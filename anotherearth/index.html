@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" /> <!-- IE8 doesn't support iframes -->
+		<meta name="description" content="synchronize the movement of two Google Earths, displayed side by side, directly compare two parts of the planet, move backwards and forwards in time" />
+		<meta name="keywords" content="compare two maps, maps side by side, old maps, google earth, historical imagery, two earths" />
+
+		<title>anotherearth - compare two maps</title>
+
+		<link rel="stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/themes/base/ui.all.css" />
+		<link rel="stylesheet" type="text/css" href="css/anotherearth-min-2.css" />
+		<!-- script inclusion order is significant -->
+		<!-- google APIs -->
+		<script type="text/javascript" src="http://www.google.com/jsapi?key=ABQIAAAAXlB-hI7mbWiEzmErvxFCOxThONsl4T1EdVdA9qrIAKF3P4QumxQWOexr5JsDgGDMaaRvNXAQfDdeHg" charset="utf-8"></script>
+		<script type="text/javascript">
+			google.load("maps",     "2");//solely for google.maps.Language
+			google.load("earth",    "1");
+			google.load("language", "1");
+			google.load("search",   "1");
+		</script>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.1/jquery.min.js" charset="utf-8"></script>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/jquery-ui.min.js" charset="utf-8"></script>
+
+		<script type="text/javascript" src="js/anotherearth-static-min-2.js" charset="utf-8"></script>
+		<script type="text/javascript" src="js/main_container-min-2.js" charset="utf-8"></script>
+
+		<link rel="icon" type="image/png" href="favicon.png" /><!-- W3C -->
+		<link rel="Shortcut Icon" href="favicon.ico" /><!-- IE7 -->
+		<link rel="icon" href="favicon.ico" type="image/x-icon" />
+	</head>
+	<body>
+		<div class="panel ui-widget" id="html_welcome_message"><!-- to be removed by script and replaced with near identical text -->
+			<h1>welcome to anotherearth.org</h1>
+			<p>
+This application allows you to compare two maps easily and comprehensively, using the Google Earth browser plugin. An example use would be comparing two maps of the same place at different times; noteworthy comparisons can be saved as URL links. Movement of the Earths can be synchronized, and features such as buildings, roads and borders added.
+			</p>
+			<!--
+			<p>
+			Please see <a href="Pakistan_floods/index.html">the sub-site dedicated to the recent flooding in Pakistan</a>.
+			</p>
+			-->
+			<p>
+Please refer to Google's documentation for guides to Google Earth and its navigation control.
+			</p>
+			<p>
+If your browser's preferred language isn't English, and you have JavaScript enabled, then using a translator, powered by Google, I've attempted to convert the text.
+			</p>
+			<p>
+Feel free contact me by email: contact(at)anotherearth(dot)org
+			</p>
+			<p>
+I'm sorry, but this application is no longer compatible with Internet Explorer 6. If you are using this, I recommend using either one of the <a href="http://www.mozilla.com">Mozilla Firefox</a> or <a href="http://www.google.com/chrome">Google Chrome</a> web browsers instead.
+			</p>
+		</div>
+		<div class="panel ui-state-highlight ui-widget" id="js_incompatibility_message"><!-- to be removed by script -->
+			<p>
+				Sorry; this site relies upon JavaScript's being enabled in your browser, and an internet connection.
+			</p>
+		</div>
+		<script type="text/javascript" charset="utf-8"><!-- google analytics tracking -->
+			var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+			document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+			</script>
+			<script type="text/javascript" charset="utf-8">
+			try {
+			var pageTracker = _gat._getTracker("UA-12946428-1");
+			pageTracker._trackPageview();
+			} catch(err) {}
+		</script>
+	</body>
+</html>
