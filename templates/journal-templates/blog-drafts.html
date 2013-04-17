@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div class="page-header">
+		<h1>blog drafts</h1>
+	</div>
+
+	{% if entries %}
+
+	{% include "blog-entries.html" %}
+
+	{% else %}
+
+	<div class="row">
+		<div class="span12">
+			<p>No drafts in the blog.</p>
+		</div>
+	</div>
+
+	{% endif %}
+{% endblock %}

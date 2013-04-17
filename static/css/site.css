@@ -1,0 +1,17 @@
+textarea {
+	height: 200px;
+}
+
+.topbar-img-gravatar {
+	position: absolute;
+	bottom: 5px;
+}
+
+.feed-img {
+	margin-right: 5px;
+}
+
+#rss img {
+	float: right;
+	margin-left: 20px;
+}

@@ -1,0 +1,20 @@
+<div class="span5">
+	<div class="row">
+		<div class="span5">
+			<div id="rss" class="alert alert-block alert-info">
+				<a href="{{ "feeds"|url("blog") }}"><img src="/static/images/feed-large.png" class="feed-img" alt="feed"></a>
+				<h4><a href="{{ "feeds"|url("blog") }}">Subscribe to the journalr blog</a></h4>
+				<p>New journalr features and developments in the thrilling world of journaling.</p>
+			</div>
+		</div>
+	</div>
+
+	{% for t in top %}
+		<div class="row">
+			<div class="span5">
+				<h3><a href="{{ t.url }}">{{ t.title }}</a></h3>
+				<p>{{ t.user }} on {{ t.date|date("%B %d") }}</p>
+			</div>
+		</div>
+	{% endfor %}
+</div>

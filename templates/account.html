@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div class="page-header">
+		<h1>account</h1>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			<table class="table">
+				<tr><td>name</td><td>{{ u.name }}</td></tr>
+				<tr><td>role</td><td>{{ u.role }}</td></tr>
+				<tr><td>login with</td><td>{{ u.sources|join(", ") }}</td></tr>
+				<tr><td>user since</td><td>{{ u.register_date|sdate }}</td></tr>
+			</table>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			<h3>settings</h3>
+			<form class="form-horizontal" method="POST">
+				<fieldset>
+					<div class="control-group">
+						<label class="control-label" for="email">email</label>
+						<div class="controls">
+							<input id="email" name="email" type="text" value="{{ u.email|default("", true) }}" />
+						</div>
+					</div>
+					<div class="form-actions">
+						<input type="submit" class="btn btn-primary" name="settings" value="Save">
+					</div>
+				</fieldset>
+			</form>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			<h3>social media <small>When you create a report, automatically publish to</small></h3>
+			{% for network, values in social.items() %}
+			<div class="row">
+				<div class="span2">
+					{{ network }}
+				</div>
+				<div class="span2">
+					<span class="label label-{{ values.label_class }}">{{ values.label_text }}</span>
+				</div>
+				<div class="span2">
+					<a href="{{ values.auth_url }}" class="btn">{{ values.auth_text }}</a>
+				</div>
+				<div class="span2">
+					<a href="{{ values.enable_url }}" class="btn {{ values.enable_class }}">{{ values.enable_text }}</a>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+	</div>
+
+
+{% endblock %}

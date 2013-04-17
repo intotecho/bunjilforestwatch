@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div class="page-header">
+		<h1>recent activity</h1>
+	</div>
+
+	<div class="row">
+		<div class="span7">
+			{% include "activities.html" %}
+		</div>
+
+		<div class="span5">
+			<div id="rss" class="alert alert-block alert-info">
+				<a href="{{ "feeds"|url("activity") }}"><img src="/static/images/feed-large.png" class="feed-img" alt="feed"></a>
+				<h4><a href="{{ "feeds"|url("activity") }}">Subscribe to Bunjil activity</a></h4>
+				<br>
+				<p>See what others are doing at Bunjil Forest Watch {TBD}.</p>
+			</div>
+		</div>
+	</div>
+{% endblock %}

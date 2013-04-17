@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div class="page-header">
+		<h1>{{ u.name }}'s following</h1>
+		</h1>
+	</div>
+
+	<div row="row">
+		<div class="span12">
+			<div class="row">
+				<div class="span8">
+					{% if following %}
+						<h2><a href="{{ "user"|url(u.name) }}">{{ u.name }}</a> is following</h2>
+						{% for f in following %}
+							{% include "follow.html" %}
+						{% endfor %}
+					{% else %}
+						<h2>Not following anyone</h2>
+					{% endif %}
+				</div>
+
+				<div class="span8">
+					{% if followers %}
+						<h2>following <a href="{{ "user"|url(u.name) }}">{{ u.name }}</a></h2>
+						{% for f in followers %}
+							{% include "follow.html" %}
+						{% endfor %}
+					{% else %}
+						<h2>No followers</h2>
+					{% endif %}
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}
