@@ -1,0 +1,5 @@
+queue:
+- name: retry-limit
+  rate: 5/s
+  retry_parameters:
+    task_retry_limit: 5

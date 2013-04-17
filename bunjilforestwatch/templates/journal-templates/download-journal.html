@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block head %}
+	<link rel="stylesheet" href="/static/css/jquery-ui-1.8.16.custom.css">
+{% endblock %}
+
+{% block content %}
+	<div>
+		<h1>
+			<ul class="breadcrumb">
+				<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span class="divider">/</span></li>
+				<li><a href="{{ username|user_journal_url(journal.name) }}">{{ journal.name }}</a> <span class="divider">/</span></li>
+				<li class="active">download</li>
+			</ul>
+		</h1>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			<form class="form-horizontal" method="GET">
+				<fieldset>
+					<div class="control-group{% if 'from' in errors %} error{% endif %}">
+						<label class="control-label" for="from">from</label>
+						<div class="controls">
+							<input class="span4 datepicker" name="from" type="text" id="from" value="{{ from }}">
+							{% if 'from' in errors %}
+								<span class="help-inline">bad date format</span>
+							{% endif %}
+						</div>
+					</div>
+					<div class="control-group{% if 'to' in errors %} error{% endif %}">
+						<label class="control-label" for="to">to</label>
+						<div class="controls">
+							<input class="span4 datepicker" name="to" type="text" id="to" value="{{ to }}">
+							{% if 'to' in errors %}
+								<span class="help-inline">bad date format</span>
+							{% endif %}
+						</div>
+					</div>
+					<div class="control-group">
+						<label class="control-label">format</label>
+						<div class="controls">
+							<label class="radio">
+								<input type="radio" name="format" value="pdf" checked>
+								PDF
+							</label>
+						</div>
+					</div>
+					<div class="form-actions">
+						<input type="submit" class="btn btn-primary" value="download">
+					</div>
+				</fieldset>
+			</form>
+		</div>
+	</div>
+
+	<script src="/static/js/jquery-ui-1.8.16.custom.min.js"></script>
+
+	<script type="text/javascript">
+		$(function() {
+			$(".datepicker").datepicker({
+				minDate: new Date({{ journal.first_entry|date("%Y, %m - 1, %d") }}),
+				maxDate: new Date({{ journal.last_entry|date("%Y, %m - 1, %d") }}),
+			});
+
+			$(".datepicker").change(function() {
+				var f = $("#from").val();
+				var t = $("#to").val();
+				if(f > t)
+				{
+					$("#from").val(t);
+					$("#to").val(f);
+				}
+			});
+		});
+	</script>
+{% endblock %}

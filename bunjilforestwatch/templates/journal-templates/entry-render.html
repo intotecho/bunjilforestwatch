@@ -1,0 +1,31 @@
+<div class="row">
+	<div class="span12">
+		<h3><a href="{{ entry_url }}">
+		{% if content.subject %}
+			{{ content.subject }}</a> <small>from {{ entry.date|jdate }}</small>
+		{% else %}
+			{{ entry.date|jdate }}</a>
+		{% endif %}
+		</h3>
+
+		{{ content.rendered|safe }}
+
+		{% for b in blobs %}
+			{% if b.type == 1 %}
+				<p><a href="{{ b.get_url() }}"><img src="{{ b.get_url() }}=s100" alt="{{ b.name }}"></a></p>
+			{% endif %}
+		{% endfor %}
+
+		{% if entry.chars or content.tags %}
+		<p><small>
+			{% if entry.chars %}
+				{{ entry.chars }} character{{ entry.chars|pluralize }}, {{ entry.words }} word{{ entry.words|pluralize }}, {{ entry.sentences }} sentence{{ entry.sentences|pluralize }}.
+			{% endif %}
+
+			{% if content.tags %}
+				tags: {{ content.tags|join(", ") }}
+			{% endif %}
+		</small></p>
+		{% endif %}
+	</div>
+</div>

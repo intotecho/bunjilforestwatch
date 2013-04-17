@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div class="page-header">
+		<h1>{{user.name}}<small> home page for {{user.role}}.</small></h1>
+	</div>
+
+	<div class="row">
+		<div class="span7">
+			<h2>Recent Activities <small>observations and reports in areas you follow</small></h2>
+			{% include "activities.html" %}
+		</div>
+
+		<div class="span5">
+			<div class="row">
+				<div class="span5">
+					<div id="rss" class="alert alert-block alert-info">
+						<a href="{{ "user-feeds"|url(user.name) }}?token={{ token }}"><img src="/static/images/feed-large.png" class="feed-img" alt="feed"></a>
+						<h4><a href="{{ "user-feeds"|url(user.name) }}?token={{ token }}">Subscribe to your feed</a></h4>
+						<p>Updates for areas and people you follow.</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="span5">
+				<h2>Your Observation Tasks </h2>
+				{% if not journals %}
+					You haven't volunteered for an area yet.
+				{% else %}
+					{% include "journals.html" %}
+				{% endif %}
+			</div>
+		</div>
+	</div>
+{% endblock %}

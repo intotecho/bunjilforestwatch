@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div>
+		<h1>
+			<ul class="breadcrumb">
+				<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span class="divider">/</span></li>
+				<li class="active"><a href="{{ journal|journal_url }}">{{ journal }}</a></li>
+			</ul>
+		</h1>
+	</div>
+
+	<div class="row">
+		<div class="span4">
+			<a href="{{ "new-entry"|url(journal) }}" class="btn btn-primary">new entry</a>
+		</div>
+		<div class="span2 offset6">
+			<a href="{{ "download-journal"|url(journal) }}" class="btn"><i class="icon-download"></i> download</a>
+		</div>
+	</div>
+
+	{% if entries %}
+
+	{% for e in entries %}
+	 {{ e|safe }}
+	{% endfor %}
+
+	<div class="pagination">
+		<ul>
+			<li class="prev"><a href="{{ journal|journal_url }}">first</a></li>
+			{% if page == 1 %}
+				<li class="disabled"><a href="#">&larr; previous</a></li>
+			{% else %}
+				<li><a href="{{ journal|journal_prev(page) }}">&larr; previous</a></li>
+			{% endif %}
+
+			{% for p in pagelist %}
+				<li{% if p  == page %} class="active"{% endif %}><a href="{{ journal|journal_url(p) }}">{{ p }}</a></li>
+			{% endfor %}
+
+			{% if page == journal.pages %}
+				<li class="disabled"><a href="#">next &rarr;</a></li>
+			{% else %}
+				<li><a href="{{ journal|journal_next(page) }}">next &rarr;</a></li>
+			{% endif %}
+
+			<li class="next"><a href="{{ journal|journal_url(journal.pages) }}">last</a></li>
+		</ul>
+	</div>
+
+	{% else %}
+
+	<div class="row">
+		<div class="span12">
+			<p>No entries in this journal.</p>
+		</div>
+	</div>
+
+	{% endif %}
+{% endblock %}

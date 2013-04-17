@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div class="page-header">
+		<h1>blog <small></small></h1>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			<div class="row">
+				<div class="span7">
+					{% if entries %}
+
+					{% include "blog-entries.html" %}
+
+					<div class="pagination">
+						<ul>
+							<li class="prev"><a href="{{ blog_url }}">first</a></li>
+							{% if page == 1 %}
+								<li class="disabled"><a href="#">&larr; previous</a></li>
+							{% else %}
+								<li><a href="{{ page|blog_prev }}">&larr; previous</a></li>
+							{% endif %}
+
+							{% for p in pagelist %}
+								<li{% if p == page %} class="active"{% endif %}><a href="{{ p|blog_url }}">{{ p }}</a></li>
+							{% endfor %}
+
+							{% if page == pages %}
+								<li class="disabled"><a href="#">next &rarr;</a></li>
+							{% else %}
+								<li><a href="{{ page|blog_next }}">next &rarr;</a></li>
+							{% endif %}
+
+							<li class="next"><a href="{{ pages|blog_url }}">last</a></li>
+						</ul>
+					</div>
+
+					{% else %}
+
+					<div class="row">
+						<div class="span7">
+							<p>No entries in the blog.</p>
+						</div>
+					</div>
+
+					{% endif %}
+				</div>
+
+				{{ top|safe }}
+
+			</div>
+		</div>
+	</div>
+{% endblock %}

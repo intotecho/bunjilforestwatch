@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div>
+		<h1>
+			<ul class="breadcrumb">
+				<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span class="divider">/</span></li>
+				<li><a href="{{ username|user_journal_url(journal_name) }}">{{ journal_name }}</a> <span class="divider">/</span></li>
+				<li class="active"><a href="{{ entry.url }}">{{ content.subject|entry_subject(entry.date) }}</a></li>
+			</ul>
+		</h1>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			<form class="form-horizontal" id="form" method="POST" action="{{ "entry-save"|url }}">
+			<input type="hidden" name="journal_name" value="{{ journal_name }}">
+			<input type="hidden" name="username" value="{{ username }}">
+			<input type="hidden" name="entry_id" value="{{ entry.key().id() }}">
+				<fieldset>
+					<div class="control-group">
+						<label class="control-label" for="subject">subject</label>
+						<div class="controls">
+							<input class="input-xxlarge" id="subject" name="subject" type="text" value="{{ content.subject|default('', True) }}" />
+						</div>
+					</div>
+					<div class="control-group">
+						<label class="control-label" for="date">date</label>
+						<div class="controls">
+							<input class="input-small" id="date" name="date" type="text" value="{{ entry.date|date("%m/%d/%Y") }}" />
+							<input class="input-mini" id="time" name="time" type="text" value="{{ entry.time }}" />
+							<span class="help-inline">date format: MM/DD/YYYY; time is optional, format is HH:MM AM/PM</span>
+						</div>
+					</div>
+					<div class="control-group post-speech">
+						<label class="control-label" for="text">text</label>
+						<div class="controls">
+							<textarea class="input-xxlarge" id="text" name="text">{{ content.text|default('', True) }}</textarea>
+						</div>
+					</div>
+					<div class="control-group">
+						<label class="control-label" for="markup">markup</label>
+						<div class="controls">
+							<select id="markup" name="markup">{{ markup_options|safe }}</select>
+							<span class="help-inline">we have a <a href="{{ "markup"|url }}" target="#_blank">brief explanation</a> about markups</span>
+						</div>
+					</div>
+					<div class="control-group">
+						<label class="control-label" for="tags">tags</label>
+						<div class="controls">
+							<input class="input-xlarge" id="tags" name="tags" type="text" value="{{ content.tags|join(", ") }}" />
+							<span class="help-inline">comma separated (ex: kids, funny story, park)</span>
+						</div>
+					</div>
+					{% for b in blobs %}
+					<div class="control-group">
+						<div class="controls">
+							<input type="checkbox" name="blob" value="{{ b.key().id }}" checked>
+							{{ b.size|filesizeformat }}, <a href="{{ b.get_url() }}">{{ b.name }}</a>
+						</div>
+					</div>
+					{% endfor %}
+					<div class="form-actions post-attach">
+						<button id="save" class="btn btn-primary"><i class="icon-pencil icon-white"></i> Save</button>
+						<a href="javascript:(function(){document.body.appendChild(document.createElement('script')).src='https://encipher.it/javascripts/inject.v2.js';})();" class="btn btn-info" rel="tooltip" title="Click on the security link at the top to learn more about this."><i class="icon-lock icon-white"></i> Encipher It</a>
+						<button id="delete" class="btn btn-danger disabled show-tooltip" disabled="disabled" title="This will delete all files attached to this entry, too."><i class="icon-trash icon-white"></i> Delete entry</button>
+						<input id="sure" type="checkbox" name="sure">
+						<span>I'm sure</span>
+					</div>
+				</fieldset>
+			</form>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			<p>Download as: <a href="?pdf" class="btn"><i class="icon-download"></i> PDF</a></p>
+		</div>
+	</div>
+
+	{{ render|safe }}
+
+	<script src="/static/js/jquery.form.js"></script>
+
+	<script type="text/javascript">
+	$(function() {
+		$("#save").click(function() {
+			$("#form").submit();
+		});
+		$("#delete").click(function() {
+			$("#form").append('<input type="hidden" name="delete" value="delete">');
+			$("#form").submit();
+		});
+	});
+
+	// file attaching
+	$(function() {
+		var attach = '\
+			<div class="control-group"> \
+				<label class="control-label" for="attach" class="label-attach">attach a file</label> \
+					<form method="POST" enctype="multipart/form-data"> \
+						<div class="controls"> \
+							<input class="input-xlarge file-attach" id="attach" name="attach" type="file" /> \
+							<span id="span-attach" class="help-block">we currently only support images, up to 4MB</span> \
+						</div> \
+					</form> \
+			</div> \
+		';
+
+		var full_text = '\
+			<div class="control-group"> \
+				<div class="controls"> \
+					your account has reached its upload limit: you cannot upload any more files \
+				</div> \
+			</div> \
+		';
+
+		var cnt = 1;
+		var full = {% if can_upload %}0{% else %}1{% endif %};
+
+		var addattach = function() {
+			$(".file-attach").unbind('change');
+			$(".iilabel-attach").each(function() {
+				$(this).html('<a href="#" onclick="$(this).parent().parent().remove(); return false;">remove</a>');
+			});
+
+			if(full == 1)
+			{
+				full = 2;
+				$(".post-attach").before(full_text);
+				return;
+			}
+
+			$(".post-attach").before(attach);
+			$(".file-attach").last().change(function() {
+				var $this = $(this);
+				var name = $this.val().split('\\').pop();
+				var label = $this.parent().parent().parent().children("label");
+				var form = $this.parent().parent();
+				$("#span-attach").remove();
+
+				addattach();
+
+				label.html('uploading...');
+
+				$.ajax({
+					url: '{{ upload_url }}',
+					success: function(data) {
+						if(data == '')
+						{
+							full = 1;
+						}
+
+						var target = 'upload-' + cnt++;
+						label.prepend('<iframe id="' + target + '" src="#" style="width: 0; height: 0; border: 0px solid #fff;"></iframe>');
+						form.attr('target', target);
+						form.attr('action', data);
+
+						form.ajaxSubmit({
+							success: function(data, stat, xhr) {
+								$("#" + target).remove();
+
+								if(data == '')
+								{
+									label.html('error during upload');
+									$this.parent().html('<span class="uneditable-input">' + name + '</span>');
+								}
+								else if(xhr.responseXML.title.substr(0, 3) == "413")
+								{
+									label.html('file too large');
+									$this.parent().html('<span class="uneditable-input">' + name + '</span>');
+								}
+								else
+								{
+									label.html('uploaded');
+									var obj = jQuery.parseJSON(data);
+									$this.parent().html(
+										'<input type="checkbox" checked disabled> ' +
+										filesizeformat(obj.size) +
+										', ' +
+										'<a href="' +
+										obj.url +
+										'">' +
+										obj.name +
+										'</a>'
+									);
+									$("#form").append('<input type="hidden" name="blob" value="' + obj.blob_id + '">');
+								}
+							}
+						});
+					}
+				});
+			});
+		}
+
+		addattach();
+	});
+	</script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div class="page-header">
+		<h1>Register <small>to become a forest watch volunteer or subscriber</small></h1>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			<p>Welcome. Please register to use Bunjil Forest Watch - it's free.</p>
+			<form class="form-horizontal" method="POST" action="{{ "register"|url }}">
+				<fieldset>
+					<div class="control-group{% if errors.username %} error{% endif %}">
+						<label class="control-label" for="username">username</label>
+						<div class="controls">
+							<input class="input-large" id="username" name="username" type="text" value="{{ username }}">
+							{% if errors.username %}<span class="help-inline">{{ errors.username }}</span>{% endif %}
+						</div>
+					</div>
+					<div class="control-group">
+						<label class="control-label" for="email">email address</label>
+						<div class="controls">
+							<input id="email" name="email" type="text" value="{{ email }}">
+						</div>
+					</div>
+					
+					<label class="control-label" for="role"><b>role</b></label>
+						<div class="control-group">
+						<div class="controls">
+						<h3>Choose what best describes you?</h3>
+						<label class="radio" for "role">
+  						<input type="radio" name="roleoptionsRadios" id="optionsRadios1" value="local" checked>I look after a nearby forest or park. Please alert me when anything changes.</label>
+  						</div>
+  					</div>
+  					<div>
+  						<div class="controls">
+						<label class="radio">
+	  					<input type="radio" name="roleoptionsRadios" id="optionsRadios2" value="volunteer">I want to help locals in remote areas to protect their forest. I can volunteer time.</label>
+	  					</div>
+  					</div>
+					
+					<div class="form-actions">
+						<input type="submit" class="btn btn-primary" name="submit" value="Register">
+					</div>
+					
+  					</fieldset>
+			</form>
+		</div>
+	</div>
+{% endblock %}

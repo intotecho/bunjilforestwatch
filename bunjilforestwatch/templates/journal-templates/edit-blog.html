@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div class="page-header">
+		<h1>edit blog entry</h1>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			<a href="{{ b.url }}">link</a>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			<form class="form-horizontal" method="POST">
+				<fieldset>
+					<div class="control-group">
+						<label class="control-label" for="title">title</label>
+						<div class="controls">
+							<input class="input-xxlarge" id="title" name="title" type="text" value="{{ b.title }}" />
+						</div>
+					</div>
+					<div class="control-group">
+						<label class="control-label" for="date">date</label>
+						<div class="controls">
+							<input class="input-small" id="date" name="date" type="text" value="{{ b.date|date("%m/%d/%Y") }}" />
+							<input class="input-mini" id="time" name="time" type="text" value="{{ b.date|date("%I:%M %p") }}" />
+							<span class="help-inline">date format: MM/DD/YYYY; time format is HH:MM AM/PM</span>
+						</div>
+					</div>
+					<div class="control-group">
+						<label class="control-label" for="text">text</label>
+						<div class="controls">
+							<textarea class="input-xxlarge" id="text" name="text">{{ b.text }}</textarea>
+						</div>
+					</div>
+					<div class="control-group">
+						<label class="control-label" for="markup">markup</label>
+						<div class="controls">
+							<select name="markup">{{ markup_options|safe }}</select>
+							<span class="help-inline"><a href="{{ "markup"|url }}" target="#_blank">markup help</a></span>
+						</div>
+					</div>
+					<div class="control-group">
+						<label class="control-label" for="draft">draft</label>
+						<div class="controls">
+							<input type="checkbox" name="draft"{% if b.draft %} checked{% endif %}>
+						</div>
+					</div>
+
+					<div class="form-actions">
+						<input type="submit" id="save" class="btn btn-primary" value="Save">
+						<input id="delete" class="btn btn-danger disabled" type="submit" disabled="disabled" name="delete" value="Delete entry">
+						<input id="sure" type="checkbox" name="sure">
+						<span>I'm sure</span>
+					</div>
+				</fieldset>
+			</form>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="span12">
+			{{ b.rendered|safe }}
+		</div>
+	</div>
+{% endblock %}

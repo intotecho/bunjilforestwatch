@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>journalr</title>
+	<meta name="description" content="community based forest monitoring">
+	<meta name="author" content="bunjil">
+	<link rel="alternate" type="application/atom+xml" title="bunjil forest watch" href="{{ "feeds"|url("blog") }}">
+
+	<link rel="stylesheet" href="/static/css/bootstrap.min.css">
+	<link rel="stylesheet" href="/static/css/site.css">
+
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+
+	<script src="/static/js/bootstrap.min.js"></script>
+	<script src="/static/js/site.js"></script>
+
+	{% block head %}
+	{% endblock %}
+</head>
+
+<body>
+	<div class="navbar">
+		<div class="navbar-inner">
+			<div class="container">
+				<a href="/" class="brand">Bunjil Forest Watch</a>
+				<ul class="nav">
+					<li{% if active == "index" or active == "index-user" %} class="active"{% endif %}><a href="{{ "main"|url }}">home</a></li>
+					<li{% if active == "observatory" %} class="active"{% endif %}><a href="{{ "observatory"|url }}">observatory</a></li>
+					<li{% if active == "blog" or active == "blog-entry" %} class="active"{% endif %}><a href="{{ "blog"|url }}">blog</a></li>
+<!--  				<li{% if active == "security" %} class="active"{% endif %}><a href="{{ "security"|url }}">security</a></li> -->
+<!-- 				<li{% if active == "stats" %} class="active"{% endif %}><a href="{{ "stats"|url }}">stats</a></li> -->
+					<li{% if active == "about" %} class="active"{% endif %}><a href="{{ "about"|url }}">about</a></li>
+				</ul>
+				<ul class="nav pull-right">
+					{% if user %}
+
+					{% if user.admin %}
+					<li class="dropdown{% if active  == "admin" %} active{% endif %}"> <a href="#" class="dropdown-toggle" data-toggle="dropdown">admin <b class="caret"></b></a>
+						<ul class="dropdown-menu">
+							<li><a href="{{ "new-blog"|url }}">new blog entry</a></li>
+							<li><a href="{{ "blog-drafts"|url }}">blog drafts</a></li>
+							<li><a href="{{ "flush-memcache"|url }}">flush memcache</a></li>
+							<li><a href="{{ "update-users"|url }}">update users</a></li>
+						</ul>
+					</li>
+					{% endif %}
+
+					<li class="dropdown{% if active  == "view-journal" or active == "entry" or active == "new-journal" %} active{% endif %}"> <a href="#" class="dropdown-toggle" data-toggle="dropdown">journals <b class="caret"></b></a>
+						<ul class="dropdown-menu">
+							{% for j in session.journals %}
+								<li{% if active == "view-journal" and j.1 == journal.name %} class="active"{% endif %}><a href="{{ j.0 }}">{{ j.1 }}</a></li>
+							{% endfor %}
+							<li class="divider"></li>
+							<li><a href="{{ "user"|url(user.name) }}"><i class="icon-home"></i> my journals</a></li>
+							<li{% if active == "new-journal" %} class="active"{% endif %}><a href="{{ "new-journal"|url }}">new journal</a></li>
+						</ul>
+					</li>
+					<li class="dropdown{% if active == "account" %} active{% endif %}">
+						<a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ user.name }} <img class="topbar-img-gravatar" src="{{ user.avatar }}&amp;s=30" alt="{{ user.name }}" width="30" height="30"> <b style="margin-left: 34px" class="caret"></b></a>
+						<ul class="dropdown-menu">
+							<li{% if active == "account" %} class="active"{% endif %}><a href="{{ "account"|url }}"><i class="icon-user"></i> account</a></li>
+							<li><a href="{{ "logout"|url }}">logout</a></li>
+							{% if login_source == "google" %}<li><a href="{{ "logout-google"|url }}">switch account</a></li>{% endif %}
+						</ul>
+					</li>
+					{% else %}
+					<li class="dropdown">
+						<a href="#" class="dropdown-toggle" data-toggle="dropdown">login / signup <b class="caret"></b></a>
+						<ul class="dropdown-menu">
+							<li><a href="{{ "login-google"|url }}">with google</a></li>
+							<li><a href="{{ "login-facebook"|url }}">with facebook</a></li>
+						</ul>
+					</li>
+					{% endif %}
+				</ul>
+			</div>
+		</div>
+	</div>
+
+	{% if messages %}
+	<div class="container">
+		<div class="row"><p></p></div>
+		{% for m in messages %}
+			<div class="row">
+				<div class="span12">
+					<div class="alert alert-{{ m.1 }} fade in">
+						<a class="close" data-dismiss="alert">&times;</a>
+						{{ m.0 }}
+					</div>
+				</div>
+			</div>
+		{% endfor %}
+		</div>
+	</div>
+	{% endif %}
+
+	<div class="container">
+		{% block content %}{% endblock %}
+	</div>
+
+	{% if google_analytics %}
+	<script type="text/javascript">
+		var _gaq = _gaq || [];
+		_gaq.push(['_setAccount', '{{ google_analytics }}']);
+		_gaq.push(['_trackPageview']);
+
+		(function() {
+			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		})();
+	</script>
+	{% endif %}
+</body>
+</html>

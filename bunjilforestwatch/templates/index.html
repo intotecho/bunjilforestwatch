@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+<div class="page-header">
+		<h1>Bunjil Forest Watch <small> Communities protecting forests</small></h1>
+	</div>
+	<div>
+	   	<p>Already have an account?&#8194;<a class="btn" href="/signin">Sign In</a></p>
+	</div>
+    <div class="hero-unit">
+    	<h2>What best describes you?<small></small></h2>
+    	<h3>I look after a nearby forest or park.  <small> Please alert me when anything changes.</small></h1>
+    	<p><a class="btn" href="/about">Subscribe for alerts to your area &raquo;</a> It's free!</p>
+		<h3>I want to help locals in remote areas to protect their forest.<small> I can volunteer time.</small></h1>
+    	<p><a class="btn" href="/register">Register as a Volunteer&raquo;</a></p>
+
+    </div>
+
+      <!-- Example row of columns -->
+      <div class="row">
+        <div class="span6">
+          <h2>Volunteers</h2>
+           <p>Volunteer sign up to monitor satellite images on behalf of local conservation groups. Volunteers need not be associated with the local hero or the forest they are protecting. They will be asked to check new satelite images as soon as they are published and report any disturbances. To be a volunteer you must be prepared to complete regular observation tasks when requested. You will need a internet access.</p>
+          <p><a class="btn" href="/about">Volunteers &raquo;</a></p>
+        </div>
+        <div class="span6">
+          <h2>Local Conservation Group</h2>
+           <p>Local Groups look after a particular forest of conservation area. They can subscribe to this service to receive free updates by email when their forest changes.</p>
+          <p><a class="btn" href="/about">Local Heros &raquo;</a></p>
+       </div>
+       </div>
+    
+     <div class="row">
+        <div class="span4">
+          <h2>Non-Government Organisations</h2>
+          <p>Environmental Non-Government Organisations help link small conservation groups in remote areas to this service.</p>
+          <p><a class="btn" href="/about">NGO Details &raquo;</a></p>
+        </div>
+        <div class="span4">
+          <h2>Developers</h2>
+          <p>Help develop this open source application.</p>
+          <p><a class="btn" href="/support">Support Us&raquo;</a></p>
+        </div>
+		<div class="span4">
+          <h2>Donate</h2>
+          <p>Support the small running costs </p>
+          <p><a class="btn" href="/donate">Support Us&raquo;</a></p>
+        </div>
+
+      </div>
+   
+{% endblock %}
