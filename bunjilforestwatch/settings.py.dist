@@ -1,0 +1,18 @@
+# fill this with data from os.urandom(64)
+COOKIE_KEY = ''
+
+FACEBOOK_KEY = ''
+FACEBOOK_SECRET = ''
+
+# to enable, set to analytics id: 'UA-12345678-9'
+GOOGLE_ANALYTICS = ''
+
+TWITTER_KEY = 'pCUVbTMmjUgFdUte2OpKw'
+TWITTER_SECRET = '2ZkmX9uZXViXRTvHulBMTBo7XFpSygyyxAWRKUz0'
+
+DROPBOX_KEY = ''
+DROPBOX_SECRET = ''
+
+GOOGLE_SITE_VERIFICATION = ''
+GOOGLE_KEY = ''
+GOOGLE_SECRET = ''
