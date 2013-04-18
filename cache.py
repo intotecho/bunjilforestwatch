@@ -48,6 +48,13 @@ C_JOURNAL = 'journal_%s_%s'
 C_JOURNALS = 'journals_%s'
 C_JOURNAL_KEY = 'journal_key_%s_%s'
 C_JOURNAL_LIST = 'journals_list_%s'
+
+C_AREA= 'areas_%s_%s'
+C_AREAS = 'areas_%s'
+C_AREA_KEY = 'area_key_%s_%s'
+C_AREAS_LIST = 'areas_list_%s'
+
+
 C_KEY = 'key_%s'
 C_STATS = 'stats'
 
@@ -118,6 +125,27 @@ def get_by_keys(keys, kind=None):
 			data[i] = fetched.pop(0)
 
 	return data
+
+
+def get_areas(user_key):
+	n = C_AREAS %user_key
+	data = unpack(memcache.get(n))
+	if data is None:
+		data = models.AreaOfInterest.all().ancestor(user_key).fetch(models.AreaOfInterest.MAX_AREAS)
+		memcache.add(n, pack(data))
+
+	return data
+# returns a list of journal names
+def get_areas_list(user_key):
+	n = C_AREAS_LIST %user_key
+	data = memcache.get(n)
+	if data is None:
+		areas= get_areas(user_key)
+		data = [(i.url(), i.name) for i in areas]
+		memcache.add(n, data)
+
+	return data
+
 
 def get_journals(user_key):
 	n = C_JOURNALS %user_key
@@ -209,6 +237,7 @@ def get_stats():
 		data = [(i, counters.get_count(i)) for i in [
 			counters.COUNTER_USERS,
 			counters.COUNTER_JOURNALS,
+			counters.COUNTER_AREAS,
 			counters.COUNTER_ENTRIES,
 			counters.COUNTER_CHARS,
 			counters.COUNTER_WORDS,

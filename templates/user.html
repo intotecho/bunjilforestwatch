@@ -1,6 +1,5 @@
 
 {% extends "base.html" %}
-
 {% block content %}
 	<div>
 		<h1>
@@ -97,4 +96,21 @@
 			{% endfor %}
 		</div>
 	</div>
+	
+	<div class="row">
+		<div class="span6">
+			<h2>{{ u }}'s areas</h2>
+
+			{% include "journals.html" %}
+		</div>
+
+		<div class="span6">
+			<h2>activity <small><a href="{{ "user-feeds"|url(u.name) }}"><img src="/static/images/feed.png" class="feed-img" alt="feed">rss feed</a></small></h2>
+			{% for a in activities %}
+				<p>{% if a.img %}<img src="{{ a.img }}" alt="{{ a.user }}"> {% endif %}<a href="{{ "user"|url(a.user) }}">{{ a.user }}</a> {{ a.get_action()|safe }} {{ a.date|timesince }}</p>
+			{% endfor %}
+		</div>
+	</div>
+	
+	
 {% endblock %}

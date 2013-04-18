@@ -14,6 +14,7 @@ import hashlib
 import urllib
 import utils
 import webapp2
+
 class DerefModel(db.Model):
 	def get_key(self, prop_name):
 		return getattr(self.__class__, prop_name).get_value_for_datastore(self)
@@ -45,6 +46,9 @@ class User(db.Model):
 	last_active = db.DateTimeProperty(auto_now=True)
 	token = db.StringProperty(required=True, indexed=False)
 	
+	areas_observing = db.ListProperty(db.Key, default=None) # list of areas we watch
+	areas_subscribing = db.ListProperty(db.Key, default=None) # list of areas I subscribe to  (only for local)
+	
 # adding for bujilae
 	role = db.StringProperty(required=True, choices=set(["volunteer", "local", "admin", "viewer"]))	
 
@@ -61,6 +65,8 @@ class User(db.Model):
 
 	allowed_data = db.IntegerProperty(required=True, default=50 * 2 ** 20) # 50 MB default
 	used_data = db.IntegerProperty(required=True, default=0)
+
+	aoi_count = db.IntegerProperty(required=True, default=0)
 
 	journal_count = db.IntegerProperty(required=True, default=0)
 	entry_count = db.IntegerProperty(required=True, default=0)
@@ -132,13 +138,16 @@ class User(db.Model):
 
 class AreaOfInterest(db.Model):
 
+	#ENTRIES_PER_PAGE = 5
+	MAX_AREAS = 3
+
 	name = db.StringProperty(required=True)
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
 
 	#subscriber who created aoi
 	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
-	subscriber = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True) #usually the creator
+	subscriber = db.UserProperty(verbose_name=None, auto_current_user=True, auto_current_user_add=False) #usually the creator
 		
 	#subscriber = db.ReferenceProperty(User)
 	#boundary	= db.GeoPtProperty(0,0, repeated=True)
@@ -146,6 +155,14 @@ class AreaOfInterest(db.Model):
 	last_observation = db.DateTimeProperty()
 	first_observation = db.DateTimeProperty()
 	observation_count = db.IntegerProperty(required=True, default=0)
+
+	@property
+	def observers(self):
+			return User.all().filter('areas_observing', self.key())
+
+	@property
+	def subscribers(self):
+			return User.all().filter('areas_subscribing', self.key())
 
 	# all frequencies are per week
 
@@ -284,23 +301,32 @@ class Entry(db.Model):
 	def blob_keys(self):
 		return [db.Key.from_path('Blob', long(i), parent=self.key()) for i in self.blobs]
 
+
 ACTIVITY_NEW_JOURNAL = 1
 ACTIVITY_NEW_ENTRY = 2
 ACTIVITY_FOLLOWING = 3
 ACTIVITY_SAVE_ENTRY = 4
+ACTIVITY_NEW_AREA = 5
+ACTIVITY_NEW_OBS = 6
+ACTIVITY_NEW_REPORT = 7
+ACTIVITY_NEW_FEEDBACK = 8
+
+
 
 ACTIVITY_CHOICES = [
 	ACTIVITY_NEW_JOURNAL,
 	ACTIVITY_NEW_ENTRY,
 	ACTIVITY_FOLLOWING,
 	ACTIVITY_SAVE_ENTRY,
+	ACTIVITY_NEW_AREA
 ]
 
 ACTIVITY_ACTION = {
-	ACTIVITY_NEW_JOURNAL: 'created a new journal',
-	ACTIVITY_NEW_ENTRY: 'started a new journal entry',
-	ACTIVITY_FOLLOWING: 'started following',
-	ACTIVITY_SAVE_ENTRY: 'updated a journal entry',
+	ACTIVITY_NEW_JOURNAL: 	'created a new journal',
+	ACTIVITY_NEW_ENTRY: 	'started a new journal entry',
+	ACTIVITY_FOLLOWING: 	'started following',
+	ACTIVITY_SAVE_ENTRY: 	'updated a journal entry',
+	ACTIVITY_NEW_AREA: 		'created a new area of interest',
 }
 
 class Activity(DerefModel):
@@ -326,10 +352,11 @@ class Activity(DerefModel):
 		a = Activity(user=user.name, img=user.gravatar('30'), action=action, object=object)
 		ar = db.put_async(a)
 
-		receivers = cache.get_followers(user.name)
-		receivers.append(user.name)
+		#receivers = cache.get_followers(user.name)
+		#receivers.append(user.name)
 		ar.get_result()
-		ai = ActivityIndex(parent=a, receivers=receivers)
+		#ai = ActivityIndex(parent=a, receivers=receivers)
+		ai = ActivityIndex(parent=a)
 		ai.put()
 
 class ActivityIndex(db.Model):
