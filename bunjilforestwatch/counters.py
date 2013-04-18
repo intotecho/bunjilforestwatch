@@ -8,6 +8,7 @@ from google.appengine.ext import db
 COUNTER_CHARS = 'characters'
 COUNTER_ENTRIES = 'entries'
 COUNTER_JOURNALS = 'journals'
+COUNTER_AREAS = 'areass'
 COUNTER_SENTENCES = 'sentences'
 COUNTER_USERS = 'users'
 COUNTER_WORDS = 'words'

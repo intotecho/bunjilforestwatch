@@ -1,3 +1,4 @@
+#bunjilae
 
 from __future__ import with_statement
 
@@ -80,6 +81,7 @@ class BaseHandler(webapp2.RequestHandler):
 		}
 
 		self.session['journals'] = cache.get_journal_list(db.Key(self.session['user']['key']))
+		self.session['areas']    = cache.get_areas_list(db.Key(self.session['user']['key']))
 
 	MESSAGE_KEY = '_flash_message'
 	def add_message(self, level, message):
@@ -103,7 +105,7 @@ class BaseHandler(webapp2.RequestHandler):
 		return user, registered
 
 	def logout(self):
-		for k in ['user', 'journals']:
+		for k in ['user', 'journals', 'areas']:
 			if k in self.session:
 				del self.session[k]
 	
@@ -223,7 +225,9 @@ class Register(BaseHandler):
 						google_id=uid if source == models.USER_SOURCE_GOOGLE else None,
 						token=base64.urlsafe_b64encode(os.urandom(30))[:32],
 					)
-
+					#user.areas_observing = {} # list of areas we watch
+					#user.areas_subscribing = {}
+					
 					if getattr(user, '%s_id' %source) != uid:
 						errors['username'] = 'Username is already taken.'
 					else:
@@ -391,6 +395,48 @@ class AccountHandler(BaseHandler):
 
 		self.redirect(webapp2.uri_for('account'))
 
+class NewAreaHandler(BaseHandler):
+	def get(self):
+		self.render('new-area.html')
+
+	def post(self):
+		name = self.request.get('name')
+
+		if len(self.session['areas']) >= models.AreaOfInterest.MAX_AREAS:
+			self.add_message('error', 'Only %i areas allowed.' %models.AreaOfIntrerest.MAX_AREAS)
+		elif not name:
+			self.add_message('error', 'Your area of interest needs a short name.')
+		else:
+			#journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
+			aoi = models.AreaOfInterest(parent=db.Key(self.session['user']['key']), name=name)
+			for journal_url, journal_name in self.session['areas']:
+				if aoi.name == area_name:
+					self.add_message('error', 'There is already a protected area called %s.' %name)
+					break
+			else:
+				def txn(user_key, aoi):
+					user = db.get(user_key)
+					user.aoi_count += 1
+					#db.put([user, aoi])
+					db.put(aoi)
+					user.areas_subscribing.append(aoi.key())
+					db.put(user)
+					return user, aoi
+
+				user, aoi = db.run_in_transaction(txn, self.session['user']['key'], aoi)
+				cache.clear_journal_cache(user.key())
+				cache.set(cache.pack(user), cache.C_KEY, user.key())
+				self.populate_user_session()
+				counters.increment(counters.COUNTER_AREAS)
+				
+				models.Activity.create(user, models.ACTIVITY_NEW_AREA, aoi.key())
+				self.add_message('success', 'Created a new area %s.' %name)
+				self.redirect(webapp2.uri_for('new-area', username=self.session['user']['name'], aoi_name=aoi.name))
+				return
+
+		self.render('new-area.html')
+
+
 class NewJournal(BaseHandler):
 	def get(self):
 		self.render('new-journal.html')
@@ -419,13 +465,15 @@ class NewJournal(BaseHandler):
 				cache.clear_journal_cache(user.key())
 				cache.set(cache.pack(user), cache.C_KEY, user.key())
 				self.populate_user_session()
-				counters.increment(counters.COUNTER_JOURNALS)
+				counters.increment(counters.COUNTER_AREAS)
 				models.Activity.create(user, models.ACTIVITY_NEW_JOURNAL, journal.key())
 				self.add_message('success', 'Created your journal %s.' %name)
 				self.redirect(webapp2.uri_for('new-entry', username=self.session['user']['name'], journal_name=journal.name))
 				return
 
 		self.render('new-journal.html')
+
+
 
 class ViewJournal(BaseHandler):
 	def get(self, username, journal_name):
@@ -1476,6 +1524,8 @@ app = webapp2.WSGIApplication([
 	webapp2.Route(r'/logout', handler=Logout, name='logout'),
 	webapp2.Route(r'/logout/google', handler=GoogleSwitch, name='logout-google'),
 	webapp2.Route(r'/markup', handler=MarkupHandler, name='markup'),
+
+	webapp2.Route(r'/new/area', handler=NewAreaHandler, name='new-area'),
 	webapp2.Route(r'/new/journal', handler=NewJournal, name='new-journal'),
 	webapp2.Route(r'/register', handler=Register, name='register'),
 	webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
@@ -1508,6 +1558,8 @@ RESERVED_NAMES = set([
 	'about',
 	'account',
 	'activity',
+	'area',
+	'areas',
 	'admin',
 	'backup',
 	'blob',
