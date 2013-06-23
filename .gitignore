@@ -2,3 +2,13 @@
 *.swp
 settings.py
 .settings
+app-journalr/
+*.zip
+*.p1
+*.p12
+Crypto/*
+PIL/*
+ee/*
+oauth2client/*
+Servers/
+.metadata/*

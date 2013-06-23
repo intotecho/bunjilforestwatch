@@ -16,3 +16,7 @@ DROPBOX_SECRET = ''
 GOOGLE_SITE_VERIFICATION = ''
 GOOGLE_KEY = ''
 GOOGLE_SECRET = ''
+
+MY_SERVICE_ACCOUNT = 'whitelist@gmail.com'  # replace with your service account
+MY_PRIVATE_KEY_FILE = 'path\own-privatekey.p12'       # replace with you private key file path
+

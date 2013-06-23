@@ -15,6 +15,10 @@ import urllib
 import utils
 import webapp2
 
+
+
+
+
 class DerefModel(db.Model):
 	def get_key(self, prop_name):
 		return getattr(self.__class__, prop_name).get_value_for_datastore(self)
@@ -66,7 +70,7 @@ class User(db.Model):
 	allowed_data = db.IntegerProperty(required=True, default=50 * 2 ** 20) # 50 MB default
 	used_data = db.IntegerProperty(required=True, default=0)
 
-	aoi_count = db.IntegerProperty(required=True, default=0)
+	areas_count = db.IntegerProperty(required=True, default=0)
 
 	journal_count = db.IntegerProperty(required=True, default=0)
 	entry_count = db.IntegerProperty(required=True, default=0)
@@ -129,21 +133,22 @@ class User(db.Model):
 		return [i for i in USER_SOURCE_CHOICES if getattr(self, '%s_id' %i)]
 
 
-#class UserFollowersIndex(db.Model):
-	#users = db.StringListProperty()
+class UserFollowersIndex(db.Model):
+	users = db.StringListProperty()
 
-#class UserFollowingIndex(db.Model):
-	#users = db.StringListProperty()
+class UserFollowingIndex(db.Model):
+	users = db.StringListProperty()
 
 
 class AreaOfInterest(db.Model):
 
-	#ENTRIES_PER_PAGE = 5
-	MAX_AREAS = 3
+	ENTRIES_PER_PAGE = 5
+	MAX_AREAS = 24
 
 	name = db.StringProperty(required=True)
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
+	entry_count = db.IntegerProperty(required=True, default=0) # reports related to this area
 
 	#subscriber who created aoi
 	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
@@ -170,12 +175,17 @@ class AreaOfInterest(db.Model):
 		return unicode(self.name)
 
 	@property
+	def pages(self):
+		if self.entry_count == 0:
+			return 1
+		return (self.entry_count + self.ENTRIES_PER_PAGE - 1) / self.ENTRIES_PER_PAGE
 
 	def url(self, page=1):
 		if page > 1:
-			return webapp2.uri_for('view-journal', username=self.key().parent().name(), journal_name=self.name, page=page)
+			return webapp2.uri_for('view-area', username=self.key().parent().name(), area_name=self.name, page=page)
 		else:
-			return webapp2.uri_for('view-journal', username=self.key().parent().name(), journal_name=self.name)
+			return webapp2.uri_for('view-area', username=self.key().parent().name(), area_name=self.name)
+
 
 
 class Journal(db.Model):

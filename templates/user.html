@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 {% block content %}
 	<div>
@@ -12,15 +11,15 @@
 	<div class="row">
 		<div class="span6">
 			<table class="table">
-				<tr><td>{% if u.role =="volunteer" %}<tr><td>Volunteer</td></tr>{% endif %}
-				<tr><td>{% if u.role =="subscriber" %}<tr><td>Subscriber</td></tr>{% endif %}
-				<tr><td>member since</td><td>{{ u.register_date|sdate }}</td></tr>
-				<tr><td>areas observing</td><td>{{ u.journal_count }}</td></tr>
-				<tr><td>reports</td><td>{{ u.entry_count }}</td></tr>
-				<tr><td>reports per week</td><td>{{ u.freq_entries|floatformat }}</td></tr>
-				<tr><td>observations per week</td><td>{{ u.freq_chars|floatformat }}</td></tr>
-				{% if u.last_entry %}<tr><td>last observation task</td><td>{{ u.last_entry|sdate }}</td></tr>{% endif %}
-				{% if u.first_entry %}<tr><td>last report</td><td>{{ u.first_entry|sdate }}</td></tr>{% endif %}
+				<tr><td>{% if u.role =="volunteer" %}<tr><td>User Type: Volunteer</td></tr>{% endif %}
+				<tr><td>{% if u.role =="local" %}<tr><td>User Type: Local Group</td></tr>{% endif %}
+				<tr><td>Member since</td><td>{{ u.register_date|sdate }}</td></tr>
+				<tr><td>Areas observing</td><td>{{ u.areas_observing}}</td></tr>
+				<tr><td>Areas subscribed </td><td>{{ u.areas_observing}}</td></tr>
+				<tr><td>Journals</td><td>{{ u.journal_count }}</td></tr>
+				<tr><td>Reports</td><td>{{ u.entry_count }}</td></tr>
+				{% if u.last_entry %}<tr><td>Last observation task</td><td>{{ u.last_entry|sdate }}</td></tr>{% endif %}
+				{% if u.first_entry %}<tr><td>Last report</td><td>{{ u.first_entry|sdate }}</td></tr>{% endif %}
 			</table>
 		</div>
 
@@ -56,6 +55,10 @@
 					<span>journal{{ u.journal_count|pluralize }}</span>
 				</div>
 				<div class="span2">
+					<h2>{{ u.area_count }}</h2>
+					<span>journal{{ u.area_count|pluralize }}</span>
+				</div>
+				<div class="span2">
 					<h2>{{ followers|length }}</h2>
 					<span>follower{{ followers|length|pluralize }}</span>
 				</div>
@@ -81,7 +84,13 @@
 	</div>
 
 	<hr>
-
+	<div class="row">
+		<div class="span6">
+			<h2>{{ u }}'s areas watching</h2>
+			{% include "areas.html" %}
+		</div>
+	</div>
+	
 	<div class="row">
 		<div class="span6">
 			<h2>{{ u }}'s journals</h2>
@@ -97,20 +106,6 @@
 		</div>
 	</div>
 	
-	<div class="row">
-		<div class="span6">
-			<h2>{{ u }}'s areas</h2>
-
-			{% include "areas.html" %}
-		</div>
-
-		<div class="span6">
-			<h2>activity <small><a href="{{ "user-feeds"|url(u.name) }}"><img src="/static/images/feed.png" class="feed-img" alt="feed">rss feed</a></small></h2>
-			{% for a in activities %}
-				<p>{% if a.img %}<img src="{{ a.img }}" alt="{{ a.user }}"> {% endif %}<a href="{{ "user"|url(a.user) }}">{{ a.user }}</a> {{ a.get_action()|safe }} {{ a.date|timesince }}</p>
-			{% endfor %}
-		</div>
-	</div>
 	
-	
+
 {% endblock %}

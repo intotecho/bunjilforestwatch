@@ -49,11 +49,10 @@ C_JOURNALS = 'journals_%s'
 C_JOURNAL_KEY = 'journal_key_%s_%s'
 C_JOURNAL_LIST = 'journals_list_%s'
 
-C_AREA= 'areas_%s_%s'
+C_AREA= 'area_%s_%s'
 C_AREAS = 'areas_%s'
 C_AREA_KEY = 'area_key_%s_%s'
-C_AREAS_LIST = 'areas_list_%s'
-
+C_AREA_LIST = 'areas_list_%s'
 
 C_KEY = 'key_%s'
 C_STATS = 'stats'
@@ -137,7 +136,7 @@ def get_areas(user_key):
 	return data
 # returns a list of journal names
 def get_areas_list(user_key):
-	n = C_AREAS_LIST %user_key
+	n = C_AREA_LIST %user_key
 	data = memcache.get(n)
 	if data is None:
 		areas= get_areas(user_key)
@@ -248,6 +247,10 @@ def get_stats():
 
 	return data
 
+def clear_area_cache(user_key):
+	memcache.delete_multi([C_AREAS %user_key, C_AREA_LIST %user_key])
+
+
 def clear_journal_cache(user_key):
 	memcache.delete_multi([C_JOURNALS %user_key, C_JOURNAL_LIST %user_key])
 
@@ -336,6 +339,27 @@ def get_following(username):
 		else:
 			data = following.users
 
+		memcache.add(n, data)
+
+	return data
+
+def get_area(username, area_name):
+	n = C_AREA %(username, area_name)
+	data = unpack(memcache.get(n))
+	if data is None:
+		area_key = get_area_key(username, area_name)
+		if area_key:
+			data = db.get(area_key)
+		memcache.add(n, pack(data))
+
+	return data
+
+def get_area_key(username, area_name):
+	n = C_AREA_KEY %(username, area_name)
+	data = memcache.get(n)
+	if data is None:
+		user_key = db.Key.from_path('User', username)
+		data = models.AreaOfInterest.all(keys_only=True).ancestor(user_key).filter('name', area_name.decode('utf-8')).get()
 		memcache.add(n, data)
 
 	return data

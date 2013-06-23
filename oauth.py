@@ -14,8 +14,13 @@
 
 """"OAuth library for making RESTful API calls using the OAuth protocol"""
 
-import cgi
+import sys
 import logging
+from pprint import pprint as pp
+#logging.error(pp(sys.path))
+
+import cgi
+
 import urllib
 import time
 
@@ -24,6 +29,9 @@ from hmac import new as hmac
 from random import getrandbits
 
 from google.appengine.api import urlfetch
+
+
+
 
 # We require a JSON parsing library. These seem to be the most popular.
 try:
