@@ -62,7 +62,8 @@ def prefetch_refprops(entities, *props):
 			prop.__set__(entity, ref_entities[ref_key])
 	return entities
 
-def render(_template, context):
+def render(_template, context): 
+	logging.info('render%s', context)
 	return env.get_template(_template).render(**context)
 
 NUM_PAGE_DISP = 5
@@ -216,3 +217,10 @@ def google_upload(token, path, content, entryid=None):
 		client.auth_token = authsub
 		entry = client.GetDoc(entryid)
 		entry = client.Update(entry, media_source=ms)
+
+def syspath():
+	import sys
+	import logging
+	#from pprint import pprint as pp
+	#logging.error(pp(sys.path))
+	return

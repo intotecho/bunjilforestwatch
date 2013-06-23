@@ -2,6 +2,7 @@ bunjilae
 
 Bunjil Forest Watch Demo. 
 Runs on [Google App Engine](http://code.google.com/appengine/).
+
 Application URL kinabalu@appspot.com (TBC)
 
 <script>
@@ -14,4 +15,7 @@ Application URL kinabalu@appspot.com (TBC)
   ga('send', 'pageview');
 
 </script>
+
+<!-- BUGS --->
+Add check to prevent creating an area called area, or a journal called journal. See RESERVED_NAME and post new user.
 

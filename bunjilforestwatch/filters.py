@@ -30,6 +30,19 @@ def url(ob, name=''):
 	else:
 		return webapp2.uri_for(ob)
 
+
+def user_area_url(username, area_name):
+	return webapp2.uri_for('view-area', username=username, area_name=area_name)
+
+def area_url(area, page=1):
+	return area.url(page)
+
+def area_prev(ob, page):
+	return area_url(ob, str(page - 1))
+
+def area_next(ob, page):
+	return area_url(ob, str(page + 1))
+
 def user_journal_url(username, journal_name):
 	return webapp2.uri_for('view-journal', username=username, journal_name=journal_name)
 
@@ -139,9 +152,13 @@ filters = dict([(i, globals()[i]) for i in [
 	'journal_next',
 	'journal_prev',
 	'journal_url',
+	'area_next',
+	'area_prev',
+	'area_url',
 	'pluralize',
 	'sdate',
 	'timesince',
 	'url',
 	'user_journal_url',
+	'user_area_url',
 ]])

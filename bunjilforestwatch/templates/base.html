@@ -2,7 +2,7 @@
 <html>
 <head>
 	<meta charset="utf-8">
-	<title>journalr</title>
+	<title>bunjilae</title>
 	<meta name="description" content="community based forest monitoring">
 	<meta name="author" content="bunjil">
 	<link rel="alternate" type="application/atom+xml" title="bunjil forest watch" href="{{ "feeds"|url("blog") }}">
@@ -14,8 +14,10 @@
 
 	<script src="/static/js/bootstrap.min.js"></script>
 	<script src="/static/js/site.js"></script>
+ 
+ 
+{% block head %}
 
-	{% block head %}
 	{% endblock %}
 </head>
 
@@ -27,6 +29,7 @@
 				<ul class="nav">
 					<li{% if active == "index" or active == "index-user" %} class="active"{% endif %}><a href="{{ "main"|url }}">home</a></li>
 					<li{% if active == "observatory" %} class="active"{% endif %}><a href="{{ "observatory"|url }}">observatory</a></li>
+					<li{% if active == "engine" %} class="active"{% endif %}><a href="{{ "engine"|url }}">engine</a></li>
 					<li{% if active == "blog" or active == "blog-entry" %} class="active"{% endif %}><a href="{{ "blog"|url }}">blog</a></li>
 <!--  				<li{% if active == "security" %} class="active"{% endif %}><a href="{{ "security"|url }}">security</a></li> -->
 <!-- 				<li{% if active == "stats" %} class="active"{% endif %}><a href="{{ "stats"|url }}">stats</a></li> -->
@@ -56,6 +59,17 @@
 							<li{% if active == "new-journal" %} class="active"{% endif %}><a href="{{ "new-journal"|url }}">new journal</a></li>
 						</ul>
 					</li>
+					
+					<li class="dropdown{% if active  == "view-area" or active == "entry" or active == "new-area" %} active{% endif %}"> <a href="#" class="dropdown-toggle" data-toggle="dropdown">areas <b class="caret"></b></a>
+						<ul class="dropdown-menu">
+							{% for ar in session.areas %}
+								<li{% if active == "view-area" and ar.1 == area.name %} class="active"{% endif %}><a href="{{ ar.0 }}">{{ ar.1 }}</a></li>
+							{% endfor %}
+							<li class="divider"></li>
+							<li><a href="{{ "user"|url(user.name) }}"><i class="icon-home"></i>my areas</a></li>
+							<li{% if active == "new-area" %} class="active"{% endif %}><a href="{{ "new-area"|url }}">new area</a></li>
+						</ul>
+					</li>
 					<li class="dropdown{% if active == "account" %} active{% endif %}">
 						<a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ user.name }} <img class="topbar-img-gravatar" src="{{ user.avatar }}&amp;s=30" alt="{{ user.name }}" width="30" height="30"> <b style="margin-left: 34px" class="caret"></b></a>
 						<ul class="dropdown-menu">
@@ -83,9 +97,9 @@
 		<div class="row"><p></p></div>
 		{% for m in messages %}
 			<div class="row">
-				<div class="span12">
-					<div class="alert alert-{{ m.1 }} fade in">
-						<a class="close" data-dismiss="alert">&times;</a>
+				<div class="span16">
+					<div class="alert-message {{ m.1 }} fade in" data-alert="alert">
+						<a class="close" href="#">&times;</a>
 						{{ m.0 }}
 					</div>
 				</div>
@@ -94,11 +108,9 @@
 		</div>
 	</div>
 	{% endif %}
-
-	<div class="container">
-		{% block content %}{% endblock %}
-	</div>
-
+	
+    	{% block content %}{% endblock %}
+	
 	{% if google_analytics %}
 	<script type="text/javascript">
 		var _gaq = _gaq || [];
@@ -114,3 +126,4 @@
 	{% endif %}
 </body>
 </html>
+

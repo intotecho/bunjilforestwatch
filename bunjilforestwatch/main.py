@@ -2,11 +2,16 @@
 
 from __future__ import with_statement
 
+
+
+import eeservice
 import base64
 import datetime
 import logging
 import re
 import os
+
+
 
 from django.utils import html
 from google.appengine.api import files
@@ -17,6 +22,7 @@ from google.appengine.ext import db
 #from google.appengine.ext import webapp2
 from google.appengine.ext.webapp import blobstore_handlers
 from webapp2_extras import sessions
+
 import django
 import json
 import webapp2
@@ -29,6 +35,29 @@ import models
 import settings
 import twitter
 import utils
+
+
+def rendert(s, p, d={}):
+	session = s.session
+	d['session'] = session
+
+	if 'user' in session:
+		d['user'] = session['user']
+	# this is still set after logout (i'm not sure why it's set at all), so use this workaround
+	elif 'user' in d:
+		del d['user']
+
+	for k in ['login_source']:
+		if k in session:
+			d[k] = session[k]
+
+	d['messages'] = s.get_messages()
+	d['active'] = p.partition('.')[0]
+
+	if settings.GOOGLE_ANALYTICS:
+		d['google_analytics'] = settings.GOOGLE_ANALYTICS
+
+	s.response.out.write(utils.render(p, d))
 
 class BaseHandler(webapp2.RequestHandler):
 	def render(self, _template, context={}):
@@ -44,14 +73,17 @@ class BaseHandler(webapp2.RequestHandler):
 		if settings.GOOGLE_ANALYTICS:
 			context['google_analytics'] = settings.GOOGLE_ANALYTICS
 
+		logging.info('render template %s with context <<%s>>,', _template, context)
+		logging.info('messages %s', context['messages'])
+		
 		rv = utils.render(_template, context)
 		
-		logging.info('context is <<%s>>,', context)
 		
 		self.response.write(rv)
 
 	def dispatch(self):
 		self.session_store = sessions.get_store(request=self.request)
+		logging.info('dispatch %s', self.request)
 
 		try:
 			webapp2.RequestHandler.dispatch(self)
@@ -130,16 +162,19 @@ class MainPage(BaseHandler):
 
 	def get(self):
 		if 'user' in self.session:
- 			#following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
-			#followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User')
+ 			following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
+			followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User')
 			journals = cache.get_journals(db.Key(self.session['user']['key']))
+			areas= cache.get_areas(db.Key(self.session['user']['key']))
+			logging.info( "areas = %s", areas)
 			self.render('index-user.html', {
 				'activities': cache.get_activities_follower(self.session['user']['name']),
-				'observations': journals,
+				'journals': journals,
 				'thisuser': True,
 				'token': self.session['user']['token'],
-				#'following': following,
-				#'followers': followers,
+				'following': following,
+				'followers': followers,
+				'areas': areas
 			})
 		else:
 			self.render('index.html')
@@ -163,6 +198,7 @@ class GoogleLogin(BaseHandler):
 	def get(self):
 		current_user = users.get_current_user()
 		user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())
+		
 
 		if not registered:
 			self.redirect(webapp2.uri_for('register'))
@@ -182,6 +218,7 @@ class FacebookLogin(BaseHandler):
 					return
 		else:
 			self.redirect(facebook.oauth_url({'local_redirect': 'login-facebook'}, {'scope': 'email'}))
+			#eeservice.initEarthEngineServer()
 			return
 
 		self.redirect(webapp2.uri_for('main'))
@@ -236,7 +273,7 @@ class Register(BaseHandler):
 						counters.increment(counters.COUNTER_USERS)
 						if rolechoice == 'local':
 							self.add_message('Success', '%s, you have been registered as a Subscriber at Bunjil Forest Watch.' %user)
-							self.redirect(webapp2.uri_for('new-journal'))
+							self.redirect(webapp2.uri_for('new-area'))
 						else:
 							self.add_message('Success', '%s, you have been registered as a Volunteer at Bunjil Forest Watch.' %user)
 							self.redirect(webapp2.uri_for('new-journal'))
@@ -322,28 +359,8 @@ class AccountHandler(BaseHandler):
 
 		self.render('account.html', {
 			'u': u,
-			'backup':
-			{
-				'dropbox': {
-					'auth_text': 'authorize' if not u.dropbox_token else 'deauthorize',
-					'auth_url': webapp2.uri_for('dropbox', action='authorize') if not u.dropbox_token else webapp2.uri_for('account', deauthorize='dropbox'),
-					'enable_class': 'disabled' if not u.dropbox_token else '',
-					'enable_text': 'enable' if not u.dropbox_enable or not u.dropbox_token else 'disable',
-					'enable_url': '#' if not u.dropbox_token else webapp2.uri_for('account', enable='dropbox') if not u.dropbox_enable else webapp2.uri_for('account', disable='dropbox'),
-					'label_class': 'warning' if not u.dropbox_token else 'success' if u.dropbox_enable else 'important',
-					'label_text': 'not authorized' if not u.dropbox_token else 'enabled' if u.dropbox_enable else 'disabled',
-				},
-				'google docs': {
-					'auth_text': 'authorize' if not u.google_docs_token else 'deauthorize',
-					'auth_url': webapp2.uri_for('google', action='authorize') if not u.google_docs_token else webapp2.uri_for('account', deauthorize='google_docs'),
-					'enable_class': 'disabled' if not u.google_docs_token else '',
-					'enable_text': 'enable' if not u.google_docs_enable or not u.google_docs_token else 'disable',
-					'enable_url': '#' if not u.google_docs_token else webapp2.uri_for('account', enable='google_docs') if not u.google_docs_enable else webapp2.uri_for('account', disable='google_docs'),
-					'label_class': 'warning' if not u.google_docs_token else 'success' if u.google_docs_enable else 'important',
-					'label_text': 'not authorized' if not u.google_docs_token else 'enabled' if u.google_docs_enable else 'disabled',
-				},
-			},
-			'social': {
+			#'backup':
+					'social': {
 				'facebook': {
 					'auth_text': 'authorize' if not u.facebook_token else 'deauthorize',
 					'auth_url': facebook.oauth_url({'local_redirect': 'account'}, {'scope': 'publish_stream,offline_access'}) if not u.facebook_token else webapp2.uri_for('account', deauthorize='facebook'),
@@ -403,35 +420,35 @@ class NewAreaHandler(BaseHandler):
 		name = self.request.get('name')
 
 		if len(self.session['areas']) >= models.AreaOfInterest.MAX_AREAS:
-			self.add_message('error', 'Only %i areas allowed.' %models.AreaOfIntrerest.MAX_AREAS)
+			self.add_message('error', 'Only %i areas allowed.' %models.AreaOfInterest.MAX_AREAS)
 		elif not name:
 			self.add_message('error', 'Your area of interest needs a short name.')
 		else:
 			#journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
-			aoi = models.AreaOfInterest(parent=db.Key(self.session['user']['key']), name=name)
-			for journal_url, journal_name in self.session['areas']:
-				if aoi.name == area_name:
-					self.add_message('error', 'There is already a protected area called %s.' %name)
+			area = models.AreaOfInterest(parent=db.Key(self.session['user']['key']), name=name)
+			for area_url, area_name in self.session['areas']:
+				if area.name == area_name:
+					self.add_message('error', 'There is already a protected area called %s ' %name)
 					break
 			else:
-				def txn(user_key, aoi):
+				def txn(user_key, area):
 					user = db.get(user_key)
-					user.aoi_count += 1
-					#db.put([user, aoi])
-					db.put(aoi)
-					user.areas_subscribing.append(aoi.key())
-					db.put(user)
-					return user, aoi
+					user.areas_count += 1
+					#db.put([user, area])
+					db.put([user, area])
+					#user.areas_subscribing.append(area.key())
+					#db.put(user)
+					return user, area
 
-				user, aoi = db.run_in_transaction(txn, self.session['user']['key'], aoi)
-				cache.clear_journal_cache(user.key())
+				user, area = db.run_in_transaction(txn, self.session['user']['key'], area)
+				cache.clear_area_cache(user.key())
 				cache.set(cache.pack(user), cache.C_KEY, user.key())
 				self.populate_user_session()
 				counters.increment(counters.COUNTER_AREAS)
 				
-				models.Activity.create(user, models.ACTIVITY_NEW_AREA, aoi.key())
+				models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
 				self.add_message('success', 'Created a new area %s.' %name)
-				self.redirect(webapp2.uri_for('new-area', username=self.session['user']['name'], aoi_name=aoi.name))
+				self.redirect(webapp2.uri_for('new-area', username=self.session['user']['name'], area_name=area.name))
 				return
 
 		self.render('new-area.html')
@@ -474,13 +491,44 @@ class NewJournal(BaseHandler):
 		self.render('new-journal.html')
 
 
+class ViewArea(BaseHandler):
+	def get(self, username, area_name):
+		#page = int(self.request.get('page', 1))
+		area = cache.get_area(username, area_name)
+		
+		logging.debug('ViewArea area_name %s %s', area_name, area)
+		
+		if not area or username != self.session['user']['name']:
+			logging.info('ViewArea not or ')
+			ViewJournal.get(self, username, area_name) # need to tidy up routing so Journals and Areas can work.
+			#self.error(404)
+			return
+
+		if not area:
+			logging.info('ViewArea not area')
+			ViewJournal.get(self, username, area_name)
+			#self.error(404)
+		else:
+			#logging.info('ViewArea else ')
+			self.render('view-area.html', {
+				'username': username,
+				'area': area,
+				#'journal': journal,
+				#'entries': cache.get_entries_page(username, area, page, area.key()),
+				#'page': page,
+				#'pagelist': utils.page_list(page, area.pages),
+				
+			})
+
 
 class ViewJournal(BaseHandler):
 	def get(self, username, journal_name):
 		page = int(self.request.get('page', 1))
-		journal = cache.get_journal(username, journal_name)
+		journal= cache.get_journal(username, journal_name)
 
-		if not journal or page < 1 or page > journal.pages or username != self.session['user']['name']:
+		logging.info('ViewJournal journal_name %s %s', journal_name, journal)
+		
+		if not journal or username != self.session['user']['name']:
 			self.error(404)
 			return
 
@@ -507,7 +555,11 @@ class ObservatoryHandler(BaseHandler):
 	def get(self):
 		self.render('observatory.html', {'observatory': cache.get_stats()})
 
-
+class EngineHandler(BaseHandler):
+	def get(self):
+		self.render('engine.html', {'engine': cache.get_stats()})
+		eeservice.initEarthEngineService()
+		
 class ActivityHandler(BaseHandler):
 	def get(self):
 		self.render('activity.html', {'activities': cache.get_activities()})
@@ -531,27 +583,45 @@ class UserHandler(BaseHandler):
 			return
 
 		journals = cache.get_journals(u.key())
+		#logging.info ("journals %s", journals)
+		areas= cache.get_areas(u.key())
+		#logging.info ("areas %s", areas)
 		activities = cache.get_activities(username=username)
-		#following = cache.get_following(username)
-		#followers = cache.get_followers(username)
-
+		following = cache.get_following(username)
+		followers = cache.get_followers(username)
+		#logging.info ("following %s, followers %s", following, followers)
+		
 		if 'user' in self.session:
-			#is_following = username in cache.get_following(self.session['user']['name'])
+			is_following = username in cache.get_following(self.session['user']['name'])
 			thisuser = self.session['user']['name'] == u.name
 		else:
-			#is_following = False
+			is_following = False
 			thisuser = False 
 
+		#logging.info ("u is %s", u)
+		
 		self.render('user.html', {
 			'u': u,
 			'journals': journals,
 			'activities': activities,
-			#'following': following,
-			#'followers': followers,
-			#'is_following': is_following,
-			'thisuser': thisuser,
+			'following': following,
+			'followers': followers,
+			'is_following': is_following,
+			'thisuser': thisuser, # True if user being shown is thisuser
+			'areas': areas,
+			})
+"""
+		self.render('user.html', {
+			'u': u,
+			'journals': journals,
+			'activities': activities,
+			'following': following,
+			'followers': followers,
+			'is_following': is_following,
+			'thisuser': thisuser
+			#'areas': areas
 		})
-
+"""
 class FollowHandler(BaseHandler):
 	def get(self, username):
 		user = cache.get_user(username)
@@ -1299,8 +1369,8 @@ class SocialPost(BaseHandler):
 class FollowingHandler(BaseHandler):
 	def get(self, username):
 		u = cache.get_user(username)
-		#following = cache.get_by_keys(cache.get_following(username), 'User')
-		#followers = cache.get_by_keys(cache.get_followers(username), 'User')
+		following = cache.get_by_keys(cache.get_following(username), 'User')
+		followers = cache.get_by_keys(cache.get_followers(username), 'User')
 
 		self.render('following.html', {'u': u, 'following': following, 'followers': followers})
 
@@ -1517,8 +1587,8 @@ app = webapp2.WSGIApplication([
 	webapp2.Route(r'/facebook', handler=FacebookCallback, name='facebook'),
 	webapp2.Route(r'/google', handler=GoogleCallback, name='google'),
 	webapp2.Route(r'/feeds/<feed>', handler=FeedsHandler, name='feeds'),
-	#webapp2.Route(r'/follow/<username>', handler=FollowHandler, name='follow'),
-	#webapp2.Route(r'/following/<username>', handler=FollowingHandler, name='following'),
+	webapp2.Route(r'/follow/<username>', handler=FollowHandler, name='follow'),
+	webapp2.Route(r'/following/<username>', handler=FollowingHandler, name='following'),
 	webapp2.Route(r'/login/facebook', handler=FacebookLogin, name='login-facebook'),
 	webapp2.Route(r'/login/google', handler=GoogleLogin, name='login-google'),
 	webapp2.Route(r'/logout', handler=Logout, name='logout'),
@@ -1532,6 +1602,7 @@ app = webapp2.WSGIApplication([
 	webapp2.Route(r'/security', handler=SecurityHandler, name='security'),
 	webapp2.Route(r'/stats', handler=StatsHandler, name='stats'),
 	webapp2.Route(r'/observatory', handler=ObservatoryHandler, name='observatory'),
+	webapp2.Route(r'/engine', handler=EngineHandler, name='engine'),
 	webapp2.Route(r'/twitter/<action>', handler=TwitterHandler, name='twitter'),
 	webapp2.Route(r'/upload/file/<username>/<journal_name>/<entry_id>', handler=UploadHandler, name='upload-file'),
 	webapp2.Route(r'/upload/success', handler=UploadSuccess, name='upload-success'),
@@ -1544,12 +1615,26 @@ app = webapp2.WSGIApplication([
 	# google site verification
 	webapp2.Route(r'/%s.html' %settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
 
+	webapp2.Route(r'<username><area_name>', handler=ViewArea, name='view-area'),
+	webapp2.Route(r'<username><area_name>/new', handler=NewEntryHandler, name='new-obstask'),
+
+	webapp2.Route(r'/journal/<username>/<journal_name>', handler=ViewJournal, name='view-journal'),
+	webapp2.Route(r'/journal/<username>/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
+	webapp2.Route(r'/journal/<username>/<journal_name>/download', handler=DownloadJournalHandler, name='download-journal'),
+	webapp2.Route(r'/journal/<username>/<journal_name>/new', handler=NewEntryHandler, name='new-entry'),
+
 	# this section must be last, since the regexes below will match one and two -level URLs
 	webapp2.Route(r'/<username>', handler=UserHandler, name='user'),
+	
+	# this section must be last, since the regexes below will match one and two -level URLs
+	webapp2.Route(r'/<username>/<area_name>', handler=ViewArea, name='view-area'),
+	webapp2.Route(r'/<username>/<area_name>/new', handler=NewEntryHandler, name='new-obstask'),
+
 	webapp2.Route(r'/<username>/<journal_name>', handler=ViewJournal, name='view-journal'),
 	webapp2.Route(r'/<username>/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
 	webapp2.Route(r'/<username>/<journal_name>/download', handler=DownloadJournalHandler, name='download-journal'),
 	webapp2.Route(r'/<username>/<journal_name>/new', handler=NewEntryHandler, name='new-entry'),
+
 	], debug=True, config=config)
 
 RESERVED_NAMES = set([
@@ -1568,6 +1653,7 @@ RESERVED_NAMES = set([
 	'docs',
 	'dropbox',
 	'entry',
+	'engine',
 	'facebook',
 	'features',
 	'feeds',

@@ -1,16 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <?eclipse-pydev version="1.0"?><pydev_project>
-<pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">Default</pydev_property>
+<pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">python32</pydev_property>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_VERSION">python 2.7</pydev_property>
 <pydev_pathproperty name="org.python.pydev.PROJECT_SOURCE_PATH">
 <path>/bunjilae</path>
 </pydev_pathproperty>
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
-<path>C:\Program Files (x86)\Google\google_appengine\lib</path>
-<path>C:\Program Files (x86)\Google\google_appengine\lib\webob-1.2.3\webob</path>
-<path>C:\Program Files (x86)\Google\google_appengine\google\appengine\api\blobstore</path>
-<path>C:\Program Files (x86)\Google\google_appengine\google\appengine\api</path>
-<path>C:\Program Files (x86)\Google\google_appengine\lib\django-1.4\django</path>
-<path>C:\Program Files (x86)\Google\google_appengine\lib\django-1.4\django\contrib\gis\db\models\sql</path>
+<path>C:\Python2732\Lib\site-packages\PIL</path>
+<path>C:\Python2732\Lib\site-packages\PIL-1.1.7-py2.7-win32.egg</path>
+<path>C:\Python2732\Lib\site-packages\Pillow-2.0.0-py2.7.egg-info</path>
 </pydev_pathproperty>
 </pydev_project>

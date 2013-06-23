@@ -10,12 +10,6 @@
 		<tr><td>entries</td><td>{{ j.entry_count }}</td></tr>
 		<tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
 		<tr><td>characters</td><td>{{ j.chars }}</td></tr>
-		<tr><td>words</td><td>{{ j.words }}</td></tr>
-		<tr><td>sentences</td><td>{{ j.sentences }}</td></tr>
-		<tr><td>entries per week</td><td>{{ j.freq_entries|floatformat }}</td></tr>
-		<tr><td>characters per week</td><td>{{ j.freq_chars|floatformat }}</td></tr>
-		<tr><td>words per week</td><td>{{ j.freq_words|floatformat }}</td></tr>
-		<tr><td>sentences per week</td><td>{{ j.freq_sentences|floatformat }}</td></tr>
 		{% if j.last_entry %}<tr><td>last entry</td><td>{{ j.last_entry|sdate }}</td></tr>{% endif %}
 		{% if j.first_entry %}<tr><td>first entry</td><td>{{ j.first_entry|sdate }}</td></tr>{% endif %}
 		{% if j.entry_days %}<tr><td>entries spanning</td><td>{{ j.entry_days }} day{{ j.entry_days|pluralize }}</td></tr>{% endif %}
