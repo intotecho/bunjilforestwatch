@@ -140,6 +140,18 @@ class UserFollowingIndex(db.Model):
 	users = db.StringListProperty()
 
 
+class Geometry(db.Model):
+  name = db.StringProperty()
+  description = db.StringProperty(multiline=True)
+  type = db.StringProperty()
+  dateModified = db.DateProperty(auto_now=True)
+  coordinates = db.ListProperty(db.GeoPt, default=None)
+  bound = db.ListProperty(float, default=None)
+  timeStamp = db.DateProperty(auto_now_add=True)
+  altitudes = db.ListProperty(float, default=None)
+  userId = db.StringProperty(default=None)
+  tags = db.ListProperty(unicode,default=None)
+
 class AreaOfInterest(db.Model):
 
 	ENTRIES_PER_PAGE = 5
@@ -149,11 +161,21 @@ class AreaOfInterest(db.Model):
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
 	entry_count = db.IntegerProperty(required=True, default=0) # reports related to this area
+	description = db.StringProperty(multiline=True)
+	type = db.StringProperty()
+	coordinates = db.ListProperty(db.GeoPt, default=None)
+	bound = db.ListProperty(float, default=None)
+	timeStamp = db.DateProperty(auto_now_add=True)
+	altitudes = db.ListProperty(float, default=None)
+	#userId = db.StringProperty(default=None)
+	#dateModified = db.DateProperty(auto_now=True)
+	#tags = db.ListProperty(unicode,default=None)
 
 	#subscriber who created aoi
 	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
 	subscriber = db.UserProperty(verbose_name=None, auto_current_user=True, auto_current_user_add=False) #usually the creator
-		
+	
+	
 	#subscriber = db.ReferenceProperty(User)
 	#boundary	= db.GeoPtProperty(0,0, repeated=True)
 

@@ -416,7 +416,8 @@ class NewAreaHandler(BaseHandler):
 	def get(self):
 		self.render('new-area.html')
 
-	def post(self):
+	def post(self, area_description, coordinates):
+	#def post(self):
 		name = self.request.get('name')
 
 		if len(self.session['areas']) >= models.AreaOfInterest.MAX_AREAS:
@@ -425,7 +426,7 @@ class NewAreaHandler(BaseHandler):
 			self.add_message('error', 'Your area of interest needs a short name.')
 		else:
 			#journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
-			area = models.AreaOfInterest(parent=db.Key(self.session['user']['key']), name=name)
+			area = models.AreaOfInterest(parent=db.Key(self.session['user']['key']), name=name, description=description, coordiantes=coordinates)
 			for area_url, area_name in self.session['areas']:
 				if area.name == area_name:
 					self.add_message('error', 'There is already a protected area called %s ' %name)
@@ -447,7 +448,7 @@ class NewAreaHandler(BaseHandler):
 				counters.increment(counters.COUNTER_AREAS)
 				
 				models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
-				self.add_message('success', 'Created a new area %s.' %name)
+				self.add_message('success', 'Created a new area %s. %s' %name, description)
 				self.redirect(webapp2.uri_for('new-area', username=self.session['user']['name'], area_name=area.name))
 				return
 
@@ -1614,7 +1615,7 @@ app = webapp2.WSGIApplication([
 
 	# google site verification
 	webapp2.Route(r'/%s.html' %settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
-
+	
 	webapp2.Route(r'<username><area_name>', handler=ViewArea, name='view-area'),
 	webapp2.Route(r'<username><area_name>/new', handler=NewEntryHandler, name='new-obstask'),
 
