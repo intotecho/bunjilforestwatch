@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+ </div>
+   <div style="font-size: 13px">
+   <br/>
+   You can also retrieve the output of the geo-tagged DataStore as KML. Here are some example queries:
+   <br/>
+   <a href="gen/request?operation=get&output=kml">Flat KML of all geometries</a>
+   <br/>
+   <a href="gen/request?operation=get;output=kml&BBOX=-134.1097675284931,17.4684230256152,-84.15249495568608,50.22789898549566">KML of geometries within a specified bounding box</a>
+   <br/>
+   <br/><br/><br/>
+   </div>
+
+{% endblock %}
+

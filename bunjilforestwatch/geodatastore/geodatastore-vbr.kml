@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://earth.google.com/kml/2.2">
+  <NetworkLink>
+    <Link>
+      <href>http://geodatastore.prom.corp.google.com/gen/request</href>
+      <viewRefreshMode>onStop</viewRefreshMode>
+      <httpQuery>operation=get;output=kml</httpQuery>
+    </Link>
+  </NetworkLink>
+</kml>
