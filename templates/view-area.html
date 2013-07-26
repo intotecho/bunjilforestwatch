@@ -1,20 +1,101 @@
 {% extends "base.html" %}
+{% block head %}
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map-canvas { height: 100% }
+    </style>
+    <script 
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=true">
+    </script>
+    <script src="/static/js/polygon-outliner.js"></script>
+	
+	<script>
+    
+      function initialize() {
+        var mapOptions = {
+          //center: new google.maps.LatLng(-34.397, 150.644),
+          center: new google.maps.LatLng({{area.map_center}}),
+          zoom: {{ area.map_zoom }},
+          mapTypeId: google.maps.MapTypeId.HYBRID
+        };
+        
+        var map = new google.maps.Map(document.getElementById("map-canvas"),
+            mapOptions);
+     
+        var latlngs = [];
+          
+        {% for j in area.coordinates %}
+        	latlngs.push(new google.maps.LatLng({{j}}))
+        {% endfor %}	
+        
+        areaBoundary = new google.maps.Polygon({
+                paths: latlngs,
+                strokeColor: '#FFFF00',
+                strokeOpacity: 0.5,
+                strokeWeight: 2,
+                fillColor: '#000000',
+                fillOpacity: 0.15
+            });
+        areaBoundary.setMap(map);
+        
+        //<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
+		  
+		  $(window).resize(function () {
+	    	    var h = $(window).height(),
+	    	        offsetTop = 60; // Calculate the top offset
 
+	    	    $('#map-canvas').css('height', (h - offsetTop));
+	    	}).resize();
+	      
+    };
+    
+    google.maps.event.addDomListener(window, 'load', initialize);
+    </script>   
+{% endblock %}
 {% block content %}
-<h1>View Area</h1>
-	<div>
-		<h1>
+<div>
+		<p>
 			<ul class="breadcrumb">
 				<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span class="divider">/</span></li>
 				<li class="active"><a href="{{ area|area_url }}">{{ area }}</a></li>
 			</ul>
-		</h1>
-	</div>
-	
-	<div class="row">
-		<div class="span12">
-			<p>No reports for this area.</p>
-		</div>
+		</p>
 	</div>
 
+	<div class="container-fluid">
+  <div class="row-fluid">
+    <div class="span2">
+      <!--Sidebar content <div class="control-group"> -->
+     <h3><i>{{area.name}}</i></h3>
+	<div>
+	<h4>Description</h4>
+		<p>{{ area.description }}</p>
+	</div>
+	<div>
+	<h4>Boundary Coordinates</h4>
+	
+	{% for j in area.coordinates %}
+		<p class="divider">{{j}}</p>
+	{% endfor %}	
+	</div>
+	<div>
+	<h4>Map View</h4>
+	<p class="divider">"Center: {{area.map_center}}"</p>
+	<p class="divider">"Zoom: {{area.map_zoom}}"</p>
+	</div>
+	<div>
+	<h4>Reports</h4>
+	<p>No reports for this area.</p>
+	</div>
+		
+   </div>
+  <div class="span10">
+      <!--Body = Map content-->
+        <h3>Area of Interest: <i>{{ area.name }}</i></h3>
+  	  <div id="map-canvas"> </div>
+  </div>
+</div>
+</div>
 {% endblock %}

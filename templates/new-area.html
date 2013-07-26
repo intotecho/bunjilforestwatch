@@ -7,16 +7,16 @@
       body { height: 100%; margin: 0; padding: 0 }
       #map-canvas { height: 100% }
     </style>
-    <script 
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=true">
-    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=true"></script>
 	<script src="/static/js/polygon-outliner.js"></script>
+	<script src="/static/js/GeoJSON.js"></script>
+ 
     <script>
     
       function initialize() {
         var mapOptions = {
           center: new google.maps.LatLng(-34.397, 150.644),
-          zoom: 2,
+          zoom: 3,
           mapTypeId: google.maps.MapTypeId.HYBRID
         };
         var map = new google.maps.Map(document.getElementById("map-canvas"),
@@ -25,13 +25,63 @@
         var creator = new PolygonCreator(map);
           
       
-      //reset
-		 $('#reset').click(function(){ 
+        //function to add the polygon coordinates to the form data prior to submit. 
+		$(window).bind('submit',function(){
+			  //alert("submitting");
+			  if(null==creator.showData()){
+					alert('Please first mark out the new area');
+		 		}else{
+		 			
+		 			//convert (x,y)(x,y) to [x,y], [x,y]  > This coordstring is only printed briefly in the panel, so can be deleted.
+		 			var str="[" + creator.showData(); 
+		 			var n=str.replace(/\(/gi, "[");
+		 			var m=n.replace(/\)\[/gi,   "], [");
+		 			var coordstring=m.replace(/\)/gi, "]]");
+		 			$('#dataPanel').append(coordstring);
+		 				 					 			
+					//format polygon string returned by showData into an array of mypoints
+		 			boundaryPoints = Array();
+		 			var x = creator.showData();
+					while(x.length > 1) {
+					     var n = x.slice(x.indexOf("(")+1, x.indexOf(")") );
+					     var m = n.split(",");
+					     x=x.slice(x.indexOf(")")+1);
+					     p= [parseFloat(m[0]), parseFloat(m[1])];
+					     boundaryPoints.push(p);
+					}
+					
+					// get and send the viewing parameters of the map
+					var mapcenter = map.getCenter();
+					
+					
+					//c= parseFloat(mapcenter.lat()), parseFloat(mapcenter.lon());
+					
+					var mapzoom = map.getZoom();
+		 					 			
+		 			var newArea = { "type": "FeatureCollection",
+		 					 			 "features": [
+											{ "type": "Feature",
+    											"geometry":   {"type": "Point", "coordinates": [mapcenter.lat(), mapcenter.lng()]},
+    											"properties": {"featureName": "mapview", "zoom": mapzoom }
+    										},
+		 					                { "type": "Feature",
+		 					                 	"geometry":   {"type": "Polygon","coordinates": boundaryPoints},
+		 					                    "properties": {"featureName": "boundary"}
+		 					                 }
+		 					               ]
+		 					             }// End newArea
+		 			var toServer = JSON.stringify(newArea);
+		 			//alert(toServer);
+		 			document.getElementById("coordinates_id").value = toServer
+		 		}
+		});
+
+        //reset
+		$('#reset').click(function(){ 
 		 		creator.destroy();
 		 		creator=null;
 		 		creator=new PolygonCreator(map);
 		 });		 
-
 
 		 //show paths
 		 $('#showData').click(function(){ 
@@ -43,17 +93,8 @@
 		 		}
 		 });
 
-		 //show color
-		 $('#showColor').click(function(){ 
-		 		$('#dataPanel').empty();
-		 		if(null==creator.showData()){
-		 			$('#dataPanel').append('Please first create a polygon');
-		 		}else{
-		 				$('#dataPanel').append(creator.showColor());
-		 		}
-		 });
-		 
-	     //<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
+		
+		 //<!--resize div tip from https://github.com/twitter/bootstrap/issues/2475 -->
 		  
 		  $(window).resize(function () {
 	    	    var h = $(window).height(),
@@ -74,12 +115,15 @@
     <div class="span2">
       <!--Sidebar content <div class="control-group"> -->
       	
-		<form class="form-vertical" method="POST">
+		<form id="new_area_form" class="form-vertical" method="POST">
 				<fieldset>
 					<div>
 						<label class="control-label" for="name">Enter name for new Area</label>
 						<div class="controls">
 							<input id="name" name="name" type="text" style="width:150px"/>
+						</div>
+						<div class="controls">
+							<input id="coordinates_id" name="coordinates" type="hidden" value="undefined"/>
 						</div>
 					</div>
 					<div class="control-group">
@@ -96,6 +140,9 @@
 					</div>
 				</fieldset>
 		</form>	
+		<label class="control-label" for="description">Enter Description of this Area</label>
+		<textarea rows="5" cols="25" name="description" form="new_area_form">...</textarea>
+		
    </div>
   <div class="span10">
       <!--Body = Map content-->
@@ -104,7 +151,7 @@
 		<li>Left click and hold to drag the center of the map to your part of the earth.</li>
 		<li>Zoom till your area takes up most of the map.</li>
 		<li>Left click on the map to create markers, when last marker meets first marker, it will form a polygon.</li> 
-		<li>Right click on the polygon to change its color.</li>
+
   <div id="map-canvas"> </div>
   </div>
 </div>

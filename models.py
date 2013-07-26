@@ -164,6 +164,8 @@ class AreaOfInterest(db.Model):
 	description = db.StringProperty(multiline=True)
 	type = db.StringProperty()
 	coordinates = db.ListProperty(db.GeoPt, default=None)
+	map_center = db.GeoPtProperty(required=True, default=None);
+	map_zoom    = db.IntegerProperty(required=True, default=1)
 	bound = db.ListProperty(float, default=None)
 	timeStamp = db.DateProperty(auto_now_add=True)
 	altitudes = db.ListProperty(float, default=None)
@@ -174,8 +176,7 @@ class AreaOfInterest(db.Model):
 	#subscriber who created aoi
 	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
 	subscriber = db.UserProperty(verbose_name=None, auto_current_user=True, auto_current_user_add=False) #usually the creator
-	
-	
+		
 	#subscriber = db.ReferenceProperty(User)
 	#boundary	= db.GeoPtProperty(0,0, repeated=True)
 
