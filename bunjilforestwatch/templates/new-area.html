@@ -51,10 +51,8 @@
 					}
 					
 					// get and send the viewing parameters of the map
-					var mapcenter = map.getCenter();
-					
-					
-					//c= parseFloat(mapcenter.lat()), parseFloat(mapcenter.lon());
+					var unwrapped_mapcenter = map.getCenter(); // can exceed 90lat or 180 lon
+					var mapcenter = new google.maps.LatLng(unwrapped_mapcenter.lat(), unwrapped_mapcenter.lng()); //wrapped.
 					
 					var mapzoom = map.getZoom();
 		 					 			

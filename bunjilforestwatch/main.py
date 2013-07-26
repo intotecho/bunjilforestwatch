@@ -477,7 +477,8 @@ class NewAreaHandler(BaseHandler):
 				models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
 				self.add_message('success', 'Created a new area %s %s' %(area.name, area.description))
 								
-				self.redirect(webapp2.uri_for('new-area', username=self.session['user']['name'], area_name=area.name))
+				self.redirect(webapp2.uri_for('view-area', username=self.session['user']['name'], area_name=area.name))
+				
 				return
 
 		self.render('new-area.html')
