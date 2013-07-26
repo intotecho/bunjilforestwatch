@@ -6,7 +6,7 @@ geodatastore.adminPanel = function(id) {
   }
   this.selected_geometry_ = null;
   this.geometries_ = [];
-  this.mode_ = 'view';
+  this.mode_ = 'view'; 
   this.createMap_();
 };
 

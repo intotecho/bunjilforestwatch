@@ -10,8 +10,7 @@ import datetime
 import logging
 import re
 import os
-
-
+import geojson
 
 from django.utils import html
 from google.appengine.api import files
@@ -73,8 +72,8 @@ class BaseHandler(webapp2.RequestHandler):
 		if settings.GOOGLE_ANALYTICS:
 			context['google_analytics'] = settings.GOOGLE_ANALYTICS
 
-		logging.info('render template %s with context <<%s>>,', _template, context)
-		logging.info('messages %s', context['messages'])
+		#logging.info('BaseHandler: render template %s with context <<%s>>,', _template, context)
+		logging.info('BaseHandler: messages %s', context['messages'])
 		
 		rv = utils.render(_template, context)
 		
@@ -83,7 +82,7 @@ class BaseHandler(webapp2.RequestHandler):
 
 	def dispatch(self):
 		self.session_store = sessions.get_store(request=self.request)
-		logging.info('dispatch %s', self.request)
+		#logging.info('BaseHandler:dispatch %s', self.request)
 
 		try:
 			webapp2.RequestHandler.dispatch(self)
@@ -166,7 +165,7 @@ class MainPage(BaseHandler):
 			followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User')
 			journals = cache.get_journals(db.Key(self.session['user']['key']))
 			areas= cache.get_areas(db.Key(self.session['user']['key']))
-			logging.info( "areas = %s", areas)
+			#logging.info( "areas = %s", areas)
 			self.render('index-user.html', {
 				'activities': cache.get_activities_follower(self.session['user']['name']),
 				'journals': journals,
@@ -416,17 +415,45 @@ class NewAreaHandler(BaseHandler):
 	def get(self):
 		self.render('new-area.html')
 
-	def post(self, area_description, coordinates):
-	#def post(self):
+	def post(self):
 		name = self.request.get('name')
-
+		descr = self.request.get('description')
+		logging.info('NewAreaHandler name: %s description:%s', name, descr)
+		
+		coordinate_geojson_str = self.request.get('coordinates').decode('utf-8')
+		geojsonBoundary = geojson.loads(coordinate_geojson_str)
+		logging.info(geojsonBoundary)
+		coords = []
+		pts = []
+		center_pt = []
+		
+		for item in geojsonBoundary['features']:
+			if item['properties']['featureName']=="boundary":
+				pts=item['geometry']['coordinates']
+				#unicode_pts = pts #.decode('utf-8')
+				#logging.info("pts: ", pts)
+		
+				for lat,lon in pts:
+					gp = db.GeoPt(float(lat), float(lon))
+					#print("lat:", lat,"lon:", lon)
+					coords.append(gp)
+				coords.append(coords[0]) # for a polygon, last point must also be the first point.
+			if item['properties']['featureName']=="mapview": # get the view settings to display the area.
+				zoom=item['properties']['zoom']
+				center_pt=item['geometry']['coordinates']
+				logging.info("zoom: %s, center_pt: %s, typeof(center_pt) %s", zoom, center_pt, type(center_pt) )
+				center = db.GeoPt(float(center_pt[0]), float(center_pt[1]))
+				#be good to add a bounding box too.
+				
 		if len(self.session['areas']) >= models.AreaOfInterest.MAX_AREAS:
 			self.add_message('error', 'Only %i areas allowed.' %models.AreaOfInterest.MAX_AREAS)
 		elif not name:
-			self.add_message('error', 'Your area of interest needs a short name.')
+			self.add_message('error', 'Your area of interest needs a short and unique name.')
 		else:
-			#journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
-			area = models.AreaOfInterest(parent=db.Key(self.session['user']['key']), name=name, description=description, coordiantes=coordinates)
+			
+			area = models.AreaOfInterest(parent=db.Key(self.session['user']['key']),
+					 name=name, description=descr, coordinates=coords, map_center = center, map_zoom = zoom )
+						
 			for area_url, area_name in self.session['areas']:
 				if area.name == area_name:
 					self.add_message('error', 'There is already a protected area called %s ' %name)
@@ -448,7 +475,8 @@ class NewAreaHandler(BaseHandler):
 				counters.increment(counters.COUNTER_AREAS)
 				
 				models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
-				self.add_message('success', 'Created a new area %s. %s' %name, description)
+				self.add_message('success', 'Created a new area %s %s' %(area.name, area.description))
+								
 				self.redirect(webapp2.uri_for('new-area', username=self.session['user']['name'], area_name=area.name))
 				return
 
@@ -1615,7 +1643,7 @@ app = webapp2.WSGIApplication([
 
 	# google site verification
 	webapp2.Route(r'/%s.html' %settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
-	
+	# problem with the routing area_name means we cant create journals - area takes precendence.
 	webapp2.Route(r'<username><area_name>', handler=ViewArea, name='view-area'),
 	webapp2.Route(r'<username><area_name>/new', handler=NewEntryHandler, name='new-obstask'),
 

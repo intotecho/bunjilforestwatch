@@ -12,3 +12,5 @@ ee/*
 oauth2client/*
 Servers/
 .metadata/*
+.svn/*
+geodatastore/.svn/*
