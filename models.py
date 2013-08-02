@@ -141,16 +141,16 @@ class UserFollowingIndex(db.Model):
 
 
 class Geometry(db.Model):
-  name = db.StringProperty()
-  description = db.StringProperty(multiline=True)
-  type = db.StringProperty()
-  dateModified = db.DateProperty(auto_now=True)
-  coordinates = db.ListProperty(db.GeoPt, default=None)
-  bound = db.ListProperty(float, default=None)
-  timeStamp = db.DateProperty(auto_now_add=True)
-  altitudes = db.ListProperty(float, default=None)
-  userId = db.StringProperty(default=None)
-  tags = db.ListProperty(unicode,default=None)
+	name = db.StringProperty()
+	description = db.StringProperty(multiline=True)
+	type = db.StringProperty()
+	dateModified = db.DateProperty(auto_now=True)
+	coordinates = db.ListProperty(db.GeoPt, default=None)
+	bound = db.ListProperty(float, default=None)
+	timeStamp = db.DateProperty(auto_now_add=True)
+	altitudes = db.ListProperty(float, default=None)
+	userId = db.StringProperty(default=None)
+	tags = db.ListProperty(unicode,default=None)
 
 class AreaOfInterest(db.Model):
 
