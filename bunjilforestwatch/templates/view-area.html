@@ -13,9 +13,9 @@
 	
 	<script>
     
+	
       function initialize() {
         var mapOptions = {
-          //center: new google.maps.LatLng(-34.397, 150.644),
           center: new google.maps.LatLng({{area.map_center}}),
           zoom: {{ area.map_zoom }},
           mapTypeId: google.maps.MapTypeId.HYBRID
@@ -42,7 +42,30 @@
         
         //<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
 		  
-		  $(window).resize(function () {
+   		$('#latest_img').click(function(){ 
+	 			var pathname = window.location.pathname + '/overlay';
+	 			//alert (pathname);
+	 			$.get(pathname, function(data, status){
+	 			    alert("Data: " + data + "\nStatus: " + status);
+	 			  });
+	 	});
+  		
+   		var pts;
+
+   		/*quickhull
+   		function qhPlotPoints() {
+   		    ctx = document.getElementById('qh_demo').getContext('2d');
+   		    ctx.clearRect(0,0,200,200);
+   		    ctx.fillStyle = 'rgb(0,0,0)';
+   		    pts = getRandomPoints(250,200,200);
+   		    for (var idx in pts) {
+   		        var pt = pts[idx];
+   		        ctx.fillRect(pt[0],pt[1],2,2);
+   		    }
+   		}
+   		*/
+   		
+  		$(window).resize(function () {
 	    	    var h = $(window).height(),
 	    	        offsetTop = 60; // Calculate the top offset
 
@@ -70,12 +93,15 @@
       <!--Sidebar content <div class="control-group"> -->
      <h3><i>{{area.name}}</i></h3>
 	<div>
+	<input id="latest_img"  type="button" class="btn btn-primary" value="Get Latest Imagery"/>
+	</div>
+	<div>
 	<h4>Description</h4>
 		<p>{{ area.description }}</p>
 	</div>
 	<div>
 	<h4>Boundary Coordinates</h4>
-	
+				
 	{% for j in area.coordinates %}
 		<p class="divider">{{j}}</p>
 	{% endfor %}	
@@ -93,9 +119,11 @@
    </div>
   <div class="span10">
       <!--Body = Map content-->
-        <h3>Area of Interest: <i>{{ area.name }}</i></h3>
-  	  <div id="map-canvas"> </div>
+        <h3>Your area of interest:  <i>{{ area.name }}</i></h3>
+       	<div id="map-canvas"> </div>
   </div>
 </div>
 </div>
 {% endblock %}
+
+

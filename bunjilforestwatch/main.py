@@ -475,13 +475,13 @@ class NewAreaHandler(BaseHandler):
 				counters.increment(counters.COUNTER_AREAS)
 				
 				models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
-				self.add_message('success', 'Created a new area %s %s' %(area.name, area.description))
+				self.add_message('success', 'Created your new area of interest: %s' %(area.name))
 								
 				self.redirect(webapp2.uri_for('view-area', username=self.session['user']['name'], area_name=area.name))
 				
 				return
 
-		self.render('new-area.html')
+		####self.render('new-area.html')
 
 
 class NewJournal(BaseHandler):
@@ -530,8 +530,8 @@ class ViewArea(BaseHandler):
 		
 		if not area or username != self.session['user']['name']:
 			logging.info('ViewArea not or ')
-			ViewJournal.get(self, username, area_name) # need to tidy up routing so Journals and Areas can work.
-			#self.error(404)
+			#ViewJournal.get(self, username, area_name) # need to tidy up routing so Journals and Areas can work.
+			self.error(404)
 			return
 
 		if not area:
@@ -550,7 +550,36 @@ class ViewArea(BaseHandler):
 				
 			})
 
-
+class PlotAreaOverlay(BaseHandler):
+	
+	def get(self, username, area_name):
+		area = cache.get_area(username, area_name)
+		if not area or username != self.session['user']['name']:
+			logging.info('PlotAreaOverlay - bad area returned %s, username %s, %s', area, username, area_name)
+			self.error(404)
+			return
+		
+		logging.info('PlotAreaOverlay area_name %s %s', area_name, type(area))
+		eeservice.initEarthEngineService()
+		poly = to_dict(area)
+		path = eeservice.testGetImage(poly);
+		self.response.write(path)
+		
+def to_dict(area): #fn not used
+	output = {}
+	ar = []
+	x=0
+	for geopt in area.coordinates:
+		#value = getattr(model, key)
+		logging.info('to_dict: %s', geopt )
+		output[x] = {'lat': geopt.lat, 'lon': geopt.lon}
+		ar.append([geopt.lat, geopt.lon])
+		x = x+1
+	logging.info('to_dict output: %s %s', ar, output)
+	p = json.dumps(ar)
+	
+	return p
+			
 class ViewJournal(BaseHandler):
 	def get(self, username, journal_name):
 		page = int(self.request.get('page', 1))
@@ -1379,8 +1408,8 @@ class SocialPost(BaseHandler):
 		network = self.request.get('network')
 		username = self.request.get('username')
 
-		MESSAGE = 'Wrote a new entry on journalr.'
-		NAME = 'my journalr account'
+		MESSAGE = 'Wrote a new entry on Bunjil.'
+		NAME = 'my observations'
 		link = utils.absolute_uri('user', username=username)
 
 		user = cache.get_by_key(entry_key.parent().parent())
@@ -1659,6 +1688,7 @@ app = webapp2.WSGIApplication([
 	# this section must be last, since the regexes below will match one and two -level URLs
 	webapp2.Route(r'/<username>/<area_name>', handler=ViewArea, name='view-area'),
 	webapp2.Route(r'/<username>/<area_name>/new', handler=NewEntryHandler, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name>/overlay', handler=PlotAreaOverlay, name='new-obstask'),
 
 	webapp2.Route(r'/<username>/<journal_name>', handler=ViewJournal, name='view-journal'),
 	webapp2.Route(r'/<username>/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
