@@ -437,7 +437,7 @@ class NewAreaHandler(BaseHandler):
 					gp = db.GeoPt(float(lat), float(lon))
 					#print("lat:", lat,"lon:", lon)
 					coords.append(gp)
-				coords.append(coords[0]) # for a polygon, last point must also be the first point.
+				#coords.append(coords[0]) # for a polygon, last point must also be the first point.
 			if item['properties']['featureName']=="mapview": # get the view settings to display the area.
 				zoom=item['properties']['zoom']
 				center_pt=item['geometry']['coordinates']
@@ -550,35 +550,29 @@ class ViewArea(BaseHandler):
 				
 			})
 
-class PlotAreaOverlay(BaseHandler):
-	
+class PlotAreaOverlayHandler(BaseHandler):
+	#This handler responds to Ajax request, hence it returns a response.write()
 	def get(self, username, area_name):
 		area = cache.get_area(username, area_name)
 		if not area or username != self.session['user']['name']:
-			logging.info('PlotAreaOverlay - bad area returned %s, username %s, %s', area, username, area_name)
+			logging.info('PlotAreaOverlayHandler - bad area returned %s, username %s, %s', area, username, area_name)
 			self.error(404)
 			return
-		
-		logging.info('PlotAreaOverlay area_name %s %s', area_name, type(area))
+		logging.debug('PlotAreaOverlayHandler area_name %s %s', area_name, type(area))
 		eeservice.initEarthEngineService()
-		poly = to_dict(area)
-		path = eeservice.testGetImage(poly);
+		poly = []
+		for geopt in area.coordinates:
+			poly.append([geopt.lon, geopt.lat])
+		#poly = to_dict(area)
+		path = eeservice.getL8SharpOverlay(poly)
+		self.add_message('success', 'New data: %s' %(path))
 		self.response.write(path)
-		
+   
 def to_dict(area): #fn not used
-	output = {}
 	ar = []
-	x=0
 	for geopt in area.coordinates:
-		#value = getattr(model, key)
-		logging.info('to_dict: %s', geopt )
-		output[x] = {'lat': geopt.lat, 'lon': geopt.lon}
-		ar.append([geopt.lat, geopt.lon])
-		x = x+1
-	logging.info('to_dict output: %s %s', ar, output)
-	p = json.dumps(ar)
-	
-	return p
+		ar.append([geopt.lon, geopt.lat])
+	return ar
 			
 class ViewJournal(BaseHandler):
 	def get(self, username, journal_name):
@@ -1688,7 +1682,7 @@ app = webapp2.WSGIApplication([
 	# this section must be last, since the regexes below will match one and two -level URLs
 	webapp2.Route(r'/<username>/<area_name>', handler=ViewArea, name='view-area'),
 	webapp2.Route(r'/<username>/<area_name>/new', handler=NewEntryHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/<area_name>/overlay', handler=PlotAreaOverlay, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name>/overlay', handler=PlotAreaOverlayHandler, name='new-obstask'),
 
 	webapp2.Route(r'/<username>/<journal_name>', handler=ViewJournal, name='view-journal'),
 	webapp2.Route(r'/<username>/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
