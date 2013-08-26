@@ -1,6 +1,8 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
 <html>
 <head>
+
 	<meta charset="utf-8">
 	<title>bunjilae</title>
 	<meta name="description" content="community based forest monitoring">
@@ -13,7 +15,6 @@
 	<script>window.jQuery || document.write('<script src="/static/js/jquery.js"><\/script>')</script> <!-- backup? -->
 
 	<script type="text/javascript" src="/static/js/bootstrap.min.js"></script>
-	
 {% block head %}
 
 {% endblock %}
@@ -26,12 +27,17 @@
 				<a href="/" class="brand">Bunjil Forest Watch</a>
 				<ul class="nav">
 					<li{% if active == "index" or active == "index-user" %} class="active"{% endif %}><a href="{{ "main"|url }}">home</a></li>
-					<li{% if active == "observatory" %} class="active"{% endif %}><a href="{{ "observatory"|url }}">observatory</a></li>
-					<li{% if active == "engine" %} class="active"{% endif %}><a href="{{ "engine"|url }}">engine</a></li>
-					<li{% if active == "blog" or active == "blog-entry" %} class="active"{% endif %}><a href="{{ "blog"|url }}">blog</a></li>
+					<li{% if active == "index" or active == "index-user" %} class="active"{% endif %}><a href="http://bunjilforestwatch.wordpress.com/">news</a></li>
+					
+				{% if user %}
+					
 <!--  				<li{% if active == "security" %} class="active"{% endif %}><a href="{{ "security"|url }}">security</a></li> -->
 <!-- 				<li{% if active == "stats" %} class="active"{% endif %}><a href="{{ "stats"|url }}">stats</a></li> -->
-					<li{% if active == "about" %} class="active"{% endif %}><a href="{{ "about"|url }}">about</a></li>
+					<li{% if active == "blog" or active == "blog-entry" %} class="active"{% endif %}><a href="{{ "blog"|url }}">my blog</a></li>
+					<li{% if active == "observatory" %} class="active"{% endif %}><a href="{{ "observatory"|url }}">earth</a></li>
+					<li{% if active == "engine" %} class="active"{% endif %}><a href="{{ "engine"|url }}">engine</a></li>
+				{% endif %}
+					<li{% if active == "about" %} class="active"{% endif %}><a href="{{ "about"|url }}">about</a></li>			
 				</ul>
 				<ul class="nav pull-right">
 					{% if user %}
@@ -76,9 +82,9 @@
 							{% if login_source == "google" %}<li><a href="{{ "logout-google"|url }}">switch account</a></li>{% endif %}
 						</ul>
 					</li>
-					{% else %}
+					{% else %} 
 					<li class="dropdown">
-						<a href="#" class="dropdown-toggle" data-toggle="dropdown">login / signup <b class="caret"></b></a>
+						<a href="#" class="dropdown-toggle" data-toggle="dropdown">login<b class="caret"></b></a>
 						<ul class="dropdown-menu">
 							<li><a href="{{ "login-google"|url }}">with google</a></li>
 							<li><a href="{{ "login-facebook"|url }}">with facebook</a></li>

@@ -12,9 +12,7 @@
     <script src="/static/js/polygon-outliner.js"></script>
 	
 	<script>
-    
-	
-      function initialize() {
+       function initialize() {
         var mapOptions = {
           center: new google.maps.LatLng({{area.map_center}}),
           zoom: {{ area.map_zoom }},
@@ -24,7 +22,38 @@
         var map = new google.maps.Map(document.getElementById("map-canvas"),
             mapOptions);
      
-        var latlngs = [];
+        var infoWindow = new google.maps.InfoWindow();
+
+        // Initialize the Landsat Grid layer
+        var gridLayer = new google.maps.FusionTablesLayer({
+          query: {
+            select: 'geometry',
+            from: '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8' //'196LqydLhOq1Wl9612hNhcGoh4vUmRjTaiFvDhA'
+          },
+          styles: [{
+              polygonOptions: {
+                fillColor: '#00FF00',
+                fillOpacity: 0.05,
+                lineColour: '#FF00FF'
+              }
+            }],
+          map: map,
+          suppressInfoWindows: true
+        });
+        google.maps.event.addListener(gridLayer, 'click', function(e) {
+          windowControl(e, infoWindow, map);
+        });
+
+      // Open the info window at the clicked location
+      function windowControl(e, infoWindow, map) {
+        infoWindow.setOptions({
+          content: e.infoWindowHtml,
+          position: e.latLng,
+          pixelOffset: e.pixelOffset,
+        });
+        infoWindow.open(map);
+      }
+         var latlngs = [];
           
         {% for j in area.coordinates %}
         	latlngs.push(new google.maps.LatLng({{j}}))
@@ -46,24 +75,17 @@
 	 			var pathname = window.location.pathname + '/overlay';
 	 			//alert (pathname);
 	 			$.get(pathname, function(data, status){
-	 			    alert("Data: " + data + "\nStatus: " + status);
+	 				$('#observations').empty();
+	 				if(status == 'success') {
+	 					$('#observations').append("New: \n" + data);
+	 				}	
+	 				else {
+	 					alert("Failed: " + status);
+	 				}	
 	 			  });
 	 	});
   		
    		var pts;
-
-   		/*quickhull
-   		function qhPlotPoints() {
-   		    ctx = document.getElementById('qh_demo').getContext('2d');
-   		    ctx.clearRect(0,0,200,200);
-   		    ctx.fillStyle = 'rgb(0,0,0)';
-   		    pts = getRandomPoints(250,200,200);
-   		    for (var idx in pts) {
-   		        var pt = pts[idx];
-   		        ctx.fillRect(pt[0],pt[1],2,2);
-   		    }
-   		}
-   		*/
    		
   		$(window).resize(function () {
 	    	    var h = $(window).height(),
@@ -74,7 +96,14 @@
 	      
     };
     
+    
+    
+    
     google.maps.event.addDomListener(window, 'load', initialize);
+    
+    </script>
+    
+    
     </script>   
 {% endblock %}
 {% block content %}
@@ -112,8 +141,12 @@
 	<p class="divider">"Zoom: {{area.map_zoom}}"</p>
 	</div>
 	<div>
+	<h4>Observations</h4>
+	<p id="observations">No images for this area.</p>
+	</div>
+	<div>
 	<h4>Reports</h4>
-	<p>No reports for this area.</p>
+	<p id="reports">No reports for this area.</p>
 	</div>
 		
    </div>
