@@ -1,60 +1,186 @@
-{% extends "base.html" %}
-{% block head %}
+{% extends "base.html" %} {% block head %}
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-    <style type="text/css">
-      html { height: 100% }
-      body { height: 100%; margin: 0; padding: 0 }
-      #map-canvas { height: 100% }
-    </style>
-    <script 
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=true">
-    </script>
-    <script src="/static/js/polygon-outliner.js"></script>
+<style type="text/css">
+html {
+	height: 100%
+}
+
+body {
+	height: 100%;
+	margin: 10;
+	padding: 10
+}
+
+#map-canvas {
+	height: 100%
+}
+</style>
+
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=true"> </script>
+<script type="text/javascript" src="/static/js/ExtDraggableObject.js"></script>	
+<script type="text/javascript" src="/static/js/CustomTileOverlay.js"></script>
+<script type="text/javascript" src="/static/js/polygon-outliner.js"></script>
+
+<script>
+var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
+var map, overlay;
+var map_id;
+
+function createOpacityControl(map, opacity) {
+	var sliderImageUrl = "/static/img/opacity-slider3d7.png";
 	
-	<script>
-       function initialize() {
-        var mapOptions = {
-          center: new google.maps.LatLng({{area.map_center}}),
-          zoom: {{ area.map_zoom }},
-          mapTypeId: google.maps.MapTypeId.HYBRID
-        };
+	// Create main div to hold the control.
+	var opacityDiv = document.createElement('DIV');
+	opacityDiv.setAttribute("style", "topmargin=0;margin:5px;overflow-x:hidden;overflow-y:hidden;background:url(" + sliderImageUrl + ") no-repeat;width:71px;height:42px;cursor:pointer;");
+	
+	// Create knob
+	var opacityKnobDiv = document.createElement('DIV');
+	opacityKnobDiv.setAttribute("style", "padding:0;margin:0;overflow-x:hidden;overflow-y:hidden;background:url(" + sliderImageUrl + ") no-repeat -71px 0;width:14px;height:21px;");
+	opacityDiv.appendChild(opacityKnobDiv);
+
+	var opacityCtrlKnob = new ExtDraggableObject(opacityKnobDiv, {
+		restrictY: true,
+		container: opacityDiv
+	});
+
+	////Create Label (CG Mods) 
+	var opacityLabelDiv = document.createElement('DIV');
+	opacityLabelDiv.setAttribute("style", "text-align:bottom;position:relative;left:0px;bottom:0px;width:71px;height:42px;");
+	opacityLabelDiv.setAttribute('onselectstart', "return false");
+	//opacityLabelDiv.setAttribute("disabled", "disabled");
+	var opacityLabelText = document.createTextNode("OverlayName");
+	//opacityLabelText.setAttribute('onselectstart', "return false");
+	opacityLabelDiv.appendChild(opacityLabelText);
+	
+	opacityDiv.appendChild(opacityLabelDiv);
+	
+	
+	google.maps.event.addListener(opacityCtrlKnob, "dragend", function () {
+		setOpacity(opacityCtrlKnob.valueX());
+	});
+
+	google.maps.event.addDomListener(opacityDiv, "click", function (e) {
+		var left = findPosLeft(this);
+		var x = e.pageX - left - 5; // - 5 as we're using a margin of 5px on the div
+		opacityCtrlKnob.setValueX(x);
+		setOpacity(x);
+	});
+
+	map.controls[google.maps.ControlPosition.TOP_RIGHT].push(opacityDiv);
+	
+
+	//map.controls[google.maps.ControlPosition.TOP_RIGHT].name = 'NewName';
+	
+	// Set initial value
+	var initialValue = OPACITY_MAX_PIXELS / (100 / opacity);
+	opacityCtrlKnob.setValueX(initialValue);
+	setOpacity(initialValue);
+}
+
+function setOpacity(pixelX) {
+	// Range = 0 to OPACITY_MAX_PIXELS
+	var value = (100 / OPACITY_MAX_PIXELS) * pixelX;
+	if (value < 0) value = 0;
+	if (value == 0) {
+		if (overlay.visible == true) {
+			overlay.hide();
+		}
+	}
+	else {
+		overlay.setOpacity(value);
+		if (overlay.visible == false) {
+			overlay.show();
+		}
+	}
+}
+
+function findPosLeft(obj) { //for slider
+	var curleft = 0;
+	if (obj.offsetParent) {
+		do {
+			curleft += obj.offsetLeft;
+		} while (obj = obj.offsetParent);
+		return curleft;
+	}
+	return undefined;
+}
+
+//google.maps.event.addDomListener(window, 'load', init);
+
+var initialOpacity = 100;
+
+function initialize() {
         
-        var map = new google.maps.Map(document.getElementById("map-canvas"),
+        var mapOptions = {
+				//zoom: 13,
+				zoom: {{ area.map_zoom }},
+				center: new google.maps.LatLng({{area.map_center}}),
+		        //center: new google.maps.LatLng(-42.8598, 171.8043),
+				mapTypeId: google.maps.MapTypeId.HYBRID,
+				panControl:true,
+				zoomControl:true,
+				mapTypeControl:true,
+				scaleControl:true,
+				streetViewControl:false,
+				overviewMapControl:false,
+				rotateControl:false
+			}
+        
+        map = new google.maps.Map(document.getElementById("map-canvas"),
             mapOptions);
-     
-        var infoWindow = new google.maps.InfoWindow();
+        
+        //NZ TOPO LAYER WITH SLIDER
+		overlay = new CustomTileOverlay(map, initialOpacity);
+		//overlay.show();
+
+		google.maps.event.addListener(map, 'tilesloaded', function () {
+			overlay.deleteHiddenTiles(map.getZoom());
+		});
+
+		// Add opacity control and set initial value
+		createOpacityControl(map, initialOpacity);
+        
+        var infoWindow = new google.maps.InfoWindow();	
 
         // Initialize the Landsat Grid layer
-        var gridLayer = new google.maps.FusionTablesLayer({
-          query: {
-            select: 'geometry',
-            from: '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8' //'196LqydLhOq1Wl9612hNhcGoh4vUmRjTaiFvDhA'
-          },
-          styles: [{
-              polygonOptions: {
-                fillColor: '#00FF00',
-                fillOpacity: 0.05,
-                lineColour: '#FF00FF'
-              }
-            }],
-          map: map,
-          suppressInfoWindows: true
-        });
-        google.maps.event.addListener(gridLayer, 'click', function(e) {
-          windowControl(e, infoWindow, map);
-        });
+        
+//         var gridLayer = new google.maps.FusionTablesLayer({
+//           query: {
+//             select: 'geometry',
+//             from: '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8'
+//           },
+//           styles: [{
+//               polygonOptions: {
+//                 fillColor: '#00FF00',
+//                 fillOpacity: 0.04,
+//                 lineColour: '#FF00FF'
+//               }
+//             }],
+//           map: map,
 
-      // Open the info window at the clicked location
-      function windowControl(e, infoWindow, map) {
-        infoWindow.setOptions({
-          content: e.infoWindowHtml,
-          position: e.latLng,
-          pixelOffset: e.pixelOffset,
-        });
-        infoWindow.open(map);
-      }
-         var latlngs = [];
-          
+//           suppressInfoWindows: true
+//         });
+//         google.maps.event.addListener(gridLayer, 'click', function(e) {
+//           	windowControl(e, infoWindow, map);
+//         });
+//         google.maps.event.addListener(gridLayer, 'zoom', function(e) { //needs work
+//           	if e.zoom < 4 gridLayer.hidden();
+//         });
+
+
+      	// Open the info window at the clicked location
+      	function windowControl(e, infoWindow, map) {
+      		console.log("windowControl: ", e.infoWindowHtml);
+        	infoWindow.setOptions({
+          		content: e.infoWindowHtml,
+          		
+          		position: e.latLng,
+          		pixelOffset: e.pixelOffset,
+        	});
+        	infoWindow.open(map);
+      	}
+      	
+        var latlngs = [];
         {% for j in area.coordinates %}
         	latlngs.push(new google.maps.LatLng({{j}}))
         {% endfor %}	
@@ -69,93 +195,102 @@
             });
         areaBoundary.setMap(map);
         
-        //<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
-		  
+        
+        
    		$('#latest_img').click(function(){ 
-	 			var pathname = window.location.pathname + '/overlay';
-	 			//alert (pathname);
-	 			$.get(pathname, function(data, status){
-	 				$('#observations').empty();
-	 				if(status == 'success') {
-	 					$('#observations').append("New: \n" + data);
-	 				}	
-	 				else {
-	 					alert("Failed: " + status);
-	 				}	
-	 			  });
-	 	});
-  		
-   		var pts;
+	 		var pathname = window.location.pathname + '/overlay';
+	 		$('#observations').empty();
+	 		$('#observations').append("Getting Sat Data...");//could be animated gif from http://www.ajaxload.info/
+ 			$('#latest_img').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>')
+	 		$('#observations').prepend('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>')
+	 		$.get(pathname) //, { name: "not used", time: "notused" }
+	 		.done(function(data){
+	 			mapobj = jQuery.parseJSON(data);
+	 			overlay.mapid = mapobj.mapid
+	 			overlay.token  = mapobj.token
+	 			$('#observations').empty();
+	 			$('#observations').append(overlay.mapid, overlay.token); 
+	 			$('#latest_img').append(); 
+	 			overlay.show();
+	 		})
+	 		.error(function( jqxhr, textStatus, error ) {
+	 	          var err = textStatus + ', ' + error;
+	 	          console.log( "Request Failed: " + err);
+	 	    });
+   		});
    		
-  		$(window).resize(function () {
+   		$(window).resize(function () {
+   				//<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
 	    	    var h = $(window).height(),
 	    	        offsetTop = 60; // Calculate the top offset
-
 	    	    $('#map-canvas').css('height', (h - offsetTop));
 	    	}).resize();
-	      
-    };
-    
-    
-    
+   		
+	};//initialize
     
     google.maps.event.addDomListener(window, 'load', initialize);
     
     </script>
-    
-    
-    </script>   
-{% endblock %}
-{% block content %}
-<div>
-		<p>
-			<ul class="breadcrumb">
-				<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span class="divider">/</span></li>
-				<li class="active"><a href="{{ area|area_url }}">{{ area }}</a></li>
-			</ul>
-		</p>
-	</div>
 
-	<div class="container-fluid">
-  <div class="row-fluid">
-    <div class="span2">
-      <!--Sidebar content <div class="control-group"> -->
-     <h3><i>{{area.name}}</i></h3>
-	<div>
-	<input id="latest_img"  type="button" class="btn btn-primary" value="Get Latest Imagery"/>
-	</div>
-	<div>
-	<h4>Description</h4>
-		<p>{{ area.description }}</p>
-	</div>
-	<div>
-	<h4>Boundary Coordinates</h4>
-				
-	{% for j in area.coordinates %}
-		<p class="divider">{{j}}</p>
-	{% endfor %}	
-	</div>
-	<div>
-	<h4>Map View</h4>
-	<p class="divider">"Center: {{area.map_center}}"</p>
-	<p class="divider">"Zoom: {{area.map_zoom}}"</p>
-	</div>
-	<div>
-	<h4>Observations</h4>
-	<p id="observations">No images for this area.</p>
-	</div>
-	<div>
-	<h4>Reports</h4>
-	<p id="reports">No reports for this area.</p>
-	</div>
-		
-   </div>
-  <div class="span10">
-      <!--Body = Map content-->
-        <h3>Your area of interest:  <i>{{ area.name }}</i></h3>
-       	<div id="map-canvas"> </div>
-  </div>
+
+</script>
+{% endblock %} {% block content %}
+<div>
+	<p>
+	<ul class="breadcrumb">
+		<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span
+			class="divider">/</span></li>
+		<li class="active"><a href="{{ area|area_url }}">{{ area }}</a></li>
+	</ul>
+	</p>
 </div>
+
+<div class="container-fluid">
+	<div class="row-fluid">
+		<div class="span2">
+			<!--Sidebar content <div class="control-group"> -->
+			<h3>
+				<i>{{area.name}}</i>
+			</h3>
+			<div>
+				<input id="latest_img" type="button" class="btn btn-primary"
+					value="Get Latest Imagery" />
+	 
+			</div>
+			<div>
+				<h4>Description</h4>
+				<p>{{ area.description }}</p>
+			</div>
+			<div>
+				<h4>Boundary Coordinates</h4>
+
+				{% for j in area.coordinates %}
+				<p class="divider">{{j}}</p>
+				{% endfor %}
+			</div>
+			<div>
+				<h4>Map View</h4>
+				<p class="divider">"Center: {{area.map_center}}"</p>
+				<p class="divider">"Zoom: {{area.map_zoom}}"</p>
+			</div>
+			<div>
+				<h4>Observations</h4>
+				<p id="observations">No images for this area.</p>
+			</div>
+			<div>
+				<h4>Reports</h4>
+				<p id="reports">No reports for this area.</p>
+			</div>
+
+		</div>
+		<div class="span10">
+			<!--Body = Map content-->
+			<h3>
+				Your area of interest: <i>{{ area.name }}</i>
+			</h3>
+			<div id="map-canvas"></div>
+		</div>
+	</div>
 </div>
 {% endblock %}
 

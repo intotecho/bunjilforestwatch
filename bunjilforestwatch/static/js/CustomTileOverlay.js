@@ -16,8 +16,11 @@ CustomTileOverlay = function (map, opacity) {
 	
 	this.visible = false;
 	this.initialized = false;
-
+	
 	this.self = this;
+	this.mapid = null;
+	this.token = null;
+	
 }
 
 CustomTileOverlay.prototype = new google.maps.OverlayView();
@@ -107,16 +110,38 @@ CustomTileOverlay.prototype.getTileUrlCoord = function (coord, zoom) {
 	return new google.maps.Point(x, y);
 }
 
-// Replace with logic for your own tile set
+
 CustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
-	// Restricting tiles to the small tile set we have in the example
-	if (zoom == 13 && coord.x >= 8004 && coord.x <= 8006 && coord.y >= 3013 && coord.y <= 3015) {
-		return "tiles/" + zoom + "-" + coord.x + "-" + coord.y + ".png";
+	//Modified to support Earth Engine tiles.
+	//from mapclient.py:  return '%s/map/%s/%d/%d/%d?token=%s' % (_tile_base_url, mapid['mapid'], z, x, y, mapid['token'])
+	// https://earthengine.googleapis.com//map/0d5c4ebb14ddafdb264ca2bb76fd41c4/11/171/-42?token=4111ca3429e7173813dfeab801764e85
+	BASE_URL = 'https://earthengine.googleapis.com';
+
+	if(this.mapid)
+	{
+		url = (BASE_URL + '//map/' + this.mapid + '/' + zoom + '/' + coord.x + '/' + coord.y +  '?token=' + this.token);
+		console.log(url);
+		return url;
 	}
 	else {
-		return "tiles/blanktile.png";
+		console.log('No mapid, blank tile returned.');
+		return "/static/tiles/nztopo/blanktile.png";
 	}
 }
+
+/*
+OriginalCustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
+	// Restricting tiles to the small tile set we have in the example
+	
+	//if (zoom <= 20 && zoom >= 8 && coord.x >= 8004 && coord.x <= 8006 && coord.y >= 3013 && coord.y <= 3015) {
+	if (coord.x >= 8004 && coord.x <= 8006 && coord.y >= 3013 && coord.y <= 3015) {
+		return "/static/tiles/nztopo/" + zoom + "-" + coord.x + "-" + coord.y + ".png";
+	}
+	else {
+		return "/static/tiles/nztopo/blanktile.png";
+	}
+}
+*/
 
 CustomTileOverlay.prototype.initialize = function () {
 	if (this.initialized) {
@@ -125,6 +150,7 @@ CustomTileOverlay.prototype.initialize = function () {
 	var self = this.self;
 	this.map.overlayMapTypes.insertAt(0, self);
 	this.initialized = true;
+	this.map_id = null;
 }
 
 CustomTileOverlay.prototype.hide = function () {
