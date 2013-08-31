@@ -39,12 +39,6 @@ def getLatestLandsatImage(boundary_polygon, image_collection):
     boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
     park_boundary = ee.FeatureCollection(boundary_feature)
     info = park_boundary.getInfo()
-    #logging.debug('boundary_coords= %s', info['features'][0]['geometry']['coordinates'])
-    #TEST WITH FUSION TABLE
-    #park_boundary_ft = ee.FeatureCollection('ft:1urlhdLW2pA66f2xS0yzmO-LaESYdclD7-17beg0')
-    #info_ft = park_boundary_ft.getInfo()
-    #logging.info('boundary_coords_ft= %s', info_ft['features'][0]['geometry']['coordinates'])
-     
     end_date   = datetime.datetime.today()
     secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
     start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear )
@@ -69,7 +63,7 @@ def getLatestLandsatImage(boundary_polygon, image_collection):
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
     logging.info('getLatestLandsatImage id: %s, date:%s', id, date_str)
-    return latest_image.clip(park_boundary)
+    return latest_image  #.clip(park_boundary)
 
 def getLatestLandsat7HSVUpres(boundary_polygon):
     #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
@@ -246,6 +240,50 @@ def getL8SharpOverlay(coords):
     path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
     return path
 
+def getL8SharpImage(coords):
+    image = getLatestLandsatImage(coords, ee.ImageCollection('LANDSAT/LC8_L1T_TOA'))
+    sharpimage = SharpenLandsat8HSVUpres(image)
+    red = 'red'
+    green = 'green'
+    blue = 'blue'    
+    byteimage = sharpimage.multiply(255).byte()
+    #path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
+    return byteimage
+
+def getMapId(image, red, green, blue):
+
+    crs = image.getInfo()['bands'][0]['crs']
+    p05 = []
+    p95 = []
+    p05 = getPercentile(image, 5, crs)
+    p95 = getPercentile(image, 95, crs)
+    min = str(p05[red]) + ', ' + str(p05[green]) + ', ' + str(p05[blue])
+    max = str(p95[red]) + ', ' + str(p95[green]) + ', ' + str(p95[blue])
+    print('Percentile  5%: ', min)
+    print('Percentile 95%: ', max)
+    # Define visualization parameters, based on the image statistics.
+    mapparams = {    'bands':  'red, green, blue', 
+                     'min': min,
+                     'max': max,
+                     'gamma': 1.2
+                }   
+    mapid  = image.getMapId(mapparams) 
+    return mapid
+
+def getTiles(mapid): #not used
+    tilepath = ee.data.getTileUrl(mapid, 0, 0, 1)
+    logging.info('getTiles: %s',       tilepath)
+    return tilepath
+
+def GetMap(coords):
+        image = getLatestLandsatImage(coords, ee.ImageCollection('LANDSAT/LC8_L1T_TOA'))
+        sharpimage = SharpenLandsat8HSVUpres(image)
+        byteimage = sharpimage.multiply(255).byte()
+        red = 'red'
+        green = 'green'
+        blue = 'blue'
+        mapid = getMapId(byteimage,  red, green, blue)
+
 #### UNIT TESTS ######
 
 #fc = ee.FeatureCollection('ft:1urlhdLW2pA66f2xS0yzmO-LaESYdclD7-17beg0') #Yarra Ranges N.P.
@@ -262,6 +300,26 @@ class TestEEService(unittest.TestCase):
     
     def setUp(self):
         initEarthEngineService()
+        
+    def TestGetMap(self):
+        #image = getLatestLandsatImage(self.coords, ee.ImageCollection('LANDSAT/LC8_L1T_TOA'))
+        #sharpimage = SharpenLandsat8HSVUpres(image)
+        #byteimage = sharpimage.multiply(255).byte()
+        #red = 'red'
+        #green = 'green'
+        #blue = 'blue'
+        #mapid = getMap(byteimage,  red, green, blue)
+        mapid = GetMap(self.coords)
+        self.assertEqual(True, True, 'TestGetMap failed')
+     
+    def TestGetTiles(self):
+        mapid = GetMap(self.coords)
+        red = 'red'
+        green = 'green'
+        blue = 'blue'
+        tileurl = getTiles(byteimage,  red, green, blue)
+        print tileurl
+        self.assertEqual(tilepath.startswith("https://earthengine.googleapis.com//map"), True, 'TestGetTiles failed')
      
     def TestL7Thumbs(self):
         
@@ -299,15 +357,10 @@ class TestEEService(unittest.TestCase):
           
     def TestL8Overlay(self):
         image = getLatestLandsatImage(self.coords, ee.ImageCollection('LANDSAT/LC8_L1T_TOA'))
-        #red = 'B4'
-        #green = 'B3'
-        #blue = 'B2'
         sharpimage = SharpenLandsat8HSVUpres(image)
         red = 'red'
         green = 'green'
         blue = 'blue'    
-
-        #testimage= ee.Image("LANDSAT/LC8_L1T_TOA/LC80440342013170LGN00")
         byteimage = sharpimage.multiply(255).byte()
         path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
         self.assertEqual(path.startswith("https://earthengine.googleapis.com//api/download?docid"), True, 'L8 overlay failed')

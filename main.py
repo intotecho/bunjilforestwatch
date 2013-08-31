@@ -4,6 +4,7 @@ from __future__ import with_statement
 
 
 
+import ee
 import eeservice
 import base64
 import datetime
@@ -166,6 +167,7 @@ class MainPage(BaseHandler):
 			journals = cache.get_journals(db.Key(self.session['user']['key']))
 			areas= cache.get_areas(db.Key(self.session['user']['key']))
 			#logging.info( "areas = %s", areas)
+			eeservice.initEarthEngineService()
 			self.render('index-user.html', {
 				'activities': cache.get_activities_follower(self.session['user']['name']),
 				'journals': journals,
@@ -458,7 +460,7 @@ class NewAreaHandler(BaseHandler):
 				if area.name == area_name:
 					self.add_message('error', 'There is already a protected area called %s ' %name)
 					break
-			else:
+			else: #for loop did not break.
 				def txn(user_key, area):
 					user = db.get(user_key)
 					user.areas_count += 1
@@ -550,6 +552,8 @@ class ViewArea(BaseHandler):
 				
 			})
 
+
+
 class PlotAreaOverlayHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
 	def get(self, username, area_name):
@@ -559,20 +563,30 @@ class PlotAreaOverlayHandler(BaseHandler):
 			self.error(404)
 			return
 		logging.debug('PlotAreaOverlayHandler area_name %s %s', area_name, type(area))
-		eeservice.initEarthEngineService()
+		eeservice.initEarthEngineService() #- moved to main user login page
 		poly = []
 		for geopt in area.coordinates:
 			poly.append([geopt.lon, geopt.lat])
-		#poly = to_dict(area)
-		path = eeservice.getL8SharpOverlay(poly)
-		self.add_message('success', 'New data: %s' %(path))
-		self.response.write(path)
-   
-def to_dict(area): #fn not used
-	ar = []
-	for geopt in area.coordinates:
-		ar.append([geopt.lon, geopt.lat])
-	return ar
+		
+		image = eeservice.getL8SharpImage(poly)
+		map_id  = eeservice.getMapId(image,  'red',  'green', 'blue')
+		del map_id['image'] #can't serialise a memory object, and browser won't need it.
+		logging.info("map_id %s", map_id)
+		#logging.info("tile_path %s",area.tile_path)
+		
+		def txn(user_key, area):
+			user = db.get(user_key)
+			user.areas_count += 1
+			db.put([user, area])
+			return user, area
+
+		user, area = db.run_in_transaction(txn, self.session['user']['key'], area)
+		cache.clear_area_cache(user.key())
+		cache.set(cache.pack(user), cache.C_KEY, user.key())
+		self.populate_user_session()
+		#self.add_message('success', 'map_id:%s' %(map_id))
+		self.response.write(json.dumps(map_id))
+
 			
 class ViewJournal(BaseHandler):
 	def get(self, username, journal_name):

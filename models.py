@@ -166,6 +166,8 @@ class AreaOfInterest(db.Model):
 	coordinates = db.ListProperty(db.GeoPt, default=None)
 	map_center = db.GeoPtProperty(required=True, default=None);
 	map_zoom    = db.IntegerProperty(required=True, default=1)
+	map_id       = db.StringProperty(required=False, default=None) #overlay from GEE - should be part of Observation class
+	tile_path	= db.LinkProperty(required=False, default=None) #should be part of Observation object
 	bound = db.ListProperty(float, default=None)
 	timeStamp = db.DateProperty(auto_now_add=True)
 	altitudes = db.ListProperty(float, default=None)
