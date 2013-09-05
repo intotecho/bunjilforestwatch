@@ -113,39 +113,75 @@ function findPosLeft(obj) { //for slider
 	return undefined;
 }
 
-function drawMap(data) {
-    var rows = data['rows'];
-    for (var i in rows) {
-      if (rows[i][0] != 'Antarctica') {
-        var newCoordinates = [];
-        var geometries = rows[i][1]['geometries'];
-        if (geometries) {
-          for (var j in geometries) {
-            newCoordinates.push(constructNewCoordinates(geometries[j]));
-          }
-        } else {
-          newCoordinates = constructNewCoordinates(rows[i][1]['geometry']);
-        }
-        var randomnumber = Math.floor(Math.random() * 4);
-        var country = new google.maps.Polygon({
-          paths: newCoordinates,
-          strokeColor: colors[randomnumber],
-          strokeOpacity: 0,
-          strokeWeight: 1,
-          fillColor: colors[randomnumber],
-          fillOpacity: 0.3
-        });
-        google.maps.event.addListener(country, 'mouseover', function() {
-          this.setOptions({fillOpacity: 1});
-        });
-        google.maps.event.addListener(country, 'mouseout', function() {
-          this.setOptions({fillOpacity: 0.3});
-        });
+function GetPolygonBounds(poly ) {
 
-        country.setMap(map);
-      }
-    }
-  }
+	var bounds = new google.maps.LatLngBounds();
+	var paths = poly.getPaths();
+	var path;
+	
+	for (var p = 0; p < paths.getLength(); p++) {
+	        path = paths.getAt(p);
+	        for (var i = 0; i < path.getLength(); i++) {
+	                bounds.extend(path.getAt(i));
+	        }
+	}
+	
+	return bounds;
+}
+
+
+function drawLandsatGrid(data) {
+	
+	var rows = data['rows'];
+    
+    var currentBounds = map.getBounds(); // get bounds of the map object's viewport
+    console.log(currentBounds);
+       
+    for (var i in rows) {
+    	var newCoordinates = [];
+		
+        var geometry = rows[i][1]['geometry']
+        if (geometry) {
+			newCoordinates = constructNewCoordinates(geometry);
+            if (i % 1000 == 0) {
+       			//console.log(newCoordinates);
+				//console.log("row[i][1]: ", rows[i][1]);
+			}
+       		var landsat_cell = new google.maps.Polygon({
+	        	paths: newCoordinates,
+	        	strokeColor: '#FFFFFF',
+	        	strokeOpacity: 0.4,
+	        	strokeWeight: 1,
+	          	//fillColor: colors[randomnumber],
+	          	fillOpacity: 0
+	        });
+	        //printMethods(landsat_cell);
+	        cell_bounds = GetPolygonBounds(landsat_cell);
+	        
+	        //if (cell_bounds.intersects(currentBounds))
+	        {
+	        	// if any point of cell is in view, add to map.
+	        	//console.log("visible");
+		        google.maps.event.addListener(landsat_cell, 'mouseover', function() {
+		            this.setOptions({fillOpacity: 0.1, strokeWeight: 4});
+		        });
+		        google.maps.event.addListener(landsat_cell, 'mouseout', function() {
+		            this.setOptions({fillOpacity: 0});
+		        });
+	        	landsat_cell.setMap(map);
+			}
+// 			else {
+// 				if (i % 200 == 0) {
+// 					//console.log("outside", i);
+// 				}
+  		} // if geometry 
+  		else {
+			if (i % 200 == 0) {
+				console.log("no geometry ", i);
+			}
+		}
+ 	} //each row
+  }//drawLandsatGrid
 
   function constructNewCoordinates(polygon) {
     var newCoordinates = [];
@@ -156,13 +192,26 @@ function drawMap(data) {
     }
     return newCoordinates;
   }
-
+ 
+	//print all the methods in javascript object - for debuggin
+function printMethods(object)
+{
+    var methods = [];
+    for (var m in object) {
+    	if (typeof object[m] == "function") {
+          	        methods.push(m);
+        }
+	}
+	console.log(methods.join(","));
+} 
+ 
+ 
 function initialize() {
-        
+        var map_center = new google.maps.LatLng({{area.map_center}});
         var mapOptions = {
 				//zoom: 13,
 				zoom: {{ area.map_zoom }},
-				center: new google.maps.LatLng({{area.map_center}}),
+				center: map_center,
 		        //center: new google.maps.LatLng(-42.8598, 171.8043),
 				mapTypeId: google.maps.MapTypeId.HYBRID,
 				panControl:true,
@@ -176,22 +225,22 @@ function initialize() {
         
         map = new google.maps.Map(document.getElementById("map-canvas"),
             mapOptions);
-        
-        
+         
         // Initialize JSONP request
         var script = document.createElement('script');
         var url = ['https://www.googleapis.com/fusiontables/v1/query?'];
         url.push('sql=');
-        var query = 'SELECT name, geometry FROM ' + LANDSAT_GRID_FT;
+        var query = 'SELECT name, geometry FROM ' + LANDSAT_GRID_FT + ' WHERE ST_INTERSECTS(geometry, CIRCLE(LATLNG' + map_center + ' , 100000))';
+		console.log("ft query: ", query);
+		//var query = 'SELECT name, geometry FROM ' + LANDSAT_GRID_FT;
         //var query = 'SELECT name, kml_4326 FROM ' +  COUNTRY_GRID_FT;
         var encodedQuery = encodeURIComponent(query);
         url.push(encodedQuery);
-        url.push('&callback=drawMap');
+        url.push('&callback=drawLandsatGrid');
         url.push('&key='+ BUNJIL_API_KEY);
         script.src = url.join('');
         var body = document.getElementsByTagName('body')[0];
         body.appendChild(script);
-
         
         //NZ TOPO LAYER WITH SLIDER
 		overlay = new CustomTileOverlay(map, initialOpacity);
@@ -206,28 +255,7 @@ function initialize() {
         
         var infoWindow = new google.maps.InfoWindow();	
 
-        
-////////////////////////https://developers.google.com/fusiontables/docs/samples/mouseover_map_styles
-       
-
-        function initialize() {
-       
-         
-          // Initialize JSONP request
-          var script = document.createElement('script');
-          var url = ['https://www.googleapis.com/fusiontables/v1/query?'];
-          url.push('sql=');
-          var query = 'SELECT name, geometry FROM ' + LANDSAT_GRID_FT;
-          var encodedQuery = encodeURIComponent(query);
-          url.push(encodedQuery);
-          url.push('&callback=drawMap');
-          url.push('&key=' + BUNJIL_API_KEY);
-          script.src = url.join('');
-          var body = document.getElementsByTagName('body')[0];
-          body.appendChild(script);
-        }
-
-   
+    
         google.maps.event.addDomListener(window, 'load', initialize);
       ////////////////////////https://developers.google.com/fusiontables/docs/samples/mouseover_map_styles
         
@@ -282,14 +310,7 @@ function initialize() {
 //                     'fillColor = #FF00FF'
         
 //                 );
-//				//print all the methods in javascript object
-//           	var methods = [];
-//           	for (var m in gridLayer) {
-//           	    if (typeof gridLayer[m] == "function") {
-//           	        methods.push(m);
-//           	    }
-//           	}
-//           	console.log(methods.join(","));
+
 //         });
 //         google.maps.event.addListener(gridLayer, 'zoom', function(e) { //needs work
 //           	if (e.zoom() < 4) {gridLayer.hidden();}
