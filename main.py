@@ -554,15 +554,15 @@ class ViewArea(BaseHandler):
 
 
 
-class PlotAreaOverlayHandler(BaseHandler):
+class L8LatestOverlayHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
 	def get(self, username, area_name):
 		area = cache.get_area(username, area_name)
 		if not area or username != self.session['user']['name']:
-			logging.info('PlotAreaOverlayHandler - bad area returned %s, username %s, %s', area, username, area_name)
+			logging.info('L8LatestOverlayHandler - bad area returned %s, username %s, %s', area, username, area_name)
 			self.error(404)
 			return
-		logging.debug('PlotAreaOverlayHandler area_name %s %s', area_name, type(area))
+		logging.debug('L8LatestOverlayHandler area_name %s %s', area_name, type(area))
 		eeservice.initEarthEngineService() #- moved to main user login page
 		poly = []
 		for geopt in area.coordinates:
@@ -586,6 +586,33 @@ class PlotAreaOverlayHandler(BaseHandler):
 		self.populate_user_session()
 		#self.add_message('success', 'map_id:%s' %(map_id))
 		self.response.write(json.dumps(map_id))
+
+class L8LatestDownloadHandler(BaseHandler):
+	#This handler responds to Ajax request, hence it returns a response.write()
+	def get(self, username, area_name):
+		area = cache.get_area(username, area_name)
+		if not area or username != self.session['user']['name']:
+			logging.info('L8LatestDownloadHandler - bad area returned %s, username %s, %s', area, username, area_name)
+			self.error(404)
+			return
+		logging.debug('L8LatestDownloadHandler area_name %s %s', area_name, type(area))
+		eeservice.initEarthEngineService() #- moved to main user login page
+		
+		poly = []
+		for geopt in area.coordinates:
+			poly.append([geopt.lon, geopt.lat])
+
+		image = eeservice.getL8SharpImage(poly)
+		#image = eeservice.getLatestLandsatImage(poly, ee.ImageCollection('LANDSAT/LC8_L1T_TOA') )
+		#image = getLatestLandsatImage(self.coords, ee.ImageCollection('LANDSAT/LC8_L1T_TOA'))
+	
+		path = eeservice.getOverlayPath(image, "L8TOA", 'red',  'green', 'blue')
+		
+		#cache.clear_area_cache(user.key())
+		#cache.set(cache.pack(user), cache.C_KEY, user.key())
+		#self.populate_user_session()
+		#self.add_message('success', 'map_id:%s' %(map_id))
+		self.response.write(path)
 
 			
 class ViewJournal(BaseHandler):
@@ -1696,7 +1723,8 @@ app = webapp2.WSGIApplication([
 	# this section must be last, since the regexes below will match one and two -level URLs
 	webapp2.Route(r'/<username>/<area_name>', handler=ViewArea, name='view-area'),
 	webapp2.Route(r'/<username>/<area_name>/new', handler=NewEntryHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/<area_name>/overlay', handler=PlotAreaOverlayHandler, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name>/L8latest/overlay',  handler=L8LatestOverlayHandler, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name>/L8latest/download', handler=L8LatestDownloadHandler, name='new-obstask'),
 
 	webapp2.Route(r'/<username>/<journal_name>', handler=ViewJournal, name='view-journal'),
 	webapp2.Route(r'/<username>/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
