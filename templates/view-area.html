@@ -23,7 +23,11 @@ body {
 
 <script>
 var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
-var map, overlay;
+var LANDSAT_GRID_FT = '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8';//https://www.google.com/fusiontables/DataSource?docid=1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8
+var COUNTRY_GRID_FT = '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ'; //https://www.google.com/fusiontables/data?docid=1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ
+
+var BUNJIL_API_KEY = 'AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I' //https://code.google.com/apis/console/
+
 var map_id;
 var colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00'];
 var map;
@@ -153,7 +157,6 @@ function drawMap(data) {
     return newCoordinates;
   }
 
-
 function initialize() {
         
         var mapOptions = {
@@ -179,12 +182,12 @@ function initialize() {
         var script = document.createElement('script');
         var url = ['https://www.googleapis.com/fusiontables/v1/query?'];
         url.push('sql=');
-        var query = 'SELECT name, kml_4326 FROM ' +
-            '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ';
+        var query = 'SELECT name, geometry FROM ' + LANDSAT_GRID_FT;
+        //var query = 'SELECT name, kml_4326 FROM ' +  COUNTRY_GRID_FT;
         var encodedQuery = encodeURIComponent(query);
         url.push(encodedQuery);
         url.push('&callback=drawMap');
-        url.push('&key=AIzaSyAm9yWCV7JPCTHCJut8whOjARd7pwROFDQ');
+        url.push('&key='+ BUNJIL_API_KEY);
         script.src = url.join('');
         var body = document.getElementsByTagName('body')[0];
         body.appendChild(script);
@@ -214,12 +217,11 @@ function initialize() {
           var script = document.createElement('script');
           var url = ['https://www.googleapis.com/fusiontables/v1/query?'];
           url.push('sql=');
-          var query = 'SELECT name, kml_4326 FROM ' +
-              '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ';
+          var query = 'SELECT name, geometry FROM ' + LANDSAT_GRID_FT;
           var encodedQuery = encodeURIComponent(query);
           url.push(encodedQuery);
           url.push('&callback=drawMap');
-          url.push('&key=AIzaSyAm9yWCV7JPCTHCJut8whOjARd7pwROFDQ');
+          url.push('&key=' + BUNJIL_API_KEY);
           script.src = url.join('');
           var body = document.getElementsByTagName('body')[0];
           body.appendChild(script);
