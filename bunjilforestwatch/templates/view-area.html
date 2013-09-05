@@ -25,6 +25,10 @@ body {
 var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
 var map, overlay;
 var map_id;
+var colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00'];
+var map;
+var initialOpacity = 100;
+var gridLayer;
 
 function createOpacityControl(map, opacity) {
 	var sliderImageUrl = "/static/img/opacity-slider3d7.png";
@@ -105,9 +109,50 @@ function findPosLeft(obj) { //for slider
 	return undefined;
 }
 
-//google.maps.event.addDomListener(window, 'load', init);
+function drawMap(data) {
+    var rows = data['rows'];
+    for (var i in rows) {
+      if (rows[i][0] != 'Antarctica') {
+        var newCoordinates = [];
+        var geometries = rows[i][1]['geometries'];
+        if (geometries) {
+          for (var j in geometries) {
+            newCoordinates.push(constructNewCoordinates(geometries[j]));
+          }
+        } else {
+          newCoordinates = constructNewCoordinates(rows[i][1]['geometry']);
+        }
+        var randomnumber = Math.floor(Math.random() * 4);
+        var country = new google.maps.Polygon({
+          paths: newCoordinates,
+          strokeColor: colors[randomnumber],
+          strokeOpacity: 0,
+          strokeWeight: 1,
+          fillColor: colors[randomnumber],
+          fillOpacity: 0.3
+        });
+        google.maps.event.addListener(country, 'mouseover', function() {
+          this.setOptions({fillOpacity: 1});
+        });
+        google.maps.event.addListener(country, 'mouseout', function() {
+          this.setOptions({fillOpacity: 0.3});
+        });
 
-var initialOpacity = 100;
+        country.setMap(map);
+      }
+    }
+  }
+
+  function constructNewCoordinates(polygon) {
+    var newCoordinates = [];
+    var coordinates = polygon['coordinates'][0];
+    for (var i in coordinates) {
+      newCoordinates.push(
+          new google.maps.LatLng(coordinates[i][1], coordinates[i][0]));
+    }
+    return newCoordinates;
+  }
+
 
 function initialize() {
         
@@ -129,6 +174,22 @@ function initialize() {
         map = new google.maps.Map(document.getElementById("map-canvas"),
             mapOptions);
         
+        
+        // Initialize JSONP request
+        var script = document.createElement('script');
+        var url = ['https://www.googleapis.com/fusiontables/v1/query?'];
+        url.push('sql=');
+        var query = 'SELECT name, kml_4326 FROM ' +
+            '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ';
+        var encodedQuery = encodeURIComponent(query);
+        url.push(encodedQuery);
+        url.push('&callback=drawMap');
+        url.push('&key=AIzaSyAm9yWCV7JPCTHCJut8whOjARd7pwROFDQ');
+        script.src = url.join('');
+        var body = document.getElementsByTagName('body')[0];
+        body.appendChild(script);
+
+        
         //NZ TOPO LAYER WITH SLIDER
 		overlay = new CustomTileOverlay(map, initialOpacity);
 		//overlay.show();
@@ -142,38 +203,111 @@ function initialize() {
         
         var infoWindow = new google.maps.InfoWindow();	
 
-        // Initialize the Landsat Grid layer
         
-//         var gridLayer = new google.maps.FusionTablesLayer({
+////////////////////////https://developers.google.com/fusiontables/docs/samples/mouseover_map_styles
+       
+
+        function initialize() {
+       
+         
+          // Initialize JSONP request
+          var script = document.createElement('script');
+          var url = ['https://www.googleapis.com/fusiontables/v1/query?'];
+          url.push('sql=');
+          var query = 'SELECT name, kml_4326 FROM ' +
+              '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ';
+          var encodedQuery = encodeURIComponent(query);
+          url.push(encodedQuery);
+          url.push('&callback=drawMap');
+          url.push('&key=AIzaSyAm9yWCV7JPCTHCJut8whOjARd7pwROFDQ');
+          script.src = url.join('');
+          var body = document.getElementsByTagName('body')[0];
+          body.appendChild(script);
+        }
+
+   
+        google.maps.event.addDomListener(window, 'load', initialize);
+      ////////////////////////https://developers.google.com/fusiontables/docs/samples/mouseover_map_styles
+        
+//        // Initialize the Landsat Grid layer  
+//        
+//         var dynamicLayer = new google.maps.visualization.DynamicMapsEngineLayer({
+//     		layerId: '06673056454046135537-08896501997766553811', // 	1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8	06673056454046135537-08896501997766553811
+//     		map: map,
+//     		suppressInfoWindows: true,
+//     		clickable: true
+//   		});
+        
+//         gridLayer = new google.maps.FusionTablesLayer({
 //           query: {
 //             select: 'geometry',
-//             from: '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8'
+//             from: '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8',
+//             where: 'name CONTAINS "74_90"'
 //           },
 //           styles: [{
+//         	  where: 'name CONTAINS "74_91"',
 //               polygonOptions: {
 //                 fillColor: '#00FF00',
-//                 fillOpacity: 0.04,
-//                 lineColour: '#FF00FF'
+//                 fillOpacity: 0.04
+//               },
+//           },
+//              {
+//               where: 'name == 74_90',
+//               polygonOptions: {
+//                 fillColor: '#000080',
+//                 fillOpacity: 0.5
 //               }
-//             }],
+//             }
+//              ],
 //           map: map,
-
 //           suppressInfoWindows: true
 //         });
+        
+        
+        
+        
 //         google.maps.event.addListener(gridLayer, 'click', function(e) {
 //           	windowControl(e, infoWindow, map);
+// //           	gridLayer.setQuery({
+// //                 select: 'name',
+// //                 from: '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8',
+// //                 where: 'Name > 74_90'
+//               });
+//           	gridLayer.setMap(map);
+//           	//x= gridLayer.getOptions();
+//           	//console.log(x);
+//           	gridLayer.setOptions(
+//                     'fillColor = #FF00FF'
+        
+//                 );
+//				//print all the methods in javascript object
+//           	var methods = [];
+//           	for (var m in gridLayer) {
+//           	    if (typeof gridLayer[m] == "function") {
+//           	        methods.push(m);
+//           	    }
+//           	}
+//           	console.log(methods.join(","));
 //         });
 //         google.maps.event.addListener(gridLayer, 'zoom', function(e) { //needs work
-//           	if e.zoom < 4 gridLayer.hidden();
+//           	if (e.zoom() < 4) {gridLayer.hidden();}
 //         });
-
+//         google.maps.event.addListener(gridLayer, 'mouseover', function(e) {
+//             //var style = gridLayer.getFeatureStyle(e.featureId);
+//             //style.fillColor = 'green';
+//             //style.fillOpacity = 80;
+//             console.log('mouseover', e);
+//           });
+//         google.maps.event.addListener(gridLayer, 'mouseout', function(event) {
+//             var style = layer.getFeatureStyle(event.featureId).resetAll();
+//             console.log('mouseout', e);
+//           });
 
       	// Open the info window at the clicked location
       	function windowControl(e, infoWindow, map) {
-      		console.log("windowControl: ", e.infoWindowHtml);
+      		console.log("windowControl: ", e);
         	infoWindow.setOptions({
-          		content: e.infoWindowHtml,
-          		
+          		content: e.infoWindowHtml,  		
           		position: e.latLng,
           		pixelOffset: e.pixelOffset,
         	});
@@ -195,30 +329,56 @@ function initialize() {
             });
         areaBoundary.setMap(map);
         
-        
-        
-   		$('#latest_img').click(function(){ 
-	 		var pathname = window.location.pathname + '/overlay';
-	 		$('#observations').empty();
-	 		$('#observations').append("Getting Sat Data...");//could be animated gif from http://www.ajaxload.info/
- 			$('#latest_img').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>')
-	 		$('#observations').prepend('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>')
+        // Create Overlay of Latest Landsat8
+   		$('#L8latest_overlay_btn').click(function(){ 
+	 		var pathname = window.location.pathname + '/L8latest/overlay';
+	 		$("#observations_panel").collapse('show');
+	 		$('#observations_panel').empty();
+	 		$('#observations_panel').append("Getting Sat Data...");//could be animated gif from http://www.ajaxload.info/
+ 			$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
 	 		$.get(pathname) //, { name: "not used", time: "notused" }
 	 		.done(function(data){
 	 			mapobj = jQuery.parseJSON(data);
 	 			overlay.mapid = mapobj.mapid
 	 			overlay.token  = mapobj.token
-	 			$('#observations').empty();
-	 			$('#observations').append(overlay.mapid, overlay.token); 
-	 			$('#latest_img').append(); 
-	 			overlay.show();
+	 			$('#observations_panel').empty();
+	 			$('#observations_panel').append(overlay.mapid, overlay.token);
 	 		})
 	 		.error(function( jqxhr, textStatus, error ) {
 	 	          var err = textStatus + ', ' + error;
 	 	          console.log( "Request Failed: " + err);
+		 		  $('#observations_panel').empty();
+		 		  $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
 	 	    });
    		});
-   		
+        
+   		$('#L8latest_download_btn').click(function(){ 
+	 		var pathname = window.location.pathname + '/L8latest/download';
+	 		$("#observations_panel").collapse('show');
+	 		$('#observations_panel').empty();
+	 		$('#observations_panel').append("Getting Download ...");//could be animated gif from http://www.ajaxload.info/
+ 			$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+	 		$.get(pathname) //, { name: "not used", time: "notused" }
+	 		.done(function(path){
+	 			$('#observations_panel').empty();
+	 			$('#observations_panel').append(path); 
+	 			window.open(path);
+	 		})
+	 		.error(function( jqxhr, textStatus, error ) {
+	 	          var err = textStatus + ', ' + error;
+	 	          console.log( "Download Failed: " + err);
+		 		  $('#observations_panel').empty();
+		 		  $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
+	 	    });
+   		});
+   			
+   		$('#Landset_WRS_layer_btn').click(function(){ 
+	 		$("#observations_panel").collapse('show');
+	 		$('#observations_panel').empty();
+	 		$('#observations_panel').append("Show L8 Grid...");//could be animated gif from http://www.ajaxload.info/
+ 			//$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+			//gridLayer.show(); 
+   		});
    		$(window).resize(function () {
    				//<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
 	    	    var h = $(window).height(),
@@ -230,7 +390,7 @@ function initialize() {
     
     google.maps.event.addDomListener(window, 'load', initialize);
     
-    </script>
+ </script>
 
 
 </script>
@@ -252,42 +412,93 @@ function initialize() {
 			<h3>
 				<i>{{area.name}}</i>
 			</h3>
+			
 			<div>
-				<input id="latest_img" type="button" class="btn btn-primary"
-					value="Get Latest Imagery" />
-	 
+			<p>
+				<input id="L8latest_overlay_btn" type="button" class="btn btn-primary"
+					value="Get Latest Imagery" /></p>
 			</div>
+	
 			<div>
-				<h4>Description</h4>
-				<p>{{ area.description }}</p>
-			</div>
+			<p>
+				<input id="L8latest_download_btn" type="button" class="btn"
+					value="Download" /></p>
+			</div>	
 			<div>
-				<h4>Boundary Coordinates</h4>
-
-				{% for j in area.coordinates %}
-				<p class="divider">{{j}}</p>
-				{% endfor %}
+			<p>
+				<input id="Landset_WRS_layer_btn" type="button" class="btn"
+					value="Scene border Layer" /></p>
+			</div>	
+			<div class="accordion" id="accordion2">
+			  <div class="accordion-group">
+			    <div class="accordion-heading">
+			      <a class="accordion-toggle" data-toggle="collapse"  href="#description_panel">
+			        Area Description
+			      </a>
+			    </div>
+			    <div id="description_panel" class="accordion-body collapse in">
+			      <div class="accordion-inner">
+			        <p>{{ area.description }}</p>
+			      </div>
+			    </div>
+			  </div>
+			  <div class="accordion-group">
+			    <div class="accordion-heading">
+			      <a class="accordion-toggle" data-toggle="collapse" href="#boundary_panel">
+			        Boundary Coordinates
+			      </a>
+			    </div>
+			    <div id="boundary_panel" class="accordion-body collapse">
+			      <div class="accordion-inner">
+			        {% for j in area.coordinates %}
+						<p class="divider">{{j}}</p>
+					{% endfor %}
+			      </div>
+			    </div>
+			  </div>
+			  <div class="accordion-group">
+			    <div class="accordion-heading">
+			      <a class="accordion-toggle" data-toggle="collapse" href="#map_panel">
+			        Map View 
+			      </a>
+			    </div>
+			    <div id="map_panel" class="accordion-body collapse">
+			      <div class="accordion-inner">
+			       	<p class="divider">"Map initial view (saved)"</p>
+					<p class="divider">"Center: {{area.map_center}}"</p>
+					<p class="divider">"Zoom: {{area.map_zoom}}"</p>
+			      </div>
+			    </div>
+			  </div>
+			   <div class="accordion-group">
+			    <div class="accordion-heading">
+			      <a class="accordion-toggle" data-toggle="collapse" href="#observations_panel">
+			        Observations
+			      </a>
+			    </div>
+			    <div id="observations_panel" class="accordion-body collapse">
+			      <div class="accordion-inner">
+			        <p>No Observations.<p>
+			      </div>
+			    </div>
+			  </div>
+			   <div class="accordion-group">
+			    <div class="accordion-heading">
+			      <a class="accordion-toggle" data-toggle="collapse" href="#reports_panel">
+			        Reports
+			      </a>
+			    </div>
+			    <div id="reports_panel" class="accordion-body collapse">
+			      <div class="accordion-inner">
+			        <p>No reports<p>
+			      </div>
+			    </div>
+			  </div>
 			</div>
-			<div>
-				<h4>Map View</h4>
-				<p class="divider">"Center: {{area.map_center}}"</p>
-				<p class="divider">"Zoom: {{area.map_zoom}}"</p>
-			</div>
-			<div>
-				<h4>Observations</h4>
-				<p id="observations">No images for this area.</p>
-			</div>
-			<div>
-				<h4>Reports</h4>
-				<p id="reports">No reports for this area.</p>
-			</div>
-
 		</div>
 		<div class="span10">
 			<!--Body = Map content-->
-			<h3>
-				Your area of interest: <i>{{ area.name }}</i>
-			</h3>
+			
 			<div id="map-canvas"></div>
 		</div>
 	</div>
