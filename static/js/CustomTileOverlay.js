@@ -6,7 +6,87 @@ Originally developed for: http://www.topomap.co.nz/
 Licences: Creative Commons Attribution 3.0 New Zealand License
 http://creativecommons.org/licenses/by/3.0/nz/
 ******************************************************************************/
+var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
+var initialOpacity = 100;
 
+function createOpacityControl(map, opacity) {
+	var sliderImageUrl = "/static/img/opacity-slider3d7.png";
+	
+	// Create main div to hold the control.
+	var opacityDiv = document.createElement('DIV');
+	opacityDiv.setAttribute("style", "topmargin=0;margin:5px;overflow-x:hidden;overflow-y:hidden;background:url(" + sliderImageUrl + ") no-repeat;width:71px;height:42px;cursor:pointer;");
+	
+	// Create knob
+	var opacityKnobDiv = document.createElement('DIV');
+	opacityKnobDiv.setAttribute("style", "padding:0;margin:0;overflow-x:hidden;overflow-y:hidden;background:url(" + sliderImageUrl + ") no-repeat -71px 0;width:14px;height:21px;");
+	opacityDiv.appendChild(opacityKnobDiv);
+
+	var opacityCtrlKnob = new ExtDraggableObject(opacityKnobDiv, {
+		restrictY: true,
+		container: opacityDiv
+	});
+
+	////Create Label (CG Mods) 
+	var opacityLabelDiv = document.createElement('DIV');
+	opacityLabelDiv.setAttribute("style", "text-align:bottom;position:relative;left:0px;bottom:0px;width:71px;height:42px;");
+	opacityLabelDiv.setAttribute('onselectstart', "return false");
+	//opacityLabelDiv.setAttribute("disabled", "disabled");
+	var opacityLabelText = document.createTextNode("OverlayName");
+	//opacityLabelText.setAttribute('onselectstart', "return false");
+	opacityLabelDiv.appendChild(opacityLabelText);
+	
+	opacityDiv.appendChild(opacityLabelDiv);
+	
+	
+	google.maps.event.addListener(opacityCtrlKnob, "dragend", function () {
+		setOpacity(opacityCtrlKnob.valueX());
+	});
+
+	google.maps.event.addDomListener(opacityDiv, "click", function (e) {
+		var left = findPosLeft(this);
+		var x = e.pageX - left - 5; // - 5 as we're using a margin of 5px on the div
+		opacityCtrlKnob.setValueX(x);
+		setOpacity(x);
+	});
+
+	map.controls[google.maps.ControlPosition.TOP_RIGHT].push(opacityDiv);
+	//map.controls[google.maps.ControlPosition.TOP_RIGHT].name = 'NewName';
+	
+	// Set initial value
+	var initialValue = OPACITY_MAX_PIXELS / (100 / opacity);
+	opacityCtrlKnob.setValueX(initialValue);
+	setOpacity(initialValue);
+}
+
+function setOpacity(pixelX) {
+	// Range = 0 to OPACITY_MAX_PIXELS
+	var value = (100 / OPACITY_MAX_PIXELS) * pixelX;
+	if (value < 0) value = 0;
+	if (value == 0) {
+		if (overlay.visible == true) {
+			overlay.hide();
+		}
+	}
+	else {
+		overlay.setOpacity(value);
+		if (overlay.visible == false) {
+			overlay.show();
+		}
+	}
+}
+
+function findPosLeft(obj) { //for slider
+	var curleft = 0;
+	if (obj.offsetParent) {
+		do {
+			curleft += obj.offsetLeft;
+		} while (obj = obj.offsetParent);
+		return curleft;
+	}
+	return undefined;
+}
+
+/////////////////////////////
 CustomTileOverlay = function (map, opacity) {
 	this.tileSize = new google.maps.Size(256, 256); // Change to tile size being used
 
@@ -110,7 +190,7 @@ CustomTileOverlay.prototype.getTileUrlCoord = function (coord, zoom) {
 	return new google.maps.Point(x, y);
 }
 
-
+/*
 CustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
 	//Modified to support Earth Engine tiles.
 	//from mapclient.py:  return '%s/map/%s/%d/%d/%d?token=%s' % (_tile_base_url, mapid['mapid'], z, x, y, mapid['token'])
@@ -128,9 +208,9 @@ CustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
 		return "/static/tiles/nztopo/blanktile.png";
 	}
 }
+*/
 
-/*
-OriginalCustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
+CustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
 	// Restricting tiles to the small tile set we have in the example
 	
 	//if (zoom <= 20 && zoom >= 8 && coord.x >= 8004 && coord.x <= 8006 && coord.y >= 3013 && coord.y <= 3015) {
@@ -141,7 +221,6 @@ OriginalCustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
 		return "/static/tiles/nztopo/blanktile.png";
 	}
 }
-*/
 
 CustomTileOverlay.prototype.initialize = function () {
 	if (this.initialized) {
