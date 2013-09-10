@@ -15,56 +15,56 @@ body {
 	height: 100%
 }
 </style>
-
-<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry"> </script>
+<style type="text/css"> 
+/** FIX for Bootstrap and Google Maps Info window styes problem http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden **/
+img[src*="gstatic.com/"], img[src*="googleapis.com/"] {
+max-width: none;
+}
+</style>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry&libraries=visualization"> </script>
 <script type="text/javascript" src="/static/js/ExtDraggableObject.js"></script>	
 <script type="text/javascript" src="/static/js/CustomTileOverlay.js"></script>
 <script type="text/javascript" src="/static/js/landsat-grid.js"></script>
 <script type="text/javascript" src="/static/js/polygon-outliner.js"></script>
 
+ 
 <script>
 
-//var map_id;
-
 var map;
- 
-//print all the methods in javascript object - for debuggin
+overlayMaps = [];
+
+//print all the methods in javascript object - for debugging
 function printMethods(object)
 {
     var methods = [];
     for (var m in object) {
     	if (typeof object[m] == "function") {
-          	        methods.push(m);
+        	methods.push(m);
         }
 	}
 	console.log(methods.join(","));
 } 
-var gridInitialised;
 
-function requestLandsatGrid(map)
+function createImageOverlay(show, mapid,  token)
 {
-	// Initialize JSONP request for LANSAT grid Fusion Table
-	// Based on https://developers.google.com/fusiontables/docs/samples/mouseover_map_styles
-	if(gridInitialised != true) {
-		gridInitialised = true;
-	    var map_center = map.getCenter(); //new google.maps.LatLng({{area.map_center}});
-	    var map_distance = google.maps.geometry.spherical.computeDistanceBetween(map.getBounds().getNorthEast(), map.getBounds().getSouthWest());
-	    var radius = 150000; // how far away to show cells from a small AOI in metres
-	    var distance = (map_distance > radius)? map_distance : radius; 
-	    console.log(radius, map_distance, distance);
-	    
-	    var script = document.createElement('script');
-	    var url = ['https://www.googleapis.com/fusiontables/v1/query?'];
-	    url.push('sql=');
-	    var query = 'SELECT name, geometry, description FROM ' + LANDSAT_GRID_FT + ' WHERE ST_INTERSECTS(geometry, CIRCLE(LATLNG' + map_center + ' , ' + distance + ' ))';
-		console.log("ft query: ", query);
-	    var encodedQuery = encodeURIComponent(query);
-	    url.push(encodedQuery);
-	    url.push('&callback=drawLandsatGrid');
-	    url.push('&key='+ BUNJIL_API_KEY);
-	    script.src = url.join('');
-	    var body = document.getElementsByTagName('body')[0];
-	    body.appendChild(script);
+	if(show == true)
+	{
+	 	//CRERATE LAYER WITH SLIDER based on NZ Topo maps example.
+		overlay = new CustomTileOverlay(map, initialOpacity, mapid, token);
+	
+		google.maps.event.addListener(map, 'tilesloaded', function () {
+			overlay.deleteHiddenTiles(map.getZoom());
+		});
+		overlay.show();
+		overlayMaps.push(overlay);
+		
+		// Add opacity control and set initial value
+		createOpacityControl(map, initialOpacity);	
+	}
+	else 
+	{
+		overlay = overlayMaps.pop();
+		overlay.hide();
 	}
 }
 
@@ -89,21 +89,13 @@ function initialize() {
            mapOptions);
   
   	//wait for map to load so bounds are known before setting up landsat grid.
-  	google.maps.event.addListener(map, 'bounds_changed', function() {
-         requestLandsatGrid(map);
-    });
+  	//now activated by the checkbox.
+  	
+  	//google.maps.event.addListener(map, 'bounds_changed', function() {
+    //     //requestLandsatGrid(map, true);
+    //});
 
-    //NZ TOPO LAYER WITH SLIDER
-	overlay = new CustomTileOverlay(map, initialOpacity);
-	overlay.show();
-
-	google.maps.event.addListener(map, 'tilesloaded', function () {
-		overlay.deleteHiddenTiles(map.getZoom());
-	});
-
-	// Add opacity control and set initial value
-	createOpacityControl(map, initialOpacity);
-    
+   
  
     //Add Area Boundary tro Map
     var latlngs = [];
@@ -128,14 +120,22 @@ function initialize() {
 	 		$('#observations_panel').empty();
 	 		$('#observations_panel').append("Getting Sat Data...");
  			$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
-	 		$.get(pathname) //, { name: "not used", time: "notused" }
+	 		$.get(pathname)
 	 		.done(function(data){
 	 			mapobj = jQuery.parseJSON(data);
-	 			overlay.mapid = mapobj.mapid
-	 			overlay.token  = mapobj.token
 	 			$('#observations_panel').empty();
-	 			$('#observations_panel').append(overlay.mapid, overlay.token);
-	 		})
+	 			$('#observations_panel').append(mapobj.mapid, mapobj.token);
+	 			createImageOverlay(true, mapobj.mapid,  mapobj.token);
+	 			
+// 	 			var mapsEngineLayer = new google.maps.visualization.MapsEngineLayer({
+//     			mapId: mapobj.mapid,
+//     			token:  mapobj.token,
+//     			layerKey: 'layer_00001',
+//     			map: map,
+// 			    clickable: 'true',
+// 			    suppressInfoWindows: 'false',
+//   				});
+			})
 	 		.error(function( jqxhr, textStatus, error ) {
 	 	          var err = textStatus + ', ' + error;
 	 	          console.log( "Request Failed: " + err);
@@ -164,11 +164,43 @@ function initialize() {
 	 	    });
    		});
    			
-   		$('#Landset_WRS_layer_btn').click(function(){ 
-	 		$("#observations_panel").collapse('show');
-	 		$('#observations_panel').empty();
-	 		$('#observations_panel').append("Show L8 Grid...");//could be animated gif from http://www.ajaxload.info/
-   		});
+ 		//Checkbox to show/hide overlays  		
+   		$('.layer').click(function(){
+   			var layerID = parseInt($(this).attr('id'));
+   			
+    		if ($(this).is(':checked')){
+    			if(layerID == 0)
+    			{
+    				requestLandsatGrid(map, true);
+				}
+				if(layerID == 1)
+    			{
+//     				//Map of US flooding
+// 		 			var mapsEngineLayer = new google.maps.visualization.MapsEngineLayer({
+// 	    			mapId: '10446176163891957399-13516001307527776624-4',
+// 	    			layerKey: 'layer_00001',
+// 	    			map: map,
+// 				    clickable: 'true',
+// 				    suppressInfoWindows: 'false',
+// 	  				});
+	  				createImageOverlay(true, 0,0,0);
+    			}
+    		} 
+    		else {
+	    		if(layerID == 0)
+    			{
+    				requestLandsatGrid(map, false);
+           		 	removeLandsatGrid();
+    			}
+    			if(layerID == 1)
+    			{
+    				createImageOverlay(false,0,0,0);
+        			//var overlayMap = new google.maps.ImageMapType(overlayMaps[layerID]);
+        			//map.overlayMapTypes.setAt(layerID, overlayMap);
+        		}
+        	}
+		});
+   		
    		$(window).resize(function () {
    				//<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
 	    	    var h = $(window).height(),
@@ -214,8 +246,8 @@ function initialize() {
 			</div>	
 			<div>
 			<p>
-				<input id="Landset_WRS_layer_btn" type="button" class="btn"
-					value="Scene border Layer" /></p>
+				<input type="checkbox" id="0" class="layer" unchecked/><label for="0">Landsat Grid </label>
+				<input type="checkbox" id="1" class=layer unchecked/><label for="1">Topo map</label>
 			</div>	
 			<div class="accordion" id="accordion2">
 			  <div class="accordion-group">

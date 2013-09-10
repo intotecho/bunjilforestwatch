@@ -87,7 +87,7 @@ function findPosLeft(obj) { //for slider
 }
 
 /////////////////////////////
-CustomTileOverlay = function (map, opacity) {
+CustomTileOverlay = function (map, opacity, mapid, token) {
 	this.tileSize = new google.maps.Size(256, 256); // Change to tile size being used
 
 	this.map = map;
@@ -98,8 +98,8 @@ CustomTileOverlay = function (map, opacity) {
 	this.initialized = false;
 	
 	this.self = this;
-	this.mapid = null;
-	this.token = null;
+	this.mapid = mapid;
+	this.token = token;
 	
 }
 
@@ -190,7 +190,7 @@ CustomTileOverlay.prototype.getTileUrlCoord = function (coord, zoom) {
 	return new google.maps.Point(x, y);
 }
 
-/*
+
 CustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
 	//Modified to support Earth Engine tiles.
 	//from mapclient.py:  return '%s/map/%s/%d/%d/%d?token=%s' % (_tile_base_url, mapid['mapid'], z, x, y, mapid['token'])
@@ -199,7 +199,7 @@ CustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
 
 	if(this.mapid)
 	{
-		url = (BASE_URL + '//map/' + this.mapid + '/' + zoom + '/' + coord.x + '/' + coord.y +  '?token=' + this.token);
+		url = (BASE_URL + '/map/' + this.mapid + '/' + zoom + '/' + coord.x + '/' + coord.y +  '?token=' + this.token);
 		console.log(url);
 		return url;
 	}
@@ -208,8 +208,8 @@ CustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
 		return "/static/tiles/nztopo/blanktile.png";
 	}
 }
-*/
 
+/*
 CustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
 	// Restricting tiles to the small tile set we have in the example
 	
@@ -221,7 +221,7 @@ CustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
 		return "/static/tiles/nztopo/blanktile.png";
 	}
 }
-
+*/
 CustomTileOverlay.prototype.initialize = function () {
 	if (this.initialized) {
 		return;

@@ -56,10 +56,8 @@ def getLatestLandsatImage(boundary_polygon, collection_name):
     logging.info('Scene id: %s', id)
     latest_image = ee.Image(id)
     props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
-    info = latest_image.getInfo()
-    #print info
     test = latest_image.getInfo()['bands']
-    print test
+    print (test)
     crs = latest_image.getInfo()['bands'][0]['crs']
     #path    = props['WRS_PATH']
     #row     = props['STARTING_ROW']
@@ -292,88 +290,3 @@ def GetMap(coords):
 
 #fc = ee.FeatureCollection('ft:1urlhdLW2pA66f2xS0yzmO-LaESYdclD7-17beg0') #Yarra Ranges N.P.
 
-import unittest
-
-class TestEEService(unittest.TestCase):
-    coords = [
-              [        145.3962206840515,        -37.71424496764925      ], 
-              [        146.049907207489,        -37.705553487215816      ], 
-              [        146.00733518600464,        -37.239075302021824    ], 
-              [        145.29871702194214,        -37.233608599437034    ]
-              ]  
-    
-    def setUp(self):
-        initEarthEngineService()
-        
-    def TestGetMap(self):
-        #image = getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA')
-        #sharpimage = SharpenLandsat8HSVUpres(image)
-        #byteimage = sharpimage.multiply(255).byte()
-        #red = 'red'
-        #green = 'green'
-        #blue = 'blue'
-        #mapid = getMap(byteimage,  red, green, blue)
-        mapid = GetMap(self.coords)
-        self.assertEqual(True, True, 'TestGetMap failed')
-     
-    def TestGetTiles(self):
-        mapid = GetMap(self.coords)
-        red = 'red'
-        green = 'green'
-        blue = 'blue'
-        tileurl = getTiles(byteimage,  red, green, blue)
-        print tileurl
-        self.assertEqual(tilepath.startswith("https://earthengine.googleapis.com//map"), True, 'TestGetTiles failed')
-     
-    def TestL7Thumbs(self):
-        
-        image = getLatestLandsat7HSVUpres(coords)
-        getThumbnailPath(image)
-        self.assertEqual(1, 2, 'test failed')
-        pass
-    
-    def TestL8Thumbs(self):
-        coords = [
-              [        145.3962206840515,        -37.71424496764925      ], 
-              [        146.049907207489,        -37.705553487215816      ], 
-              [        146.00733518600464,        -37.239075302021824      ], 
-              [        145.29871702194214,        -37.233608599437034      ]
-              ]    
-        
-        testimage= ee.Image("LANDSAT/LC8_L1T_TOA/LC80440342013170LGN00")
-        sharpimage = SharpenLandsat8HSVUpres(testimage)
-        getThumbnailPath(sharpimage)
-        self.assertEqual(1, 1, 'L8 thumbs failed')
-        pass
-     
-    def TestL7Overlay(self):
-        image = getLatestLandsatImage(self.coords, 'L7_L1T')
-        #red = 'B4'
-        #green = 'B3'
-        #blue = 'B2'
-        sharpimage = SharpenLandsat7HSVUpres(image)
-        red = 'red'
-        green = 'green'
-        blue = 'blue'    
-        byteimage = sharpimage.multiply(255).byte()
-        path = getOverlayPath(byteimage, "L7", red, green, blue)
-        self.assertEqual(path.startswith("https://earthengine.googleapis.com//api/download?docid"), True, 'L7 overlay failed')
-          
-    def TestL8Overlay(self):
-        image = getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA')
-        sharpimage = SharpenLandsat8HSVUpres(image)
-        red = 'red'
-        green = 'green'
-        blue = 'blue'    
-        byteimage = sharpimage.multiply(255).byte()
-        path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
-        self.assertEqual(path.startswith("https://earthengine.googleapis.com//api/download?docid"), True, 'L8 overlay failed')
-   
-    def TestGetAlgorithms(self):
-        algorithms = ee.data.getAlgorithms()
-        #print type(algorithms) =Dictionary.
-        for f in algorithms:
-            print  f + ', \tDescr: ' + algorithms.get(f)['description']
-        self.assertEqual(True, True, 'TestAlgorithms failed')
-             
-        
