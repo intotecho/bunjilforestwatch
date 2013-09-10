@@ -9,12 +9,22 @@ http://creativecommons.org/licenses/by/3.0/nz/
 var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
 var initialOpacity = 100;
 
-function createOpacityControl(map, opacity) {
+function createOpacityControl(map, opacity, layerLabel) {
 	var sliderImageUrl = "/static/img/opacity-slider3d7.png";
 	
 	// Create main div to hold the control.
+	var mainDiv = document.createElement('DIV');	
+	mainDiv.setAttribute("style", "topmargin=0;margin:5px;width:71px;height:42px;");
+
 	var opacityDiv = document.createElement('DIV');
-	opacityDiv.setAttribute("style", "topmargin=0;margin:5px;overflow-x:hidden;overflow-y:hidden;background:url(" + sliderImageUrl + ") no-repeat;width:71px;height:42px;cursor:pointer;");
+	opacityDiv.setAttribute("style", "topmargin=0;margin:0px;overflow-x:hidden;overflow-y:hidden;background:url(" + sliderImageUrl + ") no-repeat;width:71px;height:21px;cursor:pointer;");
+
+	////Create Label (CG Mods) 
+	var opacityLabelDiv = document.createElement('DIV');
+	opacityLabelDiv.setAttribute("style", "text-align:center;position:relative;center:0px;top:0px;opacity:0.6;background-color:#cccccc;width:71px;height:21px;");
+	opacityLabelDiv.setAttribute('onselectstart', "return false");
+	opacityLabelDiv.appendChild(document.createTextNode(layerLabel));
+	
 	
 	// Create knob
 	var opacityKnobDiv = document.createElement('DIV');
@@ -26,18 +36,9 @@ function createOpacityControl(map, opacity) {
 		container: opacityDiv
 	});
 
-	////Create Label (CG Mods) 
-	var opacityLabelDiv = document.createElement('DIV');
-	opacityLabelDiv.setAttribute("style", "text-align:bottom;position:relative;left:0px;bottom:0px;width:71px;height:42px;");
-	opacityLabelDiv.setAttribute('onselectstart', "return false");
-	//opacityLabelDiv.setAttribute("disabled", "disabled");
-	var opacityLabelText = document.createTextNode("OverlayName");
-	//opacityLabelText.setAttribute('onselectstart', "return false");
-	opacityLabelDiv.appendChild(opacityLabelText);
-	
-	opacityDiv.appendChild(opacityLabelDiv);
-	
-	
+	mainDiv.appendChild(opacityDiv);
+	mainDiv.appendChild(opacityLabelDiv);
+
 	google.maps.event.addListener(opacityCtrlKnob, "dragend", function () {
 		setOpacity(opacityCtrlKnob.valueX());
 	});
@@ -49,9 +50,9 @@ function createOpacityControl(map, opacity) {
 		setOpacity(x);
 	});
 
-	map.controls[google.maps.ControlPosition.TOP_RIGHT].push(opacityDiv);
-	//map.controls[google.maps.ControlPosition.TOP_RIGHT].name = 'NewName';
-	
+	map.controls[google.maps.ControlPosition.RIGHT_TOP].push(mainDiv);
+	//map.controls[google.maps.ControlPosition.TOP_RIGHT].push(opacityLabelDiv);
+
 	// Set initial value
 	var initialValue = OPACITY_MAX_PIXELS / (100 / opacity);
 	opacityCtrlKnob.setValueX(initialValue);
@@ -109,6 +110,7 @@ CustomTileOverlay.prototype.getTile = function (p, z, ownerDocument) {
 	// If tile already exists then use it
 	for (var n = 0; n < this.tiles.length; n++) {
 		if (this.tiles[n].id == 't_' + p.x + '_' + p.y + '_' + z) {
+			console.log("getTile: already got");
 			return this.tiles[n];
 		}
 	}
@@ -129,6 +131,7 @@ CustomTileOverlay.prototype.getTile = function (p, z, ownerDocument) {
 	this.tiles.push(tile)
 
 	this.setObjectOpacity(tile);
+	console.log("getTile: fetch new tile ", tile);
 
 	return tile;
 }
