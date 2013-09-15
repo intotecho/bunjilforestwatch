@@ -18,7 +18,7 @@ class TestEEService(unittest.TestCase):
               ]  
     
     def setUp(self):
-        initEarthEngineService()
+        eeservice.initEarthEngineService()
         
     def TestGetMap(self):
         #image = getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA')
@@ -28,7 +28,7 @@ class TestEEService(unittest.TestCase):
         #green = 'green'
         #blue = 'blue'
         #mapid = getMap(byteimage,  red, green, blue)
-        mapid = GetMap(self.coords)
+        mapid = eeservice.GetMap(self.coords)
         self.assertEqual(True, True, 'TestGetMap failed')
      
     def TestGetTiles(self):
@@ -42,7 +42,7 @@ class TestEEService(unittest.TestCase):
      
     def TestL7Thumbs(self):
         
-        image = getLatestLandsat7HSVUpres(coords)
+        image = eeservice.getLatestLandsat7HSVUpres(coords)
         getThumbnailPath(image)
         self.assertEqual(1, 2, 'test failed')
         pass
@@ -56,33 +56,44 @@ class TestEEService(unittest.TestCase):
               ]    
         
         testimage= ee.Image("LANDSAT/LC8_L1T_TOA/LC80440342013170LGN00")
-        sharpimage = SharpenLandsat8HSVUpres(testimage)
-        getThumbnailPath(sharpimage)
+        sharpimage = eeservice.SharpenLandsat8HSVUpres(testimage)
+        eeservice.getThumbnailPath(sharpimage)
         self.assertEqual(1, 1, 'L8 thumbs failed')
         pass
      
     def TestL7Overlay(self):
-        image = getLatestLandsatImage(self.coords, 'L7_L1T')
+        image = eeservice.getLatestLandsatImage(self.coords, 'L7_L1T')
         #red = 'B4'
         #green = 'B3'
         #blue = 'B2'
-        sharpimage = SharpenLandsat7HSVUpres(image)
+        sharpimage = eeservice.SharpenLandsat7HSVUpres(image)
         red = 'red'
         green = 'green'
         blue = 'blue'    
-        byteimage = sharpimage.multiply(255).byte()
-        path = getOverlayPath(byteimage, "L7", red, green, blue)
+        byteimage = eeservice.sharpimage.multiply(255).byte()
+        path = eeservice.getOverlayPath(byteimage, "L7", red, green, blue)
         self.assertEqual(path.startswith("https://earthengine.googleapis.com//api/download?docid"), True, 'L7 overlay failed')
           
     def TestL8Overlay(self):
-        image = getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA')
-        sharpimage = SharpenLandsat8HSVUpres(image)
+        image = eeservice.getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA')
+        sharpimage = eeservice.SharpenLandsat8HSVUpres(image)
         red = 'red'
         green = 'green'
         blue = 'blue'    
-        byteimage = sharpimage.multiply(255).byte()
-        path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
+        byteimage = eeservice.sharpimage.multiply(255).byte()
+        path = eeservice.getOverlayPath(byteimage, "L8TOA", red, green, blue)
         self.assertEqual(path.startswith("https://earthengine.googleapis.com//api/download?docid"), True, 'L8 overlay failed')
+
+    def TestL8NDVIOverlay(self):
+        image = eeservice.getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA')
+        ndvi = eeservice.getL8NDVIImage(image)
+        red = 'red'
+        green = 'green'
+        blue = 'blue'    
+        #byteimage = eeservice.sharpimage.multiply(255).byte()
+        path = eeservice.getOverlayPath(ndvi, "L8TOA", red, green, blue)
+        self.assertEqual(path.startswith("https://earthengine.googleapis.com//api/download?docid"), True, 'TestL8NDVIOverlay failed')
+
    
     def TestGetAlgorithms(self):
         algorithms = ee.data.getAlgorithms()

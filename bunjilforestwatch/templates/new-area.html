@@ -1,16 +1,21 @@
 {% extends "base.html" %}
 {% block head %}
-
+<style type="text/css"> 
+/** FIX for Bootstrap and Google Maps Info window styes problem http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden **/
+img[src*="gstatic.com/"], img[src*="googleapis.com/"] {
+max-width: none;
+}
+var map;
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
     <style type="text/css">
       html { height: 100% }
       body { height: 100%; margin: 0; padding: 0 }
       #map-canvas { height: 100% }
     </style>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=true"></script>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
 	<script src="/static/js/polygon-outliner.js"></script>
 	<script src="/static/js/GeoJSON.js"></script>
- 
+	<script type="text/javascript" src="/static/js/landsat-grid.js"></script> 
     <script>
     
       function initialize() {
@@ -20,7 +25,7 @@
           zoom: 3,
           mapTypeId: google.maps.MapTypeId.HYBRID
         };
-        var map = new google.maps.Map(document.getElementById("map-canvas"),
+        map = new google.maps.Map(document.getElementById("map-canvas"),
             mapOptions);
         
         var creator = new PolygonCreator(map);
@@ -92,7 +97,31 @@
 		 		}
 		 });
 
-		
+			//Checkbox to show/hide overlays  		
+	   		$('.layer').click(function(){
+	   			var layerID = parseInt($(this).attr('id'));
+	   			
+	    		if ($(this).is(':checked')){
+	    			if(layerID == 0)
+	    			{
+	    				requestLandsatGrid(map, true);
+					}
+					if(layerID == 1)
+	    			{
+	    			}
+	    		} 
+	    		else {
+		    		if(layerID == 0)
+	    			{
+	    				requestLandsatGrid(map, false);
+	           		 	removeLandsatGrid();
+	    			}
+	    			if(layerID == 1)
+	    			{
+	        		}
+	        	}
+			});
+
 		 //<!--resize div tip from https://github.com/twitter/bootstrap/issues/2475 -->
 		  
 		  $(window).resize(function () {
@@ -128,6 +157,12 @@
 					<div class="control-group">
 						<input type="submit" class="btn btn-primary" value="Create Area">
 					</div>
+					<div>
+					<p>
+						<input type="checkbox" id="0" class="layer" unchecked/><label for="0">Landsat Grid </label>
+						<input type="checkbox" id="1" class=layer unchecked/><label for="1">Topo map</label></p>
+					</div>	
+					
 					<!-- <div class="form-actions"> -->
 					<div class="control-group">
 						<input id="reset", type="reset" class="btn btn-secondary" value="Start Again">
@@ -145,12 +180,7 @@
    </div>
   <div class="span10">
       <!--Body = Map content-->
-        <h3>Add new Area of Interest</h3>
-     	<p><span class="instruction"><b>To define the boundary of a new Area of Interest:</b></span></p>
-		<li>Left click and hold to drag the center of the map to your part of the earth.</li>
-		<li>Zoom till your area takes up most of the map.</li>
-		<li>Left click on the map to create markers, when last marker meets first marker, it will form a polygon.</li> 
-
+ 
   <div id="map-canvas"> </div>
   </div>
 </div>
