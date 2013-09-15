@@ -1,9 +1,0 @@
-{% for e in entries %}
-	<div class="row">
-		<div class="span7">
-			<h2><a href="{{ e.url }}">{{ e.title }}</a></h2>
-			<h5><img src="{{ e.avatar }}&amp;s=30" alt="{{ e.user }}"> <a href="{{ "user"|url(e.user) }}">{{ e.user }}</a> {{ e.date|sdate }}</h5>
-			{{ e.rendered|safe }}
-		</div>
-	</div>
-{% endfor %}

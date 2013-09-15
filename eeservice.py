@@ -53,7 +53,7 @@ def getLatestLandsatImage(boundary_polygon, collection_name):
     feature = scenes['features'].pop()
     #for feature in scenes['features']: 
     id = feature['id']   
-    logging.info('Scene id: %s', id)
+    logging.info('getLatestLandsatImage found scene: %s', id)
     latest_image = ee.Image(id)
     props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
     test = latest_image.getInfo()['bands']
@@ -65,6 +65,11 @@ def getLatestLandsatImage(boundary_polygon, collection_name):
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
     logging.info('getLatestLandsatImage id: %s, date:%s', id, date_str)
+    x = latest_image.getInfo()
+    latest_image.name = id
+    latest_image.capture_date = date_str
+    x['mynewkey'] = id 
+    #x.capture_date = date_str
     return latest_image  #.clip(park_boundary)
 
 def getLatestLandsat7HSVUpres(boundary_polygon):
@@ -121,7 +126,8 @@ def SharpenLandsat7HSVUpres(image):
         pan = image.select(['80']).unitScale(0, 155)
         huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
         upres = ee.Image.cat(huesat, pan).hsvtorgb()  
-        return(upres)    
+        byteimage = upres.multiply(255).byte()
+        return(byteimage)    
 
 def SharpenLandsat8HSVUpres(image):
         #Convert to HSV, swap in the pan band, and convert back to RGB. 
@@ -131,7 +137,9 @@ def SharpenLandsat8HSVUpres(image):
         pan = image.select("B8")
         huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
         upres = ee.Image.cat(huesat, pan).hsvtorgb()  
-        return(upres)
+        byteimage = upres.multiply(255).byte()
+        newImage = image.addBands(byteimage); #keep all the metadata of image, but add the new bands.
+        return(newImage)
 
 ###################################
 # Image statistics
@@ -238,27 +246,33 @@ def getL8SharpOverlay(coords):
     red = 'red'
     green = 'green'
     blue = 'blue'    
-    byteimage = sharpimage.multiply(255).byte()
-    path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
+    #byteimage = sharpimage.multiply(255).byte()
+    path = getOverlayPath(sharpimage, "L8TOA", red, green, blue)
     return path
 
 def getL8SharpImage(coords):
     image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA')
     sharpimage = SharpenLandsat8HSVUpres(image)
-    red = 'red'
-    green = 'green'
-    blue = 'blue'    
-    byteimage = sharpimage.multiply(255).byte()
+    #red = 'red'
+    #green = 'green'
+    #blue = 'blue'    
+    #byteimage = sharpimage.multiply(255).byte()
     #path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
-    return byteimage
+    return sharpimage
+
+def    getL8NDVIImage(coords):
+    image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA')
+    #sharpimage = SharpenLandsat8HSVUpres(image)
+    ndvi = image.normalizedDifference(["B4", "B3"]);   
+    #addToMap(ndvi.median(), {min:-1, max:1}, "Median NDVI");
 
 def getMapId(image, red, green, blue):
-
+    #original image is used for original metadata lost in image - nice to figure out a cleaner solution 
     crs = image.getInfo()['bands'][0]['crs']
     p05 = []
     p95 = []
     p05 = getPercentile(image, 5, crs)
-    p95 = getPercentile(image, 95, crs)
+    p95 = getPercentile(image, 80, crs) # not 95
     min = str(p05[red]) + ', ' + str(p05[green]) + ', ' + str(p05[blue])
     max = str(p95[red]) + ', ' + str(p95[green]) + ', ' + str(p95[blue])
     print('Percentile  5%: ', min)
@@ -267,9 +281,19 @@ def getMapId(image, red, green, blue):
     mapparams = {    'bands':  'red, green, blue', 
                      'min': min,
                      'max': max,
-                     'gamma': 1.2
+                     'gamma': 1.2,
+                     format: 'jpg'
                 }   
-    mapid  = image.getMapId(mapparams) 
+    mapid  = image.getMapId(mapparams)
+   
+    info = image.getInfo()
+    #logging.info("info", info)
+    # copy some image props to mapid for browser to display
+    props = info['properties']
+    mapid['date_acquired'] = props['DATE_ACQUIRED']
+    mapid['id'] = props['system:index']
+    mapid['path'] = props['WRS_PATH']
+    mapid['row'] = props['WRS_ROW']
     return mapid
 
 def getTiles(mapid): #not used
@@ -279,12 +303,16 @@ def getTiles(mapid): #not used
 
 def GetMap(coords):
         image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA')
+       
         sharpimage = SharpenLandsat8HSVUpres(image)
-        byteimage = sharpimage.multiply(255).byte()
+        #byteimage = sharpimage.multiply(255).byte()
+        
+        
+        
         red = 'red'
         green = 'green'
         blue = 'blue'
-        mapid = getMapId(byteimage,  red, green, blue)
+        mapid = getMapId(sharpimage, red, green, blue)
 
 #### UNIT TESTS ######
 

@@ -84,7 +84,7 @@ function drawLandsatGrid(data) {
 		var infoWindow = new google.maps.InfoWindow();
 		infoWindowArray.push(infoWindow);
 		
-		console.log(data);
+		//console.log(data);
     	var newCoordinates = [];
         var geometry = rows[i][1]['geometry']
         if (geometry) {

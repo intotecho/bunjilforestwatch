@@ -21,13 +21,12 @@ img[src*="gstatic.com/"], img[src*="googleapis.com/"] {
 max-width: none;
 }
 </style>
-<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry&libraries=visualization"> </script>
-<script type="text/javascript" src="/static/js/ExtDraggableObject.js"></script>	
-<script type="text/javascript" src="/static/js/CustomTileOverlay.js"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
+<script type="text/javascript" src="/static/js/draggable-object.js"></script>	
+<script type="text/javascript" src="/static/js/custom-tile-overlay.js"></script>
 <script type="text/javascript" src="/static/js/landsat-grid.js"></script>
 <script type="text/javascript" src="/static/js/polygon-outliner.js"></script>
-
- 
+<script type="text/javascript" src="/static/js/drawing-tools.js"></script>
 <script>
 
 var map;
@@ -91,11 +90,14 @@ function initialize() {
   	//wait for map to load so bounds are known before setting up landsat grid.
   	//now activated by the checkbox.
   	
-  	//google.maps.event.addListener(map, 'bounds_changed', function() {
-    //     //requestLandsatGrid(map, true);
-    //});
+  	google.maps.event.addListener(map, 'bounds_changed', function() {
+         //requestLandsatGrid(map, true);
+  		//console.log("zoom to: ", map.getZoom(), " move to: ", map.getBounds().getNorthEast(), map.getBounds().getSouthWest());
+    });
 
-   
+   	google.maps.event.addListener(map, 'zoom', function() { 
+	         	console.log("zoom to:", map.zoom());
+	});
  
     //Add Area Boundary tro Map
     var latlngs = [];
@@ -124,7 +126,7 @@ function initialize() {
 	 		.done(function(data){
 	 			mapobj = jQuery.parseJSON(data);
 	 			$('#observations_panel').empty();
-	 			$('#observations_panel').append(mapobj.mapid, mapobj.token);
+	 			$('#observations_panel').append("\Captured: ", mapobj.date_acquired, "\n", mapobj.id, "\nPath: ", mapobj.path, ", Row: ", mapobj.row);
 	 			createImageOverlay(true, mapobj.mapid,  mapobj.token);
 	 			
 // 	 			var mapsEngineLayer = new google.maps.visualization.MapsEngineLayer({
@@ -183,7 +185,8 @@ function initialize() {
 // 				    clickable: 'true',
 // 				    suppressInfoWindows: 'false',
 // 	  				});
-	  				createImageOverlay(true, 0,0,0);
+	  				//createImageOverlay(true, 0,0,0);
+	  				createDrawingManager(map);
     			}
     		} 
     		else {
@@ -262,7 +265,32 @@ function initialize() {
 			      </div>
 			    </div>
 			  </div>
-			  <div class="accordion-group">
+			 
+			   <div class="accordion-group">
+			    <div class="accordion-heading">
+			      <a class="accordion-toggle" data-toggle="collapse" href="#observations_panel">
+			        Observations
+			      </a>
+			    </div>
+			    <div id="observations_panel" class="accordion-body collapse">
+			      <div class="accordion-inner">
+			        <p>No Observations.<p>
+			      </div>
+			    </div>
+			  </div>
+			   <div class="accordion-group">
+			    <div class="accordion-heading">
+			      <a class="accordion-toggle" data-toggle="collapse" href="#reports_panel">
+			        Reports
+			      </a>
+			    </div>
+			    <div id="reports_panel" class="accordion-body collapse">
+			      <div class="accordion-inner">
+			        <p>No reports<p>
+			      </div>
+			    </div>
+			  </div>
+			   <div class="accordion-group">
 			    <div class="accordion-heading">
 			      <a class="accordion-toggle" data-toggle="collapse" href="#boundary_panel">
 			        Boundary Coordinates
@@ -287,30 +315,6 @@ function initialize() {
 			       	<p class="divider">"Map initial view (saved)"</p>
 					<p class="divider">"Center: {{area.map_center}}"</p>
 					<p class="divider">"Zoom: {{area.map_zoom}}"</p>
-			      </div>
-			    </div>
-			  </div>
-			   <div class="accordion-group">
-			    <div class="accordion-heading">
-			      <a class="accordion-toggle" data-toggle="collapse" href="#observations_panel">
-			        Observations
-			      </a>
-			    </div>
-			    <div id="observations_panel" class="accordion-body collapse">
-			      <div class="accordion-inner">
-			        <p>No Observations.<p>
-			      </div>
-			    </div>
-			  </div>
-			   <div class="accordion-group">
-			    <div class="accordion-heading">
-			      <a class="accordion-toggle" data-toggle="collapse" href="#reports_panel">
-			        Reports
-			      </a>
-			    </div>
-			    <div id="reports_panel" class="accordion-body collapse">
-			      <div class="accordion-inner">
-			        <p>No reports<p>
 			      </div>
 			    </div>
 			  </div>

@@ -2,8 +2,6 @@
 
 from __future__ import with_statement
 
-
-
 import ee
 import eeservice
 import base64
@@ -415,6 +413,17 @@ class AccountHandler(BaseHandler):
 
 class NewAreaHandler(BaseHandler):
 	def get(self):
+		instructions= \
+		"<b>Instructions</b> to define the boundary of a new Area of Interest:" \
+			"</span></p>"\
+			"<li>Drag (Left click and hold) to move the center of the map over your area.</li>"\
+			"<li>Zoom till your area takes up most of the map.</li>" \
+			"<li>Tick the <i>Landsat Grid</i> checkbox to see where images will be taken.</li>" \
+			"<li>Create markers by clicking around the boundary in an <b>anticlockwise</b> direction.</li> " \
+			"<li>When you get back to the starting point, click on the first marker to close the polygon. </li>" \
+			"<li>Click <i>Start Again</i> if you make a mistake.</li> "
+		
+		self.add_message('info', instructions)
 		self.render('new-area.html')
 
 	def post(self):
@@ -443,7 +452,7 @@ class NewAreaHandler(BaseHandler):
 			if item['properties']['featureName']=="mapview": # get the view settings to display the area.
 				zoom=item['properties']['zoom']
 				center_pt=item['geometry']['coordinates']
-				logging.info("zoom: %s, center_pt: %s, typeof(center_pt) %s", zoom, center_pt, type(center_pt) )
+				logging.info("zoom: %s, center_pt: %s, type(center_pt) %s", zoom, center_pt, type(center_pt) )
 				center = db.GeoPt(float(center_pt[0]), float(center_pt[1]))
 				#be good to add a bounding box too.
 				
@@ -483,7 +492,7 @@ class NewAreaHandler(BaseHandler):
 				
 				return
 
-		####self.render('new-area.html')
+		self.render('view-area.html')
 
 
 class NewJournal(BaseHandler):
@@ -554,15 +563,16 @@ class ViewArea(BaseHandler):
 
 
 
-class L8LatestOverlayHandler(BaseHandler):
+class L8LatestVisualOverlayHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
 	def get(self, username, area_name):
+		logging.info("L8LatestVisualOverlayHandler")
 		area = cache.get_area(username, area_name)
 		if not area or username != self.session['user']['name']:
-			logging.info('L8LatestOverlayHandler - bad area returned %s, username %s, %s', area, username, area_name)
+			logging.info('L8LatestVisualOverlayHandler - bad area returned %s, username %s, %s', area, username, area_name)
 			self.error(404)
 			return
-		logging.debug('L8LatestOverlayHandler area_name %s %s', area_name, type(area))
+		logging.debug('L8LatestVisualOverlayHandler area_name %s %s', area_name, type(area))
 		eeservice.initEarthEngineService() #- moved to main user login page
 		poly = []
 		for geopt in area.coordinates:
@@ -571,7 +581,7 @@ class L8LatestOverlayHandler(BaseHandler):
 		image = eeservice.getL8SharpImage(poly)
 		map_id  = eeservice.getMapId(image,  'red',  'green', 'blue')
 		del map_id['image'] #can't serialise a memory object, and browser won't need it.
-		logging.info("map_id %s", map_id)
+		#logging.info("map_id %s", map_id)
 		#logging.info("tile_path %s",area.tile_path)
 		
 		def txn(user_key, area):
@@ -587,15 +597,51 @@ class L8LatestOverlayHandler(BaseHandler):
 		#self.add_message('success', 'map_id:%s' %(map_id))
 		self.response.write(json.dumps(map_id))
 
-class L8LatestDownloadHandler(BaseHandler):
+class L8LatestNDVIOverlayHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
 	def get(self, username, area_name):
+		logging.info("L8LatestNDVIOverlayHandler")
 		area = cache.get_area(username, area_name)
 		if not area or username != self.session['user']['name']:
-			logging.info('L8LatestDownloadHandler - bad area returned %s, username %s, %s', area, username, area_name)
+			logging.info('L8LatestNDVIOverlayHandler - bad area returned %s, username %s, %s', area, username, area_name)
 			self.error(404)
 			return
-		logging.debug('L8LatestDownloadHandler area_name %s %s', area_name, type(area))
+		logging.debug('L8LatestNDVIOverlayHandler area_name %s %s', area_name, type(area))
+		eeservice.initEarthEngineService() #- moved to main user login page
+		poly = []
+		for geopt in area.coordinates:
+			poly.append([geopt.lon, geopt.lat])
+		
+		image = eeservice.getL8NDVIImage(poly)
+		map_id  = eeservice.getMapId(image,  'red',  'green', 'blue')
+		del map_id['image'] #can't serialise a memory object, and browser won't need it.
+		#logging.info("map_id %s", map_id)
+		#logging.info("tile_path %s",area.tile_path)
+		
+		def txn(user_key, area):
+			user = db.get(user_key)
+			user.areas_count += 1
+			db.put([user, area])
+			return user, area
+
+		user, area = db.run_in_transaction(txn, self.session['user']['key'], area)
+		cache.clear_area_cache(user.key())
+		cache.set(cache.pack(user), cache.C_KEY, user.key())
+		self.populate_user_session()
+		#self.add_message('success', 'map_id:%s' %(map_id))
+		self.response.write(json.dumps(map_id))
+
+
+class L8LatestVisualDownloadHandler(BaseHandler):
+	#This handler responds to Ajax request, hence it returns a response.write()
+	def get(self, username, area_name):
+		logging.info("L8LatestVisualDownloadHandler")
+		area = cache.get_area(username, area_name)
+		if not area or username != self.session['user']['name']:
+			logging.info('L8LatestVisualDownloadHandler - bad area returned %s, username %s, %s', area, username, area_name)
+			self.error(404)
+			return
+		logging.info('L8LatestVisualDownloadHandler area_name %s %s', area_name, type(area))
 		eeservice.initEarthEngineService() #- moved to main user login page
 		
 		poly = []
@@ -1723,8 +1769,9 @@ app = webapp2.WSGIApplication([
 	# this section must be last, since the regexes below will match one and two -level URLs
 	webapp2.Route(r'/<username>/<area_name>', handler=ViewArea, name='view-area'),
 	webapp2.Route(r'/<username>/<area_name>/new', handler=NewEntryHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/<area_name>/L8latest/overlay',  handler=L8LatestOverlayHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/<area_name>/L8latest/download', handler=L8LatestDownloadHandler, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name>/L8latest/overlay',  handler=L8LatestVisualOverlayHandler, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name>/L8latest/download', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name>/L8NDVI/overlay',  handler=L8LatestNDVIOverlayHandler, name='new-obstask'),
 
 	webapp2.Route(r'/<username>/<journal_name>', handler=ViewJournal, name='view-journal'),
 	webapp2.Route(r'/<username>/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
