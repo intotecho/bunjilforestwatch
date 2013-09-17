@@ -91,8 +91,12 @@ function initialize() {
   	//now activated by the checkbox.
   	
   	google.maps.event.addListener(map, 'bounds_changed', function() {
-         //requestLandsatGrid(map, true);
-  		//console.log("zoom to: ", map.getZoom(), " move to: ", map.getBounds().getNorthEast(), map.getBounds().getSouthWest());
+   	$(landsatgrid_panel).empty();
+		htmlString = "<p><font-size:50%;color:blue strong>zoom:</strong> " + map.getZoom() + "</p>";
+		htmlString += "<p>lat: " + map.getCenter().lat().toFixed(3) + ", lng: " + map.getCenter().lng().toFixed(3) + "<br></p>";
+		//htmlString +=  this.get("Description");
+		console.log( htmlString);
+		$(landsatgrid_panel).html(htmlString);
     });
 
    	google.maps.event.addListener(map, 'zoom', function() { 
@@ -173,26 +177,17 @@ function initialize() {
     		if ($(this).is(':checked')){
     			if(layerID == 0)
     			{
-    				requestLandsatGrid(map, true);
+    				requestLandsatGrid(map, true, true);
 				}
 				if(layerID == 1)
     			{
-//     				//Map of US flooding
-// 		 			var mapsEngineLayer = new google.maps.visualization.MapsEngineLayer({
-// 	    			mapId: '10446176163891957399-13516001307527776624-4',
-// 	    			layerKey: 'layer_00001',
-// 	    			map: map,
-// 				    clickable: 'true',
-// 				    suppressInfoWindows: 'false',
-// 	  				});
-	  				//createImageOverlay(true, 0,0,0);
 	  				createDrawingManager(map);
     			}
     		} 
     		else {
 	    		if(layerID == 0)
     			{
-    				requestLandsatGrid(map, false);
+    				requestLandsatGrid(map, false, true);
            		 	removeLandsatGrid();
     			}
     			if(layerID == 1)
@@ -241,7 +236,6 @@ function initialize() {
 				<input id="L8latest_overlay_btn" type="button" class="btn btn-primary"
 					value="Get Latest Imagery" /></p>
 			</div>
-	
 			<div>
 			<p>
 				<input id="L8latest_download_btn" type="button" class="btn"

@@ -165,7 +165,7 @@ class MainPage(BaseHandler):
 			journals = cache.get_journals(db.Key(self.session['user']['key']))
 			areas= cache.get_areas(db.Key(self.session['user']['key']))
 			#logging.info( "areas = %s", areas)
-			eeservice.initEarthEngineService()
+			#eeservice.initEarthEngineService() - when should we initialise??
 			self.render('index-user.html', {
 				'activities': cache.get_activities_follower(self.session['user']['name']),
 				'journals': journals,
@@ -413,6 +413,7 @@ class AccountHandler(BaseHandler):
 
 class NewAreaHandler(BaseHandler):
 	def get(self):
+		username = self.session['user']['name']
 		instructions= \
 		"<b>Instructions</b> to define the boundary of a new Area of Interest:" \
 			"</span></p>"\
@@ -424,7 +425,9 @@ class NewAreaHandler(BaseHandler):
 			"<li>Click <i>Start Again</i> if you make a mistake.</li> "
 		
 		self.add_message('info', instructions)
-		self.render('new-area.html')
+		self.render('new-area.html', {
+				'username': username
+			})	
 
 	def post(self):
 		name = self.request.get('name')
