@@ -564,8 +564,6 @@ class ViewArea(BaseHandler):
 				
 			})
 
-
-
 class L8LatestVisualOverlayHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
 	def get(self, username, area_name):
@@ -582,20 +580,20 @@ class L8LatestVisualOverlayHandler(BaseHandler):
 			poly.append([geopt.lon, geopt.lat])
 		
 		image = eeservice.getL8SharpImage(poly)
-		map_id  = eeservice.getMapId(image,  'red',  'green', 'blue')
+		map_id  = eeservice.getVisualMapId(image,  'red',  'green', 'blue')
 		del map_id['image'] #can't serialise a memory object, and browser won't need it.
 		#logging.info("map_id %s", map_id)
 		#logging.info("tile_path %s",area.tile_path)
 		
-		def txn(user_key, area):
-			user = db.get(user_key)
-			user.areas_count += 1
-			db.put([user, area])
-			return user, area
-
-		user, area = db.run_in_transaction(txn, self.session['user']['key'], area)
-		cache.clear_area_cache(user.key())
-		cache.set(cache.pack(user), cache.C_KEY, user.key())
+# 		def txn(user_key, area):
+# 			user = db.get(user_key)
+# 			user.areas_count += 1
+# 			db.put([user, area])
+# 			return user, area
+# 
+# 		user, area = db.run_in_transaction(txn, self.session['user']['key'], area)
+#		cache.clear_area_cache(user.key())
+#		cache.set(cache.pack(user), cache.C_KEY, user.key())
 		self.populate_user_session()
 		#self.add_message('success', 'map_id:%s' %(map_id))
 		self.response.write(json.dumps(map_id))
@@ -615,21 +613,20 @@ class L8LatestNDVIOverlayHandler(BaseHandler):
 		for geopt in area.coordinates:
 			poly.append([geopt.lon, geopt.lat])
 		
-		image = eeservice.getL8NDVIImage(poly)
-		map_id  = eeservice.getMapId(image,  'red',  'green', 'blue')
+		image = eeservice.getLatestLandsatImage(poly, 'LANDSAT/LC8_L1T_TOA')
+		map_id = eeservice.getL8LatestNDVIImage(image)
 		del map_id['image'] #can't serialise a memory object, and browser won't need it.
 		#logging.info("map_id %s", map_id)
 		#logging.info("tile_path %s",area.tile_path)
-		
-		def txn(user_key, area):
-			user = db.get(user_key)
-			user.areas_count += 1
-			db.put([user, area])
-			return user, area
-
-		user, area = db.run_in_transaction(txn, self.session['user']['key'], area)
-		cache.clear_area_cache(user.key())
-		cache.set(cache.pack(user), cache.C_KEY, user.key())
+# 		def txn(user_key, area):
+# 			user = db.get(user_key)
+# 			user.areas_count += 1
+# 			db.put([user, area])
+# 			return user, area
+# 
+# 		user, area = db.run_in_transaction(txn, self.session['user']['key'], area)
+# 		cache.clear_area_cache(user.key())
+# 		cache.set(cache.pack(user), cache.C_KEY, user.key())
 		self.populate_user_session()
 		#self.add_message('success', 'map_id:%s' %(map_id))
 		self.response.write(json.dumps(map_id))
@@ -1772,9 +1769,9 @@ app = webapp2.WSGIApplication([
 	# this section must be last, since the regexes below will match one and two -level URLs
 	webapp2.Route(r'/<username>/<area_name>', handler=ViewArea, name='view-area'),
 	webapp2.Route(r'/<username>/<area_name>/new', handler=NewEntryHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/<area_name>/L8latest/overlay',  handler=L8LatestVisualOverlayHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/<area_name>/L8latest/download', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/<area_name>/L8NDVI/overlay',  handler=L8LatestNDVIOverlayHandler, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name>/overlay/l8-vis/latest',  handler=L8LatestVisualOverlayHandler, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name>/overlay/l8-ndvi/latest',  handler=L8LatestNDVIOverlayHandler, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name>/download/l8-vis/latest', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
 
 	webapp2.Route(r'/<username>/<journal_name>', handler=ViewJournal, name='view-journal'),
 	webapp2.Route(r'/<username>/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),

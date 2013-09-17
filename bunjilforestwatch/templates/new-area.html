@@ -16,9 +16,12 @@ var map;
 	<script src="/static/js/polygon-outliner.js"></script>
 	<script src="/static/js/GeoJSON.js"></script>
 	<script type="text/javascript" src="/static/js/landsat-grid.js"></script> 
-    <script>
+	<script type="text/javascript" src="/static/js/bootbox.min.js"></script> 
+	
+	<script>
     
       function initialize() {
+    	  bootbox.alert("Instructions!");
         var mapOptions = {
           center: new google.maps.LatLng(-34.397, 150.644),
           overviewMapControl: true,

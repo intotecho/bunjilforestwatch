@@ -261,7 +261,7 @@ def getL8SharpImage(coords):
     return sharpimage
 
 def getL8LatestNDVIImage(image):
-    NDVI_PALETTE = {"FFFFFF,00FF00"}
+    NDVI_PALETTE = {'FFFFFF','00FF00'}
     ndvi = image.normalizedDifference(["B4", "B3"]);   
     
     #addToMap(ndvi.median(), {min:-1, max:1}, "Median NDVI");
@@ -270,11 +270,11 @@ def getL8LatestNDVIImage(image):
     newImage = image.addBands(ndvi); #keep all the metadata of image, but add the new bands.
     print('getL8NDVIImage: ', newImage)
 
-    mapparams = {    'bands':  'red, green, blue', 
+    mapparams = {    #'bands':  'red, green, blue', 
                      'min': -1,
                      'max': 1,
-                     'palette': NDVI_PALETTE,
-                     'gamma': 1.2,
+                     'palette': 'FFFFFF, 00FF00',
+                     #'gamma': 1.2,
                      'format': 'jpg'
                 }   
     mapid  = ndvi.getMapId(mapparams)
@@ -326,9 +326,6 @@ def GetMap(coords):
        
         sharpimage = SharpenLandsat8HSVUpres(image)
         #byteimage = sharpimage.multiply(255).byte()
-        
-        
-        
         red = 'red'
         green = 'green'
         blue = 'blue'
