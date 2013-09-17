@@ -248,7 +248,10 @@
 			return 	this.getPolygonObj().setOptions(
 							{fillColor:color,
 							 strokeColor:color,
-							 strokeWeight: 2
+							 strokeWeight: 2,
+							 editable: true,
+							 clickable: true,
+							 fillOpacity: 0.4
 							 }
 						);
 		}

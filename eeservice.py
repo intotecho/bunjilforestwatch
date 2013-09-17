@@ -260,13 +260,35 @@ def getL8SharpImage(coords):
     #path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
     return sharpimage
 
-def    getL8NDVIImage(coords):
-    image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA')
-    #sharpimage = SharpenLandsat8HSVUpres(image)
+def getL8LatestNDVIImage(image):
+    NDVI_PALETTE = {"FFFFFF,00FF00"}
     ndvi = image.normalizedDifference(["B4", "B3"]);   
+    
     #addToMap(ndvi.median(), {min:-1, max:1}, "Median NDVI");
+    #getMapId(ndvi, {min:-1, max:1, palette:NDVI_PALETTE}, "NDVI");
+    
+    newImage = image.addBands(ndvi); #keep all the metadata of image, but add the new bands.
+    print('getL8NDVIImage: ', newImage)
 
-def getMapId(image, red, green, blue):
+    mapparams = {    'bands':  'red, green, blue', 
+                     'min': -1,
+                     'max': 1,
+                     'palette': NDVI_PALETTE,
+                     'gamma': 1.2,
+                     'format': 'jpg'
+                }   
+    mapid  = ndvi.getMapId(mapparams)
+  
+    # copy some image props to mapid for browser to display
+    info = image.getInfo() #logging.info("info", info)
+    props = info['properties']
+    mapid['date_acquired'] = props['DATE_ACQUIRED']
+    mapid['id'] = props['system:index']
+    mapid['path'] = props['WRS_PATH']
+    mapid['row'] = props['WRS_ROW']
+    return mapid
+
+def getVisualMapId(image, red, green, blue):
     #original image is used for original metadata lost in image - nice to figure out a cleaner solution 
     crs = image.getInfo()['bands'][0]['crs']
     p05 = []
@@ -282,13 +304,11 @@ def getMapId(image, red, green, blue):
                      'min': min,
                      'max': max,
                      'gamma': 1.2,
-                     format: 'jpg'
+                     'format': 'jpg'
                 }   
     mapid  = image.getMapId(mapparams)
-   
-    info = image.getInfo()
-    #logging.info("info", info)
     # copy some image props to mapid for browser to display
+    info = image.getInfo() #logging.info("info", info)
     props = info['properties']
     mapid['date_acquired'] = props['DATE_ACQUIRED']
     mapid['id'] = props['system:index']
@@ -312,7 +332,7 @@ def GetMap(coords):
         red = 'red'
         green = 'green'
         blue = 'blue'
-        mapid = getMapId(sharpimage, red, green, blue)
+        mapid = getVisualMapId(sharpimage, red, green, blue)
 
 #### UNIT TESTS ######
 

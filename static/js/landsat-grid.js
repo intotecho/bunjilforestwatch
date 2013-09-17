@@ -7,7 +7,8 @@ var LANDSAT_GRID_FT = '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8';//https://www.g
 var COUNTRY_GRID_FT = '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ'; //https://www.google.com/fusiontables/data?docid=1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ
 var BUNJIL_API_KEY = 'AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I' //https://code.google.com/apis/console/
 var landsat_overlays = [];
-
+var landsatgrid_panel = '#map_panel'
+var landsatgrid_isclickable;
 var gridInitialised;
 
 
@@ -21,10 +22,11 @@ function resetInfoWindow(){
     }
 }
 
-function requestLandsatGrid(map, showlayer)
+function requestLandsatGrid(map, showlayer, clickable)
 {
 	// Initialize JSONP request for LANSAT grid Fusion Table
 	// Based on https://developers.google.com/fusiontables/docs/samples/mouseover_map_styles
+	landsatgrid_isclickable = clickable;
 	if(gridInitialised != true) {
 		if (showlayer == true)
 		{
@@ -67,7 +69,6 @@ function requestLandsatGrid(map, showlayer)
 	}
 }
 
-
 function removeLandsatGrid() {
 	while (landsat_overlays.length > 0)
 	{
@@ -77,7 +78,8 @@ function removeLandsatGrid() {
 	}
 }
 
-function drawLandsatGrid(data) {
+
+function drawLandsatGrid(data, clickable) {
 	var rows = data['rows'];
     //var currentBounds = map.getBounds(); // get bounds of the map object's current (initial) viewport
     for (var i in rows) {
@@ -96,15 +98,25 @@ function drawLandsatGrid(data) {
         	strokeOpacity: 0.4,
         	strokeWeight: 1,
         	fillOpacity: 0,
+        	editable: false,
+        	clickable: landsatgrid_isclickable,
         	suppressInfoWindows: true,
+        	//pointer-events: none,
         	content: description
 	        });
 			landsat_cell.set("Description", description);  // Add attributes for adding description into polygon.   
 	        
 			landsat_overlays.push(landsat_cell);
 			
+				
 			google.maps.event.addListener(landsat_cell, 'mouseover', function(e) {
-	            this.setOptions({fillOpacity: 0.3, strokeWeight: 5});
+				$(landsatgrid_panel).empty();
+				htmlString = "<p><font-size:50%;color:blue strong>zoom:</strong> " + map.getZoom() + "</p>";
+				htmlString += "<p>lat: " + map.getCenter().lat().toFixed(3) + ", lng: " + map.getCenter().lng().toFixed(3) + "<br></p>";
+				htmlString +=  this.get("Description");
+				console.log( htmlString);
+				$(landsatgrid_panel).html(htmlString);
+				this.setOptions({fillOpacity: 0.3, strokeWeight: 5});
 	        });
 	        google.maps.event.addListener(landsat_cell, 'mouseout', function(e) {
 	            this.setOptions({fillOpacity: 0, strokeWeight: 1});
@@ -115,17 +127,18 @@ function drawLandsatGrid(data) {
 	         	console.log(e.zoom());
 	       	});
 	       	
- 			google.maps.event.addListener(landsat_cell, 'click', function(e) {
- 				resetInfoWindow();
- 				infoWindow.setOptions({
- 			   		content: this.get("Description"),  		
- 			   		position: e.latLng,
- 			   		pixelOffset: e.pixelOffset,
- 			 	});
- 				infoWindow.open(map);
-  			});
+// 			google.maps.event.addListener(landsat_cell, 'click', function(e) {
+// 				resetInfoWindow();
+// 				infoWindow.setOptions({
+// 			   		content: this.get("Description"),  		
+// 			   		position: e.latLng,
+// 			   		pixelOffset: e.pixelOffset,
+// 			 	});
+// 				infoWindow.open(map);
+//  			});
  			
         	landsat_cell.setMap(map);
+        	$(landsatgrid_panel).collapse('show');
   		} // if geometry 
   		else {
 				console.log("no geometry ", i);

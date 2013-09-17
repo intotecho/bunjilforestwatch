@@ -86,12 +86,12 @@ class TestEEService(unittest.TestCase):
 
     def TestL8NDVIOverlay(self):
         image = eeservice.getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA')
-        ndvi = eeservice.getL8NDVIImage(image)
+        ndvi = eeservice.getL8LatestNDVIImage(image)
         red = 'red'
         green = 'green'
         blue = 'blue'    
         #byteimage = eeservice.sharpimage.multiply(255).byte()
-        path = eeservice.getOverlayPath(ndvi, "L8TOA", red, green, blue)
+        #path = eeservice.getOverlayPath(ndvi, "L8TOA", red, green, blue)
         self.assertEqual(path.startswith("https://earthengine.googleapis.com//api/download?docid"), True, 'TestL8NDVIOverlay failed')
 
    

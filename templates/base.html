@@ -19,7 +19,6 @@
 
 {% endblock %}
 </head>
-
 <body>
 	<div class="navbar">
 		<div class="navbar-inner">
@@ -28,9 +27,7 @@
 				<ul class="nav">
 					<li{% if active == "index" or active == "index-user" %} class="active"{% endif %}><a href="{{ "main"|url }}">home</a></li>
 					<li{% if active == "index" or active == "index-user" %} class="active"{% endif %}><a href="http://bunjilforestwatch.wordpress.com/">news</a></li>
-					
-				{% if user %}
-					
+				{% if user %}					
 <!--  				<li{% if active == "security" %} class="active"{% endif %}><a href="{{ "security"|url }}">security</a></li> -->
 <!-- 				<li{% if active == "stats" %} class="active"{% endif %}><a href="{{ "stats"|url }}">stats</a></li> -->
 					<li{% if active == "blog" or active == "blog-entry" %} class="active"{% endif %}><a href="{{ "blog"|url }}">my blog</a></li>
@@ -41,7 +38,6 @@
 				</ul>
 				<ul class="nav pull-right">
 					{% if user %}
-
 					{% if user.admin %}
 					<li class="dropdown{% if active  == "admin" %} active{% endif %}"> <a href="#" class="dropdown-toggle" data-toggle="dropdown">admin <b class="caret"></b></a>
 						<ul class="dropdown-menu">
@@ -52,18 +48,16 @@
 						</ul>
 					</li>
 					{% endif %}
-
-					<li class="dropdown{% if active  == "view-journal" or active == "entry" or active == "new-journal" %} active{% endif %}"> <a href="#" class="dropdown-toggle" data-toggle="dropdown">journals <b class="caret"></b></a>
+					<li class="dropdown{% if active  == "view-journal" or active == "entry" or active == "new-journal" %} active{% endif %}"> <a href="#" class="dropdown-toggle" data-toggle="dropdown">reports <b class="caret"></b></a>
 						<ul class="dropdown-menu">
 							{% for j in session.journals %}
 								<li{% if active == "view-journal" and j.1 == journal.name %} class="active"{% endif %}><a href="{{ j.0 }}">{{ j.1 }}</a></li>
 							{% endfor %}
 							<li class="divider"></li>
-							<li><a href="{{ "user"|url(user.name) }}"><i class="icon-home"></i> my journals</a></li>
+							<li><a href="{{ "user"|url(user.name) }}"><i class="icon-home"></i> my reports</a></li>
 							<li{% if active == "new-journal" %} class="active"{% endif %}><a href="{{ "new-journal"|url }}">new journal</a></li>
 						</ul>
 					</li>
-					
 					<li class="dropdown{% if active  == "view-area" or active == "entry" or active == "new-area" %} active{% endif %}"> <a href="#" class="dropdown-toggle" data-toggle="dropdown">areas <b class="caret"></b></a>
 						<ul class="dropdown-menu">
 							{% for ar in session.areas %}
@@ -95,7 +89,6 @@
 			</div>
 		</div>
 	</div>
-
 	{% if messages %}
 	<div class="container">
 		<div class="row"><p></p></div>
@@ -112,7 +105,6 @@
 		</div>
 	</div>
 	{% endif %}
-	
   	{% block content %}{% endblock %}
 	
 	{% if google_analytics %}

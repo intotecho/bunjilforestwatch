@@ -43,7 +43,7 @@ var map;
 		 			var n=str.replace(/\(/gi, "[");
 		 			var m=n.replace(/\)\[/gi,   "], [");
 		 			var coordstring=m.replace(/\)/gi, "]]");
-		 			$('#dataPanel').append(coordstring);
+		 			$('#map_panel').append(coordstring);
 		 				 					 			
 					//format polygon string returned by showData into an array of mypoints
 		 			boundaryPoints = Array();
@@ -89,11 +89,12 @@ var map;
 
 		 //show paths
 		 $('#showData').click(function(){ 
-		 		$('#dataPanel').empty();
+			     console.log("map-panel draw");
+		 		$('#map_panel').empty();
 		 		if(null==creator.showData()){
-		 			$('#dataPanel').append('Please first create a polygon');
+		 			$('#map_panel').append('Please first create a polygon');
 		 		}else{
-		 			$('#dataPanel').append(creator.showData());
+		 			$('#map_panel').append(creator.showData());
 		 		}
 		 });
 
@@ -104,7 +105,7 @@ var map;
 	    		if ($(this).is(':checked')){
 	    			if(layerID == 0)
 	    			{
-	    				requestLandsatGrid(map, true);
+	    				requestLandsatGrid(map, true, false);
 					}
 					if(layerID == 1)
 	    			{
@@ -113,7 +114,7 @@ var map;
 	    		else {
 		    		if(layerID == 0)
 	    			{
-	    				requestLandsatGrid(map, false);
+	    				requestLandsatGrid(map, false, false);
 	           		 	removeLandsatGrid();
 	    			}
 	    			if(layerID == 1)
@@ -138,52 +139,52 @@ var map;
     
 {% endblock %}
 {% block content %}
-	<div class="container-fluid">
-  <div class="row-fluid">
-    <div class="span2">
-      <!--Sidebar content <div class="control-group"> -->
-      	
-		<form id="new_area_form" class="form-vertical" method="POST">
+<!-- <div> -->
+<!-- NO BREADCRUMBS REQUIRED FOR THIS PAGE -->
+<!-- </div> -->
+
+<div class="container-fluid">
+	<div class="row-fluid">
+   		<div class="span2">
+     		<!--Sidebar content <div class="control-group"> -->
+   			<form id="new_area_form" class="form-vertical" method="POST">
 				<fieldset>
 					<div>
+					<div class="controls">
 						<label class="control-label" for="name">Enter name for new Area</label>
-						<div class="controls">
-							<input id="name" name="name" type="text" style="width:150px"/>
-						</div>
-						<div class="controls">
-							<input id="coordinates_id" name="coordinates" type="hidden" value="undefined"/>
-						</div>
-					</div>
-					<div class="control-group">
-						<input type="submit" class="btn btn-primary" value="Create Area">
+						<input id="name" name="name" type="text" style="width:150px"/>
 					</div>
 					<div>
-					<p>
-						<input type="checkbox" id="0" class="layer" unchecked/><label for="0">Landsat Grid </label>
-						<input type="checkbox" id="1" class=layer unchecked/><label for="1">Topo map</label></p>
+						<label class="control-label" for="description">Enter Description of this Area</label>
+						<textarea rows="5" cols="25" name="description" form="new_area_form">...</textarea>
+					</div>
+					<div>
+						<input type="checkbox" id="0" class="layer" unchecked/><label for="0">Show Landsat Grid </label>
 					</div>	
-					
-					<!-- <div class="form-actions"> -->
-					<div class="control-group">
-						<input id="reset", type="reset" class="btn btn-secondary" value="Start Again">
+					<div class="controls">
+						<input id="coordinates_id" name="coordinates" type="hidden" value="undefined"/>
 					</div>
 					<div class="control-group">
-						<input id="showData"  type="button" class="btn btn-secondary" value="Show Boundary Points"/>
+						<input id="reset", type="reset" class="btn btn-lightred" value="Start Again (Redraw Points)">
 					</div>
-					<div   id="dataPanel">
+					<div class="control-group">
+						<input id="showData"  type="button" class="btn btn-lightblue" value="Show Boundary Points"/>
 					</div>
+					<div class="control-group">
+						<input type="submit" class="btn btn-lightgreen" value="Create Area">
+					</div>
+					<div id="map_panel" class="control-group" rows="5" cols="25" name="panel" >
+						<p class="divider">"Map view"</p>
+			      	</div>
+			    </div>
 				</fieldset>
-		</form>	
-		<label class="control-label" for="description">Enter Description of this Area</label>
-		<textarea rows="5" cols="25" name="description" form="new_area_form">...</textarea>
-		
-   </div>
-  <div class="span10">
-      <!--Body = Map content-->
- 
-  <div id="map-canvas"> </div>
-  </div>
-</div>
+			</form>	
+		</div>
+ 			<div class="span10">
+     			<!--Map content-->
+	  			<div id="map-canvas"> </div>
+ 			</div>
+	</div>
 </div>
 {% endblock %}
 
