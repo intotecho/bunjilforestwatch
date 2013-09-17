@@ -121,7 +121,7 @@ function initialize() {
         
         // Create Overlay of Latest Landsat8
    		$('#L8latest_overlay_btn').click(function(){ 
-	 		var pathname = window.location.pathname + '/L8latest/overlay';
+	 		var pathname = window.location.pathname + '/overlay/l8-vis/latest';
 	 		$("#observations_panel").collapse('show');
 	 		$('#observations_panel').empty();
 	 		$('#observations_panel').append("Getting Sat Data...");
@@ -149,9 +149,41 @@ function initialize() {
 		 		  $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
 	 	    });
    		});
+   		    
+   		$('#L8NDVIlatest_overlay_btn').click(function(){ 
+	 		var pathname = window.location.pathname + '/overlay/l8-ndvi/latest';
+	 		$("#observations_panel").collapse('show');
+	 		$('#observations_panel').empty();
+	 		$('#observations_panel').append("Getting NDVI Sat Data...");
+ 			$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+	 		$.get(pathname)
+	 		.done(function(data){
+	 			mapobj = jQuery.parseJSON(data);
+	 			$('#observations_panel').empty();
+	 			$('#observations_panel').append("\Captured: ", mapobj.date_acquired, "\n", mapobj.id, "\nPath: ", mapobj.path, ", Row: ", mapobj.row);
+	 			createImageOverlay(true, mapobj.mapid,  mapobj.token);
+	 			
+// 	 			var mapsEngineLayer = new google.maps.visualization.MapsEngineLayer({
+//     			mapId: mapobj.mapid,
+//     			token:  mapobj.token,
+//     			layerKey: 'layer_00001',
+//     			map: map,
+// 			    clickable: 'true',
+// 			    suppressInfoWindows: 'false',
+//   				});
+			})
+	 		.error(function( jqxhr, textStatus, error ) {
+	 	          var err = textStatus + ', ' + error;
+	 	          console.log( "Request Failed: " + err);
+		 		  $('#observations_panel').empty();
+		 		  $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
+	 	    });
+   		});
+  
+        
         
    		$('#L8latest_download_btn').click(function(){ 
-	 		var pathname = window.location.pathname + '/L8latest/download';
+	 		var pathname = window.location.pathname + '/download/l8-vis/latest';
 	 		$("#observations_panel").collapse('show');
 	 		$('#observations_panel').empty();
 	 		$('#observations_panel').append("Getting Download ...");//animated gif from http://www.ajaxload.info/
@@ -235,6 +267,11 @@ function initialize() {
 			<p>
 				<input id="L8latest_overlay_btn" type="button" class="btn btn-primary"
 					value="Get Latest Imagery" /></p>
+			</div>
+			<div>
+			<p>
+				<input id="L8NDVIlatest_overlay_btn" type="button" class="btn btn-lightgreen"
+					value="Latest NDVI" /></p>
 			</div>
 			<div>
 			<p>
