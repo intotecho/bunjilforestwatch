@@ -31,7 +31,7 @@ returns the latest image from the collection that overlaps the boundary coordina
 Also clips the image to the coordinates to reduce the size.
 '''
     
-def getLatestLandsatImage(boundary_polygon, collection_name):
+def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_path = None, opt_row = None):
     #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
     feat = ee.Geometry.Polygon(boundary_polygon)
     #logging.info('feat %s', feat)
@@ -44,16 +44,29 @@ def getLatestLandsatImage(boundary_polygon, collection_name):
     start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear )
     logging.debug('start:%s, end:%s ',start_date,  end_date)
 
-    sortedCollection = ee.ImageCollection(image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).sort('system:time_start', False )) #note cast to ee,ImageCollection() resolves bug in sort() for ee ver 0.13
+    sortedCollection = ee.ImageCollection(image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).sort('system:time_start', False ))
+    resultingCollection = sortedCollection
+    if opt_path is not None and opt_row is not None:
+        #filter Landsat by Path/Row and date
+        if ("L7" in collection_name):
+            row_fieldname = "STARTING_ROW"
+        else:
+            row_fieldname = "WRS_ROW"
+        resultingCollection = sortedCollection.filterMetadata('WRS_PATH', 'equals', opt_path).filterMetadata(row_fieldname, 'equals', opt_row)
+    
     #logging.info('Collection description : %s', sortedCollection.getInfo())
   
-    scenes  = sortedCollection.getInfo()
+    scenes  = resultingCollection.getInfo()
     #logging.info('Scenes: %s', sortedCollection)
     #because sort has a bug, always in wrong order, so pop the last one. Otherwise would apply limit(1)
-    feature = scenes['features'].pop()
+    try:
+        feature = scenes['features'][len(scenes)-latest_depth]
+    except IndexError:
+        feature = scenes['features'].pop()
+        
     #for feature in scenes['features']: 
     id = feature['id']   
-    logging.info('getLatestLandsatImage found scene: %s', id)
+    #logging.info('getLatestLandsatImage found scene: %s', id)
     latest_image = ee.Image(id)
     props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
     test = latest_image.getInfo()['bands']
@@ -64,7 +77,7 @@ def getLatestLandsatImage(boundary_polygon, collection_name):
     system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
-    logging.info('getLatestLandsatImage id: %s, date:%s', id, date_str)
+    logging.info('getLatestLandsatImage id: %s, date:%s latest:%d', id, date_str, latest_depth )
     x = latest_image.getInfo()
     latest_image.name = id
     latest_image.capture_date = date_str
@@ -162,6 +175,86 @@ def getPercentile(image, percentile, crs):
         True  # bestEffort
         ).getInfo()
 
+def getL8SharpImage(coords, depth):
+    image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
+    sharpimage = SharpenLandsat8HSVUpres(image)
+    #red = 'red'
+    #green = 'green'
+    #blue = 'blue'    
+    #byteimage = sharpimage.multiply(255).byte()
+    #path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
+    return sharpimage
+
+def getL8LatestNDVIImage(image):
+    NDVI_PALETTE = {'FFFFFF','00FF00'}
+    ndvi = image.normalizedDifference(["B4", "B3"]);   
+    
+    #addToMap(ndvi.median(), {min:-1, max:1}, "Median NDVI");
+    #getMapId(ndvi, {min:-1, max:1, palette:NDVI_PALETTE}, "NDVI");
+    
+    newImage = image.addBands(ndvi); #keep all the metadata of image, but add the new bands.
+    print('getL8NDVIImage: ', newImage)
+
+    mapparams = {    #'bands':  'red, green, blue', 
+                     'min': -1,
+                     'max': 1,
+                     'palette': 'FF00FF, 00FF00',
+                     #'gamma': 1.2,
+                     'format': 'jpg'
+                }   
+    mapid  = ndvi.getMapId(mapparams)
+  
+    # copy some image props to mapid for browser to display
+    info = image.getInfo() #logging.info("info", info)
+    props = info['properties']
+    mapid['date_acquired'] = props['DATE_ACQUIRED']
+    mapid['id'] = props['system:index']
+    mapid['path'] = props['WRS_PATH']
+    mapid['row'] = props['WRS_ROW']
+    return mapid
+
+def getVisualMapId(image, red, green, blue):
+    #original image is used for original metadata lost in image - nice to figure out a cleaner solution 
+    crs = image.getInfo()['bands'][0]['crs']
+    p05 = []
+    p95 = []
+    p05 = getPercentile(image, 5, crs)
+    p95 = getPercentile(image, 80, crs) # not 95
+    min = str(p05[red]) + ', ' + str(p05[green]) + ', ' + str(p05[blue])
+    max = str(p95[red]) + ', ' + str(p95[green]) + ', ' + str(p95[blue])
+    print('Percentile  5%: ', min)
+    print('Percentile 95%: ', max)
+    # Define visualization parameters, based on the image statistics.
+    mapparams = {    'bands':  'red, green, blue', 
+                     'min': min,
+                     'max': max,
+                     'gamma': 1.2,
+                     'format': 'jpg'
+                }   
+    mapid  = image.getMapId(mapparams)
+    # copy some image props to mapid for browser to display
+    info = image.getInfo() #logging.info("info", info)
+    props = info['properties']
+    mapid['date_acquired'] = props['DATE_ACQUIRED']
+    mapid['id'] = props['system:index']
+    mapid['path'] = props['WRS_PATH']
+    mapid['row'] = props['WRS_ROW']
+    return mapid
+
+def getTiles(mapid): #not used
+    tilepath = ee.data.getTileUrl(mapid, 0, 0, 1)
+    logging.info('getTiles: %s',       tilepath)
+    return tilepath
+
+def GetMap(coords, depth): # not used except test
+        image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
+       
+        sharpimage = SharpenLandsat8HSVUpres(image)
+        #byteimage = sharpimage.multiply(255).byte()
+        red = 'red'
+        green = 'green'
+        blue = 'blue'
+        mapid = getVisualMapId(sharpimage, red, green, blue)
 
 def getThumbnailPath(image):
         # GET THUMBNAIL
@@ -239,9 +332,9 @@ def getOverlayPath(image, prefix, red, green, blue):
     logging.info('getOverlayPath: %s',       path)
     return path
 
-def getL8SharpOverlay(coords):
+def getL8SharpOverlay(coords, depth):
     
-    image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA')
+    image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
     sharpimage = SharpenLandsat8HSVUpres(image)
     red = 'red'
     green = 'green'
@@ -249,89 +342,4 @@ def getL8SharpOverlay(coords):
     #byteimage = sharpimage.multiply(255).byte()
     path = getOverlayPath(sharpimage, "L8TOA", red, green, blue)
     return path
-
-def getL8SharpImage(coords):
-    image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA')
-    sharpimage = SharpenLandsat8HSVUpres(image)
-    #red = 'red'
-    #green = 'green'
-    #blue = 'blue'    
-    #byteimage = sharpimage.multiply(255).byte()
-    #path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
-    return sharpimage
-
-def getL8LatestNDVIImage(image):
-    NDVI_PALETTE = {'FFFFFF','00FF00'}
-    ndvi = image.normalizedDifference(["B4", "B3"]);   
-    
-    #addToMap(ndvi.median(), {min:-1, max:1}, "Median NDVI");
-    #getMapId(ndvi, {min:-1, max:1, palette:NDVI_PALETTE}, "NDVI");
-    
-    newImage = image.addBands(ndvi); #keep all the metadata of image, but add the new bands.
-    print('getL8NDVIImage: ', newImage)
-
-    mapparams = {    #'bands':  'red, green, blue', 
-                     'min': -1,
-                     'max': 1,
-                     'palette': 'FFFFFF, 00FF00',
-                     #'gamma': 1.2,
-                     'format': 'jpg'
-                }   
-    mapid  = ndvi.getMapId(mapparams)
-  
-    # copy some image props to mapid for browser to display
-    info = image.getInfo() #logging.info("info", info)
-    props = info['properties']
-    mapid['date_acquired'] = props['DATE_ACQUIRED']
-    mapid['id'] = props['system:index']
-    mapid['path'] = props['WRS_PATH']
-    mapid['row'] = props['WRS_ROW']
-    return mapid
-
-def getVisualMapId(image, red, green, blue):
-    #original image is used for original metadata lost in image - nice to figure out a cleaner solution 
-    crs = image.getInfo()['bands'][0]['crs']
-    p05 = []
-    p95 = []
-    p05 = getPercentile(image, 5, crs)
-    p95 = getPercentile(image, 80, crs) # not 95
-    min = str(p05[red]) + ', ' + str(p05[green]) + ', ' + str(p05[blue])
-    max = str(p95[red]) + ', ' + str(p95[green]) + ', ' + str(p95[blue])
-    print('Percentile  5%: ', min)
-    print('Percentile 95%: ', max)
-    # Define visualization parameters, based on the image statistics.
-    mapparams = {    'bands':  'red, green, blue', 
-                     'min': min,
-                     'max': max,
-                     'gamma': 1.2,
-                     'format': 'jpg'
-                }   
-    mapid  = image.getMapId(mapparams)
-    # copy some image props to mapid for browser to display
-    info = image.getInfo() #logging.info("info", info)
-    props = info['properties']
-    mapid['date_acquired'] = props['DATE_ACQUIRED']
-    mapid['id'] = props['system:index']
-    mapid['path'] = props['WRS_PATH']
-    mapid['row'] = props['WRS_ROW']
-    return mapid
-
-def getTiles(mapid): #not used
-    tilepath = ee.data.getTileUrl(mapid, 0, 0, 1)
-    logging.info('getTiles: %s',       tilepath)
-    return tilepath
-
-def GetMap(coords):
-        image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA')
-       
-        sharpimage = SharpenLandsat8HSVUpres(image)
-        #byteimage = sharpimage.multiply(255).byte()
-        red = 'red'
-        green = 'green'
-        blue = 'blue'
-        mapid = getVisualMapId(sharpimage, red, green, blue)
-
-#### UNIT TESTS ######
-
-#fc = ee.FeatureCollection('ft:1urlhdLW2pA66f2xS0yzmO-LaESYdclD7-17beg0') #Yarra Ranges N.P.
 

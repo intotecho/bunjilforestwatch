@@ -30,6 +30,9 @@ max-width: none;
 <script>
 
 var map;
+var satellite = 'l8'
+var algorithm = 'rgb'; // ndvi 
+var latest = 0;  //latest - 0
 overlayMaps = [];
 
 //print all the methods in javascript object - for debugging
@@ -121,6 +124,7 @@ function initialize() {
         
         // Create Overlay of Latest Landsat8
    		$('#L8latest_overlay_btn').click(function(){ 
+   			
 	 		var pathname = window.location.pathname + '/overlay/l8-vis/latest';
 	 		$("#observations_panel").collapse('show');
 	 		$('#observations_panel').empty();
@@ -231,12 +235,67 @@ function initialize() {
         	}
 		});
    		
+ 		
+   		$('#algorithm-visual').click(function(e){
+           $("#algorithm:first-child").text("RGB");
+           algorithm = 'rgb';
+   		   e.preventDefault();
+   		});
+        $('#algorithm-ndvi').click(function(e){
+           $("#algorithm:first-child").text("NDVI");
+           algorithm = 'ndvi';
+           e.preventDefault();
+        });
+        $('#algorithm-change').click(function(e){
+           $("#algorithm:first-child").text("Change");
+           algorithm = 'change';
+           e.preventDefault();
+        });
+        
+        $('#latest').click(function(e){
+            $("#latest:first-child").text("Latest  ");
+            latest = 0;
+            e.preventDefault();
+        });
+        $('#latest-1').click(function(e){
+            $("#latest:first-child").text("Latest-1");
+            latest = 1;
+            e.preventDefault();
+        });
+        $('#latest-2').click(function(e){
+            $("#latest:first-child").text("Latest-2");
+            latest = 2;
+            e.preventDefault();
+        });
+        $('#latest-3').click(function(e){
+            $("#latest:first-child").text("Latest-3");
+            latest = 3;
+            e.preventDefault();
+        });
+        
+        $('#satellite').click(function(e){
+            $("#satellite:first-child").text("L8");
+            satellite = 'l8';
+            e.preventDefault();
+        });
+        $('#satellite-l7').click(function(e){
+            $("#satellite:first-child").text("L7");
+            satellite = 'l7';
+            e.preventDefault();
+        });
+        $('#satellite-both').click(function(e){
+            $("#satellite:first-child").text("Both");
+            satellite = 'both';
+            e.preventDefault();
+        });
+        
    		$(window).resize(function () {
    				//<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
-	    	    var h = $(window).height(),
+     	    var h = $(window).height(),
 	    	        offsetTop = 60; // Calculate the top offset
 	    	    $('#map-canvas').css('height', (h - offsetTop));
 	    	}).resize();
+   		
 	};//initialize
  
     google.maps.event.addDomListener(window, 'load', initialize); 
@@ -259,10 +318,45 @@ function initialize() {
 	<div class="row-fluid">
 		<div class="span2">
 			<!--Sidebar content <div class="control-group"> -->
-			<h3>
+			<h4>
 				<i>{{area.name}}</i>
-			</h3>
-			
+			</h4>
+	        <!-- Algorithm Selection button -->
+	        <div class="btn-toolbar" style="margin: 0;">
+                <div class="btn-group">
+                    <button id='algorithm' type="button" class="btn btn-small btn-default dropdown-toggle" data-toggle="dropdown">
+                        Visual <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                       <li><a href="#" id='algorithm-visual'>Visual</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#" id='algorithm-ndvi'>NDVI</a></li>
+                        <li><a href="#" id='algorithm-change'>Change</a></li>
+                    </ul>
+                </div>
+                <div class="btn-group">
+                    <button id='latest' type="button" class="btn btn-small btn-default dropdown-toggle" data-toggle="dropdown">
+                        Latest<span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                       <li><a href="#" id='latest-1'>Latest-1</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#" id='latest-2'>Latest-2</a></li>
+                        <li><a href="#" id='latest-3'>Latest-3</a></li>
+                    </ul>                
+                </div>
+                 <div class="btn-group">
+                    <button id='satellite' type="button" class="btn btn-small btn-default dropdown-toggle" data-toggle="dropdown">
+                        L8<span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                       <li><a href="#" id='satellite-l7'>L7</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#" id='satellite-both'>Both</a></li>
+                    </ul>                
+                </div>
+ 
+            </div>  
 			<div>
 			<p>
 				<input id="L8latest_overlay_btn" type="button" class="btn btn-primary"

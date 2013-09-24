@@ -4,6 +4,7 @@ Wrappers for some Earth Engine Routines
 Created on 25/05/2013
 @author: cgoodman
 '''
+#fc = ee.FeatureCollection('ft:1urlhdLW2pA66f2xS0yzmO-LaESYdclD7-17beg0') #Yarra Ranges N.P.
 
 
 import eeservice
@@ -21,7 +22,7 @@ class TestEEService(unittest.TestCase):
         eeservice.initEarthEngineService()
         
     def TestGetMap(self):
-        #image = getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA')
+        #image = getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA', 1)
         #sharpimage = SharpenLandsat8HSVUpres(image)
         #byteimage = sharpimage.multiply(255).byte()
         #red = 'red'
@@ -62,7 +63,7 @@ class TestEEService(unittest.TestCase):
         pass
      
     def TestL7Overlay(self):
-        image = eeservice.getLatestLandsatImage(self.coords, 'L7_L1T')
+        image = eeservice.getLatestLandsatImage(self.coords, 'L7_L1T', 1)
         #red = 'B4'
         #green = 'B3'
         #blue = 'B2'
@@ -75,7 +76,7 @@ class TestEEService(unittest.TestCase):
         self.assertEqual(path.startswith("https://earthengine.googleapis.com//api/download?docid"), True, 'L7 overlay failed')
           
     def TestL8Overlay(self):
-        image = eeservice.getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA')
+        image = eeservice.getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA', 1)
         sharpimage = eeservice.SharpenLandsat8HSVUpres(image)
         red = 'red'
         green = 'green'
@@ -85,7 +86,7 @@ class TestEEService(unittest.TestCase):
         self.assertEqual(path.startswith("https://earthengine.googleapis.com//api/download?docid"), True, 'L8 overlay failed')
 
     def TestL8NDVIOverlay(self):
-        image = eeservice.getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA')
+        image = eeservice.getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA', 1)
         ndvi = eeservice.getL8LatestNDVIImage(image)
         red = 'red'
         green = 'green'

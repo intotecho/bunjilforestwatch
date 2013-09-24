@@ -414,17 +414,17 @@ class AccountHandler(BaseHandler):
 class NewAreaHandler(BaseHandler):
 	def get(self):
 		username = self.session['user']['name']
-		instructions= \
-		"<b>Instructions</b> to define the boundary of a new Area of Interest:" \
-			"</span></p>"\
-			"<li>Drag (Left click and hold) to move the center of the map over your area.</li>"\
-			"<li>Zoom till your area takes up most of the map.</li>" \
-			"<li>Tick the <i>Landsat Grid</i> checkbox to see where images will be taken.</li>" \
-			"<li>Create markers by clicking around the boundary in an <b>anticlockwise</b> direction.</li> " \
-			"<li>When you get back to the starting point, click on the first marker to close the polygon. </li>" \
-			"<li>Click <i>Start Again</i> if you make a mistake.</li> "
-		
-		self.add_message('info', instructions)
+# 		instructions= \
+# 		"<b>Instructions</b> to define the boundary of a new Area of Interest:" \
+# 			"</span></p>"\
+# 			"<li>Drag (Left click and hold) to move the center of the map over your area.</li>"\
+# 			"<li>Zoom till your area takes up most of the map.</li>" \
+# 			"<li>Tick the <i>Landsat Grid</i> checkbox to see where images will be taken.</li>" \
+# 			"<li>Create markers by clicking around the boundary in an <b>anticlockwise</b> direction.</li> " \
+# 			"<li>When you get back to the starting point, click on the first marker to close the polygon. </li>" \
+# 			"<li>Click <i>Start Again</i> if you make a mistake.</li> "
+# 		
+# 		self.add_message('info', instructions)
 		self.render('new-area.html', {
 				'username': username
 			})	
@@ -579,7 +579,7 @@ class L8LatestVisualOverlayHandler(BaseHandler):
 		for geopt in area.coordinates:
 			poly.append([geopt.lon, geopt.lat])
 		
-		image = eeservice.getL8SharpImage(poly)
+		image = eeservice.getL8SharpImage(poly, 2)
 		map_id  = eeservice.getVisualMapId(image,  'red',  'green', 'blue')
 		del map_id['image'] #can't serialise a memory object, and browser won't need it.
 		#logging.info("map_id %s", map_id)
@@ -613,7 +613,7 @@ class L8LatestNDVIOverlayHandler(BaseHandler):
 		for geopt in area.coordinates:
 			poly.append([geopt.lon, geopt.lat])
 		
-		image = eeservice.getLatestLandsatImage(poly, 'LANDSAT/LC8_L1T_TOA')
+		image = eeservice.getLatestLandsatImage(poly, 'LANDSAT/LC8_L1T_TOA', 1)
 		map_id = eeservice.getL8LatestNDVIImage(image)
 		del map_id['image'] #can't serialise a memory object, and browser won't need it.
 		#logging.info("map_id %s", map_id)
@@ -648,9 +648,8 @@ class L8LatestVisualDownloadHandler(BaseHandler):
 		for geopt in area.coordinates:
 			poly.append([geopt.lon, geopt.lat])
 
-		image = eeservice.getL8SharpImage(poly)
-		#image = eeservice.getLatestLandsatImage(poly, ee.ImageCollection('LANDSAT/LC8_L1T_TOA') )
-		#image = getLatestLandsatImage(self.coords, ee.ImageCollection('LANDSAT/LC8_L1T_TOA'))
+		image = eeservice.getL8SharpImage(poly, 1)
+		
 	
 		path = eeservice.getOverlayPath(image, "L8TOA", 'red',  'green', 'blue')
 		
