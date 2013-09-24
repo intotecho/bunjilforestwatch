@@ -269,6 +269,7 @@ CustomTileOverlay.prototype.setOpacity = function (op) {
 }
 
 CustomTileOverlay.prototype.setObjectOpacity = function (obj) {
+	console.log("object style: %s, %s, %s, %s.", obj.style.filter, obj.style.KHTMLOpacity, obj.style.MozOpacity, obj.style.opacity );
 	if (this.opacity > 0) {
 		if (typeof (obj.style.filter) == 'string') { obj.style.filter = 'alpha(opacity:' + this.opacity + ')'; }
 		if (typeof (obj.style.KHTMLOpacity) == 'string') { obj.style.KHTMLOpacity = this.opacity / 100; }
