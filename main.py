@@ -566,8 +566,8 @@ class ViewArea(BaseHandler):
 
 class L8LatestVisualOverlayHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
-	def get(self, username, area_name):
-		logging.info("L8LatestVisualOverlayHandler")
+	def get(self, username, area_name, action, satelite, algorithm, latest):
+		logging.info("L8LatestVisualOverlayHandler action:%s, satelite:%s, algorithm:%s, latest:%s", action, satelite, algorithm, latest)
 		area = cache.get_area(username, area_name)
 		if not area or username != self.session['user']['name']:
 			logging.info('L8LatestVisualOverlayHandler - bad area returned %s, username %s, %s', area, username, area_name)
@@ -634,8 +634,8 @@ class L8LatestNDVIOverlayHandler(BaseHandler):
 
 class L8LatestVisualDownloadHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
-	def get(self, username, area_name):
-		logging.info("L8LatestVisualDownloadHandler")
+	def get(self, username, area_name, action):
+		logging.info("L8LatestVisualDownloadHandler %s", action)
 		area = cache.get_area(username, area_name)
 		if not area or username != self.session['user']['name']:
 			logging.info('L8LatestVisualDownloadHandler - bad area returned %s, username %s, %s', area, username, area_name)
@@ -1768,9 +1768,14 @@ app = webapp2.WSGIApplication([
 	# this section must be last, since the regexes below will match one and two -level URLs
 	webapp2.Route(r'/<username>/<area_name>', handler=ViewArea, name='view-area'),
 	webapp2.Route(r'/<username>/<area_name>/new', handler=NewEntryHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/<area_name>/overlay/l8-vis/latest',  handler=L8LatestVisualOverlayHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/<area_name>/overlay/l8-ndvi/latest',  handler=L8LatestNDVIOverlayHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/<area_name>/download/l8-vis/latest', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
+
+    webapp2.Route(r'/<username>/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=L8LatestVisualOverlayHandler, name='new-obstask'),
+	webapp2.Route(r'/<username>/<area_name><:.*>', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
+    
+    
+    #webapp2.Route(r'/<username>/<area_name>/overlay/l8-vis/latest',  handler=L8LatestVisualOverlayHandler, name='new-obstask'),
+	#webapp2.Route(r'/<username>/<area_name>/overlay/l8-ndvi/latest',  handler=L8LatestNDVIOverlayHandler, name='new-obstask'),
+	#webapp2.Route(r'/<username>/<area_name>/download/l8-vis/latest', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
 
 	webapp2.Route(r'/<username>/<journal_name>', handler=ViewJournal, name='view-journal'),
 	webapp2.Route(r'/<username>/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),

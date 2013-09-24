@@ -70,6 +70,20 @@ function createImageOverlay(show, mapid,  token)
 	}
 }
 
+function setActionUrl(action)
+{
+   // action can be 'overlay' or 'download' strip the old action and append the new aciton.
+   var url = window.location.href
+   if (url.indexOf("/overlay") !=-1) {
+      url = url.substring(0, url.indexOf("/overlay")); //strip the last action.
+   }
+   if (url.indexOf("/download") !=-1) {
+       url = url.substring(0, url.indexOf("/download")); //strip the last action.
+   }
+   url = url + '/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
+   
+   window.history.replaceState('string', 'load image', url);
+};
 
 function initialize() {
     var map_center = new google.maps.LatLng({{area.map_center}});
@@ -106,7 +120,7 @@ function initialize() {
 	         	console.log("zoom to:", map.zoom());
 	});
  
-    //Add Area Boundary tro Map
+    //Add Area Boundary to Map
     var latlngs = [];
     {% for j in area.coordinates %}
     	latlngs.push(new google.maps.LatLng({{j}}))
@@ -123,71 +137,58 @@ function initialize() {
     areaBoundary.setMap(map);
         
         // Create Overlay of Latest Landsat8
-   		$('#L8latest_overlay_btn').click(function(){ 
-   			
-	 		var pathname = window.location.pathname + '/overlay/l8-vis/latest';
-	 		$("#observations_panel").collapse('show');
-	 		$('#observations_panel').empty();
-	 		$('#observations_panel').append("Getting Sat Data...");
- 			$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
-	 		$.get(pathname)
-	 		.done(function(data){
-	 			mapobj = jQuery.parseJSON(data);
-	 			$('#observations_panel').empty();
-	 			$('#observations_panel').append("\Captured: ", mapobj.date_acquired, "\n", mapobj.id, "\nPath: ", mapobj.path, ", Row: ", mapobj.row);
-	 			createImageOverlay(true, mapobj.mapid,  mapobj.token);
-	 			
-// 	 			var mapsEngineLayer = new google.maps.visualization.MapsEngineLayer({
-//     			mapId: mapobj.mapid,
-//     			token:  mapobj.token,
-//     			layerKey: 'layer_00001',
-//     			map: map,
-// 			    clickable: 'true',
-// 			    suppressInfoWindows: 'false',
-//   				});
-			})
-	 		.error(function( jqxhr, textStatus, error ) {
-	 	          var err = textStatus + ', ' + error;
-	 	          console.log( "Request Failed: " + err);
-		 		  $('#observations_panel').empty();
-		 		  $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
-	 	    });
-   		});
+        
+
+    $('#L8latest_overlay_btn').click(function(){
+    	setActionUrl("overlay");
+    	var pathname = window.location.pathname;
+    	
+        $("#observations_panel").collapse('show');
+	 	$('#observations_panel').empty();
+	 	$('#observations_panel').append("Getting Sat Data...");
+ 		$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+	 	$.get(pathname).done(function(data) {
+	 	    mapobj = jQuery.parseJSON(data);
+	 	    $('#observations_panel').empty();
+	 	    $('#observations_panel').append("Captured: ", mapobj.date_acquired, "\n", mapobj.id, "\nPath: ", mapobj.path, ", Row: ", mapobj.row);
+	 	    createImageOverlay(true, mapobj.mapid,  mapobj.token);
+
+	    }).error(function( jqxhr, textStatus, error ) {
+	    	var err = textStatus + ', ' + error;
+	 	    console.log( "Request Failed: " + err);
+		 	$('#observations_panel').empty();
+		 	$('#observations_panel').append("<p>Failed: " + err + "</p>"); 
+	 	});
+    }); //L8latest_overlay_btn.click
    		    
-   		$('#L8NDVIlatest_overlay_btn').click(function(){ 
-	 		var pathname = window.location.pathname + '/overlay/l8-ndvi/latest';
-	 		$("#observations_panel").collapse('show');
-	 		$('#observations_panel').empty();
-	 		$('#observations_panel').append("Getting NDVI Sat Data...");
- 			$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
-	 		$.get(pathname)
-	 		.done(function(data){
-	 			mapobj = jQuery.parseJSON(data);
-	 			$('#observations_panel').empty();
-	 			$('#observations_panel').append("\Captured: ", mapobj.date_acquired, "\n", mapobj.id, "\nPath: ", mapobj.path, ", Row: ", mapobj.row);
-	 			createImageOverlay(true, mapobj.mapid,  mapobj.token);
-	 			
-// 	 			var mapsEngineLayer = new google.maps.visualization.MapsEngineLayer({
-//     			mapId: mapobj.mapid,
-//     			token:  mapobj.token,
-//     			layerKey: 'layer_00001',
-//     			map: map,
-// 			    clickable: 'true',
-// 			    suppressInfoWindows: 'false',
-//   				});
-			})
-	 		.error(function( jqxhr, textStatus, error ) {
-	 	          var err = textStatus + ', ' + error;
-	 	          console.log( "Request Failed: " + err);
-		 		  $('#observations_panel').empty();
-		 		  $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
-	 	    });
-   		});
-  
+    $('#L8NDVIlatest_overlay_btn').click(function(){
+    	setActionUrl("overlay");
+        var pathname = window.location.pathname;
+        
+       	$("#observations_panel").collapse('show');
+ 		$('#observations_panel').empty();
+ 		$('#observations_panel').append("Getting NDVI Sat Data...");
+			$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+ 		$.get(pathname)
+ 		.done(function(data){
+ 			mapobj = jQuery.parseJSON(data);
+ 			$('#observations_panel').empty();
+ 			$('#observations_panel').append("\Captured: ", mapobj.date_acquired, "\n", mapobj.id, "\nPath: ", mapobj.path, ", Row: ", mapobj.row);
+ 			createImageOverlay(true, mapobj.mapid,  mapobj.token);
+		})
+ 		.error(function( jqxhr, textStatus, error ) {
+ 	          var err = textStatus + ', ' + error;
+ 	          console.log( "Request Failed: " + err);
+	 		  $('#observations_panel').empty();
+	 		  $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
+ 	    });
+ 	});
+ 
         
         
    		$('#L8latest_download_btn').click(function(){ 
-	 		var pathname = window.location.pathname + '/download/l8-vis/latest';
+            var pathname = window.location.pathname + '/download/' + satellite + '/' + algorithm + '/' + latest;
+            window.history.replaceState('string', 'load image', pathname);
 	 		$("#observations_panel").collapse('show');
 	 		$('#observations_panel').empty();
 	 		$('#observations_panel').append("Getting Download ...");//animated gif from http://www.ajaxload.info/
@@ -254,22 +255,22 @@ function initialize() {
         
         $('#latest').click(function(e){
             $("#latest:first-child").text("Latest  ");
-            latest = 0;
+            latest = 'latest';
             e.preventDefault();
         });
         $('#latest-1').click(function(e){
             $("#latest:first-child").text("Latest-1");
-            latest = 1;
+            latest = 'latest-1';
             e.preventDefault();
         });
         $('#latest-2').click(function(e){
             $("#latest:first-child").text("Latest-2");
-            latest = 2;
+            latest = 'latest-2';
             e.preventDefault();
         });
         $('#latest-3').click(function(e){
             $("#latest:first-child").text("Latest-3");
-            latest = 3;
+            latest = 'latest-3';
             e.preventDefault();
         });
         
@@ -285,7 +286,7 @@ function initialize() {
         });
         $('#satellite-both').click(function(e){
             $("#satellite:first-child").text("Both");
-            satellite = 'both';
+            satellite = 'l78';
             e.preventDefault();
         });
         
