@@ -207,11 +207,9 @@ class AreaOfInterest(db.Model):
 
 	def url(self, page=1):
 		if page > 1:
-			return webapp2.uri_for('view-area', username=self.key().parent().name(), area_name=self.name, page=page)
+			return webapp2.uri_for('view-area', username=self.key().parent().name(), area_name= self.name, page=page)
 		else:
-			return webapp2.uri_for('view-area', username=self.key().parent().name(), area_name=self.name)
-
-
+			return webapp2.uri_for('view-area', username=self.key().parent().name(),  area_name= self.name)
 
 class Journal(db.Model):
 	ENTRIES_PER_PAGE = 5

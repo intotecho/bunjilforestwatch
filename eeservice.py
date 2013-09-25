@@ -26,10 +26,11 @@ def initEarthEngineService():
     
     
 '''
-getLatestLandsatImage(array of points, string as name of ee.imagecollection)
-returns the latest image from the collection that overlaps the boundary coordinates.
-Also clips the image to the coordinates to reduce the size.
+getLandsatImage(array of points, string as name of ee.imagecollection)
+returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
+Could also clip the image to the coordinates to reduce the size.
 '''
+
     
 def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_path = None, opt_row = None):
     #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
@@ -44,7 +45,7 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_p
     start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear )
     logging.debug('start:%s, end:%s ',start_date,  end_date)
 
-    sortedCollection = ee.ImageCollection(image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).sort('system:time_start', False ))
+    sortedCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).sort('system:time_start', False )
     resultingCollection = sortedCollection
     if opt_path is not None and opt_row is not None:
         #filter Landsat by Path/Row and date
@@ -58,19 +59,36 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_p
   
     scenes  = resultingCollection.getInfo()
     #logging.info('Scenes: %s', sortedCollection)
-    #because sort has a bug, always in wrong order, so pop the last one. Otherwise would apply limit(1)
+    
     try:
-        feature = scenes['features'][len(scenes)-latest_depth]
+        feature = scenes['features'][int(latest_depth)]
     except IndexError:
-        feature = scenes['features'].pop()
-        
-    #for feature in scenes['features']: 
+        feature = scenes['features'][0]
+    
+#     #debugging loop through collection
+#     for x in range(0, len(scenes)):
+#         print ("x: ", x)
+#         feature = scenes['features'][x]
+#         idx = feature['id']
+#         imagex = ee.Image(idx)
+#         propsx = imagex.getInfo()['properties'] 
+#         system_time_startx= datetime.datetime.fromtimestamp(propsx['system:time_start'] / 1000) #convert ms
+#         date_strx = system_time_startx.strftime("%Y-%m-%d @ %H:%M")
+#         logging.info("loop: %d, %s", x, date_strx)    
+       #prints
+       #INFO     2013-09-24 12:53:10,357 eeservice.py:76] loop: 0, 2013-09-03 @ 01:18
+       #INFO     2013-09-24 12:53:13,052 eeservice.py:76] loop: 1, 2013-08-18 @ 01:18
+       #INFO     2013-09-24 12:53:15,960 eeservice.py:76] loop: 2, 2013-08-02 @ 01:18
+       #INFO     2013-09-24 12:53:18,596 eeservice.py:76] loop: 3, 2013-07-17 @ 01:18
+       #INFO     2013-09-24 12:53:21,611 eeservice.py:76] loop: 4, 2013-07-01 @ 01:18
+       #INFO     2013-09-24 12:53:24,493 eeservice.py:76] loop: 5, 2013-05-30 @ 01:18  
+    
     id = feature['id']   
     #logging.info('getLatestLandsatImage found scene: %s', id)
     latest_image = ee.Image(id)
     props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
     test = latest_image.getInfo()['bands']
-    print (test)
+    #print (test)
     crs = latest_image.getInfo()['bands'][0]['crs']
     #path    = props['WRS_PATH']
     #row     = props['STARTING_ROW']
@@ -85,51 +103,7 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_p
     #x.capture_date = date_str
     return latest_image  #.clip(park_boundary)
 
-def getLatestLandsat7HSVUpres(boundary_polygon):
-    #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
-    feat = ee.Geometry.Polygon(boundary_polygon)
-    #logging.info('feat %s', feat)
-    
-    feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-    park_boundary = ee.FeatureCollection(feature )
-    info = park_boundary.getInfo()
-    logging.debug('boundary_coords= %s', info['features'][0]['geometry']['coordinates'])
-    #TEST WITH FUSION TABLE
-    #park_boundary_ft = ee.FeatureCollection('ft:1urlhdLW2pA66f2xS0yzmO-LaESYdclD7-17beg0')
-    #info_ft = park_boundary_ft.getInfo()
-    #logging.info('boundary_coords_ft= %s', info_ft['features'][0]['geometry']['coordinates'])
-     
-    end_date   = datetime.datetime.today()
-    secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
-    start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear )
-    logging.debug('start:%s, end:%s ',start_date,  end_date)
-        
-    sortedCollection = ee.ImageCollection(ee.ImageCollection('L7_L1T').filterBounds(park_boundary).filterDate(start_date, end_date).sort('system:time_start', False ).limit(1)) #note cast to ee,ImageCollection() resolves bug in sort() for ee ver 0.13
-    #logging.info('Collection description : %s', sortedCollection.getInfo())
-  
-    scenes  = sortedCollection.getInfo()
-    #logging.info('Scenes: %s', sortedCollection)
-    
-    for feature in scenes['features']:
-        id = feature['id']   #logging.info('Scene id: %s, %s', id, i)
-        image1 = ee.Image(id)
-        props = image1.getInfo()['properties'] #logging.info('image properties: %s', props)
-        crs = image1.getInfo()['bands'][0]['crs']
-        path    = props['WRS_PATH']
-        row     = props['STARTING_ROW']
-        
-        system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000)
-        date_format_str = "%Y-%m-%d @ %H:%M"
-        date_str = system_time_start.strftime(date_format_str)
 
-        logging.info('getLatestLandsat_Visible id: %s, path: %s, row: %s, date:%s', id, path, row, date_str)
-        #Convert to HSV, swap in the pan band, and convert back to RGB. 
-        #Example from https://ee-api.appspot.com/#5ea3dd541a2173702cfe6c7a88346475
-        rgb = image.select(['30', '20', '10']).unitScale(0, 255) #Select the visible red, green and blue bands.
-        gray = image.select(['80']).unitScale(0, 155)
-        huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
-        upres = ee.Image.cat(huesat, gray).hsvtorgb().clip(park_boundary)
-        return upres
 
 def SharpenLandsat7HSVUpres(image):
         #Convert to HSV, swap in the pan band, and convert back to RGB. 
@@ -175,7 +149,7 @@ def getPercentile(image, percentile, crs):
         True  # bestEffort
         ).getInfo()
 
-def getL8SharpImage(coords, depth):
+def getL8SharpImage(coords, depth): # wont use now
     image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
     sharpimage = SharpenLandsat8HSVUpres(image)
     #red = 'red'
@@ -219,7 +193,7 @@ def getVisualMapId(image, red, green, blue):
     p05 = []
     p95 = []
     p05 = getPercentile(image, 5, crs)
-    p95 = getPercentile(image, 80, crs) # not 95
+    p95 = getPercentile(image, 95, crs) 
     min = str(p05[red]) + ', ' + str(p05[green]) + ', ' + str(p05[blue])
     max = str(p95[red]) + ', ' + str(p95[green]) + ', ' + str(p95[blue])
     print('Percentile  5%: ', min)
@@ -332,14 +306,75 @@ def getOverlayPath(image, prefix, red, green, blue):
     logging.info('getOverlayPath: %s',       path)
     return path
 
-def getL8SharpOverlay(coords, depth):
-    
-    image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
-    sharpimage = SharpenLandsat8HSVUpres(image)
-    red = 'red'
-    green = 'green'
-    blue = 'blue'    
-    #byteimage = sharpimage.multiply(255).byte()
-    path = getOverlayPath(sharpimage, "L8TOA", red, green, blue)
-    return path
+def getLandsatOverlay(coords, satellite, algorithm, depth):
+    if satellite == 'l8':
+        image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
+        if algorithm == 'rgb':
+            sharpimage = SharpenLandsat8HSVUpres(image)
+            red = 'red'
+            green = 'green'
+            blue = 'blue'    
+            #path = getOverlayPath(sharpimage, "L8TOA", red, green, blue)
+            mapid = getVisualMapId(sharpimage, red, green, blue)
+            return mapid
+        elif algorithm == 'ndvi':
+            print "l8 ndvi"
+    elif satellite == 'l7':
+        image = getLatestLandsatImage(coords, 'LANDSAT/L7_L1T', depth)
+        if algorithm == 'rgb':
+            sharpimage = SharpenLandsat7HSVUpres(image)
+            red   = '30'
+            green = '20'
+            blue  = '10'    
+            mapid = getVisualMapId(sharpimage, red, green, blue)
+            return mapid
+        elif algorithm == 'ndvi':
+           print "l7 ndvi"
 
+################# NOT USED ############################################
+
+def getLatestLandsat7HSVUpres(boundary_polygon):
+    #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
+    feat = ee.Geometry.Polygon(boundary_polygon)
+    #logging.info('feat %s', feat)
+    
+    feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
+    park_boundary = ee.FeatureCollection(feature )
+    info = park_boundary.getInfo()
+    logging.debug('boundary_coords= %s', info['features'][0]['geometry']['coordinates'])
+    #TEST WITH FUSION TABLE
+    #park_boundary_ft = ee.FeatureCollection('ft:1urlhdLW2pA66f2xS0yzmO-LaESYdclD7-17beg0')
+    #info_ft = park_boundary_ft.getInfo()
+    #logging.info('boundary_coords_ft= %s', info_ft['features'][0]['geometry']['coordinates'])
+     
+    end_date   = datetime.datetime.today()
+    secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
+    start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear )
+    logging.debug('start:%s, end:%s ',start_date,  end_date)
+        
+    sortedCollection = ee.ImageCollection(ee.ImageCollection('L7_L1T').filterBounds(park_boundary).filterDate(start_date, end_date).sort('system:time_start', False ).limit(1)) #note cast to ee,ImageCollection() resolves bug in sort() for ee ver 0.13
+    #logging.info('Collection description : %s', sortedCollection.getInfo())
+  
+    scenes  = sortedCollection.getInfo()
+    #logging.info('Scenes: %s', sortedCollection)
+    
+    for feature in scenes['features']:
+        id = feature['id']   #logging.info('Scene id: %s, %s', id, i)
+        image1 = ee.Image(id)
+        props = image1.getInfo()['properties'] #logging.info('image properties: %s', props)
+        crs = image1.getInfo()['bands'][0]['crs']
+        path    = props['WRS_PATH']
+        row     = props['STARTING_ROW']
+        
+        system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000)
+        date_format_str = "%Y-%m-%d @ %H:%M"
+        date_str = system_time_start.strftime(date_format_str)
+
+        logging.info('getLatestLandsat_Visible id: %s, path: %s, row: %s, date:%s', id, path, row, date_str)
+        #Convert to HSV, swap in the pan band, and convert back to RGB. 
+        #Example from https://ee-api.appspot.com/#5ea3dd541a2173702cfe6c7a88346475
+        rgb = image.select(['30', '20', '10']).unitScale(0, 255) #Select the visible red, green and blue bands.
+        gray = image.select(['80']).unitScale(0, 155)
+        huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
+        upres = ee.Image.cat(huesat, gray).hsvtorgb().clip(park_boundary)
+        return upres
