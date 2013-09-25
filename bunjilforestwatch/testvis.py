@@ -21,6 +21,17 @@ class TestEEService(unittest.TestCase):
     def setUp(self):
         eeservice.initEarthEngineService()
         
+    def TestL8Overlay(self):
+        
+        image = eeservice.getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA', 0)
+        sharpimage = eeservice.SharpenLandsat8HSVUpres(image)
+        red = 'red'
+        green = 'green'
+        blue = 'blue'    
+        byteimage = eeservice.sharpimage.multiply(255).byte()
+        path = eeservice.getOverlayPath(byteimage, "L8TOA", red, green, blue)
+        self.assertEqual(path.startswith("https://earthengine.googleapis.com//api/download?docid"), True, 'L8 overlay failed')
+
     def TestGetMap(self):
         #image = getLatestLandsatImage(self.coords, 'LANDSAT/LC8_L1T_TOA', 1)
         #sharpimage = SharpenLandsat8HSVUpres(image)

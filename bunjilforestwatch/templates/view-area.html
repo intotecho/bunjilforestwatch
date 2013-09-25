@@ -161,32 +161,7 @@ function initialize() {
 	 	});
     }); //L8latest_overlay_btn.click
    		    
-    $('#L8NDVIlatest_overlay_btn').click(function(){
-    	setActionUrl("overlay");
-        var pathname = window.location.pathname;
-        
-       	$("#observations_panel").collapse('show');
- 		$('#observations_panel').empty();
- 		$('#observations_panel').append("Getting NDVI Sat Data...");
-			$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
- 		$.get(pathname)
- 		.done(function(data){
- 			mapobj = jQuery.parseJSON(data);
- 			$('#observations_panel').empty();
- 			$('#observations_panel').append("\Captured: ", mapobj.date_acquired, "\n", mapobj.id, "\nPath: ", mapobj.path, ", Row: ", mapobj.row);
- 			createImageOverlay(true, mapobj.mapid,  mapobj.token);
-		})
- 		.error(function( jqxhr, textStatus, error ) {
- 	          var err = textStatus + ', ' + error;
- 	          console.log( "Request Failed: " + err);
-	 		  $('#observations_panel').empty();
-	 		  $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
- 	    });
- 	});
- 
-        
-        
-   		$('#L8latest_download_btn').click(function(){ 
+    $('#L8latest_download_btn').click(function(){ 
             var pathname = window.location.pathname + '/download/' + satellite + '/' + algorithm + '/' + latest;
             window.history.replaceState('string', 'load image', pathname);
 	 		$("#observations_panel").collapse('show');
@@ -255,22 +230,22 @@ function initialize() {
         
         $('#latest').click(function(e){
             $("#latest:first-child").text("Latest  ");
-            latest = 'latest';
+            latest = 0;
             e.preventDefault();
         });
         $('#latest-1').click(function(e){
             $("#latest:first-child").text("Latest-1");
-            latest = 'latest-1';
+            latest = 1;
             e.preventDefault();
         });
         $('#latest-2').click(function(e){
             $("#latest:first-child").text("Latest-2");
-            latest = 'latest-2';
+            latest = 2;
             e.preventDefault();
         });
         $('#latest-3').click(function(e){
             $("#latest:first-child").text("Latest-3");
-            latest = 'latest-3';
+            latest = 3;
             e.preventDefault();
         });
         
@@ -325,29 +300,30 @@ function initialize() {
 	        <!-- Algorithm Selection button -->
 	        <div class="btn-toolbar" style="margin: 0;">
                 <div class="btn-group">
-                    <button id='algorithm' type="button" class="btn btn-small btn-default dropdown-toggle" data-toggle="dropdown">
-                        Visual <span class="caret"></span>
+                    <button id='algorithm' type="button" style="width:60px" class="btn btn-small btn btn-lightred dropdown-toggle" data-toggle="dropdown">
+                        RGB <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" role="menu">
-                       <li><a href="#" id='algorithm-visual'>Visual</a></li>
+                       <li><a href="#" id='algorithm-visual'>RGB</a></li>
                         <li class="divider"></li>
                         <li><a href="#" id='algorithm-ndvi'>NDVI</a></li>
                         <li><a href="#" id='algorithm-change'>Change</a></li>
                     </ul>
                 </div>
                 <div class="btn-group">
-                    <button id='latest' type="button" class="btn btn-small btn-default dropdown-toggle" data-toggle="dropdown">
+                    <button id='latest' type="button"  style="width:60px" class="btn btn-small btn-lightgreen dropdown-toggle" data-toggle="dropdown">
                         Latest<span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" role="menu">
-                       <li><a href="#" id='latest-1'>Latest-1</a></li>
+                       <li><a href="#" id='latest'>Latest</a></li>
                         <li class="divider"></li>
+                        <li><a href="#" id='latest-1'>Latest-1</a></li>
                         <li><a href="#" id='latest-2'>Latest-2</a></li>
                         <li><a href="#" id='latest-3'>Latest-3</a></li>
                     </ul>                
                 </div>
                  <div class="btn-group">
-                    <button id='satellite' type="button" class="btn btn-small btn-default dropdown-toggle" data-toggle="dropdown">
+                    <button id='satellite' type="button" style="width:40px" class="btn btn-small btn btn-lightred dropdown-toggle" data-toggle="dropdown">
                         L8<span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" role="menu">
@@ -361,22 +337,17 @@ function initialize() {
 			<div>
 			<p>
 				<input id="L8latest_overlay_btn" type="button" class="btn btn-primary"
-					value="Get Latest Imagery" /></p>
+					value="View Image" /></p>
 			</div>
 			<div>
 			<p>
-				<input id="L8NDVIlatest_overlay_btn" type="button" class="btn btn-lightgreen"
-					value="Latest NDVI" /></p>
-			</div>
-			<div>
-			<p>
-				<input id="L8latest_download_btn" type="button" class="btn"
-					value="Download" /></p>
+				<input id="Get Download " type="button" class="btn"
+					value="Download Image" /></p>
 			</div>	
 			<div>
 			<p>
 				<input type="checkbox" id="0" class="layer" unchecked/><label for="0">Landsat Grid </label>
-				<input type="checkbox" id="1" class=layer unchecked/><label for="1">Topo map</label>
+				<input type="checkbox" id="1" class=layer unchecked/><label for="1">Make Report</label>
 			</div>	
 			<div class="accordion" id="accordion2">
 			  <div class="accordion-group">
