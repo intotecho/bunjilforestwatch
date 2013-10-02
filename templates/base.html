@@ -1,7 +1,8 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>bunjilae</title>
 	<meta name="description" content="community based forest monitoring">
 	<meta name="author" content="bunjil">
@@ -20,6 +21,8 @@
 {% endblock %}
 </head>
 <body>
+
+
 	<div class="navbar">
 		<div class="navbar-inner">
 			<div class="container">
@@ -64,7 +67,7 @@
 								<li{% if active == "view-area" and ar.1 == area.name %} class="active"{% endif %}><a href="{{ ar.0 }}">{{ ar.1 }}</a></li> 
 							{% endfor %}
 							<li class="divider"></li>
-							<li><a href="{{ "user"|url(user.name) }}"><i class="icon-home"></i>my areas</a></li>
+							<li><a href="{{ "user"|url(user.name)}}/myareas"><i class="icon-home"></i>my areas</a></li>
 							<li{% if active == "new-area" %} class="active"{% endif %}><a href="{{ "new-area"|url }}">new area</a></li>
 						</ul>
 					</li>

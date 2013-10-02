@@ -4,8 +4,6 @@ Created on 25/05/2013
 @author: cgoodman
 
 '''
-
-
 import sys
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -95,12 +93,11 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_p
     system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
-    logging.info('getLatestLandsatImage id: %s, date:%s latest:%d', id, date_str, latest_depth )
+    logging.info('getLatestLandsatImage id: %s, date:%s latest:%s', id, date_str, latest_depth )
     x = latest_image.getInfo()
     latest_image.name = id
     latest_image.capture_date = date_str
     x['mynewkey'] = id 
-    #x.capture_date = date_str
     return latest_image  #.clip(park_boundary)
 
 
@@ -128,6 +125,11 @@ def SharpenLandsat8HSVUpres(image):
         newImage = image.addBands(byteimage); #keep all the metadata of image, but add the new bands.
         return(newImage)
 
+# def getL8SharpImage(coords, depth): # wont use now
+#     image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
+#     sharpimage = SharpenLandsat8HSVUpres(image)
+#     return sharpimage
+
 ###################################
 # Image statistics
 
@@ -149,18 +151,9 @@ def getPercentile(image, percentile, crs):
         True  # bestEffort
         ).getInfo()
 
-def getL8SharpImage(coords, depth): # wont use now
-    image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
-    sharpimage = SharpenLandsat8HSVUpres(image)
-    #red = 'red'
-    #green = 'green'
-    #blue = 'blue'    
-    #byteimage = sharpimage.multiply(255).byte()
-    #path = getOverlayPath(byteimage, "L8TOA", red, green, blue)
-    return sharpimage
 
 def getL8LatestNDVIImage(image):
-    NDVI_PALETTE = {'FFFFFF','00FF00'}
+    NDVI_PALETTE = {'FF00FF','00FF00'}
     ndvi = image.normalizedDifference(["B4", "B3"]);   
     
     #addToMap(ndvi.median(), {min:-1, max:1}, "Median NDVI");
@@ -188,7 +181,7 @@ def getL8LatestNDVIImage(image):
     return mapid
 
 def getVisualMapId(image, red, green, blue):
-    #original image is used for original metadata lost in image - nice to figure out a cleaner solution 
+    #original image is used for original metadata lost in image so caller must keep a reference to the image
     crs = image.getInfo()['bands'][0]['crs']
     p05 = []
     p95 = []
@@ -203,33 +196,29 @@ def getVisualMapId(image, red, green, blue):
                      'min': min,
                      'max': max,
                      'gamma': 1.2,
-                     'format': 'jpg'
+                     'format': 'png'
                 }   
     mapid  = image.getMapId(mapparams)
-    # copy some image props to mapid for browser to display
-    info = image.getInfo() #logging.info("info", info)
-    props = info['properties']
-    mapid['date_acquired'] = props['DATE_ACQUIRED']
-    mapid['id'] = props['system:index']
-    mapid['path'] = props['WRS_PATH']
-    mapid['row'] = props['WRS_ROW']
     return mapid
 
-def getTiles(mapid): #not used
-    tilepath = ee.data.getTileUrl(mapid, 0, 0, 1)
-    logging.info('getTiles: %s',       tilepath)
-    return tilepath
+# def getTiles(mapid): #not used
+#     tilepath = ee.data.getTileUrl(mapid, 0, 0, 1)
+#     logging.info('getTiles: %s',       tilepath)
+#     return tilepath
 
-def GetMap(coords, depth): # not used except test
-        image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
-       
-        sharpimage = SharpenLandsat8HSVUpres(image)
-        #byteimage = sharpimage.multiply(255).byte()
-        red = 'red'
-        green = 'green'
-        blue = 'blue'
-        mapid = getVisualMapId(sharpimage, red, green, blue)
-
+# def GetMap(coords, depth): # not used except test
+#         image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
+#        
+#         sharpimage = SharpenLandsat8HSVUpres(image)
+#         #byteimage = sharpimage.multiply(255).byte()
+#         red = 'red'
+#         green = 'green'
+#         blue = 'blue'
+#         if False:
+#             mapid = getVisualMapId(sharpimage, red, green, blue)
+#         else:
+#             mapid = getVisualMapId(image, red, green, blue)
+#             
 def getThumbnailPath(image):
         # GET THUMBNAIL
         crs = image.getInfo()['bands'][0]['crs']
@@ -316,65 +305,35 @@ def getLandsatOverlay(coords, satellite, algorithm, depth):
             blue = 'blue'    
             #path = getOverlayPath(sharpimage, "L8TOA", red, green, blue)
             mapid = getVisualMapId(sharpimage, red, green, blue)
+            info = image.getInfo() #logging.info("info", info)
+            #print info
+            props = info['properties']
+            mapid['date_acquired'] = props['DATE_ACQUIRED']
+            mapid['id'] = props['system:index']
+            mapid['path'] = props['WRS_PATH']
+            mapid['row'] = props['WRS_ROW']
             return mapid
         elif algorithm == 'ndvi':
             print "l8 ndvi"
+            
     elif satellite == 'l7':
         image = getLatestLandsatImage(coords, 'LANDSAT/L7_L1T', depth)
+        props = image.getInfo()['properties'] 
         if algorithm == 'rgb':
             sharpimage = SharpenLandsat7HSVUpres(image)
-            red   = '30'
-            green = '20'
-            blue  = '10'    
+            red   = 'red'
+            green = 'green'
+            blue  = 'blue'    
             mapid = getVisualMapId(sharpimage, red, green, blue)
+            mapid['date_acquired'] = props['DATE_ACQUIRED']
+            mapid['id'] = props['system:index']
+            mapid['path'] = props['WRS_PATH']
+            mapid['row'] = props['WRS_ROW']
+            
             return mapid
+        
         elif algorithm == 'ndvi':
            print "l7 ndvi"
 
 ################# NOT USED ############################################
 
-def getLatestLandsat7HSVUpres(boundary_polygon):
-    #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
-    feat = ee.Geometry.Polygon(boundary_polygon)
-    #logging.info('feat %s', feat)
-    
-    feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-    park_boundary = ee.FeatureCollection(feature )
-    info = park_boundary.getInfo()
-    logging.debug('boundary_coords= %s', info['features'][0]['geometry']['coordinates'])
-    #TEST WITH FUSION TABLE
-    #park_boundary_ft = ee.FeatureCollection('ft:1urlhdLW2pA66f2xS0yzmO-LaESYdclD7-17beg0')
-    #info_ft = park_boundary_ft.getInfo()
-    #logging.info('boundary_coords_ft= %s', info_ft['features'][0]['geometry']['coordinates'])
-     
-    end_date   = datetime.datetime.today()
-    secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
-    start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear )
-    logging.debug('start:%s, end:%s ',start_date,  end_date)
-        
-    sortedCollection = ee.ImageCollection(ee.ImageCollection('L7_L1T').filterBounds(park_boundary).filterDate(start_date, end_date).sort('system:time_start', False ).limit(1)) #note cast to ee,ImageCollection() resolves bug in sort() for ee ver 0.13
-    #logging.info('Collection description : %s', sortedCollection.getInfo())
-  
-    scenes  = sortedCollection.getInfo()
-    #logging.info('Scenes: %s', sortedCollection)
-    
-    for feature in scenes['features']:
-        id = feature['id']   #logging.info('Scene id: %s, %s', id, i)
-        image1 = ee.Image(id)
-        props = image1.getInfo()['properties'] #logging.info('image properties: %s', props)
-        crs = image1.getInfo()['bands'][0]['crs']
-        path    = props['WRS_PATH']
-        row     = props['STARTING_ROW']
-        
-        system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000)
-        date_format_str = "%Y-%m-%d @ %H:%M"
-        date_str = system_time_start.strftime(date_format_str)
-
-        logging.info('getLatestLandsat_Visible id: %s, path: %s, row: %s, date:%s', id, path, row, date_str)
-        #Convert to HSV, swap in the pan band, and convert back to RGB. 
-        #Example from https://ee-api.appspot.com/#5ea3dd541a2173702cfe6c7a88346475
-        rgb = image.select(['30', '20', '10']).unitScale(0, 255) #Select the visible red, green and blue bands.
-        gray = image.select(['80']).unitScale(0, 155)
-        huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
-        upres = ee.Image.cat(huesat, gray).hsvtorgb().clip(park_boundary)
-        return upres

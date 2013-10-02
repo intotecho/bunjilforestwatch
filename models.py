@@ -91,15 +91,15 @@ class User(db.Model):
 			self.entry_days = (self.last_entry - self.first_entry).days + 1
 			weeks = self.entry_days / 7.
 			self.freq_entries = self.entry_count / weeks
-			self.freq_chars = self.chars / weeks
-			self.freq_words = self.words / weeks
-			self.freq_sentences = self.sentences / weeks
+			#self.freq_chars = self.chars / weeks
+			#self.freq_words = self.words / weeks
+			#self.freq_sentences = self.sentences / weeks
 		else:
 			self.entry_days = 0
 			self.freq_entries = 0.
-			self.freq_chars = 0.
-			self.freq_words = 0.
-			self.freq_sentences = 0.
+			#self.freq_chars = 0.
+			#self.freq_words = 0.
+			#self.freq_sentences = 0.
 
 	def set_dates(self):
 		self.last_entry = datetime.datetime.now()
@@ -138,6 +138,13 @@ class UserFollowersIndex(db.Model):
 
 class UserFollowingIndex(db.Model):
 	users = db.StringListProperty()
+
+class AreaFollowersIndex(db.Model):  #A Area has a list of users in an AreaFollowersIndex(key=user)
+    users = db.StringListProperty()
+
+class UserFollowingAreasIndex(db.Model): #A User has a list of areas in a UserFollowingAreasIndex(key=area)
+    areas = db.StringListProperty()
+    
 
 
 class Geometry(db.Model):
