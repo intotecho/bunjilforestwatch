@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+<!-- View and Manage Areas - from 'my areas' from the menu -->
+{% block content %}
+   <p>
+    <ul class="breadcrumb">
+        <li><a href="{{ "user"|url(user.name) }}">{{ user.name }}</a>  <span
+            class="divider">/</span></li>
+        <li class="active">home (role: {{user.role}})</li>
+    </ul>
+    </p>
+<div class="row">
+   <div class="span6"><pre>
+                {% if not areas %}
+                    You don't have any areas yet.
+                {% else %}
+                    {% include "areas.html" %}
+                {% endif %}
+                </pre><a href="{{ "new-area"|url}}" class="btn btn-lightblue">Create new area</a></div>
+   <div class="span6"><pre>
+                {% if not areas %}
+                    You don't have any areas yet.
+                {% else %}
+                    {% include "allareas.html" %}
+                {% endif %} 
+                </pre>           
+  </div>   
+{% endblock %}

@@ -1,22 +1,40 @@
+
 {% extends "base.html" %}
-
+<!-- This is index page or localhost:8001 when user is logged in -->
+<!-- See also localhost:8001/username - my areas from the menu -->
 {% block content %}
-	<div class="page-header">
-		<h1>{{user.name}}<small> home page for {{user.role}}.</small></h1>
-	</div>
-	<div class="page-header">
-	
-	</div>
+   <p>
+    <ul class="breadcrumb">
+        <li><a href="{{ "user"|url(user.name) }}">{{ user.name }}</a>  <span
+            class="divider">/</span></li>
+        <li class="active">home (role: {{user.role}})</li>
+    </ul>
+    </p>
+    
+<div class="row">
+  <div class="span4"><pre><h4>Your Tasks </h4>
+                {% if not journals %}
+                    You haven't volunteered for an area yet.
+                {% else %}
+                    {% include "journals.html" %}
+                {% endif %}</pre> </div>
+   <div class="span4"><pre>
+                {% if not areas %}
+                    You don't have any areas yet.
+                {% else %}
+                    {% include "areas.html" %}
+                {% endif %}</pre><a href="{{ "new-area"|url}}" class="btn btn-lightblue">Create new area</a></div>
+            
+  <div class="span4"><pre><h4>Your Reports</h4>
+                {% if not activities %}
+                    No Activities yet.
+                {% else %}
+                    {% include "activities.html" %}
+                {% endif %}</pre> </div>
+ </div>
+  <div class="row">
 
-	<div class="row">
-		<div class="span7">
-			<h2>Recent Activities <small>observations and reports in areas you follow</small></h2>
-			{% include "activities.html" %}
-		</div>
-
-		<div class="span5">
-			<div class="row">
-				<div class="span5">
+<div class="span8">
 					<div id="rss" class="alert alert-block alert-info">
 						<a href="{{ "user-feeds"|url(user.name) }}?token={{ token }}"><img src="/static/images/feed-large.png" class="feed-img" alt="feed"></a>
 						<h4><a href="{{ "user-feeds"|url(user.name) }}?token={{ token }}">Subscribe to your feed</a></h4>
@@ -24,15 +42,7 @@
 					</div>
 				</div>
 			</div>
-
-			<div class="span5">
-				<h2>Your Observation Tasks </h2>
-				{% if not journals %}
-					You haven't volunteered for an area yet.
-				{% else %}
-					{% include "journals.html" %}
-				{% endif %}
-			</div>
 		</div>
 	</div>
+	
 {% endblock %}

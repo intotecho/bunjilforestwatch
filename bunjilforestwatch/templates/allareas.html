@@ -1,0 +1,23 @@
+<!-- Included by myareas.html -->
+<table class="table">   
+<h4>All Areas</h4>
+<tbody>
+
+    {% for j in all_areas %}
+    <tr><td>
+        {% if thisuser %}<b>
+   <h4><a href="{{ j|area_url }}">{{ j }}</a></h4>
+        {% else %}
+            {{ j }}
+        {% endif %}
+    </td></tr>
+         <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
+         <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
+         <tr><td>followers</td><td>{{ j.subscriber }}</td></tr>
+
+<a href=</a>
+         <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j }}" class="btn btn-lightgreen">"Follow {{ j.1 }}"</a></td></tr>
+
+         <tr><td><a href="{{ "about"|url}}" class="btn btn-lightgreen">about </a></td></tr>
+{% endfor %}
+    </tbody></table>
