@@ -1,23 +1,15 @@
 <!-- Included by myareas.html -->
-<table class="table">   
-<h4>All Areas</h4>
-<tbody>
-
+<table class="table table-condensed">   
+    <tbody>
     {% for j in all_areas %}
-    <tr><td>
-        {% if thisuser %}<b>
-   <h4><a href="{{ j|area_url }}">{{ j }}</a></h4>
+        {% if thisuser %}
+         <tr><td><a data-toggle="tooltip" title="Click to view. Description: {{ j.description}}" href="{{ j|area_url }}"><h5>{{ j }}</h5></a></td></tr>
         {% else %}
-            {{ j }}
+            <tr><td>{{ j }} not this user </td></tr>
         {% endif %}
-    </td></tr>
          <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
          <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
-         <tr><td>followers</td><td>{{ j.subscriber }}</td></tr>
-
-<a href=</a>
-         <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j }}" class="btn btn-lightgreen">"Follow {{ j.1 }}"</a></td></tr>
-
-         <tr><td><a href="{{ "about"|url}}" class="btn btn-lightgreen">about </a></td></tr>
-{% endfor %}
-    </tbody></table>
+         <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j }}" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Add to areas you follow. You will be asked to review new images for this area.">"Follow {{ j.1 }}"</a></td></tr>
+    {% endfor %}
+    </tbody>
+</table>

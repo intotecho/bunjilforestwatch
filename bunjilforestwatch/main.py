@@ -111,7 +111,7 @@ class BaseHandler(webapp2.RequestHandler):
 		}
 
 		self.session['journals'] = cache.get_journal_list(db.Key(self.session['user']['key']))
-		self.session['areas']    = cache.get_areas_list(db.Key(self.session['user']['key']))
+		self.session['areas']	= cache.get_areas_list(db.Key(self.session['user']['key']))
 
 	MESSAGE_KEY = '_flash_message'
 	def add_message(self, level, message):
@@ -158,57 +158,66 @@ class BaseUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
 
 class MainPage(BaseHandler):
 
-    def get(self):
-        if 'user' in self.session:
-            following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
-            followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User')
-            journals = cache.get_journals(db.Key(self.session['user']['key']))
-            areas = cache.get_areas(db.Key(self.session['user']['key']))
-            all_areas = cache.get_all_areas()
-            
-            #all_areas = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
+	def get(self):
+		if 'user' in self.session:
+			following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
+			followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User')
+			following_areas = cache.get_by_keys(cache.get_following_areas(self.session['user']['name']), 'AreaOfInterest')
+			#following_areas = cache.get_by_keys(cache.get_area_followers(self.session['user']['name']), 'AreaOfInterest')
+			#area_followers = cache.get_by_keys(cache.get_area_followers(self.session['user']['name']), 'AreaOfInterest)
+			journals = cache.get_journals(db.Key(self.session['user']['key']))
+			areas = cache.get_areas(db.Key(self.session['user']['key']))
+			all_areas = cache.get_all_areas()
+			#following_areas_list = cache.get_following_areas_list(self.session['user']['name'])
+			print("MainHandler areas: ", areas, "following_areas: ", following_areas) #, "following_areas_list: ", following_areas_list)
+			
+			#all_areas = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
 			#logging.info( "areas = %s", areas)
 			#eeservice.initEarthEngineService() - when should we initialise??
-            self.render('index-user.html', {
+			self.render('index-user.html', {
 				'activities': cache.get_activities_follower(self.session['user']['name']),
+				#'username' : self.session['user']['name'],
+				'user': self.session['user']['name'],
 				'journals': journals,
 				'thisuser': True,
 				'token': self.session['user']['token'],
-				'following': following,
-				'followers': followers,
+				'following': following, #other users
+				'followers': followers,#other users
+				'following_areas': following_areas, #other areas.
+				#'following_areas_list': following_areas_list, #other areas.
 				'areas': areas,
-                'all_areas': all_areas
+				'all_areas': all_areas
 			})
-        else:
-            self.render('index.html') # not logged in.
+		else:
+			self.render('index.html') # not logged in.
 
 
 class ViewAreas(BaseHandler):
 
-     def get(self, username):
-        print ViewAreas
-        if 'user' in self.session:
-#             following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
-#             followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User')
-#             journals = cache.get_journals(db.Key(self.session['user']['key']))
-            areas = cache.get_areas(db.Key(self.session['user']['key']))
-            all_areas = cache.get_all_areas()
-            
-            #all_areas = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
-            #logging.info( "areas = %s", areas)
-            #eeservice.initEarthEngineService() - when should we initialise??
-            self.render('view-areas.html', {
-#                 'activities': cache.get_activities_follower(self.session['user']['name']),
-#                 'journals': journals,
-                'thisuser': True,
-                'token': self.session['user']['token'],
-#                 'following': following,
-#                 'followers': followers,
-                'areas': areas,
-                'all_areas': all_areas
-            })
-        else:
-            self.render('index.html') # not logged in.
+	 def get(self, username):
+		print ViewAreas
+		if 'user' in self.session:
+#			 following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
+#			 followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User')
+#			 journals = cache.get_journals(db.Key(self.session['user']['key']))
+			areas = cache.get_areas(db.Key(self.session['user']['key']))
+			all_areas = cache.get_all_areas()
+			
+			#all_areas = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
+			#logging.info( "areas = %s", areas)
+			#eeservice.initEarthEngineService() - when should we initialise??
+			self.render('view-areas.html', {
+#				 'activities': cache.get_activities_follower(self.session['user']['name']),
+#				 'journals': journals,
+				'thisuser': True,
+				'token': self.session['user']['token'],
+#				 'following': following,
+#				 'followers': followers,
+				'areas': areas,
+				'all_areas': all_areas
+			})
+		else:
+			self.render('index.html') # not logged in.
 
 
 class FacebookCallback(BaseHandler):
@@ -303,11 +312,11 @@ class Register(BaseHandler):
 						self.populate_user_session(user)
 						counters.increment(counters.COUNTER_USERS)
 						if rolechoice == 'local':
-							self.add_message('Success', '%s, you have been registered as a Subscriber at Bunjil Forest Watch.' %user)
+							self.add_message('Success', '%s, Welcome new subscriber. Now create a new area that you wish to monitor.' %user)
 							self.redirect(webapp2.uri_for('new-area'))
 						else:
-							self.add_message('Success', '%s, you have been registered as a Volunteer at Bunjil Forest Watch.' %user)
-							self.redirect(webapp2.uri_for('new-journal'))
+							self.add_message('Success', '%s, Welcome new volunteer. Choose an area to follow.' %user)
+							self.redirect(webapp2.uri_for('main'))
 						return
 			else:
 				username = ''
@@ -495,21 +504,23 @@ class NewAreaHandler(BaseHandler):
 			self.add_message('error', 'Your area of interest needs a short and unique name.')
 		else:
 			
-			area = models.AreaOfInterest(parent=db.Key(self.session['user']['key']),
-					 name=name, description=descr, coordinates=coords, map_center = center, map_zoom = zoom )
-						
+			area = models.AreaOfInterest(key_name=name,
+					 name=name, description=descr, coordinates=coords, map_center = center, map_zoom = zoom, owner=db.Key(self.session['user']['key']) )
 			for area_url, area_name in self.session['areas']:
 				if area.name == area_name:
 					self.add_message('error', 'Sorry, there is already a protected area called %s ' %name)
 					break
 			else: #for loop did not break.
+
 				def txn(user_key, area):
 					user = db.get(user_key)
 					user.areas_count += 1
 					db.put([user, area])
 					return user, area
 
-				user, area = db.run_in_transaction(txn, self.session['user']['key'], area)
+				xg_on = db.create_transaction_options(xg=True)
+				
+				user, area = db.run_in_transaction_options(xg_on, txn, self.session['user']['key'], area)
 				cache.clear_area_cache(user.key())
 				cache.set(cache.pack(user), cache.C_KEY, user.key())
 				self.populate_user_session()
@@ -518,9 +529,10 @@ class NewAreaHandler(BaseHandler):
 				models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
 				self.add_message('success', 'Created your new area of interest: %s' %(area.name))
 								
-				self.redirect(webapp2.uri_for('view-area', username=self.session['user']['name'], area_name=area.name))
+				#self.redirect(webapp2.uri_for('view-area', username=self.session['user']['name'], area_name=area.name))
+				self.redirect(webapp2.uri_for('view-area', area_name=area.name))
 				return
-
+		print 'NewAreaHandler - no user'
 		self.render('view-area.html')
 
 
@@ -562,38 +574,32 @@ class NewJournal(BaseHandler):
 
 
 class ViewArea(BaseHandler):
-	def get(self, username, area_name):
-		#page = int(self.request.get('page', 1))
-		area = cache.get_area(username, area_name)
+	#def get(self, username, area_name):
+	
+	def get(self, area_name):
+		# page = int(self.request.get('page', 1))
+		area = cache.get_area(None, area_name)
 		logging.debug('ViewArea area_name %s %s', area_name, area)
-		
-# 		if not area or username != self.session['user']['name']:
-# 			logging.info('ViewArea not or ')
-# 			#ViewJournal.get(self, username, area_name) # need to tidy up routing so Journals and Areas can work.
-# 			self.error(404)
-# 			return
-
 		if not area:
-			logging.info('ViewArea not area')
-			#ViewJournal.get(self, username, area_name)
-			#self.error(404)
+			area = cache.get_area(None, area_name)
+			logging.error('ViewArea: Area not found! %s', area_name)
+			self.error(404)
 		else:
-			#logging.info('ViewArea else ')
+			# logging.info('ViewArea else ')
 			self.render('view-area.html', {
-				'username': username,
+				'username': self.session['user']['name'],
 				'area': area,
-				#'journal': journal,
-				#'entries': cache.get_entries_page(username, area, page, area.key()),
-				#'page': page,
-				#'pagelist': utils.page_list(page, area.pages),
-				
+				# 'journal': journal,
+				# 'entries': cache.get_entries_page(username, area, page, area.key()),
+				# 'page': page,
+				# 'pagelist': utils.page_list(page, area.pages),
 			})
 
 class LandsatOverlayRequestHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
-	def get(self, username, area_name, action, satelite, algorithm, latest):
-		area = cache.get_area(username, area_name)
-		if not area or username != self.session['user']['name']:
+	def get(self, area_name, action, satelite, algorithm, latest):
+		area = cache.get_area(None, area_name)
+		if not area:
 			logging.info('LandsatOverlayRequestHandler: ViewArea is not an area') 
 			self.error(404)
 			return
@@ -602,15 +608,15 @@ class LandsatOverlayRequestHandler(BaseHandler):
 			print 'This is a normal request' # render the ViewArea page, then send image.
 			#logging.debug('ViewArea area_name %s %s', area_name, area)
 			self.render('view-area.html', {
-						'username': username,
-    					'area': area})
+						#'username': username,
+						'area': area})
 		else:
 			print 'This is an AJAX request'
 		
 		logging.debug("LandsatOverlayRequestHandler action:%s, satelite:%s, algorithm:%s, latest:%s", action, satelite, algorithm, latest)
 		logging.debug('LandsatOverlayRequestHandler area_name %s %s', area_name, type(area))
-		if not area or username != self.session['user']['name']:
-			logging.info('LandsatOverlayRequestHandler - bad area returned %s, username %s, %s', area, username, area_name)
+		if not area:
+			logging.info('LandsatOverlayRequestHandler - bad area returned %s, %s', area, area_name)
 			self.error(404)
 			return
 		eeservice.initEarthEngineService() #- moved to main user login page
@@ -708,9 +714,9 @@ class AboutHandler(BaseHandler):
 		self.render('about.html')
 
 class DonateHandler(BaseHandler):
-    def get(self):
-        self.render('donate.html')
-        
+	def get(self):
+		self.render('donate.html')
+		
 class StatsHandler(BaseHandler):
 	def get(self):
 		self.render('stats.html', {'stats': cache.get_stats()})
@@ -753,12 +759,15 @@ class UserHandler(BaseHandler):
 		activities = cache.get_activities(username=username)
 		following = cache.get_following(username)
 		followers = cache.get_followers(username)
+		following_areas= cache.get_areas_following(username)
+		
 		#logging.info ("following %s, followers %s", following, followers)
 		
 		if 'user' in self.session:
 			is_following = username in cache.get_following(self.session['user']['name'])
 			thisuser = self.session['user']['name'] == u.name
 		else:
+			print "no followers"
 			is_following = False
 			thisuser = False 
 
@@ -772,7 +781,7 @@ class UserHandler(BaseHandler):
 			'followers': followers,
 			'is_following': is_following,
 			'thisuser': thisuser, # True if user being shown is thisuser
-			'areas': areas,
+			'areas': areas
 			})
 """
 		self.render('user.html', {
@@ -787,7 +796,7 @@ class UserHandler(BaseHandler):
 		})
 """
 class FollowHandler(BaseHandler):
-    
+	
 	def get(self, username, area):
 		user = cache.get_user(username)
 		if not user or 'user' not in self.session:
@@ -858,69 +867,73 @@ class FollowHandler(BaseHandler):
 
 
 class FollowAreaHandler(BaseHandler):
-    def get(self, username, area_name):
-        area = cache.get_area(None, area_name)
-        if not area :
-            self.error(404)
-            return
-        
-        thisuser = self.session['user']['name']
+	def get(self, username, area_name):
+		area = cache.get_area(None, area_name)
+		if not area :
+			self.error(404)
+			return
+		
+		thisuser = self.session['user']['name']
 
-        #self.redirect(webapp2.uri_for('view-area', area))
-        self.redirect(webapp2.uri_for('view-area', username=thisuser, area_name=area.name))
+		#self.redirect(webapp2.uri_for('view-area', area))
+		#self.redirect(webapp2.uri_for('view-area', username=thisuser, area_name=area.name))
+		self.redirect(webapp2.uri_for('view-area', area_name=area.name))
 
-        if 'unfollow' in self.request.GET:
-            op = 'del'
-            unop = 'add'
-        else:
-            op = 'add'
-            unop = 'del'
+		if 'unfollow' in self.request.GET:
+			op = 'del'
+			unop = 'add'
+		else:
+			op = 'add'
+			unop = 'del'
 
-        xg_on = db.create_transaction_options(xg=True)
+		xg_on = db.create_transaction_options(xg=True)
 
-        def txn(thisuser, area, op):
-            tu, ou = db.get([thisuser, area])
+		def txn(thisuser, area, op):
+			tu, ar = db.get([thisuser, area])
 
-            if not tu:
-                tu = models.UserFollowingAreasIndex(key=thisuser)
-            if not ou:
-                ou = models.AreaFollowersIndex(key=area)
+			if not tu:
+				tu = models.UserFollowingAreasIndex(key=thisuser)
+			if not ar:
+				ar = models.AreaFollowersIndex(key=area)
 
-            changed = []
-            if op == 'add':
-                if thisuser.name() not in ou.users:
-                    ou.users.append(thisuser.name())
-                    changed.append(ou)
-                if area.name() not in tu.areas:
-                    tu.areas.append(area.name())
-                    changed.append(tu)
-            elif op == 'del':
-                if thisuser.name() in ou.users:
-                    ou.users.remove(thisuser.name())
-                    changed.append(ou)
-                if area.name() in tu.areas:
-                    tu.areas.remove(area.name())
-                    changed.append(tu)
+			changed = []
+			if op == 'add':
+				if thisuser.name() not in ar.users:
+					ar.users.append(thisuser.name())
+					changed.append(ar)
+				if area.name() not in tu.areas:
+					tu.areas.append(area.name())
+					changed.append(tu)
+			elif op == 'del':
+				if thisuser.name() in ar.users:
+					ar.users.remove(thisuser.name())
+					changed.append(ar)
+				if area.name() in tu.areas:
+					tu.areas.remove(area.name())
+					changed.append(tu)
 
-            db.put(changed)
+			db.put(changed)
 
-            return tu, ou
-        followers_key = db.Key.from_path('AreaOfInterest', area_name, 'AreaFollowersIndex', area_name)
-        following_key = db.Key.from_path('User', thisuser, 'UserFollowingAreasIndex', thisuser)
+			return tu, ar
+		
+		following_key = db.Key.from_path('User', thisuser, 'UserFollowingAreasIndex', thisuser)
+		followers_key = db.Key.from_path('AreaOfInterest', area_name, 'AreaFollowersIndex', area_name)
 
-        following, followers = db.run_in_transaction_options(xg_on, txn, following_key, followers_key, op)
+		#followers_key = db.Key.from_path('User', thisuser, 'User', thisuser)
+		#areas_following_key = db.Key.from_path('AreaOfInterest', area_name)   #, 'User', username)
 
-        if op == 'add':
-            self.add_message('success', 'You are now following area %s.' %area_name)
-            models.Activity.create(cache.get_by_key(self.session['user']['key']), models.ACTIVITY_FOLLOWING, area)
-        elif op == 'del':
-            self.add_message('success', 'You are no longer following area %s.' %area_name)
+		areas_following, followers,  = db.run_in_transaction_options(xg_on, txn, following_key, followers_key, op)
 
-        cache.set_multi({
-            cache.C_AREA_FOLLOWERS %username: followers.users,
-            cache.C_FOLLOWING_AREAS %area_name: following.areas,
-        })
- 
+		if op == 'add':
+			self.add_message('success', 'You are now following area %s.' %area_name)
+			models.Activity.create(cache.get_by_key(self.session['user']['key']), models.ACTIVITY_FOLLOWING, area)
+		elif op == 'del':
+			self.add_message('success', 'You are no longer following area %s.' %area_name)
+
+		cache.set_multi({
+			cache.C_AREA_FOLLOWERS %area.name: followers.users,  #doesn't look right.
+			cache.C_FOLLOWING_AREAS %username: areas_following.areas,
+		})
 
 class NewEntryHandler(BaseHandler):
 	def get(self, username, journal_name):
@@ -1815,12 +1828,12 @@ app = webapp2.WSGIApplication([
 	webapp2.Route(r'/blob/<key>', handler=BlobHandler, name='blob'),
 	webapp2.Route(r'/blog', handler=BlogHandler, name='blog'),
 	webapp2.Route(r'/blog/<entry>', handler=BlogEntryHandler, name='blog-entry'),
-    webapp2.Route(r'/donate', handler=DonateHandler, name='donate'),
+	webapp2.Route(r'/donate', handler=DonateHandler, name='donate'),
 	webapp2.Route(r'/dropbox', handler=DropboxCallback, name='dropbox'),
 	webapp2.Route(r'/facebook', handler=FacebookCallback, name='facebook'),
 	webapp2.Route(r'/google', handler=GoogleCallback, name='google'),
 	webapp2.Route(r'/feeds/<feed>', handler=FeedsHandler, name='feeds'),
-    webapp2.Route(r'/following/<username>', handler=FollowingHandler, name='following'),
+	webapp2.Route(r'/following/<username>', handler=FollowingHandler, name='following'),
 	webapp2.Route(r'/login/facebook', handler=FacebookLogin, name='login-facebook'),
 	webapp2.Route(r'/login/google', handler=GoogleLogin, name='login-google'),
 	webapp2.Route(r'/logout', handler=Logout, name='logout'),
@@ -1847,16 +1860,16 @@ app = webapp2.WSGIApplication([
 	# google site verification
 	webapp2.Route(r'/%s.html' %settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
 	# problem with the routing area_name means we cant create journals - area takes precendence.
-    webapp2.Route(r'/<username>/myareas', handler=ViewAreas, name='view-areas'),
-    webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),
-	webapp2.Route(r'/<username>/area/<area_name>', handler=ViewArea, name='view-area'),
-	webapp2.Route(r'/<username>/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'),
-	webapp2.Route(r'/<username>/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-obstask'),
+	webapp2.Route(r'/myareas', handler=ViewAreas, name='view-areas'),
+	webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),
+	webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),
+	webapp2.Route(r'/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'),
+	webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-obstask'),
 	#webapp2.Route(r'/<username>/<area_name><param:.*>', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
 		
 	# this section must be last, since the regexes below will match one and two -level URLs
 	webapp2.Route(r'/<username>', handler=UserHandler, name='user'),
-    webapp2.Route(r'/<username>/journal/<journal_name>', handler=ViewJournal, name='view-journal'),
+	webapp2.Route(r'/<username>/journal/<journal_name>', handler=ViewJournal, name='view-journal'),
 	webapp2.Route(r'/<username>/journal/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
 	webapp2.Route(r'/<username>/journal/<journal_name>/download', handler=DownloadJournalHandler, name='download-journal'),
 	webapp2.Route(r'/<username>/journal/<journal_name>/new', handler=NewEntryHandler, name='new-entry'),
@@ -1867,6 +1880,7 @@ RESERVED_NAMES = set([
 	'',
 	'<username>',
 	'about',
+	'myareas',
 	'account',
 	'activity',
 	'area',
@@ -1878,7 +1892,7 @@ RESERVED_NAMES = set([
 	'contact',
 	'docs',
 	'donate',
-    'dropbox',
+	'dropbox',
 	'entry',
 	'engine',
 	'facebook',
@@ -1886,8 +1900,8 @@ RESERVED_NAMES = set([
 	'feeds',
 	'file',
 	'follow',
-    'follow',
-    'followers',
+	'follow',
+	'followers',
 	'following',
 	'google',
 	'googledocs',
