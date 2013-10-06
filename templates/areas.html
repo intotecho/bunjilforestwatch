@@ -1,18 +1,28 @@
 <!-- Included by index-user.html -->
-<table class="table">
-<h4>Your Areas</h4>
+<table class="table table-condensed">
 <tbody>
     {% for j in areas %}
-    <tr><td>
         {% if thisuser %}
-    <h5><a href="{{ j|area_url }}">{{ j }}</a></h5>
+            <tr><td><a href="{{ j|area_url }}"><h5>{{ j }}</h5></a></td></tr>
         {% else %}
-            {{ j }}
+            <tr><td>{{ j }}</td></tr>
         {% endif %}
-    </td></tr>
-         <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
-         <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
-         <tr><td>observers </td><td>{{ j.subscriber }}</td></tr>
- {% endfor %}
-<
-    </tbody></table>
+        <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
+        <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
+        <tr><td>observers </td><td>{{ j.subscriber }}</td></tr>
+    {% endfor %}
+</tbody></table>
+<h4>Following Areas </h4>
+<table class="table table-condensed">
+<tbody>
+    {% for j in following_areas %}
+        {% if j %}
+          <tr><td><h5><a href="{{ j|area_url }}">{{ j }}</a></h5></td></tr> 
+        {% else %}
+           <tr><td>{{ j }}</td></tr>
+        {% endif %}
+            <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
+            <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
+    {% endfor %}
+</tbody>
+</table>

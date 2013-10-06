@@ -13,6 +13,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import logging
+import models
 
 from google.appengine.api import memcache
 from google.appengine.datastore import entity_pb
@@ -58,7 +59,7 @@ C_AREA_ALL_LIST = 'areas_list'
 
 C_AREA_FOLLOWERS = 'area_followers_%s'
 C_FOLLOWING_AREAS = 'following_areas_%s'
-
+C_FOLLOWING_AREA_LIST = 'following_areas_list_%s'
 
 C_KEY = 'key_%s'
 C_STATS = 'stats'
@@ -109,34 +110,54 @@ def get_by_key(key):
 # idea: use async functions, although i'm not convinced it'd be faster
 # fetches all keys; if kind is specified, converts the given key names to keys of that kind
 def get_by_keys(keys, kind=None):
+	#print("get_by_keys: ", keys)	
 	if kind:
 		keys = [str(db.Key.from_path(kind, i)) for i in keys]
-
+	#print("  get_by_keys as kind: ", keys, kind)
+	for i in keys:
+		decode_key(i) #debug
 	client = memcache.Client()
 	values = client.get_multi(keys)
+	#print("  get_by_keys values: ", values)	
+
 	data = [values.get(i) for i in keys]
+	#print("get_by_keys values, data: ", values, data)	
 
 	if None in data:
 		to_fetch = []
 		for i in range(len(keys)):
 			if data[i] is None:
 				to_fetch.append(i)
-
+	
 		fetch_keys = [keys[i] for i in to_fetch]
 		fetched = db.get(fetch_keys)
 		set_multi(dict(zip(fetch_keys, fetched)))
+		#print("get_by_keys to_fetch : ", to_fetch, fetch_keys, fetched)	
 
 		for i in to_fetch:
 			data[i] = fetched.pop(0)
 
 	return data
 
+def decode_key(key):
+	#for debugging print the path of the key.
+	k = db.Key(key)
+	_app = k.app()
+	path = []
+	while k is not None:
+		path.append(k.id_or_name())
+		path.append(k.kind())
+		k = k.parent()
+	path.reverse()
+	print 'app=%r, path=%r' % (_app, path)
 
 def get_areas(user_key):
 	n = C_AREAS %user_key
 	data = unpack(memcache.get(n))
 	if data is None:
-		data = models.AreaOfInterest.all().ancestor(user_key).fetch(models.AreaOfInterest.MAX_AREAS)
+		#data = models.AreaOfInterest.all().ancestor(user_key).fetch(models.AreaOfInterest.MAX_AREAS)
+		q = db.Query(models.AreaOfInterest)
+		data = q.filter('owner =',  user_key)
 		memcache.add(n, pack(data))
 
 	return data
@@ -157,7 +178,7 @@ def get_all_areas():
     n = C_AREAS_ALL
     data = unpack(memcache.get(n))
     if data is None:
-        data = models.AreaOfInterest.all().fetch(180)
+        data = models.AreaOfInterest.all().fetch(180) #limit of 180 will be a problem in future.
         memcache.add(n, pack(data))
 
     return data
@@ -371,6 +392,49 @@ def get_following(username):
 
 	return data
 
+def get_area_followers(area_name):
+	n = C_AREA_FOLLOWERS %area_name
+	data = memcache.get(n)
+	if data is None:
+		followers = models.AreaFollowersIndex.get_by_key_name(area_name) #, parent=db.Key.from_path('AreaOfInterest', area_name))
+		if not followers:
+			data = []
+		else:
+			#data = followers.users
+			data = [(i.url(), i.name) for i in followers]
+		memcache.add(n, data)
+ 	#print "get_area_followers"
+	return data
+
+def get_following_areas(username):
+	n = C_FOLLOWING_AREAS %username
+	data = memcache.get(n)
+	if data is None:
+		following = models.UserFollowingAreasIndex.get_by_key_name(username, parent=db.Key.from_path('User', username))
+		#following = models.UserFollowingAreasIndex.get_by_key_name(username, None)
+		if not following:
+			data = []
+		else:
+			#print ("get_following_areas: areas", following.areas)
+			data = following.areas
+			print ("get_following_areas", following.areas)
+			#data = [(get_area(None, i).url(), get_area(None, i).name) for i in following.areas]
+		memcache.add(n, data)
+	#print ("get_following_areas: ", data)
+	return data
+
+def get_following_areas_list(user_key):
+	n = C_FOLLOWING_AREA_LIST %user_key
+	data = memcache.get(n)
+	if data is None:
+		areas= get_following_areas(user_key)
+		data = [(get_area(None, i).url(), get_area(None, i).name) for i in areas]
+		memcache.add(n, data)
+
+	return data
+
+
+
 def get_area(username, area_name):
 	n = C_AREA %(username, area_name)
 	data = unpack(memcache.get(n))
@@ -395,11 +459,11 @@ def get_area_userkey(username, area_name):
         data = memcache.get(n)
         if data is None:
             user_key = db.Key.from_path('User', username)
-            data = models.AreaOfInterest.all(keys_only=True).ancestor(user_key).filter('name', area_name.decode('utf-8')).get()
+            data = models.AreaOfInterest.all(keys_only=True).filter('owner =', username).filter('name', area_name.decode('utf-8')).get()
+            print ("get_area_userkey for user: ", username, data, )
             memcache.add(n, data)
             return data
 
-	
 
 def get_journal(username, journal_name):
 	n = C_JOURNAL %(username, journal_name)

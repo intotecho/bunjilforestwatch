@@ -173,8 +173,8 @@ class AreaOfInterest(db.Model):
 	coordinates = db.ListProperty(db.GeoPt, default=None)
 	map_center = db.GeoPtProperty(required=True, default=None);
 	map_zoom    = db.IntegerProperty(required=True, default=1)
-	map_id       = db.StringProperty(required=False, default=None) #overlay from GEE - should be part of Observation class
-	tile_path	= db.LinkProperty(required=False, default=None) #should be part of Observation object
+	#map_id       = db.StringProperty(required=False, default=None) #overlay from GEE - should be part of Observation class
+	#tile_path	= db.LinkProperty(required=False, default=None) #should be part of Observation object
 	bound = db.ListProperty(float, default=None)
 	timeStamp = db.DateProperty(auto_now_add=True)
 	altitudes = db.ListProperty(float, default=None)
@@ -185,8 +185,8 @@ class AreaOfInterest(db.Model):
 	#subscriber who created aoi
 	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
 	subscriber = db.UserProperty(verbose_name=None, auto_current_user=True, auto_current_user_add=False) #usually the creator
-		
-	#subscriber = db.ReferenceProperty(User)
+	owner = db.ReferenceProperty(User) #key to subscriber that created area.
+	wiki = db.LinkProperty()
 	#boundary	= db.GeoPtProperty(0,0, repeated=True)
 
 	last_observation = db.DateTimeProperty()
@@ -214,9 +214,11 @@ class AreaOfInterest(db.Model):
 
 	def url(self, page=1):
 		if page > 1:
-			return webapp2.uri_for('view-area', username=self.key().parent().name(), area_name= self.name, page=page)
+			#return webapp2.uri_for('view-area', username=self.key().parent().name(), area_name= self.name, page=page)
+			return webapp2.uri_for('view-area',  area_name= self.name, page=page)
 		else:
-			return webapp2.uri_for('view-area', username=self.key().parent().name(),  area_name= self.name)
+			#return webapp2.uri_for('view-area', username=self.key().parent().name(),  area_name= self.name)
+			return webapp2.uri_for('view-area', area_name= self.name)
 
 class Journal(db.Model):
 	ENTRIES_PER_PAGE = 5
