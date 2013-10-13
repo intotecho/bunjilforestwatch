@@ -595,8 +595,10 @@ class ViewArea(BaseHandler):
 				# 'pagelist': utils.page_list(page, area.pages),
 			})
 
+ee_initialised = False  # global flag
 class LandsatOverlayRequestHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
+
 	def get(self, area_name, action, satelite, algorithm, latest):
 		area = cache.get_area(None, area_name)
 		if not area:
@@ -619,7 +621,7 @@ class LandsatOverlayRequestHandler(BaseHandler):
 			logging.info('LandsatOverlayRequestHandler - bad area returned %s, %s', area, area_name)
 			self.error(404)
 			return
-		eeservice.initEarthEngineService() #- moved to main user login page
+	
 		poly = []
 		for geopt in area.coordinates:
 			poly.append([geopt.lon, geopt.lat])
@@ -669,7 +671,7 @@ class L8LatestVisualDownloadHandler(BaseHandler):
 			self.error(404)
 			return
 		logging.info('L8LatestVisualDownloadHandler area_name %s %s', area_name, type(area))
-		eeservice.initEarthEngineService() #- moved to main user login page
+		#eeservice.initEarthEngineService() #- moved to main user login page
 		
 		poly = []
 		for geopt in area.coordinates:
@@ -728,7 +730,7 @@ class ObservatoryHandler(BaseHandler):
 class EngineHandler(BaseHandler):
 	def get(self):
 		self.render('engine.html', {'engine': cache.get_stats()})
-		eeservice.initEarthEngineService()
+		#eeservice.initEarthEngineService()
 		
 class ActivityHandler(BaseHandler):
 	def get(self):
@@ -1941,3 +1943,6 @@ for i in app.router.build_routes.values():
 		logging.critical('%s not in RESERVED_NAMES', name)
 		print '%s not in RESERVED_NAMES' %name
 		sys.exit(1)
+
+
+eeservice.initEarthEngineService() #- moved to main routing after dev server starts.

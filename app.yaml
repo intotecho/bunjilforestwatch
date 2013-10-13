@@ -1,4 +1,4 @@
-application: bunjilae
+application: bunjilfw
 version: 1
 runtime: python27
 api_version: 1
@@ -23,8 +23,6 @@ libraries:
   version: latest
 - name: pycrypto
   version: latest
-
-
 
 handlers:
 - url: /static
