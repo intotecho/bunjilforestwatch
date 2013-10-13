@@ -178,6 +178,8 @@ class AreaOfInterest(db.Model):
 	bound = db.ListProperty(float, default=None)
 	timeStamp = db.DateProperty(auto_now_add=True)
 	altitudes = db.ListProperty(float, default=None)
+	private = db.BooleanProperty(required=True, default=False) #set to keep area hidden.
+
 	#userId = db.StringProperty(default=None)
 	#dateModified = db.DateProperty(auto_now=True)
 	#tags = db.ListProperty(unicode,default=None)
@@ -422,7 +424,7 @@ class Blob(DerefExpando):
 	size = db.IntegerProperty()
 	url = db.StringProperty(indexed=False)
 
-	def get_url(self, size=None, name=None):
+	def get_url(self, size=None, name=None):		
 		if self.type == BLOB_TYPE_IMAGE:
 			if not self.url:
 				self.url = images.get_serving_url(self.blob)

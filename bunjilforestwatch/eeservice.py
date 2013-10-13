@@ -12,17 +12,28 @@ import oauth2client.client
 import datetime
 import ee
 import json
-
+import os
+from os import environ
+from oauth2client.appengine import AppAssertionCredentials
 '''
 initEarthEngineService()
 Call once per session to authenticate to EE
+SERVER_SOFTWARE: In the development web server, this value is "Development/X.Y" where "X.Y" is the version of the runtime. 
+When running on App Engine, this value is "Google App Engine/X.Y.Z".
+
 '''
+
 def initEarthEngineService():
-    SCOPES = ('https://www.googleapis.com/auth/earthengine.readonly')
-    creds = ee.ServiceAccountCredentials(settings.MY_SERVICE_ACCOUNT, settings.MY_PRIVATE_KEY_FILE)
-    ee.Initialize(creds) 
-    
-    
+
+	#SCOPES = ('https://www.googleapis.com/auth/earthengine.readonly') # still needed?
+	if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
+		logging.info("Initialising Earth Engine authenticated connection from devserver")
+ 		EE_CREDENTIALS = ee.ServiceAccountCredentials(settings.MY_LOCAL_SERVICE_ACCOUNT, settings.MY_LOCAL_PRIVATE_KEY_FILE)
+  	else:
+ 		logging.info("Initialising Earth Engine authenticated connection from App Engine")
+ 		EE_CREDENTIALS = AppAssertionCredentials(ee.OAUTH2_SCOPE)
+	ee.Initialize(EE_CREDENTIALS) 
+
 '''
 getLandsatImage(array of points, string as name of ee.imagecollection)
 returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
