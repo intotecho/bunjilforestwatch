@@ -169,7 +169,7 @@ class MainPage(BaseHandler):
 			areas = cache.get_areas(db.Key(self.session['user']['key']))
 			all_areas = cache.get_all_areas()
 			#following_areas_list = cache.get_following_areas_list(self.session['user']['name'])
-			print("MainHandler areas: ", areas, "following_areas: ", following_areas) #, "following_areas_list: ", following_areas_list)
+			#print("MainHandler areas: ", areas, "following_areas: ", following_areas) #, "following_areas_list: ", following_areas_list)
 			
 			#all_areas = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
 			#logging.info( "areas = %s", areas)
@@ -574,8 +574,7 @@ class NewJournal(BaseHandler):
 
 
 class ViewArea(BaseHandler):
-	#def get(self, username, area_name):
-	
+		
 	def get(self, area_name):
 		# page = int(self.request.get('page', 1))
 		area = cache.get_area(None, area_name)
@@ -589,13 +588,38 @@ class ViewArea(BaseHandler):
 			self.render('view-area.html', {
 				'username': self.session['user']['name'],
 				'area': area,
+				#'action': None,
+				#'algorithm': None,
+				#'satelite' : None,
+				#'latest' : None
 				# 'journal': journal,
 				# 'entries': cache.get_entries_page(username, area, page, area.key()),
 				# 'page': page,
 				# 'pagelist': utils.page_list(page, area.pages),
 			})
 
-ee_initialised = False  # global flag
+class ViewAreaAction(BaseHandler):
+	
+	def get(self, area_name, action, satelite, algorithm, latest):
+		
+		area = cache.get_area(None, area_name)
+		logging.info('ViewAreaAction area_name %s %s', area_name, area)
+		if not area:
+			area = cache.get_area(None, area_name)
+			logging.error('ViewArea: Area not found! %s', area_name)
+			self.error(404)
+		else:
+			# logging.info('ViewArea else ')
+			self.render('view-area.html', {
+				'username': self.session['user']['name'],
+				'area': area,
+				'action': action,
+				'algorithm': algorithm,
+				'satelite' : satelite,
+				'latest' : latest
+			})
+
+
 class LandsatOverlayRequestHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
 
@@ -609,9 +633,9 @@ class LandsatOverlayRequestHandler(BaseHandler):
 		if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
 			print 'This is a normal request' # render the ViewArea page, then send image.
 			#logging.debug('ViewArea area_name %s %s', area_name, area)
-			self.render('view-area.html', {
-						#'username': username,
-						'area': area})
+			#self.render('view-area.html', {
+			#			'username': self.session['user']['name'],
+			#			'area': area})
 		else:
 			print 'This is an AJAX request'
 		
@@ -631,7 +655,15 @@ class LandsatOverlayRequestHandler(BaseHandler):
 		del map_id['image'] #can't serialise a memory object, and browser won't need it.
 		#logging.info("map_id %s", map_id)
 		#logging.info("tile_path %s",area.tile_path)
-		
+
+		if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+			print 'This is a normal request' # render the ViewArea page, then send image.
+			#logging.debug('ViewArea area_name %s %s', area_name, area)
+			#self.render('view-area.html', {
+			#			'username': self.session['user']['name'],
+			#			'area': area})
+		else:
+			print 'This is an AJAX request'		
 		self.populate_user_session()
 		#self.add_message('success', 'map_id:%s' %(map_id))
 		self.response.write(json.dumps(map_id))
@@ -761,7 +793,7 @@ class UserHandler(BaseHandler):
 		activities = cache.get_activities(username=username)
 		following = cache.get_following(username)
 		followers = cache.get_followers(username)
-		following_areas= cache.get_areas_following(username)
+		following_areas= cache.get_following_areas(username)
 		
 		#logging.info ("following %s, followers %s", following, followers)
 		
@@ -938,13 +970,15 @@ class FollowAreaHandler(BaseHandler):
 		})
 
 class NewEntryHandler(BaseHandler):
-	def get(self, username, journal_name):
+	def get(self, username, journal_name, subject=""):
+		print ("NewEntryHandler", subject)
 		if username != self.session['user']['name']:
 			self.error(404)
 			return
 
 		journal_key = cache.get_journal_key(username, journal_name)
-
+		
+		
 		if not journal_key:
 			self.error(404)
 			return
@@ -967,7 +1001,9 @@ class NewEntryHandler(BaseHandler):
 
 		content = models.EntryContent(key=content_key)
 		entry = models.Entry(key=entry_key, content=content_id)
-
+		
+		content.subject = subject
+		
 		user, journal = db.run_in_transaction(txn, self.session['user']['key'], journal_key, entry, content)
 
 		# move this to new entry saving for first time
@@ -1492,9 +1528,9 @@ class MarkupHandler(BaseHandler):
 	def get(self):
 		self.render('markup.html')
 
-class SecurityHandler(BaseHandler):
-	def get(self):
-		self.render('security.html')
+#class SecurityHandler(BaseHandler):
+#	def get(self):
+#		self.render('security.html')
 
 class UpdateUsersHandler(BaseHandler):
 	def get(self):
@@ -1846,7 +1882,7 @@ app = webapp2.WSGIApplication([
 	webapp2.Route(r'/new/journal', handler=NewJournal, name='new-journal'),
 	webapp2.Route(r'/register', handler=Register, name='register'),
 	webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
-	webapp2.Route(r'/security', handler=SecurityHandler, name='security'),
+
 	webapp2.Route(r'/stats', handler=StatsHandler, name='stats'),
 	webapp2.Route(r'/observatory', handler=ObservatoryHandler, name='observatory'),
 	webapp2.Route(r'/engine', handler=EngineHandler, name='engine'),
@@ -1861,12 +1897,14 @@ app = webapp2.WSGIApplication([
 
 	# google site verification
 	webapp2.Route(r'/%s.html' %settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
-	# problem with the routing area_name means we cant create journals - area takes precendence.
+	
 	webapp2.Route(r'/myareas', handler=ViewAreas, name='view-areas'),
 	webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),
 	webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),
-	webapp2.Route(r'/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'),
-	webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-obstask'),
+	webapp2.Route(r'/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'), #was new-obstask
+	webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
+	webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
+	#webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-obstask'),
 	#webapp2.Route(r'/<username>/<area_name><param:.*>', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
 		
 	# this section must be last, since the regexes below will match one and two -level URLs
@@ -1874,6 +1912,7 @@ app = webapp2.WSGIApplication([
 	webapp2.Route(r'/<username>/journal/<journal_name>', handler=ViewJournal, name='view-journal'),
 	webapp2.Route(r'/<username>/journal/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
 	webapp2.Route(r'/<username>/journal/<journal_name>/download', handler=DownloadJournalHandler, name='download-journal'),
+	webapp2.Route(r'/<username>/journal/<journal_name>/new/<subject:[^/]+>', handler=NewEntryHandler, name='new-entry'),
 	webapp2.Route(r'/<username>/journal/<journal_name>/new', handler=NewEntryHandler, name='new-entry'),
 
 	], debug=True, config=config)
@@ -1923,7 +1962,7 @@ RESERVED_NAMES = set([
 	'privacy',
 	'register',
 	'save',
-	'security',
+	#'security',
 	'site',
 	'stats',
 	'observatory',
@@ -1945,4 +1984,3 @@ for i in app.router.build_routes.values():
 		sys.exit(1)
 
 
-eeservice.initEarthEngineService() #- moved to main routing after dev server starts.

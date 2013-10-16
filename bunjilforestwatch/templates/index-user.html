@@ -2,10 +2,10 @@
 <!-- This is index page or localhost:8001 when user is logged in -->
 <!-- See also localhost:8001/username - my areas from the menu -->
 {% block content %}
+<div class="container">
    <p>
     <ul class="breadcrumb">
-        <li><a href="{{ "user"|url(user.name) }}">{{ user.name }}</a>  <span
-            class="divider">/</span></li>
+        <li><a href="{{ "user"|url(user.name) }}">{{ user.name }}</a>  <span class="divider">/</span></li>
         <li class="active">home (role: {{user.role}})</li>
     </ul>
     </p>
@@ -15,9 +15,11 @@
                 {% if not areas and not following_areas%}
                     You don't have any areas yet.
                 {% else %}
+                    Areas you created:
                     {% include "areas.html" %}
                 {% endif %}
      </pre><a href="{{ "new-area"|url}}" class="btn btn-lightgreen" data-toggle="tooltip" title="Create a new area. Volunteers will review images and send you alerts.">Create new area ...</a></div>
+     
      <div class="span4"><pre><h4>All Areas</h4>
                 {% if not all_areas %}
                     No areas defined!
@@ -50,7 +52,7 @@
 					</div>
 				</div>
 			</div>
-		</div>
-	</div>
+</div>
+
 	
 {% endblock %}

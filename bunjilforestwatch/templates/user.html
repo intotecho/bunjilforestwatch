@@ -1,14 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-	<div>
-		<h1>
-			<ul class="breadcrumb">
-				<li class="active"><a href="{{ "user"|url(u.name) }}">{{ u }}</a></li>
-			</ul>
-		</h1>
-	</div>
-
-	<div class="row">
+  <p>
+    <ul class="breadcrumb">
+        <li class="active"><a href="{{ "user"|url(user.name) }}">{{ user.name }}</a></li>
+    </ul>
+    </p>
+ 	<div class="row">
 		<div class="span6">
 			<table class="table">
 				<tr><td>{% if u.role =="volunteer" %}<tr><td>User Type: Volunteer</td></tr>{% endif %}
@@ -86,20 +83,20 @@
 	<hr>
 	<div class="row">
 		<div class="span6">
-			<h2>{{ u }}'s areas watching</h2>
+			<h3>{{ u }}'s areas</h3>
 			{% include "areas.html" %}
 		</div>
 	</div>
 	
 	<div class="row">
 		<div class="span6">
-			<h2>{{ u }}'s journals</h2>
+			<h3>{{ u }}'s journals</h3>
 
 			{% include "journals.html" %}
 		</div>
 
 		<div class="span6">
-			<h2>activity <small><a href="{{ "user-feeds"|url(u.name) }}"><img src="/static/images/feed.png" class="feed-img" alt="feed">rss feed</a></small></h2>
+			<h3>activity <small><a href="{{ "user-feeds"|url(u.name) }}"><img src="/static/images/feed.png" class="feed-img" alt="feed">rss feed</a></small></h3>
 			{% for a in activities %}
 				<p>{% if a.img %}<img src="{{ a.img }}" alt="{{ a.user }}"> {% endif %}<a href="{{ "user"|url(a.user) }}">{{ a.user }}</a> {{ a.get_action()|safe }} {{ a.date|timesince }}</p>
 			{% endfor %}

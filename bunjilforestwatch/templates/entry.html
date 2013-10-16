@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-
 {% block content %}
+<div class="container">
 	<div>
-		<h1>
+		<p>
 			<ul class="breadcrumb">
 				<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span class="divider">/</span></li>
 				<li><a href="{{ username|user_journal_url(journal_name) }}">{{ journal_name }}</a> <span class="divider">/</span></li>
 				<li class="active"><a href="{{ entry.url }}">{{ content.subject|entry_subject(entry.date) }}</a></li>
 			</ul>
-		</h1>
+		</p>
 	</div>
 
 	<div class="row">
@@ -49,7 +49,7 @@
 						<label class="control-label" for="tags">tags</label>
 						<div class="controls">
 							<input class="input-xlarge" id="tags" name="tags" type="text" value="{{ content.tags|join(", ") }}" />
-							<span class="help-inline">comma separated (ex: kids, funny story, park)</span>
+							<span class="help-inline">comma separated (ex: road, clearing, fire, park)</span>
 						</div>
 					</div>
 					{% for b in blobs %}
@@ -196,4 +196,5 @@
 		addattach();
 	});
 	</script>
+</div>
 {% endblock %}
