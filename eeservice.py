@@ -39,78 +39,78 @@ getLandsatImage(array of points, string as name of ee.imagecollection)
 returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
 Could also clip the image to the coordinates to reduce the size.
 '''
+secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
 
     
 def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_path = None, opt_row = None):
-    #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
-    feat = ee.Geometry.Polygon(boundary_polygon)
-    #logging.info('feat %s', feat)
-    image_collection = ee.ImageCollection(collection_name)
-    boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-    park_boundary = ee.FeatureCollection(boundary_feature)
-    info = park_boundary.getInfo()
-    end_date   = datetime.datetime.today()
-    secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
-    start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear )
-    logging.debug('start:%s, end:%s ',start_date,  end_date)
+	#logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
+	feat = ee.Geometry.Polygon(boundary_polygon)
+	#logging.info('feat %s', feat)
+	boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
+	boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+	park_boundary = ee.FeatureCollection(boundary_feature_buffered)
+	info = park_boundary.getInfo()
+	end_date   = datetime.datetime.today()
+	start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear )
+	logging.debug('start:%s, end:%s ',start_date,  end_date)
 
-    sortedCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).sort('system:time_start', False )
-    resultingCollection = sortedCollection
-    if opt_path is not None and opt_row is not None:
-        #filter Landsat by Path/Row and date
-        if ("L7" in collection_name):
-            row_fieldname = "STARTING_ROW"
-        else:
-            row_fieldname = "WRS_ROW"
-        resultingCollection = sortedCollection.filterMetadata('WRS_PATH', 'equals', opt_path).filterMetadata(row_fieldname, 'equals', opt_row)
-    
-    #logging.info('Collection description : %s', sortedCollection.getInfo())
+	image_collection = ee.ImageCollection(collection_name)
+	sortedCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).sort('system:time_start', False )
+	resultingCollection = sortedCollection
+	if opt_path is not None and opt_row is not None:
+		#filter Landsat by Path/Row and date
+		if ("L7" in collection_name):
+			row_fieldname = "STARTING_ROW"
+		else:
+			row_fieldname = "WRS_ROW"
+		resultingCollection = sortedCollection.filterMetadata('WRS_PATH', 'equals', opt_path).filterMetadata(row_fieldname, 'equals', opt_row)
+	
+	#logging.info('Collection description : %s', sortedCollection.getInfo())
   
-    scenes  = resultingCollection.getInfo()
-    #logging.info('Scenes: %s', sortedCollection)
-    
-    try:
-        feature = scenes['features'][int(latest_depth)]
-    except IndexError:
-        feature = scenes['features'][0]
-    
-#     #debugging loop through collection
-#     for x in range(0, len(scenes)):
-#         print ("x: ", x)
-#         feature = scenes['features'][x]
-#         idx = feature['id']
-#         imagex = ee.Image(idx)
-#         propsx = imagex.getInfo()['properties'] 
-#         system_time_startx= datetime.datetime.fromtimestamp(propsx['system:time_start'] / 1000) #convert ms
-#         date_strx = system_time_startx.strftime("%Y-%m-%d @ %H:%M")
-#         logging.info("loop: %d, %s", x, date_strx)    
-       #prints
-       #INFO     2013-09-24 12:53:10,357 eeservice.py:76] loop: 0, 2013-09-03 @ 01:18
-       #INFO     2013-09-24 12:53:13,052 eeservice.py:76] loop: 1, 2013-08-18 @ 01:18
-       #INFO     2013-09-24 12:53:15,960 eeservice.py:76] loop: 2, 2013-08-02 @ 01:18
-       #INFO     2013-09-24 12:53:18,596 eeservice.py:76] loop: 3, 2013-07-17 @ 01:18
-       #INFO     2013-09-24 12:53:21,611 eeservice.py:76] loop: 4, 2013-07-01 @ 01:18
-       #INFO     2013-09-24 12:53:24,493 eeservice.py:76] loop: 5, 2013-05-30 @ 01:18  
-    
-    id = feature['id']   
-    #logging.info('getLatestLandsatImage found scene: %s', id)
-    latest_image = ee.Image(id)
-    props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
-    test = latest_image.getInfo()['bands']
-    #print (test)
-    crs = latest_image.getInfo()['bands'][0]['crs']
-    #path    = props['WRS_PATH']
-    #row     = props['STARTING_ROW']
-    system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
-    date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
+	scenes  = resultingCollection.getInfo()
+	#logging.info('Scenes: %s', sortedCollection)
+	
+	try:
+		feature = scenes['features'][int(latest_depth)]
+	except IndexError:
+		feature = scenes['features'][0]
+	
+#	 #debugging loop through collection
+#	 for x in range(0, len(scenes)):
+#		 print ("x: ", x)
+#		 feature = scenes['features'][x]
+#		 idx = feature['id']
+#		 imagex = ee.Image(idx)
+#		 propsx = imagex.getInfo()['properties'] 
+#		 system_time_startx= datetime.datetime.fromtimestamp(propsx['system:time_start'] / 1000) #convert ms
+#		 date_strx = system_time_startx.strftime("%Y-%m-%d @ %H:%M")
+#		 logging.info("loop: %d, %s", x, date_strx)	
+	   #prints
+	   #INFO	 2013-09-24 12:53:10,357 eeservice.py:76] loop: 0, 2013-09-03 @ 01:18
+	   #INFO	 2013-09-24 12:53:13,052 eeservice.py:76] loop: 1, 2013-08-18 @ 01:18
+	   #INFO	 2013-09-24 12:53:15,960 eeservice.py:76] loop: 2, 2013-08-02 @ 01:18
+	   #INFO	 2013-09-24 12:53:18,596 eeservice.py:76] loop: 3, 2013-07-17 @ 01:18
+	   #INFO	 2013-09-24 12:53:21,611 eeservice.py:76] loop: 4, 2013-07-01 @ 01:18
+	   #INFO	 2013-09-24 12:53:24,493 eeservice.py:76] loop: 5, 2013-05-30 @ 01:18  
+	
+	id = feature['id']   
+	#logging.info('getLatestLandsatImage found scene: %s', id)
+	latest_image = ee.Image(id)
+	props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
+	test = latest_image.getInfo()['bands']
+	#print (test)
+	crs = latest_image.getInfo()['bands'][0]['crs']
+	#path	= props['WRS_PATH']
+	#row	 = props['STARTING_ROW']
+	system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
+	date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
-    logging.info('getLatestLandsatImage id: %s, date:%s latest:%s', id, date_str, latest_depth )
-    x = latest_image.getInfo()
-    latest_image.name = id
-    latest_image.capture_date = date_str
-    x['mynewkey'] = id 
-    return latest_image  #.clip(park_boundary)
-
+	logging.info('getLatestLandsatImage id: %s, date:%s latest:%s', id, date_str, latest_depth )
+	x = latest_image.getInfo()
+	latest_image.name = id
+	latest_image.capture_date = date_str
+	x['mynewkey'] = id 
+	return latest_image  #.clip(park_boundary)
 
 
 def SharpenLandsat7HSVUpres(image):
@@ -345,6 +345,14 @@ def getLandsatOverlay(coords, satellite, algorithm, depth):
         
         elif algorithm == 'ndvi':
            print "l7 ndvi"
+
+
+try:
+	initEarthEngineService() #- moved to main routing after dev server starts.
+except:
+	logging.error("Failed to connect to Earth Engine")
+	pass
+
 
 ################# NOT USED ############################################
 

@@ -2,32 +2,29 @@
 
 <!-- THIS IS THE HOME PAGE WHEN NOT LOGGED IN  -->
 {% block content %}
+<div class="container">
 <div class="page-header">
 		<h1>Bunjil Forest Watch <small> Communities protecting forests</small></h1>
 	</div>
 	<div>
-	   	<p>     Already registered?  <a class="btn" href="/login/google">Sign in with Google account &#8194</a></p>
+	   	<p>     Already registered?  <a class="btn btn-lightgreen" data-toggle="tooltip" title="Only your email address will be shared with this app. Your password and any other details are not shared." href="/login/google">Sign in with Google account &#8194</a></p>
 	   <!--  	<p>Login with Facebook account&#8194;<a class="btn" href="/login/facebook">login with facebook</a></p> -->
 	</div>
     <div class="hero-unit">
     	<h2>Register<small></small></h2>
-    	<h3>What best describes you?<small></small></h3>
-        <h3>I look after a nearby forest or protected area.  <small>Send me alerts when anything changes.</small></h1>
+    	<h3>How can Bunjil Forest Watch help you?<small></small></h3>
+        <h3>I look after a nearby forest or protected area.  <small>Please send me alerts when anything changes.</small></h1>
     	<p><a class="btn" href="/about">Subscribe for alerts to your area &raquo;</a> It's free!</p>
 		<h3>I want to help locals in remote areas to protect their forest.<small> I can volunteer time.</small></h1>
     	<p><a class="btn" href="/register">Register as a Volunteer&raquo;</a></p>
-
     </div>
 <div class="row">
-  <div class="col-md-4">.col-md-4</div>
-  <div class="col-md-4">.col-md-4</div>
-  <div class="col-md-4">.col-md-4</div>
 </div>
       <!-- Example row of columns -->
       <div class="row">
         <div class="span6">
           <h2>Volunteers</h2>
-           <p>Volunteer sign up to monitor satellite images on behalf of local conservation groups. Volunteers need not be associated with the local hero or the forest they are protecting. They will be asked to check new satelite images as soon as they are published and report any disturbances. To be a volunteer you must be prepared to complete regular observation tasks when requested. You will need a internet access.</p>
+           <p>Volunteers sign up to monitor satellite images on behalf of local conservation groups. Volunteers need not be associated with the local hero or the forest they are protecting. They will be asked to check new satelite images as soon as they are published and report any disturbances. To be a volunteer you must be prepared to complete regular observation tasks when requested. You will need internet access.</p>
           <p><a class="btn" href="/about">Volunteers &raquo;</a></p>
         </div>
         <div class="span6">
@@ -55,5 +52,5 @@
         </div>
 
       </div>
-   
+ </div> 
 {% endblock %}

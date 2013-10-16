@@ -1,30 +1,22 @@
 {% extends "base.html" %}
-
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 {% block content %}
-	<div>
-		<h1>
+<div class="container">
+	<div><p>
 			<ul class="breadcrumb">
 				<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span class="divider">/</span></li>
 				<li class="active"><a href="{{ journal|journal_url }}">{{ journal }}</a></li>
-			</ul>
-		</h1>
+			</ul></p>
 	</div>
-
 	<div class="row">
 		<div class="span4">
 			<a href="{{ "new-entry"|url(journal) }}" class="btn btn-primary">new entry</a>
 		</div>
-		<div class="span2 offset6">
-			<a href="{{ "download-journal"|url(journal) }}" class="btn"><i class="icon-download"></i> download</a>
-		</div>
 	</div>
-
 	{% if entries %}
-
 	{% for e in entries %}
 	 {{ e|safe }}
 	{% endfor %}
-
 	<div class="pagination">
 		<ul>
 			<li class="prev"><a href="{{ journal|journal_url }}">first</a></li>
@@ -57,4 +49,5 @@
 	</div>
 
 	{% endif %}
+</div>
 {% endblock %}
