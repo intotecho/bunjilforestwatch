@@ -22,17 +22,26 @@ SERVER_SOFTWARE: In the development web server, this value is "Development/X.Y" 
 When running on App Engine, this value is "Google App Engine/X.Y.Z".
 
 '''
+earthengine_intialised = False
 
 def initEarthEngineService():
 
 	#SCOPES = ('https://www.googleapis.com/auth/earthengine.readonly') # still needed?
-	if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
-		logging.info("Initialising Earth Engine authenticated connection from devserver")
- 		EE_CREDENTIALS = ee.ServiceAccountCredentials(settings.MY_LOCAL_SERVICE_ACCOUNT, settings.MY_LOCAL_PRIVATE_KEY_FILE)
-  	else:
- 		logging.info("Initialising Earth Engine authenticated connection from App Engine")
- 		EE_CREDENTIALS = AppAssertionCredentials(ee.OAUTH2_SCOPE)
-	ee.Initialize(EE_CREDENTIALS) 
+	global earthengine_intialised
+	if earthengine_intialised == False:
+		try:
+			if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
+				logging.info("Initialising Earth Engine authenticated connection from devserver")
+		 		EE_CREDENTIALS = ee.ServiceAccountCredentials(settings.MY_LOCAL_SERVICE_ACCOUNT, settings.MY_LOCAL_PRIVATE_KEY_FILE)
+		  	else:
+		 		logging.info("Initialising Earth Engine authenticated connection from App Engine")
+		 		EE_CREDENTIALS = AppAssertionCredentials(ee.OAUTH2_SCOPE)
+			ee.Initialize(EE_CREDENTIALS) 
+			earthengine_intialised = True
+		except:
+			logging.error("Failed to connect to Earth Engine")
+			pass
+
 
 '''
 getLandsatImage(array of points, string as name of ee.imagecollection)
@@ -347,11 +356,6 @@ def getLandsatOverlay(coords, satellite, algorithm, depth):
            print "l7 ndvi"
 
 
-try:
-	initEarthEngineService() #- moved to main routing after dev server starts.
-except:
-	logging.error("Failed to connect to Earth Engine")
-	pass
 
 
 ################# NOT USED ############################################

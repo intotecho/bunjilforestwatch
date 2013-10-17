@@ -173,7 +173,6 @@ class MainPage(BaseHandler):
 			
 			#all_areas = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
 			#logging.info( "areas = %s", areas)
-			#eeservice.initEarthEngineService() - when should we initialise??
 			self.render('index-user.html', {
 				'activities': cache.get_activities_follower(self.session['user']['name']),
 				#'username' : self.session['user']['name'],
@@ -205,7 +204,6 @@ class ViewAreas(BaseHandler):
 			
 			#all_areas = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
 			#logging.info( "areas = %s", areas)
-			#eeservice.initEarthEngineService() - when should we initialise??
 			self.render('view-areas.html', {
 #				 'activities': cache.get_activities_follower(self.session['user']['name']),
 #				 'journals': journals,
@@ -258,7 +256,6 @@ class FacebookLogin(BaseHandler):
 					return
 		else:
 			self.redirect(facebook.oauth_url({'local_redirect': 'login-facebook'}, {'scope': 'email'}))
-			#eeservice.initEarthEngineServer()
 			return
 
 		self.redirect(webapp2.uri_for('main'))
@@ -560,6 +557,7 @@ class NewJournal(BaseHandler):
 					db.put([user, journal])
 					return user, journal
 
+				journal.journal_type = "journal"
 				user, journal = db.run_in_transaction(txn, self.session['user']['key'], journal)
 				cache.clear_journal_cache(user.key())
 				cache.set(cache.pack(user), cache.C_KEY, user.key())
@@ -572,7 +570,7 @@ class NewJournal(BaseHandler):
 
 		self.render('new-journal.html')
 
-
+	
 class ViewArea(BaseHandler):
 		
 	def get(self, area_name):
@@ -649,6 +647,7 @@ class LandsatOverlayRequestHandler(BaseHandler):
 		poly = []
 		for geopt in area.coordinates:
 			poly.append([geopt.lon, geopt.lat])
+		eeservice.initEarthEngineService() # we need earth engine now.
 		map_id = eeservice.getLandsatOverlay(poly, satelite, algorithm, latest)
 		#image = eeservice.getL8SharpImage(poly, int(latest))
 		#map_id  = eeservice.getVisualMapId(image,  'red',  'green', 'blue')
@@ -703,7 +702,7 @@ class L8LatestVisualDownloadHandler(BaseHandler):
 			self.error(404)
 			return
 		logging.info('L8LatestVisualDownloadHandler area_name %s %s', area_name, type(area))
-		#eeservice.initEarthEngineService() #- moved to main user login page
+		eeservice.initEarthEngineService() # we need earth engine now.
 		
 		poly = []
 		for geopt in area.coordinates:
@@ -759,10 +758,10 @@ class ObservatoryHandler(BaseHandler):
 	def get(self):
 		self.render('observatory.html', {'observatory': cache.get_stats()})
 
-class EngineHandler(BaseHandler):
+class EngineHandler(BaseHandler): # not used
 	def get(self):
 		self.render('engine.html', {'engine': cache.get_stats()})
-		#eeservice.initEarthEngineService()
+		eeservice.initEarthEngineService()
 		
 class ActivityHandler(BaseHandler):
 	def get(self):
@@ -968,18 +967,45 @@ class FollowAreaHandler(BaseHandler):
 			cache.C_AREA_FOLLOWERS %area.name: followers.users,  #doesn't look right.
 			cache.C_FOLLOWING_AREAS %username: areas_following.areas,
 		})
+		########### create a jopurnal for each followed area - should be in above txn ##############
 
-class NewEntryHandler(BaseHandler):
-	def get(self, username, journal_name, subject=""):
-		print ("NewEntryHandler", subject)
-		if username != self.session['user']['name']:
-			self.error(404)
+		name = "Observations for " + area_name # name is used by view-area.html to make reports.
+		journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
+		for journal_url, journal_name in self.session['journals']:
+			if journal.name == journal_name:
+				self.add_message('error', 'You already have a journal called %s.' %name)
+				break
+		else:
+			def txn(user_key, journal):
+				user = db.get(user_key)
+				user.journal_count += 1
+				db.put([user, journal])
+				return user, journal
+			journal.journal_type = "observations"
+
+			user, journal = db.run_in_transaction(txn, self.session['user']['key'], journal)
+			cache.clear_journal_cache(user.key())
+			cache.set(cache.pack(user), cache.C_KEY, user.key())
+			self.populate_user_session()
+			counters.increment(counters.COUNTER_AREAS)
+			models.Activity.create(user, models.ACTIVITY_NEW_JOURNAL, journal.key())
+			self.add_message('success', 'Created journal %s.' %name)
+			#self.redirect(webapp2.uri_for('new-entry', username=self.session['user']['name'], journal_name=journal.name))
 			return
 
+		#self.render('new-journal.html')
+
+
+class NewEntryHandler(BaseHandler):
+	def get(self, username, journal_name, images=""):
+		print ("NewEntryHandler: ", journal_name, images)
+		if username != self.session['user']['name']:
+			print ("NewEntryHandler", username, journal_name, images)
+			self.error(404)
+			return
 		journal_key = cache.get_journal_key(username, journal_name)
-		
-		
 		if not journal_key:
+			print ("NewEntryHandler missing journal_key")
 			self.error(404)
 			return
 
@@ -990,7 +1016,6 @@ class NewEntryHandler(BaseHandler):
 
 			db.put([user, journal, entry, content])
 			return user, journal
-
 		handmade_key = db.Key.from_path('Entry', 1, parent=journal_key)
 		entry_id = db.allocate_ids(handmade_key, 1)[0]
 		entry_key = db.Key.from_path('Entry', entry_id, parent=journal_key)
@@ -1002,8 +1027,12 @@ class NewEntryHandler(BaseHandler):
 		content = models.EntryContent(key=content_key)
 		entry = models.Entry(key=entry_key, content=content_id)
 		
-		content.subject = subject
-		
+		if images:
+			#content.images= [i.strip() for i in self.request.get('images').split(',')]
+			content.images= [i.strip() for i in images.split(',')]
+		else:
+			images= []
+				
 		user, journal = db.run_in_transaction(txn, self.session['user']['key'], journal_key, entry, content)
 
 		# move this to new entry saving for first time
@@ -1028,7 +1057,10 @@ class ViewEntryHandler(BaseHandler):
 		if self.session['user']['name'] != username:
 			self.error(404) # should probably be change to 401 or 403
 			return
+		
+		journal= cache.get_journal(username, journal_name)
 
+		#logging.info('ViewEntryHandler journal_name %s %s', journal_name, journal)
 		entry, content, blobs = cache.get_entry(username, journal_name, entry_id)
 		if not entry:
 			self.error(404)
@@ -1068,11 +1100,16 @@ class ViewEntryHandler(BaseHandler):
 			if not error:
 				self.redirect(pdf_blob.get_url(name=True))
 				return
-
+		if not journal:
+			type = "default"
+		else:
+			type = journal.journal_type
+			
 		self.render('entry.html', {
 			'blobs': blobs,
 			'content': content,
 			'entry': entry,
+			'journal_type': type,
 			'journal_name': journal_name,
 			'render': cache.get_entry_render(username, journal_name, entry_id),
 			'username': username,
@@ -1188,6 +1225,7 @@ class SaveEntryHandler(BaseHandler):
 		else:
 			subject = self.request.get('subject').strip()
 			tags = self.request.get('tags').strip()
+			images = self.request.get('images').strip()
 			text = self.request.get('text').strip()
 			markup = self.request.get('markup')
 			blob_list = self.request.get_all('blob')
@@ -1207,8 +1245,12 @@ class SaveEntryHandler(BaseHandler):
 				tags = [i.strip() for i in self.request.get('tags').split(',')]
 			else:
 				tags = []
+			if images:
+				images= [i.strip() for i in self.request.get('images').split(',')]
+			else:
+				images= []
 
-			def txn(entry_key, content_key, rm_blobs, subject, tags, text, markup, rendered, chars, words, sentences, date):
+			def txn(entry_key, content_key, rm_blobs, subject, tags, images, text, markup, rendered, chars, words, sentences, date):
 				db.delete_async(rm_blobs)
 
 				user, journal, entry  = db.get([entry_key.parent().parent(), entry_key.parent(), entry_key])
@@ -1237,6 +1279,7 @@ class SaveEntryHandler(BaseHandler):
 				content = models.EntryContent(key=content_key)
 				content.subject = subject
 				content.tags = tags
+				content.images = images
 				content.text = text
 				content.markup = markup
 				content.rendered = rendered
@@ -1305,7 +1348,7 @@ class SaveEntryHandler(BaseHandler):
 				words = 0
 				sentences = 0
 
-			user, journal, entry, content, dchars, dwords, dsentences = db.run_in_transaction(txn, entry.key(), content.key(), rm_blobs, subject, tags, text, markup, rendered, chars, words, sentences, newdate)
+			user, journal, entry, content, dchars, dwords, dsentences = db.run_in_transaction(txn, entry.key(), content.key(), rm_blobs, subject, tags, images, text, markup, rendered, chars, words, sentences, newdate)
 			models.Activity.create(cache.get_user(username), models.ACTIVITY_SAVE_ENTRY, entry.key())
 
 			counters.increment(counters.COUNTER_CHARS, dchars)
@@ -1912,7 +1955,7 @@ app = webapp2.WSGIApplication([
 	webapp2.Route(r'/<username>/journal/<journal_name>', handler=ViewJournal, name='view-journal'),
 	webapp2.Route(r'/<username>/journal/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
 	webapp2.Route(r'/<username>/journal/<journal_name>/download', handler=DownloadJournalHandler, name='download-journal'),
-	webapp2.Route(r'/<username>/journal/<journal_name>/new/<subject:[^/]+>', handler=NewEntryHandler, name='new-entry'),
+	webapp2.Route(r'/<username>/journal/<journal_name>/new/<images:[^/]+>', handler=NewEntryHandler, name='new-entry'),
 	webapp2.Route(r'/<username>/journal/<journal_name>/new', handler=NewEntryHandler, name='new-entry'),
 
 	], debug=True, config=config)

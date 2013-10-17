@@ -30,6 +30,7 @@ max-width: none;
 <script>
 
 var map;
+var mapobj; //returned by last call to EE image overlay.
 var satellite = 'l8'
 var algorithm = 'rgb'; // ndvi 
 var latest = 0;  //latest - 0
@@ -220,7 +221,15 @@ function initialize() {
                     google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
                         //if (event.type == google.maps.drawing.OverlayType.CIRCLE) {
                         //  var radius = event.overlay.getRadius();
-                        window.location.href = "{{ "user"|url(user.name) }}/journal/myreports/new/'{{area.name}}'";
+                        href = "{{ "user"|url(user.name) }}/journal/Observations for {{area.name}}/new/";
+                        if (mapobj != null)
+                        {
+                            window.location.href = href + mapobj.id;
+                        }
+                        else
+                        {
+                            window.location.href = href + "Observation"; // no overlay for this observation
+                        }
                     });
                 };
     		} 
@@ -361,7 +370,7 @@ function initialize() {
                     <button id='get_overlay_btn' type="button" style="width:43px" class="btn btn-small btn-lightblue" data-toggle="tooltip" title="Overlay selected image on the map">View</button>
                 </div>
                  <div class="btn-group">
-                    <button id='get_download_btn' type="button" style="width:55px" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Download selected image to a (very large) file">Download</button>
+                    <button id='get_download_btn' type="button" style="width:60px" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Download selected image to a (very large) file">Download</button>
                  </div>
               </div>   
     		</div>	
