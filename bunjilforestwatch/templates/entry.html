@@ -32,6 +32,22 @@
 							<span class="help-inline">date format: MM/DD/YYYY; time is optional, format is HH:MM AM/PM</span>
 						</div>
 					</div>
+					{% if journal_type == "observations" %}
+                    <div class="control-group">
+                        <label class="control-label" for="overlay">image</label>
+                        <div class="controls">
+                            <input class="input-small" id="overlay" name="satimage" type="text" value="{{journal_type}}" />
+                            <span class="help-inline">identifies the Landsat image</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="images">images</label>
+                        <div class="controls">
+                            <input class="input-xlarge" id="images" name="images" type="text" value="{{ content.images|join(", ") }}" />
+                            <span class="help-inline">identifies the Landsat image(s) that this observation is based on</span>
+                        </div>
+                    </div>
+                    {% endif %}
 					<div class="control-group post-speech">
 						<label class="control-label" for="text">text</label>
 						<div class="controls">
@@ -42,7 +58,7 @@
 						<label class="control-label" for="markup">markup</label>
 						<div class="controls">
 							<select id="markup" name="markup">{{ markup_options|safe }}</select>
-							<span class="help-inline">we have a <a href="{{ "markup"|url }}" target="#_blank">brief explanation</a> about markups</span>
+							<span class="help-inline">? <a href="{{ "markup"|url }}" target="#_blank">brief explanation</a> about markups</span>
 						</div>
 					</div>
 					<div class="control-group">

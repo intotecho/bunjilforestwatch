@@ -226,6 +226,7 @@ class Journal(db.Model):
 	ENTRIES_PER_PAGE = 5
 	MAX_JOURNALS = 10
 
+	journal_type= db.StringProperty(required=True, default="journal") #"journal", "observations", "reports" etc.
 	name = db.StringProperty(required=True)
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_entry = db.DateTimeProperty()
@@ -293,6 +294,7 @@ class EntryContent(db.Model):
 	text = db.TextProperty()
 	rendered = db.TextProperty(default='')
 	markup = db.StringProperty(required=True, indexed=False, choices=CONTENT_TYPE_CHOICES, default=RENDER_TYPE_TEXT)
+	images = db.StringListProperty()
 
 
 class ObservationTask(db.Model):
