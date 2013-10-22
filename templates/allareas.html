@@ -1,15 +1,18 @@
-<!-- Included by myareas.html -->
-<table class="table table-condensed">   
-    <tbody>
-    {% for j in all_areas %}
-        {% if thisuser %}
-         <tr><td><a data-toggle="tooltip" title="Click to view. Description: {{ j.description}}" href="{{ j|area_url }}"><h5>{{ j }}</h5></a></td></tr>
-        {% else %}
-            <tr><td>{{ j }} not this user </td></tr>
-        {% endif %}
-         <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
-         <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
-         <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j }}" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Add to areas you follow. You will be asked to review new images for this area.">"Follow {{ j.1 }}"</a></td></tr>
+<!-- Included by index-user.html -->
+
+   {% for j in other_areas %}
+            <pre class="table-whitebackground">
+	        <table class="table table-condensed table-whitebackground ">
+	        <tbody>
+	        {% if thisuser %}
+	            <tr><a data-toggle="tooltip" title="Click to view. Description: {{ j.description}}" href="{{ j|area_url }}"><h4>{{ j }}</h4></a></tr>
+	        {% else %}
+	            <tr>{{ j }}</tr>
+	        {% endif %}
+	        <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
+	        <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
+	        <tr><td>observers </td><td>{{ j.subscriber }}</td></tr>
+	         <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j }}" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a></td></tr>
+	        </tbody>        
+	       </table></pre> 
     {% endfor %}
-    </tbody>
-</table>

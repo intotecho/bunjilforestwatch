@@ -146,7 +146,6 @@ class UserFollowingAreasIndex(db.Model): #A User has a list of areas in a UserFo
     areas = db.StringListProperty()
     
 
-
 class Geometry(db.Model):
 	name = db.StringProperty()
 	description = db.StringProperty(multiline=True)
@@ -186,7 +185,6 @@ class AreaOfInterest(db.Model):
 
 	#subscriber who created aoi
 	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
-	subscriber = db.UserProperty(verbose_name=None, auto_current_user=True, auto_current_user_add=False) #usually the creator
 	owner = db.ReferenceProperty(User) #key to subscriber that created area.
 	wiki = db.LinkProperty()
 	#boundary	= db.GeoPtProperty(0,0, repeated=True)
@@ -199,10 +197,7 @@ class AreaOfInterest(db.Model):
 	def observers(self):
 			return User.all().filter('areas_observing', self.key())
 
-	@property
-	def subscribers(self):
-			return User.all().filter('areas_subscribing', self.key())
-
+	
 	# all frequencies are per week
 
 	def __unicode__(self):

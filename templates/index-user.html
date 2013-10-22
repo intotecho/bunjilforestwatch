@@ -6,27 +6,39 @@
    <p>
     <ul class="breadcrumb">
         <li><a href="{{ "user"|url(user.name) }}">{{ user.name }}</a>  <span class="divider">/</span></li>
-        <li class="active">home (role: {{user.role}})</li>
+  <!--       <li class="active">home (role: {{user.role}})</li> -->
     </ul>
     </p>
-    
 <div class="row">
-   <div class="span4"><pre><h4>Your Areas</h4>
-                {% if not areas and not following_areas%}
-                    You don't have any areas yet.
+  <div class="span4 body" ><body>
+    <div class="row body">
+      <div class="span2"><h3>Your Areas</h3></div>
+      <div class="span2"><a href="{{ "new-area"|url}}" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Create a new area. Volunteers will review images and send you alerts.">New area</a></div>
+    </div>  
+         {% if not areas and not following_areas%}
+           You have not created any of your own areas.
+         {% else %}
+            Areas you created
+            {% include "areas.html" %}
+         {% endif %}
+     </body>
+   </div>
+   
+   <div class="row">
+  <div class="span4 body" ><body>
+    <div class="row body">
+      <div class="span2"><h3>Other Areas</h3></div>
+    </div>  
+                {% if not other_areas %}
+                    No other areas defined!
                 {% else %}
-                    Areas you created:
-                    {% include "areas.html" %}
-                {% endif %}
-     </pre><a href="{{ "new-area"|url}}" class="btn btn-lightgreen" data-toggle="tooltip" title="Create a new area. Volunteers will review images and send you alerts.">Create new area ...</a></div>
-     
-     <div class="span4"><pre><h4>All Areas</h4>
-                {% if not all_areas %}
-                    No areas defined!
-                {% else %}
+                     Areas you neither own nor follow 
                     {% include "allareas.html" %}
                 {% endif %}
-      </pre> </div>
+     </body>
+   </div>
+   
+ 
                 
   <div class="span4"><pre><h4>Your Reports </h4>
                 {% if not journals %}
@@ -44,15 +56,6 @@
  </div>
   <div class="row">
 
-<div class="span8">
-					<div id="rss" class="alert alert-block alert-info">
-						<a href="{{ "user-feeds"|url(user.name) }}?token={{ token }}"><img src="/static/images/feed-large.png" class="feed-img" alt="feed"></a>
-						<h4><a href="{{ "user-feeds"|url(user.name) }}?token={{ token }}">Subscribe to your feed</a></h4>
-						<p>Updates for areas and people you follow.</p>
-					</div>
-				</div>
-			</div>
-</div>
 
 	
 {% endblock %}

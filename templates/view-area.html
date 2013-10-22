@@ -48,7 +48,7 @@ function printMethods(object)
 	console.log(methods.join(","));
 } 
 
-function createImageOverlay(show, mapid,  token)
+function createImageOverlay(show, mapid,  token, slider_name)
 {
 	if(show == true)
 	{
@@ -62,7 +62,7 @@ function createImageOverlay(show, mapid,  token)
 		overlayMaps.push(overlay);
 		
 		// Add opacity control and set initial value
-		createOpacityControl(map, initialOpacity, "Engine");	
+		createOpacityControl(map, initialOpacity, slider_name.substring(5));	
 	}
 	else 
 	{
@@ -163,7 +163,7 @@ function initialize() {
     $('#get_overlay_btn').click(function(){
     	ajax_url = ajaxActionUrl("overlay");
     	httpget_url = httpgetActionUrl("overlay")
-        window.history.replaceState('string', 'load image', httpget_url);
+        //window.history.replaceState('string', 'load image', httpget_url);
 
     	//var pathname = window.location.pathname; // ie the above.
         console.log( "urls", ajax_url, httpget_url);
@@ -175,7 +175,7 @@ function initialize() {
 	 	    mapobj = jQuery.parseJSON(data);
 	 	    $('#observations_panel').empty();
 	 	    $('#observations_panel').append("Captured: ", mapobj.date_acquired, "\n", mapobj.id, "\nPath: ", mapobj.path, ", Row: ", mapobj.row);
-	 	    createImageOverlay(true, mapobj.mapid,  mapobj.token);
+	 	    createImageOverlay(true, mapobj.mapid,  mapobj.token, mapobj.date_acquired);
 
 	    }).error(function( jqxhr, textStatus, error ) {
 	    	var err = textStatus + ', ' + error;
@@ -370,7 +370,7 @@ function initialize() {
                     <button id='get_overlay_btn' type="button" style="width:43px" class="btn btn-small btn-lightblue" data-toggle="tooltip" title="Overlay selected image on the map">View</button>
                 </div>
                  <div class="btn-group">
-                    <button id='get_download_btn' type="button" style="width:60px" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Download selected image to a (very large) file">Download</button>
+                    <button id='get_download_btn' type="button" style="width:65px" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Download selected image to a (very large) file">Download</button>
                  </div>
               </div>   
     		</div>	

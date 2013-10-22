@@ -22,6 +22,11 @@ indexes:
   - name: date
     direction: desc
 
+- kind: AreaOfInterest
+  properties:
+  - name: name
+  - name: owner
+
 - kind: BlogEntry
   properties:
   - name: draft

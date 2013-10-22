@@ -154,3 +154,17 @@ textarea {
   -webkit-font-smoothing: antialiased;
 }
 
+.table-whitebordered {
+  border: 1px solid #dddddd;
+  border-collapse: separate;
+  *border-collapse: collapse;
+  border-left: 0;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.table-whitebackground {
+    background-color: #f9f9f9;
+}

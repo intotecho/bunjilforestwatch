@@ -75,8 +75,7 @@ class BaseHandler(webapp2.RequestHandler):
 		logging.debug('BaseHandler: messages %s', context['messages'])
 		
 		rv = utils.render(_template, context)
-		
-		
+
 		self.response.write(rv)
 
 	def dispatch(self):
@@ -112,7 +111,10 @@ class BaseHandler(webapp2.RequestHandler):
 
 		self.session['journals'] = cache.get_journal_list(db.Key(self.session['user']['key']))
 		self.session['areas']	= cache.get_areas_list(db.Key(self.session['user']['key']))
-
+		self.session['other_areas']	= cache.get_other_areas(self.session['user']['name'], db.Key(self.session['user']['key']))
+	
+		print ("TODO: populate_user_session() to update areas_following")
+		
 	MESSAGE_KEY = '_flash_message'
 	def add_message(self, level, message):
 		self.session.add_flash(message, level, BaseHandler.MESSAGE_KEY)
@@ -138,7 +140,6 @@ class BaseHandler(webapp2.RequestHandler):
 		for k in ['user', 'journals', 'areas']:
 			if k in self.session:
 				del self.session[k]
-	
 
 class BaseUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
 	session_store = None
@@ -160,19 +161,25 @@ class MainPage(BaseHandler):
 
 	def get(self):
 		if 'user' in self.session:
+			#THIS CAN BE OPTIMISED
 			following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
 			followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User')
 			following_areas = cache.get_by_keys(cache.get_following_areas(self.session['user']['name']), 'AreaOfInterest')
 			#following_areas = cache.get_by_keys(cache.get_area_followers(self.session['user']['name']), 'AreaOfInterest')
 			#area_followers = cache.get_by_keys(cache.get_area_followers(self.session['user']['name']), 'AreaOfInterest)
 			journals = cache.get_journals(db.Key(self.session['user']['key']))
-			areas = cache.get_areas(db.Key(self.session['user']['key']))
+			areas = cache.get_areas(db.Key(self.session['user']['key'])) # areas user created
 			all_areas = cache.get_all_areas()
+			other_areas = cache.get_other_areas(self.session['user']['name'], db.Key(self.session['user']['key']))
 			#following_areas_list = cache.get_following_areas_list(self.session['user']['name'])
 			#print("MainHandler areas: ", areas, "following_areas: ", following_areas) #, "following_areas_list: ", following_areas_list)
 			
+			print("MainHandler other_areas: ", other_areas) #, "following_areas_list: ", following_areas_list)
+			
 			#all_areas = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
 			#logging.info( "areas = %s", areas)
+			#logging.info(all_areas, self.session['user']['name'])
+			
 			self.render('index-user.html', {
 				'activities': cache.get_activities_follower(self.session['user']['name']),
 				#'username' : self.session['user']['name'],
@@ -183,13 +190,13 @@ class MainPage(BaseHandler):
 				'following': following, #other users
 				'followers': followers,#other users
 				'following_areas': following_areas, #other areas.
+				'other_areas': other_areas, #other areas.
 				#'following_areas_list': following_areas_list, #other areas.
 				'areas': areas,
 				'all_areas': all_areas
 			})
 		else:
 			self.render('index.html') # not logged in.
-
 
 class ViewAreas(BaseHandler):
 
@@ -309,7 +316,7 @@ class Register(BaseHandler):
 						self.populate_user_session(user)
 						counters.increment(counters.COUNTER_USERS)
 						if rolechoice == 'local':
-							self.add_message('Success', '%s, Welcome new subscriber. Now create a new area that you wish to monitor.' %user)
+							self.add_message('Success', '%s, Welcome to Bunjil Forest Watch. Now create a new area that you want monitored.' %user)
 							self.redirect(webapp2.uri_for('new-area'))
 						else:
 							self.add_message('Success', '%s, Welcome new volunteer. Choose an area to follow.' %user)
@@ -451,7 +458,7 @@ class AccountHandler(BaseHandler):
 class NewAreaHandler(BaseHandler):
 	def get(self):
 		username = self.session['user']['name']
-# 		instructions= \
+# 		instructions - moved to template= \
 # 		"<b>Instructions</b> to define the boundary of a new Area of Interest:" \
 # 			"</span></p>"\
 # 			"<li>Drag (Left click and hold) to move the center of the map over your area.</li>"\
@@ -471,9 +478,15 @@ class NewAreaHandler(BaseHandler):
 		descr = self.request.get('description')
 		logging.info('NewAreaHandler name: %s description:%s', name, descr)
 		
-		coordinate_geojson_str = self.request.get('coordinates').decode('utf-8')
-		geojsonBoundary = geojson.loads(coordinate_geojson_str)
-		logging.info(geojsonBoundary)
+		try:
+			coordinate_geojson_str = self.request.get('coordinates').decode('utf-8')
+			logging.info(coordinate_geojson_str)
+			geojsonBoundary = geojson.loads(coordinate_geojson_str)
+		except:
+			return self.render('new-area.html', {
+				'username': name
+			})	
+
 		coords = []
 		pts = []
 		center_pt = []
@@ -546,7 +559,7 @@ class NewJournal(BaseHandler):
 			self.add_message('error', 'Your journal needs a name.')
 		else:
 			journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
-			for journal_url, journal_name in self.session['journals']:
+			for journal_url, journal_name, jounral_type in self.session['journals']:
 				if journal.name == journal_name:
 					self.add_message('error', 'You already have a journal called %s.' %name)
 					break
@@ -967,11 +980,11 @@ class FollowAreaHandler(BaseHandler):
 			cache.C_AREA_FOLLOWERS %area.name: followers.users,  #doesn't look right.
 			cache.C_FOLLOWING_AREAS %username: areas_following.areas,
 		})
-		########### create a jopurnal for each followed area - should be in above txn ##############
+		########### create a journal for each followed area - should be in above txn ##############
 
 		name = "Observations for " + area_name # name is used by view-area.html to make reports.
 		journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
-		for journal_url, journal_name in self.session['journals']:
+		for journal_url, journal_name, journal_type in self.session['journals']:
 			if journal.name == journal_name:
 				self.add_message('error', 'You already have a journal called %s.' %name)
 				break
@@ -984,7 +997,7 @@ class FollowAreaHandler(BaseHandler):
 			journal.journal_type = "observations"
 
 			user, journal = db.run_in_transaction(txn, self.session['user']['key'], journal)
-			cache.clear_journal_cache(user.key())
+			cache.clear_area_cache(user.key())
 			cache.set(cache.pack(user), cache.C_KEY, user.key())
 			self.populate_user_session()
 			counters.increment(counters.COUNTER_AREAS)

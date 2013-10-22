@@ -44,13 +44,13 @@
 						</ul>
 					</li>
 					{% endif %}
-					<li class="dropdown{% if active  == "view-journal" or active == "entry" or active == "new-journal" %} active{% endif %}"> <a href="#" class="dropdown-toggle" data-toggle="dropdown">reports <b class="caret"></b></a>
+					<li class="dropdown{% if active  == "view-journal" or active == "entry" or active == "new-journal" %} active{% endif %}"> <a href="#" class="dropdown-toggle" data-toggle="dropdown">journals<b class="caret"></b></a>
 						<ul class="dropdown-menu">
 							{% for j in session.journals %}
-								<li{% if active == "view-journal" and j.1 == journal.name %} class="active"{% endif %}><a href="{{ j.0 }}">{{ j.1 }}</a></li>
+								<li{% if active == "view-journal" and j.1 == journal.name %} class="active"{% endif %}><a href="{{ j.0 }}">{% if j.2 == "observations" %}<i class="icon-eye-open"></i> {% endif %}{{ j.1 }}</a></li>
 							{% endfor %}
 							<li class="divider"></li>
-							<li><a href="{{ "user"|url(user.name) }}"><i class="icon-home"></i> my reports</a></li>
+							<li><a href="{{ "user"|url(user.name) }}"><i class="icon-home"></i> my journals</a></li>
 							<li{% if active == "new-journal" %} class="active"{% endif %}><a href="{{ "new-journal"|url }}">new journal</a></li>
 						</ul>
 					</li>
@@ -61,7 +61,7 @@
 							{% endfor %}
 							<li class="divider"></li>
                             {% for arf in following_areas %}
-                                <li{% if active == "view-area" and arf.1 == area.name %} class="active"{% endif %}><a href="{{ arf|area_url }}"><i class="icon-eye-open"></i> {{ arf }}</i></a></li>
+                                <li{% if active == "view-area" and arf.1 == area.name %} class="active"{% endif %}><a href="{{ arf|area_url }}"><i class="icon-eye-open"></i> {{ arf }}</a></li>
                             {% endfor %}
                             <li class="divider"></li>
 							<li><a href="{{ "user"|url(user.name)}}/myareas">my areas</a></li>
