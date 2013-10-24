@@ -1,7 +1,7 @@
 <!-- Included by index-user.html -->
     {% for j in areas %}
-           <pre class="table-whitebackground">
-            <table class="table table-condensed table-whitebackground ">
+           <pre class="table-myareabackground">
+            <table class="table table-condensed  ">
             <tbody>
         {% if thisuser %}
             <tr><a href="{{ j|area_url }}"><h4>{{ j }}</h4></a></tr>
@@ -13,20 +13,4 @@
         <tr><td>observers </td><td>{{ j.subscriber }}</td></tr>
         </tbody>        
        </table></pre> 
-    {% endfor %}
- <h3>Following Areas</h3>
-  Areas you follow
-    {% for j in following_areas %}
-        {% if j %}
-            <pre class="table-whitebackground">
-            <table class="table table-condensed ">
-            <tbody>
-          <tr><h4><a href="{{ j|area_url }}">{{ j }}</a></h4></tr> 
-        {% else %}
-           <tr>{{ j }}</tr>
-        {% endif %}
-            <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
-            <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
-            </tbody>        
-           </table></pre> 
     {% endfor %}

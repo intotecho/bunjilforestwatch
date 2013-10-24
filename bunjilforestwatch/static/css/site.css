@@ -168,3 +168,19 @@ textarea {
 .table-whitebackground {
     background-color: #f9f9f9;
 }
+
+.table-journalbackground {
+    background-color: #e9e9d9;
+}
+
+.table-myareabackground {
+    background-color: #f6f7f4;
+}
+
+.table-followareabackground {
+    background-color: #f0f0f0;
+}
+
+.table-otherareabackground {
+    background-color: #e5e9e5;
+}

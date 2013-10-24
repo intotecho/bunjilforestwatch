@@ -56,12 +56,12 @@
 					</li>
 					<li class="dropdown{% if active  == "view-area" or active == "entry" or active == "new-area" %} active{% endif %}"> <a href="#" class="dropdown-toggle" data-toggle="dropdown">areas <b class="caret"></b></a>
 						<ul class="dropdown-menu">
-							{% for ar in session.areas %}
+							{% for ar in session.areas_list %}
 								<li{% if active == "view-area" and ar.1 == area.name %} class="active"{% endif %}><a href="{{ ar.0 }}"><i class="icon-home"></i> {{ ar.1 }}</a></li> 
 							{% endfor %}
 							<li class="divider"></li>
-                            {% for arf in following_areas %}
-                                <li{% if active == "view-area" and arf.1 == area.name %} class="active"{% endif %}><a href="{{ arf|area_url }}"><i class="icon-eye-open"></i> {{ arf }}</a></li>
+                            {% for arf in session.following_areas_list %}
+                                <li{% if active == "view-area" and arf.1 == area.name %} class="active"{% endif %}><a href="{{ arf.0 }}"><i class="icon-eye-open"></i> {{ arf.1 }}</a></li>
                             {% endfor %}
                             <li class="divider"></li>
 							<li><a href="{{ "user"|url(user.name)}}/myareas">my areas</a></li>
