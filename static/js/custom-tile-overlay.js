@@ -73,6 +73,7 @@ function setOpacity(pixelX) {
 			overlay.show();
 		}
 	}
+	overlay.redraw()
 }
 
 function findPosLeft(obj) { //for slider
