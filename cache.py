@@ -62,7 +62,8 @@ C_AREA_ALL_LIST = 'areas_list'
 
 C_AREA_FOLLOWERS = 'area_followers_%s'
 C_FOLLOWING_AREAS = 'following_areas_%s'
-C_FOLLOWING_AREA_LIST = 'following_areas_list_%s'
+C_FOLLOWING_AREAS_LIST = 'following_areas_list_%s'
+C_FOLLOWING_AREANAMES_LIST = 'following_areanames_list_%s'
 
 C_KEY = 'key_%s'
 C_STATS = 'stats'
@@ -152,34 +153,47 @@ def decode_key(key):
 		path.append(k.kind())
 		k = k.parent()
 	path.reverse()
-	print 'app=%r, path=%r' % (_app, path)
+	#print 'app=%r, path=%r' % (_app, path)
 
 def get_areas(user_key):
 	n = C_AREAS %user_key
 	data = unpack(memcache.get(n))
 	if data is None:
 		#data = models.AreaOfInterest.all().ancestor(user_key).fetch(models.AreaOfInterest.MAX_AREAS)
-		q = db.Query(models.AreaOfInterest)
-		data = q.filter('owner =',  user_key)
+		#q = db.Query(models.AreaOfInterest)
+		#data = q.filter('owner =',  user_key)
+		data = models.AreaOfInterest.all().filter('owner =',  user_key).fetch(models.AreaOfInterest.MAX_AREAS)
+		print "get_areas()", data
 		memcache.add(n, pack(data))
 
 	return data
 
 def get_other_areas(username, user_key): # returns list of areas I created but includes areas I follow
 	#user_key = db.Key.from_path('User', username)
+	print ("get_other_areas() ", username, user_key)
+
 	n = C_OTHER_AREAS %user_key
 	data = unpack(memcache.get(n))
 	if data is None:
+		allareas = models.AreaOfInterest.all()
 		af =  get_following_areanames_list(username)
+		#for y in af:
+		#	print ("get_other_areas following:",  y)
+
 		#data = models.AreaOfInterest.all().ancestor(user_key).fetch(models.AreaOfInterest.MAX_AREAS)
-		q = db.Query(models.AreaOfInterest)
-		udata = q.filter('owner !=',  user_key) # excludes areas I created but includes areas I follow
+		#q = db.Query(models.AreaOfInterest)
+		#udata = q.filter('owner !=',  user_key) # excludes areas I created but includes areas I follow
 		#print ("get_other_areas: ", udata, af)
-		data = [x for x in udata if x.name not in af] # remove elements in af from udata - excludes areas I follow
+		otherareas = [x for x in allareas if x.name not in af and  x.owner.name != username ] # remove areas user created and elements in af that user follows
+		data = otherareas #[(x.url(), x.name, x.owner.name) for x in otherareas]
+		for y in data:
+			print "get_other_areas() returns: ",  y
+		print "get_other_areas() reloaded: ", username, user_key
 		memcache.add(n, pack(data))
+		#memcache.add(n, data)
 
 	return data
-   
+
 # returns a list of user's area names
 def get_areas_list(user_key):
 	n = C_AREA_LIST %user_key
@@ -192,24 +206,24 @@ def get_areas_list(user_key):
 	return data
 
 def get_all_areas():
-    n = C_AREAS_ALL
-    data = unpack(memcache.get(n))
-    if data is None:
-        data = models.AreaOfInterest.all().fetch(180) #limit of 180 will be a problem in future.
-        memcache.add(n, pack(data))
+	n = C_AREAS_ALL
+	data = unpack(memcache.get(n))
+	if data is None:
+		data = models.AreaOfInterest.all().fetch(180) #limit of 180 will be a problem in future.
+		memcache.add(n, pack(data))
 
-    return data
+	return data
 
 # returns a list of user's area names
 def get_all_areas_list():
-    n = C_AREA_ALL_LIST
-    data = memcache.get(n)
-    if data is None:
-        areas= get_areas()
-        data = [(i.url(), i.name) for i in areas] #add i.user and i.followers
-        memcache.add(n, data)
+	n = C_AREA_ALL_LIST
+	data = memcache.get(n)
+	if data is None:
+		areas= get_areas()
+		data = [(i.url(), i.name) for i in areas] #add i.user and i.followers
+		memcache.add(n, data)
 
-    return data
+	return data
 
 
 def get_journals(user_key):
@@ -313,19 +327,24 @@ def get_stats():
 
 	return data
 
-def clear_area_cache(user_key):
+def clear_area_cache(user_key, area_key):
+	print "clear_area_cache(%s, %s)", user_key, area_key
+	tag = "users"
 	memcache.delete_multi([	C_AREAS_ALL,
 							C_AREA_ALL_LIST,
 							C_AREAS %user_key, 
 							C_AREA_LIST %user_key, 
 							C_OTHER_AREAS %user_key, 
-							#C_AREA_FOLLOWERS %area_key, #see below - uses area key?
-							C_FOLLOWING_AREAS %user_key, 
-							C_FOLLOWING_AREA_LIST %user_key])
+							C_FOLLOWING_AREAS %user_key,
+							C_FOLLOWING_AREAS_LIST %user_key, 
+							C_FOLLOWING_AREANAMES_LIST %user_key,
+							C_AREA_FOLLOWERS %area_key,
+							C_AREA %(user_key, area_key),
+							C_AREA %(tag, area_key) ])
 
-
-def clear_area_followers(area_key):
+def clear_area_followers(area_key): #not used
 	memcache.delete(C_AREA_FOLLOWERS %area_key)
+
 
 
 def clear_journal_cache(user_key):
@@ -424,7 +443,8 @@ def get_area_followers(area_name):
 	n = C_AREA_FOLLOWERS %area_name
 	data = memcache.get(n)
 	if data is None:
-		followers = models.AreaFollowersIndex.get_by_key_name(area_name) #, parent=db.Key.from_path('AreaOfInterest', area_name))
+		followers = models.AreaFollowersIndex.get_by_key_name(area_name) 
+		#, parent=db.Key.from_path('AreaOfInterest', area_name))
 		if not followers:
 			data = []
 		else:
@@ -434,41 +454,67 @@ def get_area_followers(area_name):
  	#print "get_area_followers"
 	return data
 
-def get_following_areas(username):
-	n = C_FOLLOWING_AREAS %username
+def get_following_areas(user_key):
+	n = C_FOLLOWING_AREAS %user_key
 	data = memcache.get(n)
 	if data is None:
-		following = models.UserFollowingAreasIndex.get_by_key_name(username, parent=db.Key.from_path('User', username))
+		following_key = db.Key.from_path('User', user_key, 'UserFollowingAreasIndex', user_key)
+		#following = models.UserFollowingAreasIndex.from_path(kind, id_or_name, parent=None, namespace=None)
+		#following_key = db.Key.from_path('User', thisuser, 'UserFollowingAreasIndex', thisuser)
+		#following = models.UserFollowingAreasIndex.get_by_key_name(user_key, None)
+		following = models.UserFollowingAreasIndex.get(following_key)
+		data = []
 		#following = models.UserFollowingAreasIndex.get_by_key_name(username, None)
 		if not following:
-			data = []
+			print ("  get_following_areas - [no followers] ", user_key)
 		else:
 			#print ("get_following_areas: areas", following.areas)
-			data = following.areas
+			#data = following.areas
+			following_areas = following.areas
+			print "get_following_areas(): ", following_areas, type(following_areas) 
+			
+			#data = [get_area(None, af) for af in following_areas]
+			allareas = models.AreaOfInterest.all()  #inefficient
+			data = [x for x in allareas if x.name in following_areas]
+			
 			#print ("get_following_areas", following.areas)
 			#data = [(get_area(None, i).url(), get_area(None, i).name) for i in following.areas]
+		#memcache.add(n, pack(data))
 		memcache.add(n, data)
+		for y in data:
+			print ("  get_following_areas af:",  y)
+		
+		print ("get_following_areas() reloaded: ", user_key)
+
 	#print ("get_following_areas: ", data)
 	return data
 
 def get_following_areas_list(user_key):
-	n = C_FOLLOWING_AREA_LIST %user_key
+	n = C_FOLLOWING_AREAS_LIST %user_key
 	data = memcache.get(n)
 	if data is None:
 		areas= get_following_areas(user_key)
-		data = [(get_area(None, i).url(), get_area(None, i).name) for i in areas]
+		data = [(i.url(), i.name) for i in areas]
+		#data = [(get_area(None, i).url(), get_area(None, i).name) for i in areas]
 		memcache.add(n, data)
-
+		print ("get_following_areas_list() reloaded: ", user_key)
+		
 	return data
 
-def get_following_areanames_list(user_key): #as above but returns list of names only without urls
-	n = C_FOLLOWING_AREA_LIST %user_key
+def get_following_areanames_list(user_key): #as above but returns list of names only without urls for excluding from other_areas
+	n = C_FOLLOWING_AREANAMES_LIST %user_key
 	data = memcache.get(n)
 	if data is None:
 		areas= get_following_areas(user_key)
-		data = [get_area(None, i).name for i in areas]
+		if areas:
+			data = [i.name for i in areas]
+			#data = [get_area(None, i).name for i in areas]
+		else:
+			logging.error("get_following_areanames_list() ERROR!!!!")
+			data = []
 		memcache.add(n, data)
-
+		print "get_following_areanames_list() reloaded: ", user_key
+		
 	return data
 
 
@@ -477,29 +523,31 @@ def get_area(username, area_name):
 	data = unpack(memcache.get(n))
 	if data is None:
 		area_key = get_area_key(username, area_name)
-		if area_key:
-			data = db.get(area_key)
+		logging.error("get_area() key %s", area_key)
+		data = db.get(area_key)
+		if data is None:
+			logging.error("get_area() ERROR!!!! %s %s %s", username, area_name, area_key )
 		memcache.add(n, pack(data))
-
+		print "get_area", data
 	return data
 
 def get_area_key(username, area_name):
-    if username is None:
-        n = C_AREA %("users", area_name)  #users a reserved name so never a username. Fetch areas for all users.
-        data = memcache.get(n)
-        if data is None:
-            data = models.AreaOfInterest.all(keys_only=True).filter('name', area_name.decode('utf-8')).get()
-            memcache.add(n, data)
-            return data
-    else:
-        n = C_AREA_KEY %(username, area_name)
-        data = memcache.get(n)
-        if data is None:
-            user_key = db.Key.from_path('User', username)
-            data = models.AreaOfInterest.all(keys_only=True).filter('owner =', username).filter('name', area_name.decode('utf-8')).get()
-            #print ("get_area_userkey for user: ", username, data, )
-            memcache.add(n, data)
-            return data
+	if username is None:
+		n = C_AREA_KEY %("users", area_name)  #users a reserved name so never a username. Fetch areas for all users.
+		data = memcache.get(n)
+		if data is None:
+			data = models.AreaOfInterest.all(keys_only=True).filter('name', area_name).get()
+			memcache.add(n, data)
+			return data
+	else:
+		n = C_AREA_KEY %(username, area_name)
+		data = memcache.get(n)
+		if data is None:
+			user_key = db.Key.from_path('User', username)
+			data = models.AreaOfInterest.all(keys_only=True).filter('owner =', username).filter('name', area_name.decode('utf-8')).get()
+			#print ("get_area_userkey for user: ", username, data, )
+			memcache.add(n, data)
+			return data
 
 
 def get_journal(username, journal_name):
