@@ -8,7 +8,9 @@ import urllib
 
 from google.appengine.api import urlfetch
 
-import settings
+#import settings
+import settings # This file is not part of the repository. 
+
 import webapp2
 
 OAUTH_URL = 'https://www.facebook.com/dialog/oauth'

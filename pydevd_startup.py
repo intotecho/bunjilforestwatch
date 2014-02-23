@@ -9,7 +9,7 @@ if config.python_config.startup_args:
 
 if ':' not in config.version_id:
       # The default server version_id does not contain ':'
-      sys.path.append(<path to the pydevd directory>)
+      sys.path.append("C:\bunjilsrc\code\bunjilforestwatch")
       import pydevd 
       pydevd.settrace(options['host'], port=options['port'], 
                   stdoutToServer=False, stderrToServer=True)

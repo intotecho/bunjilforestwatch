@@ -7,14 +7,31 @@ Created on 25/05/2013
 import sys
 import logging
 logging.basicConfig(level=logging.DEBUG)
-import settings
-import oauth2client.client
-import datetime
-import ee
-import json
+
 import os
 from os import environ
+#logging.debug('PYTHONPATH: %s',os.environ['PYTHONPATH'])
+#logging.debug('HTTP_PROXY: %s',os.environ['HTTP_PROXY'])
+#logging.debug('HTTPS_PROXY: %s',os.environ['HTTPS_PROXY'])
+
+#if os.environ['EARTHENGINE_BYPASS'].startswith('T'): 
+#	logging.info('EARTHENGINE_BYPASS is %s. Earth Engine Calls are disabled..',os.environ['EARTHENGINE_BYPASS'])
+
+import oauth2client.client
 from oauth2client.appengine import AppAssertionCredentials
+
+import datetime
+import json
+
+import settings
+#You have to create your own keys. 
+
+#if os.environ['EARTHENGINE_BYPASS'].startswith('T'): 
+#	logging.info('EARTHENGINE_BYPASS is %s. Earth Engine Calls are disabled..',os.environ['EARTHENGINE_BYPASS'])
+#else:
+import ee
+	
+
 '''
 initEarthEngineService()
 Call once per session to authenticate to EE
@@ -27,6 +44,7 @@ earthengine_intialised = False
 def initEarthEngineService():
 
 	#SCOPES = ('https://www.googleapis.com/auth/earthengine.readonly') # still needed?
+
 	global earthengine_intialised
 	if earthengine_intialised == False:
 		try:
@@ -38,10 +56,10 @@ def initEarthEngineService():
 		 		EE_CREDENTIALS = AppAssertionCredentials(ee.OAUTH2_SCOPE)
 			ee.Initialize(EE_CREDENTIALS) 
 			earthengine_intialised = True
-		except:
-			logging.error("Failed to connect to Earth Engine")
+		except Exception, e:
+			#self.add_message('error', 'An error occurred with Earth Engine. Try again.')
+			logging.error("Failed to connect to Earth Engine. Exception: %s", e)
 			pass
-
 
 '''
 getLandsatImage(array of points, string as name of ee.imagecollection)
@@ -56,7 +74,10 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_p
 	feat = ee.Geometry.Polygon(boundary_polygon)
 	#logging.info('feat %s', feat)
 	boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-	boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+	#boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+	logging.debug('Temporarily disabled buffer to allow AOI points in clockwise order due to EEAPI bug')
+
+	boundary_feature_buffered = boundary_feature 
 	park_boundary = ee.FeatureCollection(boundary_feature_buffered)
 	info = park_boundary.getInfo()
 	end_date   = datetime.datetime.today()
@@ -163,7 +184,7 @@ def SharpenLandsat8HSVUpres(image):
 # Return the percentile values for each band in an image.
 def getPercentile(image, percentile, crs):
     return image.reduceRegion(
-        ee.Reducer.percentile(percentile), # reducer
+        ee.Reducer.percentile([percentile]), # reducer
         None, # geometry (Defaults to the footprint of the image's first band)
         None, # scale (Set automatically because bestEffort == true)
         crs,
@@ -174,7 +195,7 @@ def getPercentile(image, percentile, crs):
 
 def getL8LatestNDVIImage(image):
     NDVI_PALETTE = {'FF00FF','00FF00'}
-    ndvi = image.normalizedDifference(["B4", "B3"]);   
+    ndvi = image.normalizedDifference(["B4", "B3"]).median();   
     
     #addToMap(ndvi.median(), {min:-1, max:1}, "Median NDVI");
     #getMapId(ndvi, {min:-1, max:1, palette:NDVI_PALETTE}, "NDVI");
@@ -187,7 +208,7 @@ def getL8LatestNDVIImage(image):
                      'max': 1,
                      'palette': 'FF00FF, 00FF00',
                      #'gamma': 1.2,
-                     'format': 'jpg'
+                     'format': 'png'
                 }   
     mapid  = ndvi.getMapId(mapparams)
   
