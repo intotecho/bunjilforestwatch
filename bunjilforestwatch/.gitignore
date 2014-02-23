@@ -1,12 +1,14 @@
 *.pyc
 *.swp
 settings.py
-.settings
+secrets/
+secrets/settings.py
 app-journalr/
 *.zip
 *.p1
 *.p12
 *.pem
+*.PEM
 Crypto/*
 PIL/*
 ee/*
@@ -15,3 +17,4 @@ Servers/
 .metadata/*
 .svn/*
 geodatastore/.svn/*
+appcfg.py

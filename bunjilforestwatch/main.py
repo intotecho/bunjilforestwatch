@@ -2,7 +2,11 @@
 
 from __future__ import with_statement
 
+#import logging
+#logging.basicConfig(level=logging.DEBUG)
 
+#import os
+#from os import environ
 import eeservice
 import base64
 import datetime
@@ -11,6 +15,7 @@ import re
 import os
 import geojson
 
+import django
 from django.utils import html
 from google.appengine.api import files
 from google.appengine.api import taskqueue
@@ -20,7 +25,6 @@ from google.appengine.ext import db
 from google.appengine.ext.webapp import blobstore_handlers
 from webapp2_extras import sessions
 
-import django
 import json
 import webapp2
 

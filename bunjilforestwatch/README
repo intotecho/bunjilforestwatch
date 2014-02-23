@@ -1,26 +1,32 @@
 Bunjil Forest Watch
 
-Application URL bunjilfw.appspot.com
+Application: http://bunjilfw.appspot.com
+Blog:        http://bunjilforestwatch.wordpress.com
+Jira:        http://bunjilforestwatch.atlassian.net
+Contact:     BunjilForestWatch@gmail.com
 
-Application runs on Google App Engine and uses Google Earth Engine.
+<!-- APPLICATION NOTES--->
 
 Bunjil Forest Watch continuously checks for new satellite images covering a conservation area of interest. It scans public databases, such as LANDSAT images published at USGS. The boundary coordinates of an area to be monitored is provided by local conservation groups when they subscribe to the free service. When the solution finds new images covering their area it emails a volunteer to check for recent disturbances.
 
 Volunteers review the latest images of an area and compare with older images. They mark-up any recent changes observed, such as new roads or clearings. The solution captures the coordinates of the change and sends a concise email or SMS report to the local group. The local group responds to the observed threats as they see fit.This service will connect local conservation groups in remote tropical regions with a network of volunteers who share the timely analysis of satellite images.
 
-More info at bunjilforestwatch.wordpress.com
 
-<script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+<!-- DEVELOPER NOTES--->
 
-  ga('create', 'UA-40216178-1', 'kinabalu.appspot.com');
-  ga('send', 'pageview');
+Application runs on Google App Engine and uses Google Earth Engine.
 
-</script>
+You will need to have a Google App Engine Account and a Googel Earth Engine Account to run this.
 
-<!-- BUGS --->
-Add check to prevent creating an area called area, or a journal called journal. See RESERVED_NAME and post new user.
+For Earth Engine, you must be a trusted tester and have your Google Service Account whitelisted as the API is still under development. Then generate an OAuth2 key for that service account. 
 
+The Earth Engine API is under development and is likely to change significantly.
+
+Development Environment Setup Instructions
+http://bunjilforestwatch.wordpress.com/credits/dev/dev-environment-setup-on-windows-pc/
+
+<!-- ISSUES LISTS --->
+
+PUBLIC: https://github.com/intotecho/bunjilforestwatch/issues
+
+DEVELOPERS: http://bunjilforestwatch.atlassian.net
