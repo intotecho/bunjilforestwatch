@@ -18,3 +18,5 @@ Servers/
 .svn/*
 geodatastore/.svn/*
 appcfg.py
+OpenSSL*
+crypt.py
