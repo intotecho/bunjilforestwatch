@@ -16,7 +16,7 @@ body {
 }
 </style>
 <style type="text/css"> 
-/** FIX for Bootstrap and Google Maps Info window styes problem http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden **/
+/** FIX for Bootstrap and Google Maps Info window styles problem http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden **/
 img[src*="gstatic.com/"], img[src*="googleapis.com/"] {
 max-width: none;
 }
@@ -73,7 +73,7 @@ function createImageOverlay(show, mapid,  token, slider_name)
 
 function setActionUrl(action)
 {
-   // action can be 'overlay' or 'download' strip the old action and append the new aciton.
+   // action can be 'overlay' or 'download' strip the old action and append the new action.
    var url = window.location.href
    if (url.indexOf("/overlay") !=-1) {
       url = url.substring(0, url.indexOf("/overlay")); //strip the last action.
@@ -156,12 +156,10 @@ function initialize() {
                 fillOpacity: 0.15
             });
     areaBoundary.setMap(map);
-        
-        // Create Overlay of Latest Landsat8
-        
 
+    // Create Overlay of Latest Landsat8
     $('#get_overlay_btn').click(function(){
-    	ajax_url = ajaxActionUrl("overlay");
+    	 _url = ajaxActionUrl("overlay");
     	httpget_url = httpgetActionUrl("overlay")
         //window.history.replaceState('string', 'load image', httpget_url);
 
@@ -184,7 +182,8 @@ function initialize() {
 		 	$('#observations_panel').append("<p>Failed: " + err + "</p>"); 
 	 	});
     }); //get_overlay_btn.click
-   		    
+
+    //download   		    
     $('#get_download_btn').click(function(){ 
             var pathname = window.location.pathname + '/download/' + satellite + '/' + algorithm + '/' + latest;
             window.history.replaceState('string', 'load image', pathname);
@@ -244,7 +243,6 @@ function initialize() {
     				//createImageOverlay(false,0,0,0);
                     //var overlayMap = new google.maps.ImageMapType(overlayMaps[layerID]);
                     //map.overlayMapTypes.setAt(layerID, overlayMap);
-
         		};
         	}
 		});
@@ -311,7 +309,9 @@ function initialize() {
 	    	}).resize();
    		
 	};//initialize
+	
     google.maps.event.addDomListener(window, 'load', initialize); 
+
 </script>
 {% endblock %} {% block content %}
 <div><ul class="breadcrumb">
