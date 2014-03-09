@@ -303,8 +303,6 @@ class Register(BaseHandler):
 						google_id=uid if source == models.USER_SOURCE_GOOGLE else None,
 						token=base64.urlsafe_b64encode(os.urandom(30))[:32],
 					)
-					#user.areas_observing = {} # list of areas we watch
-					#user.areas_subscribing = {}
 					
 					if getattr(user, '%s_id' %source) != uid:
 						errors['username'] = 'Username is already taken.'
@@ -506,7 +504,7 @@ class NewAreaHandler(BaseHandler):
 				#be good to add a bounding box too.
 		if 	self.session['areas_list']:
 			if len(self.session['areas_list']) >= models.AreaOfInterest.MAX_AREAS:
-				self.add_message('error', 'Only %i areas allowed.' %models.AreaOfInterest.MAX_AREAS)
+				self.add_message('error', 'Sorry, only %i areas allowed.' %models.AreaOfInterest.MAX_AREAS)
 		if not name:
 			self.add_message('error', 'Your area of interest needs a short and unique name.')
 		else:
@@ -601,7 +599,7 @@ class ViewArea(BaseHandler):
 	
 			self.render('view-area.html', {
 				'username': self.session['user']['name'],
-				'area': area,
+				'area': area
 				#'following_areas' :following_areas
 				#'action': None,
 				#'algorithm': None,
@@ -612,7 +610,9 @@ class ViewArea(BaseHandler):
 				# 'page': page,
 				# 'pagelist': utils.page_list(page, area.pages),
 			})
-
+			
+			
+#FIXME:ViewAreaAction not called?
 class ViewAreaAction(BaseHandler):
 	
 	def get(self, area_name, action, satelite, algorithm, latest):
@@ -726,16 +726,25 @@ class L8LatestVisualDownloadHandler(BaseHandler):
 			poly.append([geopt.lon, geopt.lat])
 
 		image = eeservice.getL8SharpImage(poly, 1)
-		
-	
+			
 		path = eeservice.getOverlayPath(image, "L8TOA", 'red',  'green', 'blue')
-		
 		
 		#cache.set(cache.pack(user), cache.C_KEY, user.key())
 		#self.populate_user_session()
 		#self.add_message('success', 'map_id:%s' %(map_id))
 		self.response.write(path)
 
+class CheckNewHandler(BaseHandler):
+	#This handler responds to Cron request, no need to return a response
+	
+	def get(self):
+		logging.info("Cron CheckNewHandler check-new-images")
+			
+		eeservice.checkNewAllAreas()
+		
+		self.response.write("Checked for new images")
+			
+			
 			
 class ViewJournal(BaseHandler):
 	def get(self, username, journal_name):
@@ -1948,6 +1957,7 @@ app = webapp2.WSGIApplication([
 	webapp2.Route(r'/new/journal', handler=NewJournal, name='new-journal'),
 	webapp2.Route(r'/register', handler=Register, name='register'),
 	webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
+	webapp2.Route(r'/checknew', handler=CheckNewHandler, name='check-new-images'),
 
 	webapp2.Route(r'/stats', handler=StatsHandler, name='stats'),
 	webapp2.Route(r'/observatory', handler=ObservatoryHandler, name='observatory'),
@@ -1996,6 +2006,7 @@ RESERVED_NAMES = set([
 	'backup',
 	'blob',
 	'blog',
+	'checknew',
 	'contact',
 	'docs',
 	'donate',

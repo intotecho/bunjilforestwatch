@@ -50,7 +50,7 @@ class User(db.Model):
 	last_active = db.DateTimeProperty(auto_now=True)
 	token = db.StringProperty(required=True, indexed=False)
 	
-	areas_observing = db.ListProperty(db.Key, default=None) # list of areas we watch
+	areas_observing = db.ListProperty(db.Key, default=None) # list of areas we watch - Not Used
 	areas_subscribing = db.ListProperty(db.Key, default=None) # list of areas I subscribe to  (only for local)
 	
 # adding for bujilae
@@ -145,58 +145,64 @@ class AreaFollowersIndex(db.Model):  #A Area has a list of users in an AreaFollo
 class UserFollowingAreasIndex(db.Model): #A User has a list of areas in a UserFollowingAreasIndex(key=area)
     areas = db.StringListProperty()
     
-
-class Geometry(db.Model):
-	name = db.StringProperty()
-	description = db.StringProperty(multiline=True)
-	type = db.StringProperty()
-	dateModified = db.DateProperty(auto_now=True)
-	coordinates = db.ListProperty(db.GeoPt, default=None)
-	bound = db.ListProperty(float, default=None)
-	timeStamp = db.DateProperty(auto_now_add=True)
-	altitudes = db.ListProperty(float, default=None)
-	userId = db.StringProperty(default=None)
-	tags = db.ListProperty(unicode,default=None)
-
+'''
+Landsat Cell represents an 170sq km area where each image is captured. 
+Each path and row identifies a unique cell.
+An AOI makes overlaps a set of one or more cells - and creates a constant list of these.
+Each cell has a different schedule when new images arrive.
+'''
+class LandsatCell(db.Model):
+	#constants - not changed once created. Created when AOI is created. 
+	path = db.IntegerProperty(required=True, default=0)     # Landsat Path
+	row  = db.IntegerProperty(required=True, default=0)     # Landsat Row
+	center = db.GeoPtProperty(required=True, default=None); # Geographic Center of Cell
+	bound = db.ListProperty(float, default=None)            # Geographic Boundary of Cell
+	
+	#variables - updated with new images.
+	#TODO: This could be new class -i.e. sorted list of observations. 
+	latest_observation = db.DateTimeProperty() 				#Date of Latest Retrieved Image
+	latest_id = db.StringProperty(required=False)           #Image ID of Latest Retrieved Image - key to query EE.
+	observation_count = db.IntegerProperty(required=True, default=0) #simple counter.
+	#map_id = db.StringProperty(required=False, default=None) #overlay from GEE - should be part of Observation class
+	#token	= db.LinkProperty(required=False, default=None) #should be part of Observation object
+ 
 class AreaOfInterest(db.Model):
 
 	ENTRIES_PER_PAGE = 5
 	MAX_AREAS = 24
 
+	# Area Description
 	name = db.StringProperty(required=True)
-	created_date = db.DateTimeProperty(auto_now_add=True)
-	last_modified = db.DateTimeProperty(auto_now=True)
-	entry_count = db.IntegerProperty(required=True, default=0) # reports related to this area
 	description = db.StringProperty(multiline=True)
 	type = db.StringProperty()
+	wiki = db.LinkProperty() 
+	#tags = db.ListProperty(unicode,default=None) #TODO: Caused a unicode not callable error. Not yet implemented.
+	
+	cells = db.ListProperty(db.Key, default=None) # list of Landsat cells overlapping this area - calculated on new.
+	entry_count = db.IntegerProperty(required=True, default=0) # reports related to this area - not used yet
+	
+	#Geometry of area boundary
 	coordinates = db.ListProperty(db.GeoPt, default=None)
-	map_center = db.GeoPtProperty(required=True, default=None);
-	map_zoom    = db.IntegerProperty(required=True, default=1)
-	#map_id       = db.StringProperty(required=False, default=None) #overlay from GEE - should be part of Observation class
-	#tile_path	= db.LinkProperty(required=False, default=None) #should be part of Observation object
 	bound = db.ListProperty(float, default=None)
-	timeStamp = db.DateProperty(auto_now_add=True)
-	altitudes = db.ListProperty(float, default=None)
-	private = db.BooleanProperty(required=True, default=False) #set to keep area hidden.
-
-	#userId = db.StringProperty(default=None)
-	#dateModified = db.DateProperty(auto_now=True)
-	#tags = db.ListProperty(unicode,default=None)
-
-	#subscriber who created aoi
+	#boundary	= db.GeoPtProperty(0,0, repeated=True)
+	#altitudes = db.ListProperty(float, default=None)
+	
+	# Parameters for viewing Area
+	map_center = db.GeoPtProperty(required=True, default=None)
+	map_zoom    = db.IntegerProperty(required=True, default=1)
+	
+	#User (subscriber) who created AOI 
 	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
 	owner = db.ReferenceProperty(User) #key to subscriber that created area.
-	wiki = db.LinkProperty()
-	#boundary	= db.GeoPtProperty(0,0, repeated=True)
-
-	last_observation = db.DateTimeProperty()
-	first_observation = db.DateTimeProperty()
-	observation_count = db.IntegerProperty(required=True, default=0)
-
+	private = db.BooleanProperty(required=True, default=False) #set to keep area hidden.
+	
+	#timestsamps
+	created_date = db.DateTimeProperty(auto_now_add=True)
+	last_modified = db.DateTimeProperty(auto_now=True)
+	
 	@property
 	def observers(self):
 			return User.all().filter('areas_observing', self.key())
-
 	
 	# all frequencies are per week
 
@@ -299,7 +305,7 @@ class ObservationTask(db.Model):
 
 	content = db.IntegerProperty(required=True) # key id of EntryContent
 	aoi = db.ReferenceProperty(required = True)
-	
+	# FIXME: cell = aoi.cell
 	
 	@property
 	def time(self):

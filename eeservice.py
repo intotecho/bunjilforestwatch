@@ -6,6 +6,7 @@ Created on 25/05/2013
 '''
 import sys
 import logging
+import cache
 logging.basicConfig(level=logging.DEBUG)
 
 import os
@@ -62,6 +63,29 @@ def initEarthEngineService():
 			pass
 
 '''
+checkNew() looks at each subscribed area of interest and checks to see if there is a new image in EE since the last check.
+'''
+	
+def checkNewAllAreas():
+    #for each Area
+    all_areas = cache.get_all_areas()
+    logging.info( "checkNewAllAreas(): areas = %s", all_areas)
+    for area in all_areas:
+        checkNewForArea(area)
+    return True
+
+
+'''
+checkNew() looks at each subscribed area of interest and checks to see if there is a new image in EE since the last check.
+'''
+
+def checkNewForArea(area):
+    #logging.info( "checkNewForArea(): area = %s", area)
+    # FIXME: does nothing
+ 
+    return True
+    
+'''
 getLandsatImage(array of points, string as name of ee.imagecollection)
 returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
 Could also clip the image to the coordinates to reduce the size.
@@ -71,7 +95,7 @@ secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
     
 def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_path = None, opt_row = None):
 	#logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
-	feat = ee.Geometry.Polygon(boundary_polygon)
+	feat = ee.Geometry.Polygon(boundary_polygon);
 	#logging.info('feat %s', feat)
 	boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
 	#boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
