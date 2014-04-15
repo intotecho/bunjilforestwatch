@@ -588,6 +588,7 @@ class SelectCellHandler(BaseHandler):
 		print 'cell_feature ', cell_feature
 		self.populate_user_session()
 		displayAjaxResponse = 'SelectedCell %d %d'%(cell_feature['properties']['path'], cell_feature['properties']['row'])
+		#TODO Store as a Cell Object, and toggle isfollowed.
 		self.response.write(displayAjaxResponse)
 		return
 
