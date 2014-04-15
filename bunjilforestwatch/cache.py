@@ -27,6 +27,18 @@ import webapp2
 
 # use underscores since usernames are guaranteed to not have them
 # still a problem with journal names?
+C_AREA_KEY = 'area_key_%s_%s'
+C_AREA= 'area_%s_%s'
+C_AREAS = 'areas_%s'
+C_OTHER_AREAS = 'other_areas_%s'
+C_AREA_LIST = 'areas_list_%s'
+C_AREAS_ALL = 'areas'
+C_AREA_ALL_LIST = 'areas_list'
+C_AREA_FOLLOWERS = 'area_followers_%s'
+C_FOLLOWING_AREAS = 'following_areas_%s'
+C_FOLLOWING_AREAS_LIST = 'following_areas_list_%s'
+C_FOLLOWING_AREANAMES_LIST = 'following_areanames_list_%s'
+
 C_ACTIVITIES = 'activities_%s_%s_%s'
 C_ACTIVITIES_FOLLOWER = 'activities_follower_%s'
 C_ACTIVITIES_FOLLOWER_DATA = 'activities_follower_data_%s'
@@ -36,6 +48,8 @@ C_BLOG_ENTRIES_KEYS = 'blog_entries_keys'
 C_BLOG_ENTRIES_KEYS_PAGE = 'blog_entries_keys_page_%s'
 C_BLOG_ENTRIES_PAGE = 'blog_entries_page_%s'
 C_BLOG_TOP = 'blog_top'
+C_CELL_KEY = 'cell_key_%s_%s'
+C_CELL = 'cell_%s_%s'
 C_ENTRIES_KEYS = 'entries_keys_%s'
 C_ENTRIES_KEYS_PAGE = 'entries_keys_page_%s_%s'
 C_ENTRIES_PAGE = 'entries_page_%s_%s_%s'
@@ -50,20 +64,6 @@ C_JOURNALS = 'journals_%s'
 C_JOURNAL_KEY = 'journal_key_%s_%s'
 C_JOURNAL_LIST = 'journals_list_%s'
 
-C_AREA_KEY = 'area_key_%s_%s'
-C_AREA= 'area_%s_%s'
-
-C_AREAS = 'areas_%s'
-C_OTHER_AREAS = 'other_areas_%s'
-C_AREA_LIST = 'areas_list_%s'
-
-C_AREAS_ALL = 'areas'
-C_AREA_ALL_LIST = 'areas_list'
-
-C_AREA_FOLLOWERS = 'area_followers_%s'
-C_FOLLOWING_AREAS = 'following_areas_%s'
-C_FOLLOWING_AREAS_LIST = 'following_areas_list_%s'
-C_FOLLOWING_AREANAMES_LIST = 'following_areanames_list_%s'
 
 C_KEY = 'key_%s'
 C_STATS = 'stats'
@@ -163,14 +163,14 @@ def get_areas(user_key):
 		#q = db.Query(models.AreaOfInterest)
 		#data = q.filter('owner =',  user_key)
 		data = models.AreaOfInterest.all().filter('owner =',  user_key).fetch(models.AreaOfInterest.MAX_AREAS)
-		print "get_areas()", data
+		#print "get_areas()", data
 		memcache.add(n, pack(data))
 
 	return data
 
 def get_other_areas(username, user_key): # returns list of areas I created but includes areas I follow
 	#user_key = db.Key.from_path('User', username)
-	print ("get_other_areas() ", username, user_key)
+	#print ("get_other_areas() ", username, user_key)
 
 	n = C_OTHER_AREAS %user_key
 	data = unpack(memcache.get(n))
@@ -209,7 +209,7 @@ def get_all_areas():
 	n = C_AREAS_ALL
 	data = unpack(memcache.get(n))
 	if data is None:
-		data = models.AreaOfInterest.all().fetch(180) #limit of 180 will be a problem in future.
+		data = models.AreaOfInterest.all().fetch(180) #FIXME limit of 180 will be a problem in future.
 		memcache.add(n, pack(data))
 
 	return data
@@ -466,12 +466,12 @@ def get_following_areas(user_key):
 		data = []
 		#following = models.UserFollowingAreasIndex.get_by_key_name(username, None)
 		if not following:
-			print ("  get_following_areas - [no followers] ", user_key)
+			logging.debug("  get_following_areas - [no followers] %s", user_key)
 		else:
 			#print ("get_following_areas: areas", following.areas)
 			#data = following.areas
 			following_areas = following.areas
-			print "get_following_areas(): ", following_areas, type(following_areas) 
+			#print "get_following_areas(): ", following_areas, type(following_areas) 
 			
 			#data = [get_area(None, af) for af in following_areas]
 			allareas = models.AreaOfInterest.all()  #inefficient
@@ -481,12 +481,10 @@ def get_following_areas(user_key):
 			#data = [(get_area(None, i).url(), get_area(None, i).name) for i in following.areas]
 		#memcache.add(n, pack(data))
 		memcache.add(n, data)
-		for y in data:
-			print ("  get_following_areas af:",  y)
-		
-		print ("get_following_areas() reloaded: ", user_key)
-
-	#print ("get_following_areas: ", data)
+		#for y in data:
+			#print ("  get_following_areas af:",  y)
+		#logging.debug("get_following_areas() reloaded: %s ", user_key)
+		#print ("get_following_areas: ", data)
 	return data
 
 def get_following_areas_list(user_key):
@@ -497,7 +495,7 @@ def get_following_areas_list(user_key):
 		data = [(i.url(), i.name) for i in areas]
 		#data = [(get_area(None, i).url(), get_area(None, i).name) for i in areas]
 		memcache.add(n, data)
-		print ("get_following_areas_list() reloaded: ", user_key)
+		#print ("get_following_areas_list() reloaded: ", user_key)
 		
 	return data
 
@@ -510,10 +508,10 @@ def get_following_areanames_list(user_key): #as above but returns list of names 
 			data = [i.name for i in areas]
 			#data = [get_area(None, i).name for i in areas]
 		else:
-			logging.error("get_following_areanames_list() ERROR!!!!")
+			logging.debug("get_following_areanames_list() 	no following_areas")
 			data = []
 		memcache.add(n, data)
-		print "get_following_areanames_list() reloaded: ", user_key
+		#logging.debug("get_following_areanames_list() reloaded: ", user_key)
 		
 	return data
 
@@ -523,13 +521,14 @@ def get_area(username, area_name):
 	data = unpack(memcache.get(n))
 	if data is None:
 		area_key = get_area_key(username, area_name)
-		logging.error("get_area() key %s", area_key)
+		logging.debug("get_area() key %s", area_key)
 		data = db.get(area_key)
 		if data is None:
 			logging.error("get_area() ERROR!!!! %s %s %s", username, area_name, area_key )
 		memcache.add(n, pack(data))
-		print "get_area", data
+	logging.debug("get_area() returns: %s", data )
 	return data
+
 
 def get_area_key(username, area_name):
 	if username is None:
@@ -544,10 +543,31 @@ def get_area_key(username, area_name):
 		data = memcache.get(n)
 		if data is None:
 			user_key = db.Key.from_path('User', username)
-			data = models.AreaOfInterest.all(keys_only=True).filter('owner =', username).filter('name', area_name.decode('utf-8')).get()
+			data = models.AreaOfInterest.all(keys_only=True).filter('owner =', username).filter('name', area_name.decode('utf-8')).get() #FIXME - Is why is there an '='  in owner =' but not for other string matches?
 			#print ("get_area_userkey for user: ", username, data, )
 			memcache.add(n, data)
 			return data
+
+def get_cell_key(path, row):
+		n = C_CELL_KEY %(path, row)
+		print "get_cell_key() ", n
+		data = memcache.get(n)
+		if data is None:
+			data = models.LandsatCell.all(keys_only=True).filter('path = ', path).filter('row =', row).get()
+			memcache.add(n, data)
+			return data
+
+def get_cell(path, row):
+		n = C_CELL %(path, row)
+		print "get_cell() ", n
+		data = memcache.get(n)
+		if data is None:
+			data = models.LandsatCell.all().filter('path =', path).filter('row =', row).get()
+			if data is None:
+				logging.error("get_cell() Missing Cell Object")
+			memcache.add(n, data)
+			return data
+		
 
 
 def get_journal(username, journal_name):

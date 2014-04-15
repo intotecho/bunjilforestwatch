@@ -17,6 +17,9 @@ var map;
 	<script src="/static/js/GeoJSON.js"></script>
 	<script type="text/javascript" src="/static/js/landsat-grid.js"></script> 
 	<script type="text/javascript" src="/static/js/bootbox.min.js"></script>
+	<script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>  
+    <script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>  
+    <script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>  
 	<script>
     
       function initialize() {
@@ -81,8 +84,6 @@ var map;
 		 			//alert(toServer);
 		 			document.getElementById("coordinates_id").value = toServer
 		 		}
-
-
 		});
 
         //reset
@@ -110,8 +111,7 @@ var map;
 	    		if ($(this).is(':checked')){
 	    			if(layerID == 0)
 	    			{
-	    				requestLandsatGrid(map, true, false);
-                        
+	    				requestLandsatGrid(map, true, false, null);                 
 					}
 					if(layerID == 1)
 	    			{
@@ -121,7 +121,7 @@ var map;
 	    		else {
 		    		if(layerID == 0)
 	    			{
-	    				requestLandsatGrid(map, false, false);
+	    				requestLandsatGrid(map, false, false, null);
 	           		 	removeLandsatGrid();
 	    			}
 	    			if(layerID == 1)
@@ -199,15 +199,15 @@ var map;
 					<div class="controls">
 						<input id="coordinates_id" name="coordinates" type="hidden" value="undefined"/>
 					</div>
-					<div class="control-group">
-						<input id="reset", type="reset" class="btn btn-lightred" style="width:180px" value="Start Again" data-toggle="tooltip" title="Clear all the markers on the map">
 
-					<div class="control-group">
-<!-- 						<input id="showData"  type="button" class="btn btn-lightblue" value="Show Boundary Points"/> -->
+<!-- 					<div class="control-group">
+						<input id="showData"  type="button" class="btn btn-lightblue" value="Show Boundary Points"/> -->
 					</div>
 					<div class="control-group">
 						<input type="submit" class="btn btn-lightgreen" style="width:180px" value="Create Area">
 					</div>
+                    <div class="control-group">
+                        <input id="reset", type="reset" class="btn btn-lightred" style="width:180px" value="Oops! Start Again" data-toggle="tooltip" title="Clear all the markers on the map">
 					<div id="map_panel" class="control-group" rows="5" cols="25" name="panel" >
 						<p class="divider"></p>
 			      	</div>

@@ -1,7 +1,5 @@
+cron:
 - description: test for new images
   url: /checknew
   schedule: every day 00:00
-  timezone: Australia/NSW
-
-#- description: monday morning mailout
-#  url: /mail/weekly
+#  timezone: Australia/NSW

@@ -2,12 +2,15 @@
 
 from __future__ import with_statement
 
+LANSAT_CELL_AREA = (185*170) # sq.km  http://iic.gis.umn.edu/finfo/land/landsat2.htm
 #import logging
 #logging.basicConfig(level=logging.DEBUG)
 
 #import os
 #from os import environ
 import eeservice
+import ee
+
 import base64
 import datetime
 import logging
@@ -98,12 +101,11 @@ class BaseHandler(webapp2.RequestHandler):
  	# session['var'] = var should never be used, except in this function
 	def populate_user_session(self, user=None):
 		if 'user' not in self.session and not user:
-			print "populate_session() - no user!"
+			logging.error("populate_session() - no user!")
 			return
 		elif not user:
 			user = cache.get_user(self.session['user']['name'])
-		print "populate_session()"
-
+		
 		self.session['user'] = {
 			'admin': users.is_current_user_admin(),
 			'avatar': user.gravatar(),
@@ -166,10 +168,10 @@ class MainPage(BaseHandler):
 	def get(self):
 		if 'user' in self.session:
 			#THIS CAN BE OPTIMISED
-			print "MainPage()"
+			#print "MainPage()"
 			following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
 			followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User')
-			print self.session['user']['name']
+			#print self.session['user']['name']
 			#following_areas_list = cache.get_following_areas_list(self.session['user']['name']) #this is in session so redundant
 	
 			#following_areas = cache.get_by_keys(cache.get_area_followers(self.session['user']['name']), 'AreaOfInterest')
@@ -178,7 +180,7 @@ class MainPage(BaseHandler):
 			areas = cache.get_areas(db.Key(self.session['user']['key'])) # areas user created
 			following_areas = cache.get_following_areas(self.session['user']['name'])
 			other_areas = cache.get_other_areas(self.session['user']['name'], db.Key(self.session['user']['key']))
-			print  "MainHandler areas: ", areas,  " following_areas: ",  following_areas, " other_areas: ", other_areas
+			#print  "MainHandler areas: ", areas,  " following_areas: ",  following_areas, " other_areas: ", other_areas
 			self.populate_user_session() #Only need to do this when areas, journals  or followers change
 			
 			#all_areas = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
@@ -430,7 +432,8 @@ class AccountHandler(BaseHandler):
 				if not email:
 					email = None
 
-				self.add_message('success', 'Email address updated.')
+				self.add_message('info', 'Email address updated.')
+				
 				if self.session['user']['email'] != email:
 					u.email = email
 					changed = True
@@ -453,17 +456,7 @@ class AccountHandler(BaseHandler):
 class NewAreaHandler(BaseHandler):
 	def get(self):
 		username = self.session['user']['name']
-# 		instructions - moved to template= \
-# 		"<b>Instructions</b> to define the boundary of a new Area of Interest:" \
-# 			"</span></p>"\
-# 			"<li>Drag (Left click and hold) to move the center of the map over your area.</li>"\
-# 			"<li>Zoom till your area takes up most of the map.</li>" \
-# 			"<li>Tick the <i>Landsat Grid</i> checkbox to see where images will be taken.</li>" \
-# 			"<li>Create markers by clicking around the boundary in an <b>anticlockwise</b> direction.</li> " \
-# 			"<li>When you get back to the starting point, click on the first marker to close the polygon. </li>" \
-# 			"<li>Click <i>Start Again</i> if you make a mistake.</li> "
-# 		
-# 		self.add_message('info', instructions)
+
 		self.render('new-area.html', {
 				'username': username
 			})	
@@ -471,12 +464,13 @@ class NewAreaHandler(BaseHandler):
 	def post(self):
 		name = self.request.get('name')
 		descr = self.request.get('description')
-		logging.info('NewAreaHandler name: %s description:%s', name, descr)
+		#logging.debug('NewAreaHandler name: %s description:%s', name, descr)
 		
 		try:
 			coordinate_geojson_str = self.request.get('coordinates').decode('utf-8')
-			logging.info(coordinate_geojson_str)
+			#logging.debug("NewAreaHandler() coordinate_geojson_str: ", coordinate_geojson_str)
 			geojsonBoundary = geojson.loads(coordinate_geojson_str)
+	
 		except:
 			return self.render('new-area.html', {
 				'username': name
@@ -485,7 +479,11 @@ class NewAreaHandler(BaseHandler):
 		coords = []
 		pts = []
 		center_pt = []
-		
+		tmax_lat = -90
+		tmin_lat = +90
+		tmax_lon = -180
+		tmin_lon = +180
+		print "geojsonBoundary: ", geojsonBoundary
 		for item in geojsonBoundary['features']:
 			if item['properties']['featureName']=="boundary":
 				pts=item['geometry']['coordinates']
@@ -493,57 +491,124 @@ class NewAreaHandler(BaseHandler):
 		
 				for lat,lon in pts:
 					gp = db.GeoPt(float(lat), float(lon))
-					#print("lat:", lat,"lon:", lon)
 					coords.append(gp)
-					#coords.append(coords[0]) # for a polygon, last point must also be the first point.
+
+					#get bounds of area.
+					if lat > tmax_lat: 
+						tmax_lat = lat
+					if lat < tmin_lat: 
+						tmin_lat = lat
+					if lon > tmax_lon:
+						tmax_lon = lon
+					if lon < tmin_lon: 
+						tmin_lon = lon
+ 					
 			if item['properties']['featureName']=="mapview": # get the view settings to display the area.
 				zoom=item['properties']['zoom']
 				center_pt=item['geometry']['coordinates']
-				logging.info("zoom: %s, center_pt: %s, type(center_pt) %s", zoom, center_pt, type(center_pt) )
+				#logging.debug("zoom: %s, center_pt: %s, type(center_pt) %s", zoom, center_pt, type(center_pt) )
 				center = db.GeoPt(float(center_pt[0]), float(center_pt[1]))
 				#be good to add a bounding box too.
 		if 	self.session['areas_list']:
 			if len(self.session['areas_list']) >= models.AreaOfInterest.MAX_AREAS:
-				self.add_message('error', 'Sorry, only %i areas allowed.' %models.AreaOfInterest.MAX_AREAS)
+				self.add_message('error', 'Sorry, only %i areas allowed per user.' %models.AreaOfInterest.MAX_AREAS)
 		if not name:
-			self.add_message('error', 'Your area of interest needs a short and unique name.')
+			self.add_message('error', 'Your area of interest needs a short and unique name. Please try again') #FIXME - This check should be done in the browser.
 		else:
+			maxlatlon = db.GeoPt(float(tmax_lat), float(tmax_lon))
+			minlatlon = db.GeoPt(float(tmin_lat), float(tmin_lon))
+
+			eeservice.initEarthEngineService() # we need earth engine now.
+			polypoints = []
+			for geopt in coords:
+				polypoints.append([geopt.lon, geopt.lat])
 			
-			area = models.AreaOfInterest(key_name=name,
-					 name=name, description=descr, coordinates=coords, map_center = center, map_zoom = zoom, owner=db.Key(self.session['user']['key']) )
-			for area_url, area_name in self.session['areas_list']:
-				if area.name == area_name:
-					self.add_message('error', 'Sorry, there is already a protected area called %s ' %name)
-					break
-			else: #for loop did not break.
-
-				def txn(user_key, area):
-					user = db.get(user_key)
-					user.areas_count += 1
-					db.put([user, area])
-					return user, area
-
-				xg_on = db.create_transaction_options(xg=True)
+			cw_geom = ee.Geometry.Polygon(polypoints)
+			ccw_geom = cw_geom.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+			#logging.info('feat %s', feat)
+			feat = ee.Feature(ccw_geom, {'name': name, 'fill': 1})
+			
+			total_area = ccw_geom.area().getInfo()/1e6 #area in sq km
+			area_in_cells = total_area/LANSAT_CELL_AREA
+			if total_area > (LANSAT_CELL_AREA * 8): # limit area to an arbitrary maximum size where the system breaks down.
+				self.add_message('error', 'Sorry, your area is too big (%d sq km = %d Landsat images). Try a smaller area.' %(total_area, area_in_cells))
+			else:
+				park_boundary_fc = ee.FeatureCollection(feat)
+				#print "park_boundary_fc: ", park_boundary_fc
+				fc_info= json.dumps(park_boundary_fc.getInfo())
 				
-				user, area = db.run_in_transaction_options(xg_on, txn, self.session['user']['key'], area)
-
-				models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
-				self.add_message('success', 'Created your new area of interest: %s' %(area.name))
-
-				cache.clear_area_cache(user.key(), area.key())
-				#clear_area_followers(area.key())
-				cache.set(cache.pack(user), cache.C_KEY, user.key())
-
-				counters.increment(counters.COUNTER_AREAS)
+				area = models.AreaOfInterest(key_name=name, name=name, description=descr, 
+											coordinates=coords, boundary_fc= fc_info, map_center = center, map_zoom = zoom, 
+											max_latlon = maxlatlon,min_latlon = minlatlon, 
+											owner=db.Key(self.session['user']['key']) )
 				
-				self.populate_user_session()
+				#new_fc = ee.FeatureCollection(json.loads(fc_info)) 
+				#print "new_fc: ", new_fc # how do you create a FC from json?
 				
-				#self.redirect(webapp2.uri_for('view-area', username=self.session['user']['name'], area_name=area.name))
-				self.redirect(webapp2.uri_for('view-area', area_name=area.name))
-				return
+				for area_url, area_name in self.session['areas_list']:
+					if area.name == area_name:
+						self.add_message('error', 'Sorry, there is already a protected area called %s. Please choose a different name and try again ' %name)
+						break
+				else: #for loop did not break.
+	
+					def txn(user_key, area):
+						user = db.get(user_key)
+						user.areas_count += 1
+						db.put([user, area])
+						return user, area
+	
+					xg_on = db.create_transaction_options(xg=True)
+					
+					user, area = db.run_in_transaction_options(xg_on, txn, self.session['user']['key'], area)
+	
+					models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
+					self.add_message('success', 'Created your new area of interest: %s covering about %d sq.km'  %(area.name, total_area ) )
+	
+					cache.clear_area_cache(user.key(), area.key())
+					#clear_area_followers(area.key())
+					cache.set(cache.pack(user), cache.C_KEY, user.key())
+	
+					counters.increment(counters.COUNTER_AREAS)
+					
+					self.populate_user_session()
+					
+					#self.redirect(webapp2.uri_for('view-area', username=self.session['user']['name'], area_name=area.name))
+					self.redirect(webapp2.uri_for('view-area', area_name=area.name))
+					return
 		print 'NewAreaHandler - no user'
-		self.render('view-area.html')
+		self.render('new-area.html')
 
+
+
+class SelectCellHandler(BaseHandler):
+	def get(self, celldata):
+		print 'SelectCellHandler get ', celldata
+		username = self.session['user']['name']
+		cell_feature = json.loads(celldata)
+		print 'cell_feature ', cell_feature
+		self.populate_user_session()
+		displayAjaxResponse = 'SelectedCell %d %d'%(cell_feature['properties']['path'], cell_feature['properties']['row'])
+		self.response.write(displayAjaxResponse)
+		return
+
+	
+	def post(self):
+		print 'SelectCellHandler post'
+		name = self.request.get('name')
+		descr = self.request.get('description')
+		#logging.debug('NewAreaHandler name: %s description:%s', name, descr)
+		
+		try:
+			coordinate_geojson_str = self.request.get('coordinates').decode('utf-8')
+			#logging.debug("NewAreaHandler() coordinate_geojson_str: ", coordinate_geojson_str)
+			geojsonBoundary = geojson.loads(coordinate_geojson_str)
+	
+		except:
+			return self.render('view-area.html', {
+				'username': name
+			})	
+		
+		self.render('view-area.html')
 
 class NewJournal(BaseHandler):
 	def get(self):
@@ -588,9 +653,9 @@ class ViewArea(BaseHandler):
 	def get(self, area_name):
 		# page = int(self.request.get('page', 1))
 		area = cache.get_area(None, area_name)
-		logging.debug('ViewArea area_name %s %s', area_name, area)
+		#logging.debug('ViewArea area_name %s %s', area_name, area)
 		if not area:
-			area = cache.get_area(None, area_name)
+			#area = cache.get_area(None, area_name)
 			logging.error('ViewArea: Area not found! %s', area_name)
 			self.error(404)
 		else:
@@ -618,7 +683,7 @@ class ViewAreaAction(BaseHandler):
 	def get(self, area_name, action, satelite, algorithm, latest):
 		
 		area = cache.get_area(None, area_name)
-		logging.info('ViewAreaAction area_name %s %s', area_name, area)
+		logging.debug('ViewAreaAction area_name %s %s', area_name, area)
 		if not area:
 			area = cache.get_area(None, area_name)
 			logging.error('ViewArea: Area not found! %s', area_name)
@@ -634,12 +699,63 @@ class ViewAreaAction(BaseHandler):
 				'latest' : latest
 			})
 
+'''
+Use Earth Engine to work out which cells belong to an AreaOfInterest.
+Store the result in aoi.cells.
+Each cell identified by landsat Path and Row.
+'''
+class GetLandsatCellsHandler(BaseHandler):
+	#This handler responds to Ajax request, hence it returns a response.write()
+
+	def get(self, area_name):
+		#TODO: This test is to help me understand AJAX vs HTTP but serves not other purpose.
+		if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+			logging.debug('GetLandsatCellsHandler() - This is a normal HTTP request') # render the ViewArea page, then send image.
+		else:
+			logging.debug('GetLandsatCellsHandler() - This is an AJAX request') 
+		
+		area = cache.get_area(None, area_name)
+		if not area or area is None:
+			logging.info('GetLandsatCellsHandler - bad area returned %s', area_name)
+			self.error(404)
+			return
+		#logging.debug('GetLandsatCellsHandler area.name: %s type: %d area.key(): %s', area.name, type(area), area.key())
+	
+		eeservice.initEarthEngineService() # we need earth engine now.
+	
+		area.max_path, area.min_path, area.max_row, area.min_row = eeservice.getLandsatCells(area)
+		
+		if area.max_path == -1 or area.min_path == -1 or area.max_row == -1 or area.min_row == -1:
+			self.populate_user_session()
+			#self.add_message('error','Error calculating Cells')
+			logging.error('GetLandsatCellsHandler: Error calculating Cells')
+			self.response.write('Error calculating Cells')
+			return
+		else:
+			for p in range(area.min_path, area.max_path+1):
+				for r in range(area.min_row, area.max_row+1):
+					#data = cache.get_area_key(None, area_name)
+					cellname = str(p*1000+r)
+					logging.debug( "Creating Cell (%d, %d), %s", p, r, cellname)
+					cell = models.LandsatCell(parent=area.key(), key_name=str(p*1000+r), path = p, row = r)
+					db.put(cell)
+					area.cells.append(cell.key())
+					
+			db.put(area)
+			cache.flush()
+			self.populate_user_session()
+			self.add_message('success','Your area is covered by %d Landsat Cells' %len(area.cells))
+			celldata = {'max_path':area.max_path, 'min_path':area.min_path, 'max_row':area.max_row, 'min_row':area.min_row }
+			self.response.write(json.dumps(celldata))
+			print 'GetLandsatCellsHandler: done'
+			return
 
 class LandsatOverlayRequestHandler(BaseHandler):
 	#This handler responds to Ajax request, hence it returns a response.write()
 
-	def get(self, area_name, action, satelite, algorithm, latest):
+	def get(self, area_name, action, satelite, algorithm, latest, **opt_params):
 		area = cache.get_area(None, area_name)
+
 		if not area:
 			logging.info('LandsatOverlayRequestHandler: ViewArea is not an area') 
 			self.error(404)
@@ -647,15 +763,10 @@ class LandsatOverlayRequestHandler(BaseHandler):
 
 		if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
 			print 'This is a normal request' # render the ViewArea page, then send image.
-			#logging.debug('ViewArea area_name %s %s', area_name, area)
-			#self.render('view-area.html', {
-			#			'username': self.session['user']['name'],
-			#			'area': area})
 		else:
-			print 'This is an AJAX request'
+			logging.debug('LandsatOverlayRequestHandler - AJAX request ') 
 		
-		logging.debug("LandsatOverlayRequestHandler action:%s, satelite:%s, algorithm:%s, latest:%s", action, satelite, algorithm, latest)
-		logging.debug('LandsatOverlayRequestHandler area_name %s %s', area_name, type(area))
+		logging.debug("LandsatOverlayRequestHandler area:%s, action:%s, satelite:%s, algorithm:%s, latest:%s path %s, row %s", area_name, action, satelite, algorithm, latest, opt_params['lpath'], opt_params['lrow'])
 		if not area:
 			logging.info('LandsatOverlayRequestHandler - bad area returned %s, %s', area, area_name)
 			self.error(404)
@@ -665,87 +776,44 @@ class LandsatOverlayRequestHandler(BaseHandler):
 		for geopt in area.coordinates:
 			poly.append([geopt.lon, geopt.lat])
 		eeservice.initEarthEngineService() # we need earth engine now.
-		map_id = eeservice.getLandsatOverlay(poly, satelite, algorithm, latest)
-		#image = eeservice.getL8SharpImage(poly, int(latest))
-		#map_id  = eeservice.getVisualMapId(image,  'red',  'green', 'blue')
-		del map_id['image'] #can't serialise a memory object, and browser won't need it.
-		#logging.info("map_id %s", map_id)
-		#logging.info("tile_path %s",area.tile_path)
+		map_id = eeservice.getLandsatOverlay(poly, satelite, algorithm, latest, opt_params)
+		if not map_id:
+			#self.add_message('info','no overlapping image found for this cell') add_message needs a reload to display messages. 
+			self.populate_user_session()
+			self.response.write(json.dumps(map_id))
+			return
+		
+		#Save observation 
+		
+		path = int(opt_params['lpath'])
+		row =  int(opt_params['lrow'])
+			
+		cell = cache.get_cell(path, row)
+		if cell is not None:
+			captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
+			obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = captured_date, image_id = map_id['id'], rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
+			print "obs: ", obs
 
-		if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-			print 'This is a normal request' # render the ViewArea page, then send image.
-			#logging.debug('ViewArea area_name %s %s', area_name, area)
-			#self.render('view-area.html', {
-			#			'username': self.session['user']['name'],
-			#			'area': area})
-		else:
-			print 'This is an AJAX request'		
+			db.put(obs)
+			#print "type(cell): ", type(cell)
+			#latestObs = cell.latestObservation(map_id['collection'])
+			#print "latest Observation", latestObs
+			#db.put(cell)
+
+		del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
+		#logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
 		self.populate_user_session()
-		#self.add_message('success', 'map_id:%s' %(map_id))
 		self.response.write(json.dumps(map_id))
 
-# class L8LatestNDVIOverlayHandler(BaseHandler):
-# 	#This handler responds to Ajax request, hence it returns a response.write()
-# 	def get(self, username, area_name):
-# 		logging.info("L8LatestNDVIOverlayHandler")
-# 		area = cache.get_area(username, area_name)
-# 		if not area or username != self.session['user']['name']:
-# 			logging.info('L8LatestNDVIOverlayHandler - bad area returned %s, username %s, %s', area, username, area_name)
-# 			self.error(404)
-# 			return
-# 		logging.debug('L8LatestNDVIOverlayHandler area_name %s %s', area_name, type(area))
-# 		eeservice.initEarthEngineService() #- moved to main user login page
-# 		poly = []
-# 		for geopt in area.coordinates:
-# 			poly.append([geopt.lon, geopt.lat])
-# 		
-# 		image = eeservice.getLatestLandsatImage(poly, 'LANDSAT/LC8_L1T_TOA', 1)
-# 		map_id = eeservice.getL8LatestNDVIImage(image)
-# 		del map_id['image'] #can't serialise a memory object, and browser won't need it.
-# 		#logging.info("map_id %s", map_id)
-# 		#logging.info("tile_path %s",area.tile_path)
-# 		self.populate_user_session()
-# 		#self.add_message('success', 'map_id:%s' %(map_id))
-# 		self.response.write(json.dumps(map_id))
-
-
-class L8LatestVisualDownloadHandler(BaseHandler):
-	#This handler responds to Ajax request, hence it returns a response.write()
-	def get(self, username, area_name, action):
-		logging.info("L8LatestVisualDownloadHandler %s", action)
-		area = cache.get_area(username, area_name)
-		if not area or username != self.session['user']['name']:
-			logging.info('L8LatestVisualDownloadHandler - bad area returned %s, username %s, %s', area, username, area_name)
-			self.error(404)
-			return
-		logging.info('L8LatestVisualDownloadHandler area_name %s %s', area_name, type(area))
-		eeservice.initEarthEngineService() # we need earth engine now.
-		
-		poly = []
-		for geopt in area.coordinates:
-			poly.append([geopt.lon, geopt.lat])
-
-		image = eeservice.getL8SharpImage(poly, 1)
-			
-		path = eeservice.getOverlayPath(image, "L8TOA", 'red',  'green', 'blue')
-		
-		#cache.set(cache.pack(user), cache.C_KEY, user.key())
-		#self.populate_user_session()
-		#self.add_message('success', 'map_id:%s' %(map_id))
-		self.response.write(path)
-
 class CheckNewHandler(BaseHandler):
-	#This handler responds to Cron request, no need to return a response
+	#This handler responds to Cron requests to check for new images in each AOI, no need to return a response
 	
 	def get(self):
 		logging.info("Cron CheckNewHandler check-new-images")
-			
 		eeservice.checkNewAllAreas()
-		
 		self.response.write("Checked for new images")
-			
-			
-			
+		
+
 class ViewJournal(BaseHandler):
 	def get(self, username, journal_name):
 		page = int(self.request.get('page', 1))
@@ -1002,12 +1070,12 @@ class FollowAreaHandler(BaseHandler):
 				self.add_message('error', 'You already have a journal called %s.' %name)
 				break
 		else:
+			journal.journal_type = "observations"
 			def txn(user_key, journal):
 				user = db.get(user_key)
 				user.journal_count += 1
 				db.put([user, journal])
 				return user, journal
-			journal.journal_type = "observations"
 
 			user, journal = db.run_in_transaction(txn, self.session['user']['key'], journal)
 			cache.clear_journal_cache(db.Key(self.session['user']['key']))
@@ -1048,6 +1116,7 @@ class NewEntryHandler(BaseHandler):
 
 			db.put([user, journal, entry, content])
 			return user, journal
+		
 		handmade_key = db.Key.from_path('Entry', 1, parent=journal_key)
 		entry_id = db.allocate_ids(handmade_key, 1)[0]
 		entry_key = db.Key.from_path('Entry', entry_id, parent=journal_key)
@@ -1958,6 +2027,7 @@ app = webapp2.WSGIApplication([
 	webapp2.Route(r'/register', handler=Register, name='register'),
 	webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
 	webapp2.Route(r'/checknew', handler=CheckNewHandler, name='check-new-images'),
+	webapp2.Route(r'/selectcell/<celldata>', handler=SelectCellHandler, name='select-cell'),
 
 	webapp2.Route(r'/stats', handler=StatsHandler, name='stats'),
 	webapp2.Route(r'/observatory', handler=ObservatoryHandler, name='observatory'),
@@ -1970,7 +2040,7 @@ app = webapp2.WSGIApplication([
 	# taskqueue
 	webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
 	webapp2.Route(r'/tasks/backup', handler=BackupHandler, name='backup'),
-
+	
 	# google site verification
 	webapp2.Route(r'/%s.html' %settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
 	
@@ -1978,8 +2048,12 @@ app = webapp2.WSGIApplication([
 	webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),
 	webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),
 	webapp2.Route(r'/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'), #was new-obstask
+	webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #was new-obstask
 	webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
-	webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
+    #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
+    webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<lpath:\d+>/<lrow:\d+>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
+		
+	#webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
 	#webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-obstask'),
 	#webapp2.Route(r'/<username>/<area_name><param:.*>', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
 		
@@ -2041,6 +2115,7 @@ RESERVED_NAMES = set([
 	'save',
 	#'security',
 	'site',
+	'selectcell',
 	'stats',
 	'observatory',
 	'tasks',
