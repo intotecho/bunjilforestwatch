@@ -24,6 +24,9 @@ max-width: none;
 <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
 <script type="text/javascript" src="/static/js/draggable-object.js"></script>	
 <script type="text/javascript" src="/static/js/custom-tile-overlay.js"></script>
+<script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>  
+<script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>  
+<script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>  
 <script type="text/javascript" src="/static/js/landsat-grid.js"></script>
 <script type="text/javascript" src="/static/js/polygon-outliner.js"></script>
 <script type="text/javascript" src="/static/js/drawing-tools.js"></script>
@@ -98,12 +101,67 @@ function ajaxActionUrl(action)
    return url
 };
 
+/*
+var selectedLAT_UL; //coordinates of the selected Landsat Cell.
+var selectedLON_UL;
+var selectedLAT_UR; 
+var selectedLON_UR;
+var selectedLAT_LL;
+var selectedLON_LL;
+var selectedLAT_LR;
+var selectedLON_LR;
+*/
 function httpgetActionUrl(action)
 {
    // action/<action> can be 'overlay' or 'download'.
-   url = "{{ area|area_url }}"  + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
+   //url = "{{ area|area_url }}"  + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest 
+   var url = "{{ area|area_url }}"  + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest + "/" + selectedPath + "/" + selectedRow;
    return url
 };
+
+
+function jsonStringifySelectedCell()
+{
+   var ul=[selectedLAT_UL, selectedLON_UL];
+   var ll=[selectedLAT_LL, selectedLON_LL];
+   var lr=[selectedLAT_LR, selectedLON_LR];
+   var ur=[selectedLAT_UR, selectedLON_UR];
+   var cell_coords = Array();
+   cell_coords.push(ul);
+   cell_coords.push(ll);
+   cell_coords.push(lr);
+   cell_coords.push(ur);
+  
+   var cell_feature = { "type": "Feature",
+            "geometry":   {"type": "Polygon","coordinates": cell_coords},
+            "properties": {"featureName": "cell_boundary", "path": selectedPath, "row": selectedRow}
+                 };
+   return JSON.stringify(cell_feature);
+};
+
+
+function cellSelected()
+{
+// Fetch Overlay of Latest Landsat
+    //var _url = ajaxActionUrl("overlay");
+  var httpget_url = "/selectcell/" + jsonStringifySelectedCell()
+  console.log( "cellSelected() %d %d %s", selectedPath, selectedRow, httpget_url);
+   
+  $("#observations_panel").collapse('show');
+       $('#observations_panel').empty();
+       $('#observations_panel').append("SelectCell...");
+       $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+       $.get(httpget_url).done(function(data) {
+    	      $('#observations_panel').empty();
+              $('#observations_panel').append(data);
+        }).error(function( jqxhr, textStatus, error ) {
+            var err = textStatus + ', ' + error;
+            console.log( "Request Failed: " + err);
+            $('#observations_panel').empty();
+            $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
+     });
+}
+
 
 
 function initialize() {
@@ -133,7 +191,7 @@ function initialize() {
 		htmlString = "<p><font-size:50%;color:blue strong>zoom:</strong> " + map.getZoom() + "</p>";
 		htmlString += "<p>lat: " + map.getCenter().lat().toFixed(3) + ", lng: " + map.getCenter().lng().toFixed(3) + "<br></p>";
 		//htmlString +=  this.get("Description");
-		console.log( htmlString);
+		//console.log( htmlString);
 		$(landsatgrid_panel).html(htmlString);
     });
 
@@ -146,7 +204,9 @@ function initialize() {
     {% for j in area.coordinates %}
     	latlngs.push(new google.maps.LatLng({{j}}))
     {% endfor %}	
-        
+    
+    var latlng_bounds = {'max_lat': {{area.max_latlon.lat}}, 'min_lat': {{area.min_latlon.lat}}, 'max_lon': {{area.max_latlon.lon}}, 'min_lon': {{area.min_latlon.lon}}};
+    
     areaBoundary = new google.maps.Polygon({
                 paths: latlngs,
                 strokeColor: '#FFFF00',
@@ -157,29 +217,66 @@ function initialize() {
             });
     areaBoundary.setMap(map);
 
-    // Create Overlay of Latest Landsat8
-    $('#get_overlay_btn').click(function(){
-    	 _url = ajaxActionUrl("overlay");
-    	httpget_url = httpgetActionUrl("overlay")
-        //window.history.replaceState('string', 'load image', httpget_url);
-
-    	//var pathname = window.location.pathname; // ie the above.
-        console.log( "urls", ajax_url, httpget_url);
+    console.log("Check Cells")
+    
+    /* if AOI is new, then need to get earthengine to calculate what cells overlap the areaAOI. 
+        This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
+    */
+    var cellarray;
+    if ( {{area.max_path}} === -1) { //need to fetch the overlapping cells.
+        console.log("Check Cells is Empty ");
+        var url = "{{ area|area_url }}"  + '/' + 'getcells';
+        console.log( "url: ", url);
         $("#observations_panel").collapse('show');
-	 	$('#observations_panel').empty();
-	 	$('#observations_panel').append("Getting Sat Data...");
- 		$('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
-	 	$.get(ajax_url).done(function(data) {
-	 	    mapobj = jQuery.parseJSON(data);
-	 	    $('#observations_panel').empty();
-	 	    $('#observations_panel').append("Captured: ", mapobj.date_acquired, "\n", mapobj.id, "\nPath: ", mapobj.path, ", Row: ", mapobj.row);
-	 	    createImageOverlay(true, mapobj.mapid,  mapobj.token, mapobj.date_acquired);
+        $('#observations_panel').empty();
+        $('#observations_panel').append("Getting Area's Cells ...");
+        $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+        $.get(url).done(function(data) {
+            cellarray = jQuery.parseJSON(data);
+            $('#observations_panel').empty();
+            $('#observations_panel').append("Cells: ", cellarray.max_path, "-", cellarray.max_row, ", ", cellarray.min_path, "-", cellarray.min_row);
+            //createImageOverlay(true, mapobj.mapid,  mapobj.token, mapobj.date_acquired);
 
-	    }).error(function( jqxhr, textStatus, error ) {
-	    	var err = textStatus + ', ' + error;
-	 	    console.log( "Request Failed: " + err);
-		 	$('#observations_panel').empty();
-		 	$('#observations_panel').append("<p>Failed: " + err + "</p>"); 
+        }).error(function( jqxhr, textStatus, error ) {
+            var err = textStatus + ', ' + error;
+            console.log( "Get Cells Failed: " + err);
+            $('#observations_panel').empty();
+            $('#observations_panel').append("<p>GetCells Failed: " + err + "</p>"); 
+        });
+    } //get cells    
+    else
+   	{
+        cellarray = {'max_path': {{area.max_path}}, 'min_path': {{area.min_path}}, 'max_row': {{area.max_row}}, 'min_row': {{area.min_row}}};
+   	}
+    
+    // Fetch Overlay of Latest Landsat
+    $('#get_overlay_btn').click(function(){
+    	//var _url = ajaxActionUrl("overlay");
+    	var httpget_url = httpgetActionUrl("overlay")
+        //window.history.replaceState('string', 'load image', httpget_url);
+    	//var pathname = window.location.pathname; // ie the above.
+      console.log( "urls", httpget_url);
+       $("#observations_panel").collapse('show');
+	 	   $('#observations_panel').empty();
+	 	   $('#observations_panel').append("Getting Sat Data...");
+ 		   $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+	 	   $.get(httpget_url).done(function(data) {
+	         $('#observations_panel').empty();
+	 	    mapobj = jQuery.parseJSON(data);
+	 	    if (mapobj)
+	 	    	{
+	 	    	  $('#observations_panel').append("Captured: ", mapobj.date_acquired, "\n", mapobj.id, "\nPath: ", mapobj.path, ", Row: ", mapobj.row);
+	 	    	  createImageOverlay(true, mapobj.mapid,  mapobj.token, mapobj.date_acquired);
+	 	    	}
+	 	    else
+	 	    	{
+	 	       	         $('#observations_panel').append("No Sat Data");
+	 	    	}
+	        }).error(function( jqxhr, textStatus, error ) {
+	            var err = textStatus + ', ' + error;
+	            console.log( "Request Failed: " + err);
+	            $('#observations_panel').empty();
+	            $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
 	 	});
     }); //get_overlay_btn.click
 
@@ -212,9 +309,9 @@ function initialize() {
     		if ($(this).is(':checked')){
     			if(layerID == 0)
     			{
-    				requestLandsatGrid(map, true, true);
+    				requestLandsatGrid(map, true, true, latlng_bounds /*cellarray*/); //map, showlayer, clickable, cells
 				}
-				if(layerID == 1)
+				if(layerID == 1) 
     			{
 	  				drawingManager = createDrawingManager(map);
                     google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
@@ -235,7 +332,7 @@ function initialize() {
     		else {
 	    		if(layerID == 0)
     			{
-    				requestLandsatGrid(map, false, true);
+    				requestLandsatGrid(map, false, true, null); //map, showlayer, clickable, cells
            		 	removeLandsatGrid();
     			}
     			if(layerID == 1)

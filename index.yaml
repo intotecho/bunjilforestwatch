@@ -43,3 +43,10 @@ indexes:
   properties:
   - name: date
     direction: desc
+
+- kind: Observation
+  ancestor: yes
+  properties:
+  - name: image_collection
+  - name: captured
+    direction: desc

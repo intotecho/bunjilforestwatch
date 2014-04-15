@@ -14,10 +14,7 @@ import hashlib
 import urllib
 import utils
 import webapp2
-
-
-
-
+import ee
 
 class DerefModel(db.Model):
 	def get_key(self, prop_name):
@@ -85,7 +82,7 @@ class User(db.Model):
 	twitter_secret = db.StringProperty(indexed=False)
 
 
-# not required
+# not really required
 	def count(self):
 		if self.entry_count and self.last_entry and self.first_entry:
 			self.entry_days = (self.last_entry - self.first_entry).days + 1
@@ -145,27 +142,8 @@ class AreaFollowersIndex(db.Model):  #A Area has a list of users in an AreaFollo
 class UserFollowingAreasIndex(db.Model): #A User has a list of areas in a UserFollowingAreasIndex(key=area)
     areas = db.StringListProperty()
     
-'''
-Landsat Cell represents an 170sq km area where each image is captured. 
-Each path and row identifies a unique cell.
-An AOI makes overlaps a set of one or more cells - and creates a constant list of these.
-Each cell has a different schedule when new images arrive.
-'''
-class LandsatCell(db.Model):
-	#constants - not changed once created. Created when AOI is created. 
-	path = db.IntegerProperty(required=True, default=0)     # Landsat Path
-	row  = db.IntegerProperty(required=True, default=0)     # Landsat Row
-	center = db.GeoPtProperty(required=True, default=None); # Geographic Center of Cell
-	bound = db.ListProperty(float, default=None)            # Geographic Boundary of Cell
-	
-	#variables - updated with new images.
-	#TODO: This could be new class -i.e. sorted list of observations. 
-	latest_observation = db.DateTimeProperty() 				#Date of Latest Retrieved Image
-	latest_id = db.StringProperty(required=False)           #Image ID of Latest Retrieved Image - key to query EE.
-	observation_count = db.IntegerProperty(required=True, default=0) #simple counter.
-	#map_id = db.StringProperty(required=False, default=None) #overlay from GEE - should be part of Observation class
-	#token	= db.LinkProperty(required=False, default=None) #should be part of Observation object
- 
+
+
 class AreaOfInterest(db.Model):
 
 	ENTRIES_PER_PAGE = 5
@@ -181,9 +159,22 @@ class AreaOfInterest(db.Model):
 	cells = db.ListProperty(db.Key, default=None) # list of Landsat cells overlapping this area - calculated on new.
 	entry_count = db.IntegerProperty(required=True, default=0) # reports related to this area - not used yet
 	
+	max_path = db.IntegerProperty(required=True, default=-1)
+	min_path = db.IntegerProperty(required=True, default=-1)
+	max_row  = db.IntegerProperty(required=True, default=-1)
+	min_row  = db.IntegerProperty(required=True, default=-1)
+	
+	
 	#Geometry of area boundary
-	coordinates = db.ListProperty(db.GeoPt, default=None)
+	coordinates = db.ListProperty(db.GeoPt, default=None) # get rid of this and replace with fc.
+	boundary_fc = db.TextProperty(required = True) # ee.FeatureCollection or park boundary in JSON string format
 	bound = db.ListProperty(float, default=None)
+	max_latlon = db.GeoPtProperty(required=True, default=None)
+	min_latlon = db.GeoPtProperty(required=True, default=None)
+	#max_lat = db.IntegerProperty(required=True, default=0)
+	#min_lat = db.IntegerProperty(required=True, default=0)
+	#max_lon = db.IntegerProperty(required=True, default=0)
+	#min_lon  = db.IntegerProperty(required=True, default=0)
 	#boundary	= db.GeoPtProperty(0,0, repeated=True)
 	#altitudes = db.ListProperty(float, default=None)
 	
@@ -222,6 +213,55 @@ class AreaOfInterest(db.Model):
 		else:
 			#return webapp2.uri_for('view-area', username=self.key().parent().name(),  area_name= self.name)
 			return webapp2.uri_for('view-area', area_name= self.name)
+
+'''
+Landsat Cell represents an 170sq km area where each image is captured. 
+Each path and row identifies a unique cell.
+An AOI makes overlaps a set of one or more cells - and creates a constant list of these.
+Each cell has a different schedule when new images arrive.
+'''
+class LandsatCell(db.Model):
+	#constants - not changed once created. Created when AOI is created. 
+	path = db.IntegerProperty(required=True, default=0)     # Landsat Path
+	row  = db.IntegerProperty(required=True, default=0)     # Landsat Row
+	#Can filter on these using imageCollection.filterMetadata('WRS_PATH', 'EQUALS', 40).filterMetadata('WRS_ROW', 'EQUALS', 30)
+	
+	center = db.GeoPtProperty(required=False, default=None) # Geographic Center of Cell
+	bound = db.ListProperty(float, default=None)            # Geographic Boundary of Cell
+	#created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
+	
+	aoi = db.ReferenceProperty(AreaOfInterest) #key to area that includes this cell
+	
+	#FIXME: Multiple AOI could reference the same cell so change to a list...
+	
+	#L8_latest   = db.ReferenceProperty(Observation, default=None)
+	#L8_previous = db.ReferenceProperty(Observation, default=None)
+	#L7_latest   = db.ReferenceProperty(Observation, default=None)
+	#L7_previous = db.ReferenceProperty(Observation, default=None)
+	followed = db.BooleanProperty(required = True, default = False) # Set if cell is monitored
+	
+	
+	def latestObservation(self, collectionName="L8"): # query for latest observation from given imageColleciton.
+		#return db.GqlQuery("SELECT * FROM Observation WHERE ((landsatCell = self )AND (collection = collectionName)) ORDER_BY captured ASC LIMIT 1")
+		q = Observation.all().ancestor(self).filter('image_collection =', collectionName).order('-captured')
+		return q.get()
+
+'''
+class Observation contains the metadata and map_id for a (Landsat) satelite image that has been retrieved and converted to a usable (visible/NDVI) format.
+
+The main use is the captured date. Once this observation has been actioned, it becomes the latest, against which future observations are base lined.
+This allows the app to redraw the overlay computed by earthe engine on a new browser session without recalculating it - providing the overlay token has not expired.
+In which case, app will need to regenerate the observation.    
+'''
+class Observation(db.Model):
+	image_collection = db.StringProperty(required=False)				#identifies the ImageCollection
+	captured = db.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
+	image_id = db.StringProperty(required=False)           		# LANDSAT Image ID of Image - key to query EE.
+	rgb_map_id = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
+	rgb_token	= db.StringProperty(required=False, default=None) 	# RGB Mpa Overlay Token might have expired.
+	algorithm = db.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this. 
+	#landsatCell = db.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
+    
 
 class Journal(db.Model):
 	ENTRIES_PER_PAGE = 5

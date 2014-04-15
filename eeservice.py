@@ -71,20 +71,34 @@ def checkNewAllAreas():
     all_areas = cache.get_all_areas()
     logging.info( "checkNewAllAreas(): areas = %s", all_areas)
     for area in all_areas:
-        checkNewForArea(area)
+        checkNewForArea(area, "LANDSAT/LC8_L1T_TOA")
+        checkNewForArea(area, "LANDSAT/L7_L1T")
     return True
-
 
 '''
 checkNew() looks at each subscribed area of interest and checks to see if there is a new image in EE since the last check.
 '''
 
-def checkNewForArea(area):
+def checkNewForArea(area, collection_name):
     #logging.info( "checkNewForArea(): area = %s", area)
     # FIXME: does nothing
- 
+    all_cells = LandsatCell.all().filter('followed =', True)
+    for cell in all_cells:
+        checkNewForCell(area, cell, collection_name)
     return True
+
+'''
+checkNew() looks at each subscribed area of interest and checks to see if there is a new image in EE since the last check.
+'''
+
+def checkNewForLandsatCell(cell, collection_name):
+    # FIXME: does nothing
+    storedlastObs = cell.latestObservation(collection_name)
+    latest_image = getLatestLandsatImage(area.coords, collection_name, latest_depth, params)
     
+    return True
+
+
 '''
 getLandsatImage(array of points, string as name of ee.imagecollection)
 returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
@@ -93,42 +107,58 @@ Could also clip the image to the coordinates to reduce the size.
 secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
 
     
-def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_path = None, opt_row = None):
+def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, params):
 	#logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
-	feat = ee.Geometry.Polygon(boundary_polygon);
+	cw_feat = ee.Geometry.Polygon(boundary_polygon)
+	feat = cw_feat.buffer(0, 1e-10)
 	#logging.info('feat %s', feat)
 	boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-	#boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
-	logging.debug('Temporarily disabled buffer to allow AOI points in clockwise order due to EEAPI bug')
+	
+    #boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+	#logging.debug('Temporarily disabled buffer to allow AOI points in clockwise order due to EEAPI bug')
 
-	boundary_feature_buffered = boundary_feature 
-	park_boundary = ee.FeatureCollection(boundary_feature_buffered)
-	info = park_boundary.getInfo()
+	#boundary_feature_buffered = boundary_feature 
+	park_boundary = ee.FeatureCollection(boundary_feature)
+	
 	end_date   = datetime.datetime.today()
-	start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear )
-	logging.debug('start:%s, end:%s ',start_date,  end_date)
+	start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear/6 )
+	logging.debug('getLatestLandsatImage() start:%s, end:%s ',start_date,  end_date)
+	#logging.debug('getLatestLandsatImage() park boundary as FC %s ',park_boundary)
 
 	image_collection = ee.ImageCollection(collection_name)
-	sortedCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).sort('system:time_start', False )
-	resultingCollection = sortedCollection
-	if opt_path is not None and opt_row is not None:
+	#print image_collection.getInfo()
+	
+	if ('lpath' in params) and ('lrow' in params):
+		
+		path = int(params['lpath'])
+		row = int(params['lrow'])
+		#image_name =  collection_name[8:11] + "%03d%03d" %(path, row)
+		#print image_name
 		#filter Landsat by Path/Row and date
 		if ("L7" in collection_name):
 			row_fieldname = "STARTING_ROW"
 		else:
 			row_fieldname = "WRS_ROW"
-		resultingCollection = sortedCollection.filterMetadata('WRS_PATH', 'equals', opt_path).filterMetadata(row_fieldname, 'equals', opt_row)
+		resultingCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).filterMetadata('WRS_PATH', 'equals', path).filterMetadata(row_fieldname, 'equals', row) #)
+		
+	else:
+		resultingCollection = image_collection.filterDate(start_date, end_date).filterBounds(park_boundary)
+	
+	sortedCollection = resultingCollection.sort('system:time_start', False )
 	
 	#logging.info('Collection description : %s', sortedCollection.getInfo())
-  
-	scenes  = resultingCollection.getInfo()
+  	#print "sortedCollection", sortedCollection
+	scenes  = sortedCollection.getInfo()
 	#logging.info('Scenes: %s', sortedCollection)
 	
 	try:
 		feature = scenes['features'][int(latest_depth)]
 	except IndexError:
-		feature = scenes['features'][0]
-	
+		try:
+			feature = scenes['features'][0]
+		except IndexError:
+			logging.error("No Scenes in Filtered Collection")
+			return 0
 #	 #debugging loop through collection
 #	 for x in range(0, len(scenes)):
 #		 print ("x: ", x)
@@ -152,7 +182,7 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, opt_p
 	latest_image = ee.Image(id)
 	props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
 	test = latest_image.getInfo()['bands']
-	#print (test)
+
 	crs = latest_image.getInfo()['bands'][0]['crs']
 	#path	= props['WRS_PATH']
 	#row	 = props['STARTING_ROW']
@@ -360,9 +390,12 @@ def getOverlayPath(image, prefix, red, green, blue):
     logging.info('getOverlayPath: %s',       path)
     return path
 
-def getLandsatOverlay(coords, satellite, algorithm, depth):
+
+def getLandsatOverlay(coords, satellite, algorithm, depth, params):
     if satellite == 'l8':
-        image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
+        image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth, params)
+        if not image:
+        	return 0
         if algorithm == 'rgb':
             sharpimage = SharpenLandsat8HSVUpres(image)
             red = 'red'
@@ -377,29 +410,88 @@ def getLandsatOverlay(coords, satellite, algorithm, depth):
             mapid['id'] = props['system:index']
             mapid['path'] = props['WRS_PATH']
             mapid['row'] = props['WRS_ROW']
+            mapid['collection'] = 'LANDSAT/LC8_L1T_TOA'
+            
             return mapid
         elif algorithm == 'ndvi':
             print "l8 ndvi"
             
     elif satellite == 'l7':
-        image = getLatestLandsatImage(coords, 'LANDSAT/L7_L1T', depth)
-        props = image.getInfo()['properties'] 
+        image = getLatestLandsatImage(coords, 'LANDSAT/L7_L1T', depth, params)
+        if not image:
+        	return 0
         if algorithm == 'rgb':
             sharpimage = SharpenLandsat7HSVUpres(image)
             red   = 'red'
             green = 'green'
             blue  = 'blue'    
             mapid = getVisualMapId(sharpimage, red, green, blue)
+            info = image.getInfo()['properties'] 
+            props = info['properties']
             mapid['date_acquired'] = props['DATE_ACQUIRED']
             mapid['id'] = props['system:index']
             mapid['path'] = props['WRS_PATH']
             mapid['row'] = props['WRS_ROW']
-            
+            mapid['collection'] = 'LANDSAT/L7_L1T'
             return mapid
         
         elif algorithm == 'ndvi':
            print "l7 ndvi"
 
+		
+'''
+getPathRow returns max or min value of the sort_property in a collection.
+
+Example:
+	max_path = getPathRow(boundCollection,"WRS_PATH", False)
+	min_path = getPathRow(boundCollection,"WRS_PATH", True)
+	max_row  = getPathRow(boundCollection,"WRS_ROW", False)
+	min_row  = getPathRow(boundCollection,"WRS_ROW", True)
+'''
+def getPathRow(collection, sort_property, ascending):
+	limited_collection_info = (collection.limit(1, sort_property, ascending).getInfo())		
+	try:
+		max_prop= limited_collection_info['features'][0]['properties'][sort_property]
+		return max_prop
+	except IndexError:
+		print 'getPathRow(): Index Exception'
+		return -1
+
+	
+#determine the overlapping cells from the image collection returned and store them in area.cells.
+def getLandsatCells(area):
+	#TODO: Better to store area.coordinates as an ee.FeatureCollection type. Then this is not repeated for each new image.
+	boundary_polygon = []
+	for geopt in area.coordinates:
+		boundary_polygon.append([geopt.lon, geopt.lat])
+		
+	#logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
+	cw_feat = ee.Geometry.Polygon(boundary_polygon)
+	feat = cw_feat.buffer(0, 1e-10)
+	
+	#logging.info('feat %s', feat)
+	boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
+	#boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+	#logging.debug('getLandsatCells: Temporarily disabled buffer to allow AOI points in clockwise order due to EEAPI bug')
+
+	boundary_feature_buffered = boundary_feature 
+	park_boundary = ee.FeatureCollection(boundary_feature_buffered)
+	#info = park_boundary.getInfo()
+	end_date   = datetime.datetime.today()
+	start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear ) #years.
+	#logging.debug('start:%s, end:%s ',start_date,  end_date)
+
+	boundCollection = ee.ImageCollection('LANDSAT/LC8_L1T_TOA').filterBounds(park_boundary).filterDate(start_date, end_date)
+	#boundCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date)
+
+	max_path = getPathRow(boundCollection,"WRS_PATH", False)
+	min_path = getPathRow(boundCollection,"WRS_PATH", True)
+	max_row  = getPathRow(boundCollection,"WRS_ROW", False)
+	min_row  = getPathRow(boundCollection,"WRS_ROW", True)
+	logging.debug('getLandsatCells(): max_path: %d, min_path: %d, max_row %d, min_row: %d', max_path, min_path, max_row, min_row)
+	return (max_path, min_path, max_row, min_row)
+	
+ 
 
 
 
