@@ -587,7 +587,7 @@ class SelectCellHandler(BaseHandler):
 		cell_feature = json.loads(celldata)
 		print 'cell_feature ', cell_feature
 		self.populate_user_session()
-		displayAjaxResponse = 'SelectedCell %d %d'%(cell_feature['properties']['path'], cell_feature['properties']['row'])
+		displayAjaxResponse = 'Cell %d %d %s'%(cell_feature['properties']['path'], cell_feature['properties']['row'], 'Selected')
 		#TODO Store as a Cell Object, and toggle isfollowed.
 		self.response.write(displayAjaxResponse)
 		return
@@ -767,7 +767,7 @@ class LandsatOverlayRequestHandler(BaseHandler):
 		else:
 			logging.debug('LandsatOverlayRequestHandler - AJAX request ') 
 		
-		logging.debug("LandsatOverlayRequestHandler area:%s, action:%s, satelite:%s, algorithm:%s, latest:%s path %s, row %s", area_name, action, satelite, algorithm, latest, opt_params['lpath'], opt_params['lrow'])
+		logging.debug("LandsatOverlayRequestHandler area:%s, action:%s, satelite:%s, algorithm:%s, latest:%s", area_name, action, satelite, algorithm, latest) #, opt_params['lpath'], opt_params['lrow'])
 		if not area:
 			logging.info('LandsatOverlayRequestHandler - bad area returned %s, %s', area, area_name)
 			self.error(404)
@@ -785,17 +785,17 @@ class LandsatOverlayRequestHandler(BaseHandler):
 			return
 		
 		#Save observation 
-		
-		path = int(opt_params['lpath'])
-		row =  int(opt_params['lrow'])
+		if 'lpath' in opt_params and 'lrow' in opt_params:
+			path = int(opt_params['lpath'])
+			row =  int(opt_params['lrow'])
+			logging.debug("LandsatOverlayRequestHandler() path %s, row %s", path, row)
+			cell = cache.get_cell(path, row)
 			
-		cell = cache.get_cell(path, row)
-		if cell is not None:
-			captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-			obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = captured_date, image_id = map_id['id'], rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
-			print "obs: ", obs
-
-			db.put(obs)
+			if cell is not None:
+				captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
+				obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = captured_date, image_id = map_id['id'], rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
+				print "obs: ", obs
+				db.put(obs)
 			#print "type(cell): ", type(cell)
 			#latestObs = cell.latestObservation(map_id['collection'])
 			#print "latest Observation", latestObs
