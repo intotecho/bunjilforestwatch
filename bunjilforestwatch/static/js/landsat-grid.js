@@ -40,8 +40,7 @@ function queryLandsatFusionTableRadius(map) {
 	var map_center = map.getCenter(); // new
 	// google.maps.LatLng({{area.map_center}});
 	var map_distance = google.maps.geometry.spherical
-	.computeDistanceBetween(map.getBounds().getNorthEast(), map
-			.getBounds().getSouthWest());
+	.computeDistanceBetween(map.getBounds().getNorthEast(), map.getBounds().getSouthWest());
 	var radius = 180000; // how far away to show cells from a small AOI in metres
 	var distance = (map_distance > radius) ? map_distance : radius; // The	view area
 	distance = (distance > radius) ? radius : distance; // unless the view area is more than 2000km.
