@@ -5,7 +5,7 @@
 
 var LANDSAT_GRID_FT = '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8';// https://www.google.com/fusiontables/DataSource?docid=1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8
 var COUNTRY_GRID_FT = '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ'; // https://www.google.com/fusiontables/data?docid=1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ
-var BUNJIL_API_KEY = 'AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I'; // https://code.google.com/apis/console/ #TODO - Is this a public key or does it need to be secured?
+var MAPS_API_KEY = 'AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I'; // https://code.google.com/apis/console/ #Google Maps API public key
 var landsat_overlays = [];
 var landsatgrid_panel = '#map_panel';
 var landsatgrid_isclickable;
@@ -59,7 +59,7 @@ function queryLandsatFusionTableRadius(map) {
 	var encodedQuery = encodeURIComponent(query);
 	url.push(encodedQuery);
 	url.push('&callback=drawLandsatGrid');
-	url.push('&key=' + BUNJIL_API_KEY);
+	url.push('&key=' + MAPS_API_KEY);
 	return url;
 }
 
@@ -76,7 +76,7 @@ function queryLandsatFusionTableCells(map, latlngbounds) {
 	var encodedQuery = encodeURIComponent(query);
 	url.push(encodedQuery);
 	url.push('&callback=drawLandsatGrid');
-	url.push('&key=' + BUNJIL_API_KEY);
+	url.push('&key=' + MAPS_API_KEY);
 	return url;
 }
 
@@ -102,7 +102,7 @@ function requestLandsatGrid(map, showlayer, clickable, cellrange) {
             }
   			//url.push(encodedQuery);
 			//url.push('&callback=drawLandsatGrid');
-			//url.push('&key=' + BUNJIL_API_KEY);
+			//url.push('&key=' + MAPS_API_KEY);
 			var script = document.createElement('script');
 			script.src = url.join('');
 			var body = document.getElementsByTagName('body')[0];
