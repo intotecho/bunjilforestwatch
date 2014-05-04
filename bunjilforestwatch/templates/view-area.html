@@ -16,10 +16,12 @@ body {
 }
 </style>
 <style type="text/css"> 
-/** FIX for Bootstrap and Google Maps Info window styles problem http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden **/
+
+/** For Bootstrap and Google Maps Info window styles problem - Fix from http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden **/
 img[src*="gstatic.com/"], img[src*="googleapis.com/"] {
-max-width: none;
+    max-width: none;
 }
+
 </style>
 <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
 <script type="text/javascript" src="/static/js/draggable-object.js"></script>	
@@ -30,7 +32,9 @@ max-width: none;
 <script type="text/javascript" src="/static/js/landsat-grid.js"></script>
 <script type="text/javascript" src="/static/js/polygon-outliner.js"></script>
 <script type="text/javascript" src="/static/js/drawing-tools.js"></script>
+
 <script>
+
 
 var map;
 var mapobj; //returned by last call to EE image overlay.
@@ -38,136 +42,8 @@ var satellite = 'l8'
 var algorithm = 'rgb'; // ndvi 
 var latest = 0;  //latest - 0
 var showLandsatGridLayer = true;
-
-overlayMaps = [];
-
-//print all the methods in javascript object - for debugging
-function printMethods(object)
-{
-    var methods = [];
-    for (var m in object) {
-    	if (typeof object[m] == "function") {
-        	methods.push(m);
-        }
-	}
-	console.log(methods.join(","));
-} 
-
-function createImageOverlay(show, mapid,  token, slider_name)
-{
-	if(show == true)
-	{
-	 	//CREATE LAYER WITH SLIDER based on NZ Topo maps example.
-		overlay = new CustomTileOverlay(map, initialOpacity, mapid, token);
-	
-		google.maps.event.addListener(map, 'tilesloaded', function () {
-			overlay.deleteHiddenTiles(map.getZoom());
-		});
-		overlay.show();
-		overlayMaps.push(overlay);
-		
-		// Add opacity control and set initial value
-		createOpacityControl(map, initialOpacity, slider_name.substring(5));	
-	}
-	else 
-	{
-		overlay = overlayMaps.pop();
-		overlay.hide();
-	}
-}
-
-function setActionUrl(action)
-{
-   // action can be 'overlay' or 'download' strip the old action and append the new action.
-   var url = window.location.href
-   if (url.indexOf("/overlay") !=-1) {
-      url = url.substring(0, url.indexOf("/overlay")); //strip the last action.
-   }
-   if (url.indexOf("/download") !=-1) {
-       url = url.substring(0, url.indexOf("/download")); //strip the last action.
-   }
-   if (url.indexOf("/action") !=-1) {
-	      url = url.substring(0, url.indexOf("/action")); //strip the last action.
-	}
-
-   url = url + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
-   
-   //Not working so disable the final bit.
-   return url
-};
-
-function ajaxActionUrl(action)
-{
-   // action can be 'overlay' or 'download'.
-   url = "{{ area|area_url }}"  + '/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
-   return url
-};
-
-/*
-var selectedLAT_UL; //coordinates of the selected Landsat Cell.
-var selectedLON_UL;
-var selectedLAT_UR; 
-var selectedLON_UR;
-var selectedLAT_LL;
-var selectedLON_LL;
-var selectedLAT_LR;
-var selectedLON_LR;
-*/
-function httpgetActionUrl(action)
-{
-   // action/<action> can be 'overlay' or 'download'.
-   //satellite is 'l8' or 'l7' but should change to collection name.
-   var url = "{{ area|area_url }}"  + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest ;
-   if((selectedPath != -1) && (selectedRow != -1))
-   {
-	   url  += "/" + selectedPath + "/" + selectedRow;
-   }
-   return url
-};
-
-
-function jsonStringifySelectedCell()
-{
-   var ul=[selectedLAT_UL, selectedLON_UL];
-   var ll=[selectedLAT_LL, selectedLON_LL];
-   var lr=[selectedLAT_LR, selectedLON_LR];
-   var ur=[selectedLAT_UR, selectedLON_UR];
-   var cell_coords = Array();
-   cell_coords.push(ul);
-   cell_coords.push(ll);
-   cell_coords.push(lr);
-   cell_coords.push(ur);
-  
-   var cell_feature = { "type": "Feature",
-            "geometry":   {"type": "Polygon","coordinates": cell_coords},
-            "properties": {"featureName": "cell_boundary", "path": selectedPath, "row": selectedRow}
-                 };
-   return JSON.stringify(cell_feature);
-};
-
-
-function cellSelected()
-{
-// Fetch Overlay of Latest Landsat
-    //var _url = ajaxActionUrl("overlay");
-  var httpget_url = "/selectcell/" + jsonStringifySelectedCell()
-  console.log( "cellSelected() %d %d %s", selectedPath, selectedRow, httpget_url);
-   
-  $("#observations_panel").collapse('show');
-       $('#observations_panel').empty();
-       $('#observations_panel').append("SelectCell...");
-       $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
-       $.get(httpget_url).done(function(data) {
-    	      $('#observations_panel').empty();
-              $('#observations_panel').append(data);
-        }).error(function( jqxhr, textStatus, error ) {
-            var err = textStatus + ', ' + error;
-            console.log( "Request Failed: " + err);
-            $('#observations_panel').empty();
-            $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
-     });
-}
-
+var cellarray = [];
+var overlayMaps = [];
 
 
 function initialize() {
@@ -186,8 +62,7 @@ function initialize() {
 		clickable: true
 	}
  
-    map = new google.maps.Map(document.getElementById("map-canvas"),
-           mapOptions);
+    map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
   
   	//wait for map to load so bounds are known before setting up landsat grid.
   	//now activated by the checkbox.
@@ -196,7 +71,7 @@ function initialize() {
   		
   		if(showLandsatGridLayer == true)
   		{
-  		    requestLandsatGrid(map, true, true, null ); //map, showlayer, clickable, cells
+  		    requestLandsatGrid(map, true, true, cellarray ); //map, showlayer, clickable, cells
   		}
   		$(landsatgrid_panel).empty();
 		htmlString = "<p><font-size:50%;color:blue strong>zoom:</strong> " + map.getZoom() + "</p>";
@@ -210,14 +85,14 @@ function initialize() {
 	         	console.log("zoom to:", map.zoom());
 	});
  
-    //Add Area Boundary to Map
+    //Collect the Boundary coordinates from the area and convert to a Google Maps object.
+    
     var latlngs = [];
+    
     {% for j in area.coordinates %}
     	latlngs.push(new google.maps.LatLng({{j}}))
-    {% endfor %}	
-    
-    var latlng_bounds = {'max_lat': {{area.max_latlon.lat}}, 'min_lat': {{area.min_latlon.lat}}, 'max_lon': {{area.max_latlon.lon}}, 'min_lon': {{area.min_latlon.lon}}};
-    
+    {% endfor %}
+     
     areaBoundary = new google.maps.Polygon({
                 paths: latlngs,
                 strokeColor: '#FFFF00',
@@ -225,42 +100,53 @@ function initialize() {
                 strokeWeight: 2,
                 fillColor: '#000000',
                 fillOpacity: 0.15
-            });
+    });
+    
     areaBoundary.setMap(map);
 
-    console.log("Check Cells")
     
-    /* if AOI is new, then need to get earthengine to calculate what cells overlap the areaAOI. 
-        This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
-    */
-    var cellarray;
-    if ( {{area.max_path}} === -1) { //need to fetch the overlapping cells.
-        console.log("Check Cells is Empty ");
+/*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
+ *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
+ *  Old method was a big rectangle. 
+ *         var latlng_bounds = {'max_lat': {{area.max_latlon.lat}}, 'min_lat': {{area.min_latlon.lat}}, 'max_lon': {{area.max_latlon.lon}}, 'min_lon': {{area.min_latlon.lon}}};
+ *         cellarray =         {'max_path':{{area.max_path}},       'min_path': {{area.min_path}},      'max_row': {{area.max_row}},        'min_row': {{area.min_row}}};
+ *  New method calculates intersections so returns only overlapping cells.
+ */    
+    cellarray = {{celllist}};    //cellarray = jQuery.parseJSON({{celllist}});
+    
+    console.log('Init:Cellarray from view-area handler: ', cellarray);
+    if(cellarray.length == 0){ // Then fetch the overlapping cells from server..
+        console.log("Init: Fetching Overlapping Cells for Area");
         var url = "{{ area|area_url }}"  + '/' + 'getcells';
         console.log( "url: ", url);
         $("#observations_panel").collapse('show');
         $('#observations_panel').empty();
-        $('#observations_panel').append("Getting Area's Cells ...");
+        $('#observations_panel').append("Calculating Landsat Cells ...");
         $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
         $.get(url).done(function(data) {
             cellarray = jQuery.parseJSON(data);
+            console.log('Init:Cellarray from ajax handler: ', cellarray);
             $('#observations_panel').empty();
-            $('#observations_panel').append("Cells: ", cellarray.max_path, "-", cellarray.max_row, ", ", cellarray.min_path, "-", cellarray.min_row);
+            $('#observations_panel').append("Area has " + cellarray.length + " cells. " );
             //createImageOverlay(true, mapobj.mapid,  mapobj.token, mapobj.date_acquired);
 
         }).error(function( jqxhr, textStatus, error ) {
             var err = textStatus + ', ' + error;
-            console.log( "Get Cells Failed: " + err);
+            console.log( "GetCells Failed: " + err);
             $('#observations_panel').empty();
             $('#observations_panel').append("<p>GetCells Failed: " + err + "</p>"); 
         });
     } //get cells    
     else
    	{
-        cellarray = {'max_path': {{area.max_path}}, 'min_path': {{area.min_path}}, 'max_row': {{area.max_row}}, 'min_row': {{area.min_row}}};
+        //Can we initialise this now?     
+        if(showLandsatGridLayer == true) {
+            showLandsatGridLayer = true;
+            requestLandsatGrid(map, true, true, cellarray); //map, showlayer, clickable, cells
+        }
    	}
     
-    // Fetch Overlay of Latest Landsat
+    // Fetch Overlay Image of Latest Landsat
     $('#get_overlay_btn').click(function(){
     	//var _url = ajaxActionUrl("overlay");
     	var httpget_url = httpgetActionUrl("overlay")
@@ -291,7 +177,7 @@ function initialize() {
 	 	});
     }); //get_overlay_btn.click
 
-    //download   		    
+    //download and image - This does not work yet.  		    
     $('#get_download_btn').click(function(){ 
             var pathname = window.location.pathname + '/download/' + satellite + '/' + algorithm + '/' + latest;
             //window.history.replaceState('string', 'load image', pathname);
@@ -311,17 +197,17 @@ function initialize() {
 		 		  $('#observations_panel').empty();
 		 		  $('#observations_panel').append("<p color:red>Sorry Download is Broken! " + err + "</p>"); 
 	 	    });
-   		});
-   			
+   	});
+
  		//Checkbox to show/hide overlays  		
-   		$('.layer').click(function(){
+   	$('.layer').click(function(){
    			var layerID = parseInt($(this).attr('id'));
    		    if(layerID == 0) //LANDSAT grid 
    		    {
    	            //console.log('showLandsatGridLayer ', showLandsatGridLayer)   
    		    	if(showLandsatGridLayer == false) {
    		    	  showLandsatGridLayer = true;
-   		    	  requestLandsatGrid(map, true, true, latlng_bounds /*cellarray*/); //map, showlayer, clickable, cells
+   		    	  requestLandsatGrid(map, true, true, /*latlng_bounds */ cellarray); //map, showlayer, clickable, cells
    		    	}
    		    	else {
                     showLandsatGridLayer = false;
@@ -355,10 +241,10 @@ function initialize() {
                     // map.overlayMapTypes.setAt(layerID, overlayMap);
                 }
             }
- 		});
+ 	});
    		
- 		//Change the text in the drop-down button when a selection is changed.
-   		$('#algorithm-visual').click(function(e){
+ 	//Change the text in the drop-down button when a selection is changed.
+   	$('#algorithm-visual').click(function(e){
            $("#algorithm:first-child").text("RGB");
            algorithm = 'rgb';
    		   e.preventDefault();
@@ -411,8 +297,6 @@ function initialize() {
             e.preventDefault();
         });
         
-        
-        
    		$(window).resize(function () {
    				//<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
      	    var h = $(window).height(),
@@ -422,7 +306,7 @@ function initialize() {
         // now map is drawn is a good time to set up the Instructions Popover.
         var instructions_content = 
           "<p>" +
-          "Here you can Select Landsat Cells to monitor.<br>" + 
+          "Select Landsat Cells to monitor.<br>" + 
           "Click to highlight the cells that you wish to monitor. Click again to remove from monitoring.<br>" + 
           "Each selected cell will add to the number of observation tasks for this area.<br>" + 
           "Selected cells are regularly checked for new data.<br>" + 
@@ -441,10 +325,130 @@ function initialize() {
         $('#instructions').popover();
 
    		
-	};//initialize
+};//initialize
+google.maps.event.addDomListener(window, 'load', initialize); 
 	
 
-    google.maps.event.addDomListener(window, 'load', initialize); 
+
+function createImageOverlay(show, mapid,  token, slider_name)
+{
+    if(show == true)
+    {
+        //CREATE LAYER WITH SLIDER based on NZ Topo maps example.
+        overlay = new CustomTileOverlay(map, initialOpacity, mapid, token);
+    
+        google.maps.event.addListener(map, 'tilesloaded', function () {
+            overlay.deleteHiddenTiles(map.getZoom());
+        });
+        overlay.show();
+        overlayMaps.push(overlay);
+        
+        // Add opacity control and set initial value
+        createOpacityControl(map, initialOpacity, slider_name.substring(5));    
+    }
+    else 
+    {
+        overlay = overlayMaps.pop();
+        overlay.hide();
+    }
+}
+
+function setActionUrl(action)
+{
+   // action can be 'overlay' or 'download' strip the old action and append the new action.
+   var url = window.location.href
+   if (url.indexOf("/overlay") !=-1) {
+      url = url.substring(0, url.indexOf("/overlay")); //strip the last action.
+   }
+   if (url.indexOf("/download") !=-1) {
+       url = url.substring(0, url.indexOf("/download")); //strip the last action.
+   }
+   if (url.indexOf("/action") !=-1) {
+          url = url.substring(0, url.indexOf("/action")); //strip the last action.
+    }
+
+   url = url + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
+   
+   //Not working so disable the final bit.
+   return url
+};
+
+function ajaxActionUrl(action)
+{
+   // action can be 'overlay' or 'download'.
+   url = "{{ area|area_url }}"  + '/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
+   return url
+};
+
+
+function httpgetActionUrl(action)
+{
+   // action/<action> can be 'overlay' or 'download'.
+   //satellite is 'l8' or 'l7' but should change to collection name.
+   var url = "{{ area|area_url }}"  + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest ;
+   if((selectedPath != -1) && (selectedRow != -1))
+   {
+       url  += "/" + selectedPath + "/" + selectedRow;
+   }
+   return url
+};
+
+
+function jsonStringifySelectedCell()
+{
+   var ul=[selectedLAT_UL, selectedLON_UL];
+   var ll=[selectedLAT_LL, selectedLON_LL];
+   var lr=[selectedLAT_LR, selectedLON_LR];
+   var ur=[selectedLAT_UR, selectedLON_UR];
+   
+   var cell_coords = Array();
+   
+   cell_coords.push(ul);
+   cell_coords.push(ll);
+   cell_coords.push(lr);
+   cell_coords.push(ur);
+  
+   var cell_feature = { "type": "Feature",
+            "geometry":   {"type": "Polygon","coordinates": cell_coords},
+            "properties": {"featureName": "cell_boundary", "path": selectedPath, "row": selectedRow}
+                 }
+   return JSON.stringify(cell_feature);
+};
+
+
+function cellSelected()
+{
+// Fetch Overlay of Latest Landsat
+    //var _url = ajaxActionUrl("overlay");
+  var httpget_url = "/selectcell/" + jsonStringifySelectedCell()
+  console.log( "cellSelected() %d %d %s", selectedPath, selectedRow, httpget_url);
+   
+  $("#observations_panel").collapse('show');
+       $('#observations_panel').empty();
+       $('#observations_panel').append("SelectCell...");
+       $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+       $.get(httpget_url).done(function(data) {
+              $('#observations_panel').empty();
+              $('#observations_panel').append(data);
+              if (data.search("Selected") > 0) 
+                  {
+                     console.log( "S Data " + data)
+                     monitor_cell(selectedPath, selectedRow, true);
+                  }
+              else
+                  {
+                     console.log( "U Data " + data)
+                     monitor_cell(selectedPath, selectedRow, false);
+                  }
+        }).error(function( jqxhr, textStatus, error ) {
+            var err = textStatus + ', ' + error;
+            console.log( "Request Failed: " + err);
+            $('#observations_panel').empty();
+            $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
+     });
+}
+
+
 
 </script>
 {% endblock %} {% block content %}
@@ -515,7 +519,7 @@ function initialize() {
               </div>   
 			<div>
 			<p>
-				<input type="checkbox" id="0" class="layer" checked data-toggle="tooltip" title="Show grid cells of landsat image boundaries"/><label for="0">Landsat Grid </label>
+				<input type="checkbox" id="0" class="layer" unchecked data-toggle="tooltip" title="Show grid cells of landsat image boundaries"/><label for="0">Landsat Grid </label>
 				<input type="checkbox" id="1" class=layer unchecked/><label for="1">Make Report</label>
 			</div>	
 			<div class="accordion" id="accordion2">
@@ -593,5 +597,3 @@ function initialize() {
 	</div>
 </div>
 {% endblock %}
-
-

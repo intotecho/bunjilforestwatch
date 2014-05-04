@@ -84,6 +84,9 @@ def set_keys(entities):
 def delete(keys):
     memcache.delete_multi(keys)
 
+def delete_item(key):
+    memcache.delete(key)
+
 def flush():
     memcache.flush_all()
 
@@ -542,7 +545,6 @@ def get_area_key(username, area_name):
         if data is None:
             data = models.AreaOfInterest.all(keys_only=True).filter('name', area_name).get()
             memcache.add(n, data)
-            return data
     else:
         n = C_AREA_KEY %(username, area_name)
         data = memcache.get(n)
@@ -551,21 +553,23 @@ def get_area_key(username, area_name):
             data = models.AreaOfInterest.all(keys_only=True).filter('owner =', username).filter('name', area_name.decode('utf-8')).get() #FIXME - Is why is there an '='  in owner =' but not for other string matches?
             #print ("get_area_userkey for user: ", username, data, )
             memcache.add(n, data)
-            return data
+    return data
 
 
 def get_cell(path, row):
-        n = C_CELL %(path, row)
-        print "get_cell() ", n
-        data = memcache.get(n)
+    n = C_CELL %(path, row)
+    print "get_cell() ", n
+    data = memcache.get(n)
+    if data is None:
+        data = models.LandsatCell.all().filter('path =', int(path)).filter('row =', int(row)).get()
         if data is None:
-            data = models.LandsatCell.all().filter('path =', path).filter('row =', row).get()
-            if data is None:
-                logging.error("get_cell() Missing Cell Object")
+            logging.error("get_cell() Missing Cell Object")
+        else:
             memcache.add(n, data)
-            return data
+    return data
         
 def get_cell_from_key(cell_key): #TODO - Does not really add anything different to the generic cache.get_by_key()
+     
     n = C_CELL_KEY %(cell_key)
     #print "get_cell_from_key() ", n
     data = unpack(memcache.get(n))
