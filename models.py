@@ -151,15 +151,15 @@ class AreaOfInterest(db.Model):
 
 	# Area Description
 	name = db.StringProperty(required=True)
-	description = db.StringProperty(multiline=True)
+	description = db.StringProperty(multiline=True) # text might be better type as it is not indexed.
 	type = db.StringProperty()
-	wiki = db.LinkProperty() 
+	wiki = db.LinkProperty() # link to s a story about this area.
 	#tags = db.ListProperty(unicode,default=None) #TODO: Caused a unicode not callable error. Not yet implemented.
 	
 	cells = db.ListProperty(db.Key, default=None) # list of Landsat cells overlapping this area - calculated on new.
 	entry_count = db.IntegerProperty(required=True, default=0) # reports related to this area - not used yet
 	
-	max_path = db.IntegerProperty(required=True, default=-1)
+	max_path = db.IntegerProperty(required=True, default=-1) # these are not important now we have a better intersect routine.
 	min_path = db.IntegerProperty(required=True, default=-1)
 	max_row  = db.IntegerProperty(required=True, default=-1)
 	min_row  = db.IntegerProperty(required=True, default=-1)
@@ -171,12 +171,7 @@ class AreaOfInterest(db.Model):
 	bound = db.ListProperty(float, default=None)
 	max_latlon = db.GeoPtProperty(required=True, default=None)
 	min_latlon = db.GeoPtProperty(required=True, default=None)
-	#max_lat = db.IntegerProperty(required=True, default=0)
-	#min_lat = db.IntegerProperty(required=True, default=0)
-	#max_lon = db.IntegerProperty(required=True, default=0)
-	#min_lon  = db.IntegerProperty(required=True, default=0)
-	#boundary	= db.GeoPtProperty(0,0, repeated=True)
-	#altitudes = db.ListProperty(float, default=None)
+
 	
 	# Parameters for viewing Area
 	map_center = db.GeoPtProperty(required=True, default=None)
@@ -250,7 +245,7 @@ class LandsatCell(db.Model):
 class Observation contains the metadata and map_id for a (Landsat) satelite image that has been retrieved and converted to a usable (visible/NDVI) format.
 
 The main use is the captured date. Once this observation has been actioned, it becomes the latest, against which future observations are base lined.
-This allows the app to redraw the overlay computed by earthe engine on a new browser session without recalculating it - providing the overlay token has not expired.
+This allows the app to redraw the overlay computed by earth engine on a new browser session without recalculating it - providing the overlay token has not expired.
 In which case, app will need to regenerate the observation.    
 '''
 class Observation(db.Model):
@@ -261,7 +256,26 @@ class Observation(db.Model):
 	rgb_token	= db.StringProperty(required=False, default=None) 	# RGB Mpa Overlay Token might have expired.
 	algorithm = db.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this. 
 	#landsatCell = db.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
-    
+'''
+class Task is an observation task, based on a landsat image in an AOI. The task includes a user who is responsible for completing the task.
+Each task has a unique ID.
+'''    
+class Task(db.Model):
+	aoi = db.ReferenceProperty(AreaOfInterest) #key to area that includes this cell
+	#observation = db.ReferenceProperty(Observation) #key to observation related to this task TODO: Could be a list....
+	observations = db.ListProperty(db.Key) #key to observations related to this task.
+	original_owner = db.ReferenceProperty(User)
+	current_owner = db.ReferenceProperty(User)
+		
+	#User (volunteer following the AOI)
+	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
+	owner = db.ReferenceProperty(User) #key to subscriber that created area.
+	
+	#timestsamps
+	created_date = db.DateTimeProperty(auto_now_add=True)
+	last_modified = db.DateTimeProperty(auto_now=True)
+	
+
 
 class Journal(db.Model):
 	ENTRIES_PER_PAGE = 5

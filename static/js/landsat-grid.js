@@ -6,15 +6,16 @@
 var LANDSAT_GRID_FT = '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8';// https://www.google.com/fusiontables/DataSource?docid=1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8
 var COUNTRY_GRID_FT = '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ'; // https://www.google.com/fusiontables/data?docid=1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ
 var MAPS_API_KEY = 'AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I'; // https://code.google.com/apis/console/ #Google Maps API public key
-var landsat_overlays = [];
-var landsatgrid_panel = '#map_panel';
-var landsatgrid_isclickable;
-var gridInitialised;
 
+var landsat_overlays = [];
+var landsatgrid_panel = '#map_panel'; 	// display info about the selected cell.
+var landsatgrid_isclickable;  			// for new-area, we want it to be visible but non-interactive. For view-area, we want to be able to click on cells.
+var gridInitialised; 					// Is it already on the map?
+
+//Path Row and Coordinates of the Landsat Cell selected (e.g. by mouse click)
 var selectedPath = -1 //global - PATH selected by mouse click
 var selectedRow  = -1 //global - ROW selected by mouse click
-
-var selectedLAT_UL; //coordinates of the selected Landsat Cell.
+var selectedLAT_UL; 
 var selectedLON_UL;
 var selectedLAT_UR; 
 var selectedLON_UR;
@@ -63,8 +64,8 @@ function queryLandsatFusionTableRadius(map) {
 	return url;
 }
 
-//return the cells that overlap the RECTANGLE or AOI bounds.
-function queryLandsatFusionTableCells(map, latlngbounds) {
+//return the cells that overlap the RECTANGLE or AOI bounds. - no longer used...
+function queryLandsatFusionTableBounds(map, latlngbounds) {
 	var url = [ 'https://www.googleapis.com/fusiontables/v1/query?' ];
 	url.push('sql=');
 
@@ -80,29 +81,49 @@ function queryLandsatFusionTableCells(map, latlngbounds) {
 	return url;
 }
 
-function requestLandsatGrid(map, showlayer, clickable, cellrange) {
+function queryLandsatFusionTableCellArray(map, cellarray) {
+	
+	var url = [ 'https://www.googleapis.com/fusiontables/v1/query?' ];
+	url.push('sql=');
+
+	var cellnames = [];
+
+	for(var i = 0; i < cellarray.length-1; i++) {
+		cellnames.push("'" + cellarray[i].path + '_' + cellarray[i].row + "'"); 
+	};
+
+	var query = 'SELECT name, geometry, description FROM ' + LANDSAT_GRID_FT + 
+	" WHERE name IN (" + cellnames + ")";
+
+	var encodedQuery = encodeURIComponent(query);
+	url.push(encodedQuery);
+	url.push('&callback=drawLandsatGrid');
+	url.push('&key=' + MAPS_API_KEY);
+	console.log("ft query: ", query);
+	console.log("ft url: ", url);
+	return url;
+}
+
+function requestLandsatGrid(map, showlayer, clickable, cellarray) {
     "use strict";
     // Initialize JSONP request for LANSAT grid Fusion Table
-    //   Based on
-    //   https://developers.google.com/fusiontables/docs/samples/mouseover_map_styles
-    // landsat grid initially published by USGS.
+    // Based on https://developers.google.com/fusiontables/docs/samples/mouseover_map_styles
+    // Landsat grid in fusion table was initially published by USGS.
+
     landsatgrid_isclickable = clickable;
     var script = null;
     if (gridInitialised !== true) {
         if (showlayer === true) {
             gridInitialised = true;
             var url = null;
-            if (cellrange == null)
+            if (cellarray == null)
             {
             	url = queryLandsatFusionTableRadius(map);
             }
             else
             {
-            	url = queryLandsatFusionTableCells(map, cellrange);
+            	url = queryLandsatFusionTableCellArray(map, cellarray);
             }
-  			//url.push(encodedQuery);
-			//url.push('&callback=drawLandsatGrid');
-			//url.push('&key=' + MAPS_API_KEY);
 			var script = document.createElement('script');
 			script.src = url.join('');
 			var body = document.getElementsByTagName('body')[0];
@@ -110,7 +131,7 @@ function requestLandsatGrid(map, showlayer, clickable, cellrange) {
 		}
 	} else {
 		if (showlayer === false) {
-			console.log("deleting landsat layer script");
+			console.log("Deleting landsat layer script");
 			resetInfoWindow();
 			gridInitialised = false;
 			// var body = document.getElementsByTagName('body')[0];
@@ -132,20 +153,70 @@ function removeLandsatGrid() {
 	}
 }
 
+function display_cell_info(e, isSelected) {
+	//console.log('display_cell_info()')
+	cellobject = YAML.parse(e.get("Description")); //converts the YAML html description to JS object.
+	
+	var path = parseInt(cellobject['<strong>PATH</strong>'], 10); 
+	var row  = parseInt(cellobject['<strong>ROW</strong>'],  10);
+	
+	if(isSelected = true)
+		{
+			selectedPath   = path; 
+			selectedRow    = row;
+			selectedLAT_UL = parseFloat(cellobject['<strong>LAT UL</strong>']);
+			selectedLON_UL = parseFloat(cellobject['<strong>LON UL</strong>']);
+			selectedLAT_UR = parseFloat(cellobject['<strong>LAT UR</strong>']); 
+			selectedLON_UR = parseFloat(cellobject['<strong>LON UR</strong>']);
+			selectedLAT_LL = parseFloat(cellobject['<strong>LAT LL</strong>']);
+			selectedLON_LL = parseFloat(cellobject['<strong>LON LL</strong>']);
+			selectedLAT_LR = parseFloat(cellobject['<strong>LAT LR</strong>']);
+			selectedLON_LR = parseFloat(cellobject['<strong>LON LR</strong>']);
+		}
+	
+	$(landsatgrid_panel).empty();
+	htmlString = "<p><font-size:50%;color:blue strong>zoom:</strong> " + 
+			 map.getZoom() + "</p>";
+	htmlString += "<p>lat: " + 
+			map.getCenter().lat().toFixed(3) + 
+			", lng: " + 
+			map.getCenter().lng().toFixed(3) + "<br>" + 
+			"Path: " + parseInt(cellobject['<strong>PATH</strong>'],10) + 
+			" Row: " + parseInt(cellobject['<strong>ROW</strong>'],10)	 ; 
+    if (e.get("Monitored")== true)
+    	{
+    	    htmlString +=" Monitored"
+    	}
+    else
+    	{
+   	    	htmlString +=" Unmonitored"
+    	}
+    htmlString += "<br></p>";
+	$(landsatgrid_panel).html(htmlString);
+ }
+
+
 function landsatGrid_mouseover(e) {
-	this.setOptions({
-		//fillOpacity : 0.3,
-		strokeWeight : 5
-		//strokeColor : '#FFFFFF',
 		
-	});
+		if (this.Monitored) {
+			this.setOptions({
+				fillOpacity : 0.3
+			})
+		}
+		else 
+		{
+			this.setOptions({
+				fillOpacity : 0.2
+			})
+		}
+		display_cell_info(this, false)
 }
 
 function landsatGrid_mouseout(e) {
 	this.setOptions({
-		fillOpacity : 0,
-		strokeWeight : 1
+		fillOpacity : 0
 	})
+	$(landsatgrid_panel).empty();
 }
 
 function landsatGrid_zoom(e) {
@@ -159,38 +230,48 @@ function landsatGrid_zoom(e) {
 }
 
 function landsatGrid_click(e) {
-	console.log('landsatGrid_click()')
-	cellobject = YAML.parse(this.get("Description")); //converts the YAML html description to JS object.
-	
-	selectedPath = parseInt(cellobject['<strong>PATH</strong>'], 10); 
-	selectedRow  = parseInt(cellobject['<strong>ROW</strong>'],  10);
 
-	selectedLAT_UL = parseFloat(cellobject['<strong>LAT UL</strong>']);
-	selectedLON_UL = parseFloat(cellobject['<strong>LON UL</strong>']);
-	selectedLAT_UR = parseFloat(cellobject['<strong>LAT UR</strong>']); 
-	selectedLON_UR = parseFloat(cellobject['<strong>LON UR</strong>']);
-	selectedLAT_LL = parseFloat(cellobject['<strong>LAT LL</strong>']);
-	selectedLON_LL = parseFloat(cellobject['<strong>LON LL</strong>']);
-	selectedLAT_LR = parseFloat(cellobject['<strong>LAT LR</strong>']);
-	selectedLON_LR = parseFloat(cellobject['<strong>LON LR</strong>']);
-	
-	//console.log(cellobject['<strong>PATH</strong>'], cellobject['<strong>ROW</strong>']);
+	if (this.Monitored) {
+		this.setOptions({
+			strokeWeight : 1
+		})
+	}
+	else 
+	{
+		this.setOptions({
+			strokeWeight : 5
+		})
+	}
 
-	$(landsatgrid_panel).empty();
-	htmlString = "<p><font-size:50%;color:blue strong>zoom:</strong> " + 
-			 map.getZoom() + "</p>";
-	htmlString += "<p>lat: " + 
-			map.getCenter().lat().toFixed(3) + 
-			", lng: " + 
-			map.getCenter().lng().toFixed(3) + "<br>" + 
-			"Path: " + parseInt(cellobject['<strong>PATH</strong>'],10) + 
-			" Row: " + parseInt(cellobject['<strong>ROW</strong>'],10) +
-			"<br></p>"; 
-
-	$(landsatgrid_panel).html(htmlString);
-	
-	cellSelected(); 
+	display_cell_info(this, true)
+	cellSelected();
  }
+
+function monitor_cell(path, row, isMonitored )
+{
+	for(var i=0; i<landsat_overlays.length; i++) {
+	    if ((landsat_overlays[i].path == path) && (landsat_overlays[i].row == row)) {
+	    	landsat_overlays[i].Monitored = isMonitored;
+	        return true;
+	    }
+	}
+	console.log ("monitor_cell() Error cell not found %d %d", path, row)
+	return false;
+}
+
+//Used in initial drawing of grid.
+function isMonitored(selectedPath, selectedRow, cellarray)
+{
+	for (var i = 0 ; i < cellarray.length; i++)
+		{
+			if ((cellarray[i].path == selectedPath) && (cellarray[i].row == selectedRow))
+				{
+					return cellarray[i].followed ;
+				}
+		}
+	console.log("isMonitored(): missing cell %d, %d", selectedPath, selectedRow);
+	return false;
+}
 
 function drawLandsatGrid(data, clickable) {
 	"use strict";
@@ -214,23 +295,27 @@ function drawLandsatGrid(data, clickable) {
 			
 			selectedPath = parseInt(cellobject['<strong>PATH</strong>'], 10); 
 			selectedRow  = parseInt(cellobject['<strong>ROW</strong>'],  10);
-			console.log("drawLandsatGrid() path %d, row %d", selectedPath, selectedRow)
+			
+			//console.log("drawLandsatGrid() path %d, row %d", selectedPath, selectedRow);
+			
 			//colour as checkerboard
-			var cell_colour
+			var cell_colour;
+			var cell_strokeweight;
+			
 			if ((selectedPath %2) == (selectedRow %2)) //both path and row are odd or they are both even. 
 				{
-					cell_colour = '#CCFFFF'
+					cell_colour = '#F0FFFF';
 				}
 			else
 				{
-					cell_colour = '#FFFFCC'
+					cell_colour = '#FFF0FF';
 				}
-
+		
 			var landsat_cell = new google.maps.Polygon({
 				paths : newCoordinates,
 				strokeColor : cell_colour,
-				strokeOpacity : 0.4,
 				strokeWeight : 1,
+				strokeOpacity : 0.5,
 				fillOpacity : 0,
 				editable : false,
 				clickable : landsatgrid_isclickable,
@@ -239,9 +324,28 @@ function drawLandsatGrid(data, clickable) {
 				// pointer-events: none,
 				content : description
 			});
+
 			//add non standard new attributes
-			landsat_cell['path'] = selectedPath,
-			landsat_cell['cell'] = selectedRow,
+			landsat_cell['path'] = selectedPath;
+			landsat_cell['row'] = selectedRow;
+			
+			if( isMonitored(selectedPath, selectedRow, cellarray) == "true")
+			{
+				landsat_cell.setOptions({
+					strokeWeight : 5,
+					strokeOpacity : 0.5
+				})
+				landsat_cell.set('Monitored', true);
+			}
+			else
+			{
+				landsat_cell.setOptions({
+					strokeWeight : 1,
+					strokeOpacity : 0.5
+				})
+				console.log("drawLandsatGrid() unmonitored cell");
+				landsat_cell.set('Monitored', false);
+			}
 
 			landsat_cell.set("Description", description); // Add attributes
 															// for adding
@@ -280,18 +384,4 @@ function constructNewCoordinates(polygon) {
 	return newCoordinates;
 }
 
-// function GetPolygonBounds(poly ) {
-// No longer called because intersection filter is done in the server, not
-// browser.
-// var bounds = new google.maps.LatLngBounds();
-// var paths = poly.getPaths();
-// var path;
-// for (var p = 0; p < paths.getLength(); p++) {
-// path = paths.getAt(p);
-// for (var i = 0; i < path.getLength(); i++) {
-// bounds.extend(path.getAt(i));
-// }
-// }
-// return bounds;
-// }
 

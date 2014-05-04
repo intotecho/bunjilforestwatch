@@ -53,6 +53,7 @@ def initEarthEngineService():
 
     global earthengine_intialised
     if earthengine_intialised == False:
+        util.positional_parameters_enforcement = util.POSITIONAL_IGNORE   # avoid the WARNING [util.py:129] new_request() takes at most 1 positional argument (4 given)
         try:
             if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
                 logging.info("Initialising Earth Engine authenticated connection from devserver")
@@ -62,7 +63,6 @@ def initEarthEngineService():
                 EE_CREDENTIALS = AppAssertionCredentials(ee.OAUTH2_SCOPE)
             ee.Initialize(EE_CREDENTIALS) 
             earthengine_intialised = True
-            util.positional_parameters_enforcement = util.POSITIONAL_IGNORE   # avoid the WARNING [util.py:129] new_request() takes at most 1 positional argument (4 given)
         except Exception, e:
             #self.add_message('error', 'An error occurred with Earth Engine. Try again.')
             logging.error("Failed to connect to Earth Engine. Exception: %s", e)
@@ -83,35 +83,35 @@ def checkNewAllAreas():
 
 
 '''
-checkNewForCell() checks the collection for the latest image and compares it to the last stored. 
+checkForNewObservationInCell() checks the collection for the latest image and compares it to the last stored. 
     If a newer image is found, the observation is added and the function returns True.
     If no new image is found, the function returns False. 
     An error is logged if no images are found. 
     If no observation exists, one is created.
 '''
 
-def checkNewForCell(area, cell, collection_name):
+def checkForNewObservationInCell(area, cell, collection_name):
     poly = [] #TODO Move poly to a method of models.AOI
     for geopt in area.coordinates:
-        poly.append([geopt.lon, geopt.lat])
+        poly.append([geopt.lon, geopt.lat]) 
     latest_image = getLatestLandsatImage(poly, collection_name, 0, params = [cell.path, cell.row]) # most recent image for this cell in the collection
     if latest_image is not None:
         storedlastObs = cell.latestObservation(collection_name)             #FIXME - Need to use the cache here.
         if storedlastObs is None or latest_image.capture_datetime > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-            obs = models.Observation(parent = cell, image_collection = collection_name, captured = latest_image.capture_datetime, image_id = latest_image.name, rgb_map_id = None, rgb_token = None,  algorithm = None)
+            obs = models.Observation(parent = cell, image_collection = collection_name, captured = latest_image.system_time_start, image_id = latest_image.name, rgb_map_id = None, rgb_token = None,  algorithm = None)
             db.put(obs)
             if storedlastObs is None:
-                logging.debug('checkNewForCell FIRST observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
+                logging.debug('checkForNewObservationInCell FIRST observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
             else:
-                logging.debug('checkNewForCell NEW observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
-            return True
+                logging.debug('checkForNewObservationInCell NEW observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
+            return obs
         else:
-            logging.debug('checkNewForCell no newer observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
-            return False
+            logging.debug('checkForNewObservationInCell no newer observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
+            return None
     else:
-        logging.error('checkNewForCell no matching image in collection %s %s %s %s', area.name, collection_name, cell.path, cell.row)
-        return False
-    return True
+        logging.error('checkForNewObservationInCell no matching image in collection %s %s %s %s', area.name, collection_name, cell.path, cell.row)
+        return None
+    return None
 
 '''
 getLandsatImage(array of points, string as name of ee.imagecollection)
@@ -124,6 +124,79 @@ secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
 
     
 def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, params):
+    #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
+    cw_feat = ee.Geometry.Polygon(boundary_polygon)
+    feat = cw_feat.buffer(0, 1e-10)
+    #logging.info('feat %s', feat)
+    boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
+    
+    #boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+    #logging.debug('Temporarily disabled buffer to allow AOI points in clockwise order due to EEAPI bug')
+
+    #boundary_feature_buffered = boundary_feature 
+    park_boundary = ee.FeatureCollection(boundary_feature)
+    
+    end_date   = datetime.datetime.today()
+    start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear/2 )
+    #logging.debug('getLatestLandsatImage() start:%s, end:%s ',start_date,  end_date)
+    #logging.debug('getLatestLandsatImage() park boundary as FC %s ',park_boundary)
+
+    image_collection = ee.ImageCollection(collection_name)
+    #print image_collection.getInfo()
+    
+    if ('lpath' in params) and ('lrow' in params): 
+        
+        path = int(params['lpath'])
+        row = int(params['lrow'])
+        image_name =  collection_name[8:11] + "%03d%03d" %(path, row)
+        #logging.debug("logging.debug: image name: %s", image_name)
+        #filter Landsat by Path/Row and date
+        resultingCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row)#) #latest image form this cell.
+    else:
+        resultingCollection = image_collection.filterDate(start_date, end_date).filterBounds(park_boundary) # latest image from any cells that overlaps the area. 
+    
+    sortedCollection = resultingCollection.sort('system:time_start', False )
+    
+    #logging.info('Collection description : %s', sortedCollection.getInfo())
+      #logging.debug("sortedCollection: %s", sortedCollection)
+    scenes  = sortedCollection.getInfo()
+    #logging.info('Scenes: %s', sortedCollection)
+    
+    try:
+        feature = scenes['features'][int(latest_depth)]
+        print 'feature: ', feature
+    except IndexError:
+        try:
+            feature = scenes['features'][0]
+        except IndexError:
+            logging.error("No Scenes in Filtered Collection")
+            logging.debug("scenes: ", scenes)
+            return 0
+
+    
+    id = feature['id']   
+    #logging.info('getLatestLandsatImage found scene: %s', id)
+    latest_image = ee.Image(id)
+    props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
+    test = latest_image.getInfo()['bands']
+
+    crs = latest_image.getInfo()['bands'][0]['crs']
+    #path    = props['WRS_PATH']
+    #row     = props['STARTING_ROW']
+    system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
+    date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
+
+    logging.info('getLatestLandsatImage id: %s, date:%s latest:%s', id, date_str, latest_depth )
+    x = latest_image.getInfo()
+    # add some properties to Image object to make them easier to retrieve later.
+    latest_image.name = id
+    latest_image.capture_date = date_str
+    latest_image.system_time_start = system_time_start
+    
+    #x['mynewkey'] = id 
+    return latest_image  #.clip(park_boundary)
+
+def getCellsinArea(boundary_polygon, collection_name, params):
     #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
     cw_feat = ee.Geometry.Polygon(boundary_polygon)
     feat = cw_feat.buffer(0, 1e-10)
@@ -178,7 +251,7 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     #logging.info('getLatestLandsatImage found scene: %s', id)
     latest_image = ee.Image(id)
     props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
-    test = latest_image.getInfo()['bands']
+    #test = latest_image.getInfo()['bands']
 
     crs = latest_image.getInfo()['bands'][0]['crs']
     #path    = props['WRS_PATH']
@@ -194,6 +267,8 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     
     #x['mynewkey'] = id 
     return latest_image  #.clip(park_boundary)
+
+
 
 '''
     SharpenLandsat7HSVUpres()
@@ -354,9 +429,7 @@ def getOverlayPath(image, prefix, red, green, blue):
 
     crs = image.getInfo()['bands'][0]['crs']
     imgbands = image.get('bands')
-    #for b in imgbands:
-    #    print b
-    # Get the percentile values for each band.
+    
     p05 = []
     p95 = []
     p05 = getPercentile(image, 5, crs)
@@ -408,6 +481,7 @@ def getLandsatOverlay(coords, satellite, algorithm, depth, params):
             #print info
             props = info['properties']
             mapid['date_acquired'] = props['DATE_ACQUIRED']
+            mapid['capture_datetime'] = image.system_time_start
             mapid['id'] = props['system:index']
             mapid['path'] = props['WRS_PATH']
             mapid['row'] = props['WRS_ROW']
@@ -436,6 +510,8 @@ def getLandsatOverlay(coords, satellite, algorithm, depth, params):
             mapid['path'] = props['WRS_PATH']
             mapid['row'] = props['WRS_ROW']
             mapid['collection'] = collection_name
+            mapid['capture_datetime'] = image.capture_datetime
+            
             return mapid
         
         elif algorithm == 'ndvi':
@@ -492,10 +568,17 @@ def getLandsatCells(area):
     max_row  = getPathRow(boundCollection,"WRS_ROW", False)
     min_row  = getPathRow(boundCollection,"WRS_ROW", True)
     logging.debug('getLandsatCells(): max_path: %d, min_path: %d, max_row %d, min_row: %d', max_path, min_path, max_row, min_row)
-    return (max_path, min_path, max_row, min_row)
-    
- 
+    cells = []
+    for p in range(min_path, max_path+1):
+        for r in range(min_row, max_row+1):
+            imageCollection = boundCollection.filterMetadata('WRS_PATH', 'equals', p).filterMetadata('WRS_ROW', 'equals', r)
+            scenes  = imageCollection.getInfo()
+            try:
+                feature = scenes['features'][0]
+                cells.append([p,r])
+                logging.debug('getLandsatCells(): [%d, %d] overlaps area', p,r)
+            except IndexError:
+                logging.debug('getLandsatCells(): [%d, %d] does not overlap area', p,r)
+    return (max_path, min_path, max_row, min_row, cells)
 
-
-
-################# NOT USED ############################################
+################# EOF ############################################

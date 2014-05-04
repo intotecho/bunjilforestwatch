@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.DEBUG)
 #from os import environ
 import eeservice
 import ee
-
+import mailer
 import base64
 import datetime
 import re
@@ -79,8 +79,14 @@ class BaseHandler(webapp2.RequestHandler):
             context['google_analytics'] = settings.GOOGLE_ANALYTICS
 
         #logging.info('BaseHandler: render template %s with context <<%s>>,', _template, context)
-        logging.debug('BaseHandler: messages %s', context['messages'])
-        
+        #logging.debug('BaseHandler: messages %s', context['messages'])
+        #print '\033[1;33mRed like Radish\033[1;m'
+        #print '\033[1;34mRed like Radish\033[1;m \x1b[0m'
+        print('\033[31m' + 'some red text')
+        print('\033[30m' + 'reset to default color')
+
+        logging.debug('BaseHandler: Color Test \033[1;33mRed like Radish\033[1;m %s \x1b[0m', "Hello World")
+
         rv = utils.render(_template, context)
 
         self.response.write(rv)
@@ -583,13 +589,33 @@ class NewAreaHandler(BaseHandler):
 
 class SelectCellHandler(BaseHandler):
     def get(self, celldata):
+        self.populate_user_session()
         print 'SelectCellHandler get ', celldata
         username = self.session['user']['name']
         cell_feature = json.loads(celldata)
         print 'cell_feature ', cell_feature
-        self.populate_user_session()
-        displayAjaxResponse = 'Cell %d %d %s'%(cell_feature['properties']['path'], cell_feature['properties']['row'], 'Selected')
-        #TODO Store as a Cell Object, and toggle isfollowed.
+        path = cell_feature['properties']['path']
+        row = cell_feature['properties']['row']
+        displayAjaxResponse = 'Cell {0:d} {1:d}'.format(path, row)
+        
+        cell = cache.get_cell(path, row)
+        
+        if cell is not None:
+            area_key = cell.aoi
+            if cell.followed == True:
+                cell.followed = False
+                displayAjaxResponse += ' Unselected '
+            else:
+                cell.followed = True
+                displayAjaxResponse += ' Selected '
+            db.put(cell)
+            cache.delete([cache.C_CELL_KEY %cell.key(),
+                          cache.C_CELL %(path, row), 
+                          cache.C_CELLS %(cell.aoi)])
+        else:
+            logging.error('Selected Cell does not exist %d %d', path, row)
+            displayAjaxResponse = 'Does not exist'
+        
         self.response.write(displayAjaxResponse)
         return
 
@@ -653,29 +679,32 @@ class NewJournal(BaseHandler):
 class ViewArea(BaseHandler):
         
     def get(self, area_name):
-        # page = int(self.request.get('page', 1))
         area = cache.get_area(None, area_name)
-        #logging.debug('ViewArea area_name %s %s', area_name, area)
+        cell_list = []
         if not area:
-            #area = cache.get_area(None, area_name)
             logging.error('ViewArea: Area not found! %s', area_name)
             self.error(404)
         else:
-            # logging.info('ViewArea else ')
-            #following_areas = cache.get_by_keys(cache.get_following_areas(self.session['user']['name']), 'AreaOfInterest')
-    
+            # Make a list of the cells that overlap the area with their path, row and status. 
+            #This may be an empty list for a new area.
+            
+            for cell_key in area.cells:
+                cell = cache.get_cell_from_key(cell_key)
+                if cell is not None:
+                    #cell_list.append({"path":cell.path, "row":cell.row, "followed":cell.followed})
+                    if cell.followed:
+                        cell_list.append({"path":cell.path, "row":cell.row, "followed":"true"})
+                    else:
+                        cell_list.append({"path":cell.path, "row":cell.row, "followed":"false"})
+                else:
+                    logging.error ("ViewAreaHandler no cell returned from key %s ", cell_key)
+                
+                logging.debug('ViewArea area_name %s %s', area.name, cell_list)
+
             self.render('view-area.html', {
                 'username': self.session['user']['name'],
-                'area': area
-                #'following_areas' :following_areas
-                #'action': None,
-                #'algorithm': None,
-                #'satelite' : None,
-                #'latest' : None
-                # 'journal': journal,
-                # 'entries': cache.get_entries_page(username, area, page, area.key()),
-                # 'page': page,
-                # 'pagelist': utils.page_list(page, area.pages),
+                'area': area,
+                'celllist':json.dumps(cell_list)
             })
             
             
@@ -725,7 +754,7 @@ class GetLandsatCellsHandler(BaseHandler):
     
         eeservice.initEarthEngineService() # we need earth engine now.
     
-        area.max_path, area.min_path, area.max_row, area.min_row = eeservice.getLandsatCells(area)
+        area.max_path, area.min_path, area.max_row, area.min_row, cell_list = eeservice.getLandsatCells(area)
         
         if area.max_path == -1 or area.min_path == -1 or area.max_row == -1 or area.min_row == -1:
             self.populate_user_session()
@@ -734,23 +763,22 @@ class GetLandsatCellsHandler(BaseHandler):
             self.response.write('Error calculating Cells')
             return
         else:
-            for p in range(area.min_path, area.max_path+1):
-                for r in range(area.min_row, area.max_row+1):
-                    #data = cache.get_area_key(None, area_name)
-                    cellname = str(p*1000+r)
-                    logging.debug( "Creating Cell (%d, %d), %s", p, r, cellname)
-                    cell = models.LandsatCell(parent=area.key(), key_name=str(p*1000+r), path = p, row = r) #FIXME cells can belong to more than one parent area.
-                    db.put(cell) #FIXME should be in a transaction with area.cells updates.
-                    area.cells.append(cell.key()) #FIXME - This should only be added once a user has selected a cell for monitoring.
-                    
+            celldata = {'max_path':area.max_path, 'min_path':area.min_path, 'max_row':area.max_row, 'min_row':area.min_row, 'cell_list':cell_list}
+
+            for p,r in cell_list :
+                #data = cache.get_area_key(None, area_name)
+                cellname = str(p*1000+r)
+                logging.debug( "Creating Cell (%d, %d), %s", p, r, cellname)
+                cell = models.LandsatCell(parent=area.key(), key_name=str(p*1000+r), path = int(p), row = int(r)) #FIXME cells can belong to more than one parent area.
+                db.put(cell) #FIXME should be in a transaction with area.cells updates.
+                area.cells.append(cell.key()) #FIXME - This should only be added once a user has selected a cell for monitoring.
             db.put(area)
             cache.flush()
             self.populate_user_session()
             self.add_message('success','Your area is covered by %d Landsat Cells' %len(area.cells))
-            celldata = {'max_path':area.max_path, 'min_path':area.min_path, 'max_row':area.max_row, 'min_row':area.min_row }
             self.response.write(json.dumps(celldata))
             print 'GetLandsatCellsHandler: done'
-            return
+            return 
 
 class LandsatOverlayRequestHandler(BaseHandler):
     #This handler responds to Ajax request, hence it returns a response.write()
@@ -789,20 +817,17 @@ class LandsatOverlayRequestHandler(BaseHandler):
         if 'lpath' in opt_params and 'lrow' in opt_params:
             path = int(opt_params['lpath'])
             row =  int(opt_params['lrow'])
+            
             logging.debug("LandsatOverlayRequestHandler() path %s, row %s", path, row)
             cell = cache.get_cell(path, row)
             
             if cell is not None:
                 #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-                obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = map_id['date_acquired'], image_id = map_id['id'], rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
-                print "obs: ", obs
+                obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
                 db.put(obs)
-            #print "type(cell): ", type(cell)
-            #latestObs = cell.latestObservation(map_id['collection'])
-            #print "latest Observation", latestObs
-            #db.put(cell)
 
         del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
+        del map_id['capture_datetime'] #can't serialise a memory object, and browser won't need it so remove
         #logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
         self.populate_user_session()
         self.response.write(json.dumps(map_id))
@@ -820,18 +845,43 @@ class CheckNewHandler(BaseHandler):
         eeservice.initEarthEngineService()
         for area in all_areas:
             returnstr += 'area:{0!s} ['.format(area.name)
+            new_observations = []
             for cell_key in area.cells:
                 cell = cache.get_cell_from_key(cell_key)
                 if cell is not None:
                     #logging.debug("cell %s %s", cell.path, cell.row)
                     if cell.followed:
                         returnstr += '({0!s}, {1!s}) '.format(cell.path,cell.row)
-                        if eeservice.checkNewForCell(area, cell, "LANDSAT/LC8_L1T_TOA") == True:  #"LANDSAT/LE7_L1T_TOA") # old value "LANDSAT/L7_L1T"
-                             returnstr += 'New '
+                        obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")  #"LANDSAT/LE7_L1T_TOA") # old value "LANDSAT/L7_L1T"
+                        if obs is not None :
+                            returnstr += 'New '
+                            new_observations.append(obs)
+                            # find followers of this area
+                            # send them an email
                 else:
                     logging.error ("CheckNewHandler no cell returned from key %s ", cell_key)
             returnstr += '] '
         self.response.write(returnstr)        
+
+'''
+MailTestHandler() - This handler sends a test email 
+'''
+class MailTestHandler(BaseHandler):
+
+  def get(self):
+#     username = []
+#     if 'user' in self.session:
+#         areas = cache.get_areas(db.Key(self.session['user']['key'])) # areas user created
+#         self.populate_user_session() #Only need to do this when areas, journals  or followers change
+#         username = "intotecho@gmail.com"
+#     
+#     else:
+#         username = "bunjilforestwatch@gmail.com"
+    
+    user = cache.get_user(self.session['user']['name'])
+    
+    #mailer.new_image_email(user)
+    self.response.write( mailer.new_image_email(user))        
 
 class ViewJournal(BaseHandler):
     def get(self, username, journal_name):
@@ -2046,6 +2096,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/register', handler=Register, name='register'),
     webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
     webapp2.Route(r'/checknew', handler=CheckNewHandler, name='check-new-images'),
+    webapp2.Route(r'/mailtest', handler=MailTestHandler, name='mail-test'),
     webapp2.Route(r'/selectcell/<celldata>', handler=SelectCellHandler, name='select-cell'),
 
     webapp2.Route(r'/stats', handler=StatsHandler, name='stats'),
@@ -2125,6 +2176,7 @@ RESERVED_NAMES = set([
     'login',
     'logout',
     'markup',
+    'mailtest',
     'new',
     'news',
     'oauth',
