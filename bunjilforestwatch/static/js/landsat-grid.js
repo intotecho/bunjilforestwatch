@@ -10,7 +10,7 @@ var MAPS_API_KEY = 'AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I'; // https://code.go
 var landsat_overlays = [];
 var landsatgrid_panel = '#map_panel'; 	// display info about the selected cell.
 var landsatgrid_isclickable;  			// for new-area, we want it to be visible but non-interactive. For view-area, we want to be able to click on cells.
-var gridInitialised; 					// Is it already on the map?
+var gridInitialised = false; 					// Is it already on the map?
 
 //Path Row and Coordinates of the Landsat Cell selected (e.g. by mouse click)
 var selectedPath = -1 //global - PATH selected by mouse click
@@ -25,6 +25,7 @@ var selectedLAT_LR;
 var selectedLON_LR;
 
 var infoWindowArray = [];
+var cellarray = [];
 
 function resetInfoWindow() {
     "use strict";
@@ -40,6 +41,7 @@ function resetInfoWindow() {
 function queryLandsatFusionTableRadius(map) {
 	var map_center = map.getCenter(); // new
 	// google.maps.LatLng({{area.map_center}});
+	
 	var map_distance = google.maps.geometry.spherical
 	.computeDistanceBetween(map.getBounds().getNorthEast(), map.getBounds().getSouthWest());
 	var radius = 180000; // how far away to show cells from a small AOI in metres
@@ -88,8 +90,8 @@ function queryLandsatFusionTableCellArray(map, cellarray) {
 
 	var cellnames = [];
 
-	for(var i = 0; i < cellarray.length-1; i++) {
-		cellnames.push("'" + cellarray[i].path + '_' + cellarray[i].row + "'"); 
+	for(var i = 0; i < cellarray.length ; i++) {
+		cellnames.push("'" + cellarray[i].path + '_' + cellarray[i].row + "' "); 
 	};
 
 	var query = 'SELECT name, geometry, description FROM ' + LANDSAT_GRID_FT + 
@@ -112,7 +114,7 @@ function requestLandsatGrid(map, showlayer, clickable, cellarray) {
 
     landsatgrid_isclickable = clickable;
     var script = null;
-    if (gridInitialised !== true) {
+    if (gridInitialised != true) {
         if (showlayer === true) {
             gridInitialised = true;
             var url = null;
@@ -262,14 +264,17 @@ function monitor_cell(path, row, isMonitored )
 //Used in initial drawing of grid.
 function isMonitored(selectedPath, selectedRow, cellarray)
 {
-	for (var i = 0 ; i < cellarray.length; i++)
+	if (cellarray != null)
 		{
-			if ((cellarray[i].path == selectedPath) && (cellarray[i].row == selectedRow))
+			for (var i = 0 ; i < cellarray.length; i++)
 				{
-					return cellarray[i].followed ;
+					if ((cellarray[i].path == selectedPath) && (cellarray[i].row == selectedRow))
+						{
+							return cellarray[i].followed ;
+						}
 				}
+			console.log("isMonitored(): missing cell %d, %d", selectedPath, selectedRow);
 		}
-	console.log("isMonitored(): missing cell %d, %d", selectedPath, selectedRow);
 	return false;
 }
 
@@ -329,7 +334,7 @@ function drawLandsatGrid(data, clickable) {
 			landsat_cell['path'] = selectedPath;
 			landsat_cell['row'] = selectedRow;
 			
-			if( isMonitored(selectedPath, selectedRow, cellarray) == "true")
+			if( isMonitored(selectedPath, selectedRow, null) == "true")
 			{
 				landsat_cell.setOptions({
 					strokeWeight : 5,

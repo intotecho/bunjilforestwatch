@@ -1,42 +1,45 @@
 '''
-Wrappers for some Earth Engine Routines
-Created on 25/05/2013
-@author: cgoodman
-
+#Wrappers for Earth Engine Routines Commenced 25/05/2013
+@author: cgoodman can be shared.
+# Copyright (c) 2013-14 Chris Goodman <bunjilforestwatch@gmail.com>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
-import sys
-from google.appengine.ext import db
-import logging
-import cache
-import models # only for Observations.
 
-logging.basicConfig(level=logging.DEBUG)
+import sys
+from google.appengine.ext import db # is it required?
+import cache
+import models # only required for Observations model.
 
 import os
 from os import environ
 #logging.debug('PYTHONPATH: %s',os.environ['PYTHONPATH'])
 #logging.debug('HTTP_PROXY: %s',os.environ['HTTP_PROXY'])
 #logging.debug('HTTPS_PROXY: %s',os.environ['HTTPS_PROXY'])
-
 #if os.environ['EARTHENGINE_BYPASS'].startswith('T'): 
 #    logging.info('EARTHENGINE_BYPASS is %s. Earth Engine Calls are disabled..',os.environ['EARTHENGINE_BYPASS'])
 
 import oauth2client.client
 from oauth2client.appengine import AppAssertionCredentials
-
 from oauth2client import util # to disable positional parameters warning.
 
 import datetime
 import json
-
-import settings
-#You have to create your own keys. 
-
-#if os.environ['EARTHENGINE_BYPASS'].startswith('T'): 
-#    logging.info('EARTHENGINE_BYPASS is %s. Earth Engine Calls are disabled..',os.environ['EARTHENGINE_BYPASS'])
-#else:
+import settings #You have to import your own private keys. 
 import ee
     
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 '''
 initEarthEngineService()
@@ -48,8 +51,6 @@ When running on App Engine, this value is "Google App Engine/X.Y.Z".
 earthengine_intialised = False
 
 def initEarthEngineService():
-
-    #SCOPES = ('https://www.googleapis.com/auth/earthengine.readonly') # still needed?
 
     global earthengine_intialised
     if earthengine_intialised == False:
@@ -63,23 +64,11 @@ def initEarthEngineService():
                 EE_CREDENTIALS = AppAssertionCredentials(ee.OAUTH2_SCOPE)
             ee.Initialize(EE_CREDENTIALS) 
             earthengine_intialised = True
+            return True
         except Exception, e:
             #self.add_message('error', 'An error occurred with Earth Engine. Try again.')
             logging.error("Failed to connect to Earth Engine. Exception: %s", e)
-            pass
-
-'''
-checkNew() looks at each subscribed area of interest and checks to see if there is a new image in EE since the last check.
-'''
-    
-def checkNewAllAreas():
-    #for each Area
-    all_areas = cache.get_all_areas()
-    logging.info( "checkNewAllAreas(): areas = %s", all_areas)
-    for area in all_areas:
-        checkNewForArea(area, "LANDSAT/LC8_L1T_TOA")
-        checkNewForArea(area, "LANDSAT/LE7_L1T_TOA") # old value "LANDSAT/L7_L1T" 
-    return True
+            return False
 
 
 '''
@@ -89,7 +78,6 @@ checkForNewObservationInCell() checks the collection for the latest image and co
     An error is logged if no images are found. 
     If no observation exists, one is created.
 '''
-
 def checkForNewObservationInCell(area, cell, collection_name):
     poly = [] #TODO Move poly to a method of models.AOI
     for geopt in area.coordinates:
@@ -97,7 +85,7 @@ def checkForNewObservationInCell(area, cell, collection_name):
     latest_image = getLatestLandsatImage(poly, collection_name, 0, params = [cell.path, cell.row]) # most recent image for this cell in the collection
     if latest_image is not None:
         storedlastObs = cell.latestObservation(collection_name)             #FIXME - Need to use the cache here.
-        if storedlastObs is None or latest_image.capture_datetime > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
+        if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
             obs = models.Observation(parent = cell, image_collection = collection_name, captured = latest_image.system_time_start, image_id = latest_image.name, rgb_map_id = None, rgb_token = None,  algorithm = None)
             db.put(obs)
             if storedlastObs is None:
@@ -122,7 +110,6 @@ return type is ee.Image(). Some attributes are appended to the object.
 '''
 secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
 
-    
 def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, params):
     #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
     cw_feat = ee.Geometry.Polygon(boundary_polygon)
@@ -164,7 +151,7 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     
     try:
         feature = scenes['features'][int(latest_depth)]
-        print 'feature: ', feature
+        #print 'feature: ', feature
     except IndexError:
         try:
             feature = scenes['features'][0]
@@ -195,27 +182,22 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     
     #x['mynewkey'] = id 
     return latest_image  #.clip(park_boundary)
-
+'''
+getCellsinArea()
+requires params to passed in a dictionary of lpath lrow
+NOT CALLED @!@!!!
+'''
 def getCellsinArea(boundary_polygon, collection_name, params):
-    #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
     cw_feat = ee.Geometry.Polygon(boundary_polygon)
     feat = cw_feat.buffer(0, 1e-10)
-    #logging.info('feat %s', feat)
     boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-    
-    #boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
-    #logging.debug('Temporarily disabled buffer to allow AOI points in clockwise order due to EEAPI bug')
-
-    #boundary_feature_buffered = boundary_feature 
     park_boundary = ee.FeatureCollection(boundary_feature)
     
     end_date   = datetime.datetime.today()
     start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear/2 )
     logging.debug('getLatestLandsatImage() start:%s, end:%s ',start_date,  end_date)
-    #logging.debug('getLatestLandsatImage() park boundary as FC %s ',park_boundary)
 
     image_collection = ee.ImageCollection(collection_name)
-    #print image_collection.getInfo()
     
     if ('lpath' in params) and ('lrow' in params): 
         
@@ -538,47 +520,62 @@ def getPathRow(collection, sort_property, ascending):
 
     
 #determine the overlapping cells from the image collection returned and store them in area.cells.
+'''
+getLandsatCells taks and area and extracts is boundary. 
+Then is calls earth engine to generate a collection of L8 images from the last 2 years.
+It queries the collection for the images with the min and max paths and min and max row. This includes cells that don't overlap the area.
+It then loops through each path and row within these bounds to check for an image with that path row combination.
+If found, then the path/row cell overlaps the area and is added to the cells list.
+It returns the cells list as well as setting the max and min coordinates.
+'''
+#TODOThere is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query.
 def getLandsatCells(area):
     #TODO: Better to store area.coordinates as an ee.FeatureCollection type. Then this is not repeated for each new image.
     boundary_polygon = []
     for geopt in area.coordinates:
         boundary_polygon.append([geopt.lon, geopt.lat])
         
-    #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
     cw_feat = ee.Geometry.Polygon(boundary_polygon)
     feat = cw_feat.buffer(0, 1e-10)
     
-    #logging.info('feat %s', feat)
     boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-    #boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
-    #logging.debug('getLandsatCells: Temporarily disabled buffer to allow AOI points in clockwise order due to EEAPI bug')
-
     boundary_feature_buffered = boundary_feature 
     park_boundary = ee.FeatureCollection(boundary_feature_buffered)
-    #info = park_boundary.getInfo()
     end_date   = datetime.datetime.today()
-    start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear ) #years.
-    #logging.debug('start:%s, end:%s ',start_date,  end_date)
+    #start_date = end_date - datetime.timedelta(seconds = 2 * secsperyear ) #years.
+    start_date = end_date - datetime.timedelta(years = 2) #years.
 
     boundCollection = ee.ImageCollection('LANDSAT/LC8_L1T_TOA').filterBounds(park_boundary).filterDate(start_date, end_date)
-    #boundCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date)
 
-    max_path = getPathRow(boundCollection,"WRS_PATH", False)
-    min_path = getPathRow(boundCollection,"WRS_PATH", True)
-    max_row  = getPathRow(boundCollection,"WRS_ROW", False)
-    min_row  = getPathRow(boundCollection,"WRS_ROW", True)
-    logging.debug('getLandsatCells(): max_path: %d, min_path: %d, max_row %d, min_row: %d', max_path, min_path, max_row, min_row)
+    area.max_path = getPathRow(boundCollection,"WRS_PATH", False)
+    area.min_path = getPathRow(boundCollection,"WRS_PATH", True)
+    area.max_row  = getPathRow(boundCollection,"WRS_ROW", False)
+    area.min_row  = getPathRow(boundCollection,"WRS_ROW", True)
+    logging.debug('getLandsatCells(): max_path: %d, min_path: %d, max_row %d, min_row: %d', area.max_path, area.min_path, area.max_row, area.min_row)
     cells = []
-    for p in range(min_path, max_path+1):
-        for r in range(min_row, max_row+1):
+    for p in range(area.min_path, area.max_path+1):
+        for r in range(area.min_row, area.max_row+1):
             imageCollection = boundCollection.filterMetadata('WRS_PATH', 'equals', p).filterMetadata('WRS_ROW', 'equals', r)
             scenes  = imageCollection.getInfo()
             try:
-                feature = scenes['features'][0]
+                scenes['features'][0]
                 cells.append([p,r])
                 logging.debug('getLandsatCells(): [%d, %d] overlaps area', p,r)
+                
+                cellname = str(p*1000+r)
+                      
+                logging.debug( "Creating Cell (%d, %d), %s", p, r, cellname)
+                cell = models.LandsatCell(parent=area.key(), key_name=str(p*1000+r), path = int(p), row = int(r)) 
+                #Note that multiple LandsatCell objects for the same Landsat Cell(p,r) can be created, one for each parent area to which it belongs.
+                db.put(cell) #FIXME should be in a transaction with area.cells updates.
+                area.cells.append(cell.key()) #This is added even though the owner has not selected this cell for monitoring.
+                
             except IndexError:
                 logging.debug('getLandsatCells(): [%d, %d] does not overlap area', p,r)
-    return (max_path, min_path, max_row, min_row, cells)
+
+    db.put(area)
+    #cache.clear_area_cache("users", area) #FIXME only flush areas is all that required.   
+    cache.flush() # FIXME
+    return #(area.max_path, area.min_path, area.max_row, area.min_row, area.CellList)
 
 ################# EOF ############################################

@@ -70,7 +70,7 @@ class BaseHandler(webapp2.RequestHandler):
         context['user'] = self.session.get('user')
         context['messages'] = self.get_messages()
         context['active'] = _template.partition('.')[0]
-
+        
         for k in ['login_source']:
             if k in self.session:
                 context[k] = self.session[k]
@@ -82,10 +82,10 @@ class BaseHandler(webapp2.RequestHandler):
         #logging.debug('BaseHandler: messages %s', context['messages'])
         #print '\033[1;33mRed like Radish\033[1;m'
         #print '\033[1;34mRed like Radish\033[1;m \x1b[0m'
-        print('\033[31m' + 'some red text')
-        print('\033[30m' + 'reset to default color')
+        #print('\033[31m' + 'some red text')
+        #print('\033[30m' + 'reset to default color')
 
-        logging.debug('BaseHandler: Color Test \033[1;33mRed like Radish\033[1;m %s \x1b[0m', "Hello World")
+        logging.debug('BaseHandler:\033[1;31m Color Console Test\033[1;m  \x1b[0m %s', "Reset to Default Color")
 
         rv = utils.render(_template, context)
 
@@ -176,8 +176,8 @@ class MainPage(BaseHandler):
         if 'user' in self.session:
             #THIS CAN BE OPTIMISED
             #print "MainPage()"
-            following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
-            followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User')
+            following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User') # for journal not areas
+            followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User') # for journal not areas
             #print self.session['user']['name']
             #following_areas_list = cache.get_following_areas_list(self.session['user']['name']) #this is in session so redundant
     
@@ -203,7 +203,7 @@ class MainPage(BaseHandler):
                 'followers': followers,#other users
                 'areas': areas,
                 'following_areas': following_areas,
-                'other_areas': other_areas, #other areas.
+                'other_areas': other_areas #other areas.
                 #'following_areas_list': following_areas_list, #other areas.
                 #'all_areas': all_areas
             })
@@ -740,10 +740,10 @@ class GetLandsatCellsHandler(BaseHandler):
 
     def get(self, area_name):
         #TODO: This test is to help me understand AJAX vs HTTP but serves not other purpose.
-        if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            logging.debug('GetLandsatCellsHandler() - This is a normal HTTP request') # render the ViewArea page, then send image.
-        else:
-            logging.debug('GetLandsatCellsHandler() - This is an AJAX request') 
+        #if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        #    logging.debug('GetLandsatCellsHandler() - This is a normal HTTP request') # render the ViewArea page, then send image.
+        #else:
+        #    logging.debug('GetLandsatCellsHandler() - This is an AJAX request') 
         
         area = cache.get_area(None, area_name)
         if not area or area is None:
@@ -754,7 +754,9 @@ class GetLandsatCellsHandler(BaseHandler):
     
         eeservice.initEarthEngineService() # we need earth engine now.
     
-        area.max_path, area.min_path, area.max_row, area.min_row, cell_list = eeservice.getLandsatCells(area)
+        #area.max_path, area.min_path, area.max_row, area.min_row, cell_list = eeservice.getLandsatCells(area)
+        eeservice.getLandsatCells(area)
+        area = cache.get_area(None, area_name) # refresh the cache as it has been updated by getLandsatCells().
         
         if area.max_path == -1 or area.min_path == -1 or area.max_row == -1 or area.min_row == -1:
             self.populate_user_session()
@@ -763,21 +765,15 @@ class GetLandsatCellsHandler(BaseHandler):
             self.response.write('Error calculating Cells')
             return
         else:
-            celldata = {'max_path':area.max_path, 'min_path':area.min_path, 'max_row':area.max_row, 'min_row':area.min_row, 'cell_list':cell_list}
-
-            for p,r in cell_list :
-                #data = cache.get_area_key(None, area_name)
-                cellname = str(p*1000+r)
-                logging.debug( "Creating Cell (%d, %d), %s", p, r, cellname)
-                cell = models.LandsatCell(parent=area.key(), key_name=str(p*1000+r), path = int(p), row = int(r)) #FIXME cells can belong to more than one parent area.
-                db.put(cell) #FIXME should be in a transaction with area.cells updates.
-                area.cells.append(cell.key()) #FIXME - This should only be added once a user has selected a cell for monitoring.
-            db.put(area)
-            cache.flush()
-            self.populate_user_session()
-            self.add_message('success','Your area is covered by %d Landsat Cells' %len(area.cells))
-            self.response.write(json.dumps(celldata))
-            print 'GetLandsatCellsHandler: done'
+            cell_list = area.CellList()
+            
+            #celldata = {'max_path':area.max_path, 'min_path':area.min_path, 'max_row':area.max_row, 'min_row':area.min_row, 'cell_list':cell_list}
+            returnstr = 'Your area is covered by {0:d} Landsat Cells'.format(len(area.cells))
+            
+            #self.populate_user_session() # what does this do?
+            self.add_message('success',returnstr)
+            self.response.write(json.dumps(cell_list))
+            logging.debug(returnstr)
             return 
 
 class LandsatOverlayRequestHandler(BaseHandler):
@@ -840,28 +836,45 @@ class CheckNewHandler(BaseHandler):
     
     def get(self):
         logging.info("Cron CheckNewHandler check-new-images")
-        returnstr = "checking "
+        returnstr = "checking areas for new observations <br>"
         all_areas = cache.get_all_areas()
         eeservice.initEarthEngineService()
         for area in all_areas:
-            returnstr += 'area:{0!s} ['.format(area.name)
-            new_observations = []
-            for cell_key in area.cells:
-                cell = cache.get_cell_from_key(cell_key)
-                if cell is not None:
-                    #logging.debug("cell %s %s", cell.path, cell.row)
-                    if cell.followed:
-                        returnstr += '({0!s}, {1!s}) '.format(cell.path,cell.row)
-                        obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")  #"LANDSAT/LE7_L1T_TOA") # old value "LANDSAT/L7_L1T"
-                        if obs is not None :
-                            returnstr += 'New '
-                            new_observations.append(obs)
-                            # find followers of this area
-                            # send them an email
-                else:
-                    logging.error ("CheckNewHandler no cell returned from key %s ", cell_key)
-            returnstr += '] '
+            #area_followers_key = cache.get_area_followers(area.name) # who follows this area.
+            area_followers  = models.AreaFollowersIndex.get_by_key_name(area.name, area) 
+            if area_followers:
+                returnstr += 'area:{0!s} ['.format(area.name)
+                new_observations = []
+                for cell_key in area.cells:
+                    cell = cache.get_cell_from_key(cell_key)
+                    if cell is not None:
+                        #logging.debug("cell %s %s", cell.path, cell.row)
+                        if cell.followed:
+                            returnstr += '({0!s}, {1!s}) '.format(cell.path,cell.row)
+                            obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")  #"LANDSAT/LE7_L1T_TOA") # old value "LANDSAT/L7_L1T"
+                            if obs is not None :
+                                db.put(obs)
+                                returnstr += 'New '
+                                new_observations.append(obs.key())
+                                # find followers of this area
+                                # send them an email
+                    else:
+                        logging.error ("CheckNewHandler no cell returned from key %s ", cell_key)
+                returnstr += '] '
+                if new_observations:
+                    new_task = models.ObservationTask(aoi = area.key(), observations=new_observations) # always select the first follower.
+                    user = cache.get_user(area_followers.users[0]) # TODO - THis always assigns tasks to the first follower. 
+                    new_task.assigned_owner = user
+                    new_task.original_owner = user
+                    db.put(new_task)
+                    mailer.new_image_email(new_task, self.request.headers.get('host', 'no host'))
+                    returnstr += "created task<br>"
+            else:
+                 returnstr += '{0!s} has no followers. <br>'.format(area.name)
+                
+        logging.info(returnstr)        
         self.response.write(returnstr)        
+
 
 '''
 MailTestHandler() - This handler sends a test email 
@@ -879,9 +892,29 @@ class MailTestHandler(BaseHandler):
 #         username = "bunjilforestwatch@gmail.com"
     
     user = cache.get_user(self.session['user']['name'])
-    
+    tasks = models.ObservationTask.all().order('-created_date').fetch(2)
     #mailer.new_image_email(user)
-    self.response.write( mailer.new_image_email(user))        
+    if not tasks:
+        return self.handle_error("No tasks to test mailer")
+    resultstr = mailer.new_image_email(tasks[0], self.request.headers.get('host', 'no host') )
+    
+    self.response.write( resultstr)        
+
+class ObservationTaskHandler(BaseHandler):
+    def get(self, username, taskname):
+        user = cache.get_user(username)
+        task = cache.get_task(taskname)  #FIXME Must be typesafe
+        if task is not None:
+            resultstr = "ObservationTaskHandler: Stub [Sorry - Not yet implemented] <br> {0!s} {1!s}".format(user.name, str(task.key()))
+            logging.info(resultstr)
+        else:
+            resultstr = "ObservationTaskHandler: Invalid key {0!s}".format(taskname)
+        #following = cache.get_by_keys(cache.get_following(username), 'User')
+        #followers = cache.get_by_keys(cache.get_followers(username), 'User')
+
+        #self.render('following.html', {'u': u, 'following': following, 'followers': followers})
+        self.response.write( resultstr)
+
 
 class ViewJournal(BaseHandler):
     def get(self, username, journal_name):
@@ -1084,7 +1117,7 @@ class FollowAreaHandler(BaseHandler):
             if not tu:
                 tu = models.UserFollowingAreasIndex(key=thisuser)
             if not ar:
-                ar = models.AreaFollowersIndex(key=area)
+                ar = models.AreaFollowersIndex(key=area)  # FIXME: This looks wrong, ar is initialised as an area above but an afi here. Probably never executes.
 
             changed = []
             if op == 'add':
@@ -1120,8 +1153,7 @@ class FollowAreaHandler(BaseHandler):
         elif op == 'del':
             self.add_message('success', 'You are no longer following area %s.' %area_name)
 
-        cache.flush() # a hack workaround because I am in a panick!!!
-
+        cache.flush() # FIXME: Better to just delete the dirty items!!!
         #cache.set_multi({
         #    cache.C_AREA_FOLLOWERS %area.name: followers.users,  #doesn't look right.
         #    cache.C_FOLLOWING_AREAS %thisuser: areas_following #areas_following.areas,
@@ -1406,7 +1438,9 @@ class SaveEntryHandler(BaseHandler):
                 time = '12:00 AM'
 
             try:
-                newdate = datetime.datetime.strptime('%s %s' %(date, time), '%m/%d/%Y %I:%M %p')
+                #newdate = datetime.datetime.strptime('{0!s} {1!s}'.format(date, time),'%m/%d/%Y %I:%M %p') # new format
+                newdate = datetime.datetime.strptime('%s %s' %(date, time), '%m/%d/%Y %I:%M %p') # old format
+
             except:
                 self.add_message('error', 'Couldn\'t understand that date: %s %s' %(date, time))
                 newdate = entry.date
@@ -1605,18 +1639,18 @@ class UploadSuccess(BaseHandler):
 
         self.response.out.write(json.dumps(d))
 
-class FlushMemcache(BaseHandler):
+class FlushMemcache(BaseHandler): #Admin Only Function
     def get(self):
         cache.flush()
         self.render('admin.html', {'msg': 'memcache flushed'})
 
-class NewBlogHandler(BaseHandler):
+class NewBlogHandler(BaseHandler):  #Admin Only Function
     def get(self):
         b = models.BlogEntry(user=self.session['user']['name'], avatar=self.session['user']['avatar'])
         b.put()
         self.redirect(webapp2.uri_for('edit-blog', blog_id=b.key().id()))
 
-class EditBlogHandler(BaseHandler):
+class EditBlogHandler(BaseHandler):  #Admin Only Function
     def get(self, blog_id):
         b = models.BlogEntry.get_by_id(long(blog_id))
 
@@ -1745,7 +1779,7 @@ class MarkupHandler(BaseHandler):
 #    def get(self):
 #        self.render('security.html')
 
-class UpdateUsersHandler(BaseHandler):
+class UpdateUsersHandler(BaseHandler): #Admin Only Function
     def get(self):
         q = models.User.all(keys_only=True)
         cursor = self.request.get('cursor')
@@ -2107,6 +2141,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/upload/success', handler=UploadSuccess, name='upload-success'),
     webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
+    # observation tasks
+    webapp2.Route(r'/obs/<username>/<taskname>', handler=ObservationTaskHandler, name='obs-task'),
+
     # taskqueue
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
     webapp2.Route(r'/tasks/backup', handler=BackupHandler, name='backup'),
@@ -2180,6 +2217,7 @@ RESERVED_NAMES = set([
     'new',
     'news',
     'oauth',
+    'obs',
     'openid',
     'privacy',
     'register',

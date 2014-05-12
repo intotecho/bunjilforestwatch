@@ -32,9 +32,17 @@ img[src*="gstatic.com/"], img[src*="googleapis.com/"] {
 <script type="text/javascript" src="/static/js/landsat-grid.js"></script>
 <script type="text/javascript" src="/static/js/polygon-outliner.js"></script>
 <script type="text/javascript" src="/static/js/drawing-tools.js"></script>
+<script type="text/javascript" src="/static/js/bootbox.min.js"></script>
 
 <script>
 
+var instructions_str =  
+    "Earth Engine is now calculating which Landsat cells overlap your new area. This can take a few minutes. <br />" +
+    "Then it will display the cells as rectangles overlapping your area. <br />" + 
+    //"You can also hide or show them with the 'Landsat Grid' togle <br />" +
+    "Select the cells you wish to include in reports by clicking on them. <br />" +
+    "Click again to unselect the cell and remove it from reports. <br /><br>" + 
+    "Each cell generates more work for reviewers every 8 days. <br />Only select cells that overlap critical areas you wish to monitor.";
 
 var map;
 var mapobj; //returned by last call to EE image overlay.
@@ -42,7 +50,6 @@ var satellite = 'l8'
 var algorithm = 'rgb'; // ndvi 
 var latest = 0;  //latest - 0
 var showLandsatGridLayer = true;
-var cellarray = [];
 var overlayMaps = [];
 
 
@@ -85,6 +92,18 @@ function initialize() {
 	         	console.log("zoom to:", map.zoom());
 	});
  
+    google.maps.event.addListener(map, 'idle', function() {
+        //This is needed so the fusion tables query works
+        var map_center = map.getCenter()
+        if (map_center.lng() < -180) { 
+            map.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()+360));
+        }
+        if (map_center.lng() > 180) { 
+            map_center.lng() -= 360;
+            map.setCenter(map_center);
+        }
+     });
+
     //Collect the Boundary coordinates from the area and convert to a Google Maps object.
     
     var latlngs = [];
@@ -104,14 +123,13 @@ function initialize() {
     
     areaBoundary.setMap(map);
 
-    
-/*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
- *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
- *  Old method was a big rectangle. 
- *         var latlng_bounds = {'max_lat': {{area.max_latlon.lat}}, 'min_lat': {{area.min_latlon.lat}}, 'max_lon': {{area.max_latlon.lon}}, 'min_lon': {{area.min_latlon.lon}}};
- *         cellarray =         {'max_path':{{area.max_path}},       'min_path': {{area.min_path}},      'max_row': {{area.max_row}},        'min_row': {{area.min_row}}};
- *  New method calculates intersections so returns only overlapping cells.
- */    
+	/*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
+	 *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
+	 *  Old method was a big rectangle. 
+	 *         var latlng_bounds = {'max_lat': {{area.max_latlon.lat}}, 'min_lat': {{area.min_latlon.lat}}, 'max_lon': {{area.max_latlon.lon}}, 'min_lon': {{area.min_latlon.lon}}};
+	 *         cellarray =         {'max_path':{{area.max_path}},       'min_path': {{area.min_path}},      'max_row': {{area.max_row}},        'min_row': {{area.min_row}}};
+	 *  New method calculates intersections so returns only overlapping cells.
+	 */    
     cellarray = {{celllist}};    //cellarray = jQuery.parseJSON({{celllist}});
     
     console.log('Init:Cellarray from view-area handler: ', cellarray);
@@ -123,12 +141,31 @@ function initialize() {
         $('#observations_panel').empty();
         $('#observations_panel').append("Calculating Landsat Cells ...");
         $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+        bootbox.dialog({
+            message: instructions_str,
+            title: "Next Steps",
+            closeButton: true,
+            buttons: {
+              success: {
+              label: "Continue ...",
+              className: "btn-success",
+              callback: function() {
+              bootbox.hideAll();
+              }
+              }
+              }
+          })
+         //bootbox.alert(instructions_str);
         $.get(url).done(function(data) {
-            cellarray = jQuery.parseJSON(data);
+        	cellarray = jQuery.parseJSON(data);
+            
             console.log('Init:Cellarray from ajax handler: ', cellarray);
             $('#observations_panel').empty();
             $('#observations_panel').append("Area has " + cellarray.length + " cells. " );
-            //createImageOverlay(true, mapobj.mapid,  mapobj.token, mapobj.date_acquired);
+            //if(showLandsatGridLayer == true) {
+                showLandsatGridLayer = true;
+                requestLandsatGrid(map, true, true, cellarray); //map, showlayer, clickable, cells
+            //}
 
         }).error(function( jqxhr, textStatus, error ) {
             var err = textStatus + ', ' + error;
@@ -148,11 +185,8 @@ function initialize() {
     
     // Fetch Overlay Image of Latest Landsat
     $('#get_overlay_btn').click(function(){
-    	//var _url = ajaxActionUrl("overlay");
     	var httpget_url = httpgetActionUrl("overlay")
-        //window.history.replaceState('string', 'load image', httpget_url);
-    	//var pathname = window.location.pathname; // ie the above.
-      console.log( "urls", httpget_url);
+        console.log( "urls", httpget_url);
        $("#observations_panel").collapse('show');
 	 	   $('#observations_panel').empty();
 	 	   $('#observations_panel').append("Getting Sat Data...");
@@ -199,7 +233,7 @@ function initialize() {
 	 	    });
    	});
 
- 		//Checkbox to show/hide overlays  		
+ 	//Checkbox to show/hide overlays  		
    	$('.layer').click(function(){
    			var layerID = parseInt($(this).attr('id'));
    		    if(layerID == 0) //LANDSAT grid 
@@ -207,7 +241,7 @@ function initialize() {
    	            //console.log('showLandsatGridLayer ', showLandsatGridLayer)   
    		    	if(showLandsatGridLayer == false) {
    		    	  showLandsatGridLayer = true;
-   		    	  requestLandsatGrid(map, true, true, /*latlng_bounds */ cellarray); //map, showlayer, clickable, cells
+   		    	  requestLandsatGrid(map, true, true,  cellarray); //map, showlayer, clickable, cells
    		    	}
    		    	else {
                     showLandsatGridLayer = false;
@@ -323,6 +357,8 @@ function initialize() {
             content: instructions_content
             });
         $('#instructions').popover();
+        
+    
 
    		
 };//initialize
