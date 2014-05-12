@@ -1,0 +1,17 @@
+ <!-- TODO: Find an older version of this snippet that was lost but behaved better -->
+  {% for j in following_areas %}
+            <pre class="table-otherareabackground">
+            <table class="table table-condensed ">
+            <tbody>
+            {% if thisuser %}
+                <tr><a data-toggle="tooltip" title="Click to view. Description: {{ j.description}}" href="{{ j|area_url }}"><h4>{{ j }}</h4></a></tr>
+            {% else %}
+                <tr>{{ j }}</tr>
+            {% endif %}
+            <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
+            <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
+            <tr><td>observers </td><td>{{ j.subscriber }}</td></tr>
+             <tr><td><a href="{{ "user"|url(user.name) }}/unfollow/{{ j }}" class="btn btn-small btn-lightblue" data-toggle="tooltip" title="Stop receiving review requests for this area.">Unfollow</a></td></tr>
+            </tbody>        
+           </table></pre> 
+    {% endfor %}

@@ -30,12 +30,11 @@ var map;
           zoom: 3,
           mapTypeId: google.maps.MapTypeId.HYBRID
         };
+       
         map = new google.maps.Map(document.getElementById("map-canvas"),
             mapOptions);
         
-        var creator = new PolygonCreator(map);
-          
-        
+        var creator = new PolygonCreator(map);       
 
         //function to add the polygon coordinates to the form data prior to submit. 
 		$(window).bind('submit',function(){
@@ -161,9 +160,22 @@ var map;
 			  content: instructions_content
 			  });
           $('#instructions').popover();
-
+          
+          google.maps.event.addListener(map, 'idle', function() {
+              //This is needed so the fusion tables query works
+              var map_center = map.getCenter()
+              if (map_center.lng() < -180) { 
+                  map.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()+360));
+              }
+              if (map_center.lng() > 180) { 
+                  map_center.lng() -= 360;
+                  map.setCenter(map_center);
+              }
+           });
       };
-      
+  
+
+   
       google.maps.event.addDomListener(window, 'load', initialize);
   
     </script>    
@@ -207,7 +219,7 @@ var map;
 						<input type="submit" class="btn btn-lightgreen" style="width:180px" value="Create Area">
 					</div>
                     <div class="control-group">
-                        <input id="reset", type="reset" class="btn btn-lightred" style="width:180px" value="Oops! Start Again" data-toggle="tooltip" title="Clear all the markers on the map">
+                        <input id="reset", type="reset" class="btn btn-lightred" style="width:120px" value="Oops! Start Again" data-toggle="tooltip" title="Clear all the markers on the map">
 					<div id="map_panel" class="control-group" rows="5" cols="25" name="panel" >
 						<p class="divider"></p>
 			      	</div>

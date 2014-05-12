@@ -50,8 +50,7 @@ class User(db.Model):
 	areas_observing = db.ListProperty(db.Key, default=None) # list of areas we watch - Not Used
 	areas_subscribing = db.ListProperty(db.Key, default=None) # list of areas I subscribe to  (only for local)
 	
-# adding for bujilae
-	role = db.StringProperty(required=True, choices=set(["volunteer", "local", "admin", "viewer"]))	
+	role = db.StringProperty(required=True, choices=set(["volunteer", "local", "admin", "viewer"]))	#roles for bunjil app users. 
 
 # not required
 	first_entry = db.DateTimeProperty()
@@ -209,11 +208,33 @@ class AreaOfInterest(db.Model):
 			#return webapp2.uri_for('view-area', username=self.key().parent().name(),  area_name= self.name)
 			return webapp2.uri_for('view-area', area_name= self.name)
 
+	
+	def CellList(self):
+		cell_list = []
+		for cell_key in self.cells:
+			cell = cache.get_cell_from_key(cell_key)
+			if cell is not None:
+				#cell_list.append({"path":cell.path, "row":cell.row, "followed":cell.followed})
+				if cell.followed:
+					cell_list.append({"path":cell.path, "row":cell.row, "followed":"true"})
+				else:
+					cell_list.append({"path":cell.path, "row":cell.row, "followed":"false"})
+			else:
+				logging.error ("AreaofInterest::cell_list() no cell returned from key %s ", cell_key)
+			
+			returnstr = 'AreaofInterest::CellList() area {0!s} has cells {1!s}'.format(self.name, cell_list)
+			logging.debug(returnstr)
+		return cell_list
+
+
 '''
 Landsat Cell represents an 170sq km area where each image is captured. 
 Each path and row identifies a unique cell.
 An AOI makes overlaps a set of one or more cells - and creates a constant list of these.
 Each cell has a different schedule when new images arrive.
+
+Note that multiple LandsatCell objects for the same Landsat Cell(p,r) can be created, one for each parent area to which it belongs.
+                
 '''
 class LandsatCell(db.Model):
 	#constants - not changed once created. Created when AOI is created. 
@@ -241,6 +262,7 @@ class LandsatCell(db.Model):
 		q = Observation.all().ancestor(self).filter('image_collection =', collectionName).order('-captured')
 		return q.get()
 
+
 '''
 class Observation contains the metadata and map_id for a (Landsat) satelite image that has been retrieved and converted to a usable (visible/NDVI) format.
 
@@ -256,25 +278,25 @@ class Observation(db.Model):
 	rgb_token	= db.StringProperty(required=False, default=None) 	# RGB Mpa Overlay Token might have expired.
 	algorithm = db.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this. 
 	#landsatCell = db.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
+
+
 '''
 class Task is an observation task, based on a landsat image in an AOI. The task includes a user who is responsible for completing the task.
 Each task has a unique ID.
 '''    
-class Task(db.Model):
+class ObservationTask(db.Model):
+	# Observation
+	name = db.StringProperty()
 	aoi = db.ReferenceProperty(AreaOfInterest) #key to area that includes this cell
-	#observation = db.ReferenceProperty(Observation) #key to observation related to this task TODO: Could be a list....
-	observations = db.ListProperty(db.Key) #key to observations related to this task.
-	original_owner = db.ReferenceProperty(User)
-	current_owner = db.ReferenceProperty(User)
-		
-	#User (volunteer following the AOI)
-	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
-	owner = db.ReferenceProperty(User) #key to subscriber that created area.
+	observations = db.ListProperty(db.Key) #key to observations related to this task. E.g if two images are in the same path and published at same time.
+
+	#people - 	Expected to be a user  who is one of the area's followers. volunteering to follow the AOI
+	original_owner = db.ReferenceProperty(User, collection_name='original_user') # user originally assigned the the task
+	assigned_owner = db.ReferenceProperty(User, collection_name='assigned_user') # user who is assigned the the task
 	
 	#timestsamps
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
-	
 
 
 class Journal(db.Model):
@@ -350,23 +372,6 @@ class EntryContent(db.Model):
 	rendered = db.TextProperty(default='')
 	markup = db.StringProperty(required=True, indexed=False, choices=CONTENT_TYPE_CHOICES, default=RENDER_TYPE_TEXT)
 	images = db.StringListProperty()
-
-
-class ObservationTask(db.Model):
-	date = db.DateTimeProperty(auto_now_add=True)
-	created = db.DateTimeProperty(required=True, auto_now_add=True)
-	last_edited = db.DateTimeProperty(required=True, auto_now=True)
-
-	content = db.IntegerProperty(required=True) # key id of EntryContent
-	aoi = db.ReferenceProperty(required = True)
-	# FIXME: cell = aoi.cell
-	
-	@property
-	def time(self):
-		if not self.date.hour and not self.date.minute and not self.date.second:
-			return ''
-		else:
-			return self.date.strftime('%I:%M %p')
 
 
 class Entry(db.Model):

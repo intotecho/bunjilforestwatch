@@ -1,4 +1,4 @@
-# Copyright (c) 2011 Matt Jibson <matt.jibson@gmail.com>
+# Based on cache.py from Copyright (c) 2011 Matt Jibson <matt.jibson@gmail.com>
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -68,6 +68,7 @@ C_JOURNALS = 'journals_%s'
 C_JOURNAL_KEY = 'journal_key_%s_%s'
 C_JOURNAL_LIST = 'journals_list_%s'
 
+C_OBS_TASK = 'obstask_%s'
 
 C_KEY = 'key_%s'
 C_STATS = 'stats'
@@ -350,6 +351,7 @@ def clear_area_cache(user_key, area_key):
                             C_AREA %(user_key, area_key),
                             C_AREA %(tag, area_key) ])
 
+
 def clear_area_followers(area_key): #not used
     memcache.delete(C_AREA_FOLLOWERS %area_key)
 
@@ -453,16 +455,15 @@ def get_area_followers(area_name):
     if data is None:
         followers = models.AreaFollowersIndex.get_by_key_name(area_name) 
         #, parent=db.Key.from_path('AreaOfInterest', area_name))
-        if not followers:
-            data = []
-        else:
-            #data = followers.users
-            data = [(i.url(), i.name) for i in followers]
+        if followers is not None:
+            data = [(i.url(), i.name, i.id()) for i in followers]
+        else: 
+            data = []    
         memcache.add(n, data)
-     #print "get_area_followers"
+    #print "get_area_followers"
     return data
 
-def get_following_areas(user_key):
+def get_following_areas(user_key): 
     n = C_FOLLOWING_AREAS %user_key
     data = memcache.get(n)
     if data is None:
@@ -558,7 +559,7 @@ def get_area_key(username, area_name):
 
 def get_cell(path, row):
     n = C_CELL %(path, row)
-    print "get_cell() ", n
+    #print "get_cell() ", n
     data = memcache.get(n)
     if data is None:
         data = models.LandsatCell.all().filter('path =', int(path)).filter('row =', int(row)).get()
@@ -606,7 +607,21 @@ def get_all_cells(): #FIXME - Doesn't work - too much data returned.
         #following = models.UserFollowingAreasIndex.get_by_key_name(user_key, None)
 #        following = models.UserFollowingAreasIndex.get(following_key)
 
-
+def get_task(task_key_name):
+   
+    n = C_OBS_TASK %(task_key_name)
+    data = unpack(memcache.get(n))
+    if data is None:
+        data= get_by_key(task_key_name)
+        if data is None:
+            logging.error("get_task(): Not an object") 
+            return None
+        else:
+            if data.kind() != "ObservationTask":
+                logging.error("get_task(): Not a task object") 
+                return None
+        memcache.add(n, pack(data))
+    return data
 
 def get_journal(username, journal_name):
     n = C_JOURNAL %(username, journal_name)
