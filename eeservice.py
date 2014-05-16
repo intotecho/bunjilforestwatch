@@ -103,6 +103,7 @@ def checkForNewObservationInCell(area, cell, collection_name):
 
 '''
 getLandsatImage(array of points, string as name of ee.imagecollection)
+
 returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
 Could also clip the image to the coordinates to reduce the size.
 return type is ee.Image(). Some attributes are appended to the object.
@@ -182,74 +183,6 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     
     #x['mynewkey'] = id 
     return latest_image  #.clip(park_boundary)
-'''
-getCellsinArea()
-requires params to passed in a dictionary of lpath lrow
-NOT CALLED @!@!!!
-'''
-def getCellsinArea(boundary_polygon, collection_name, params):
-    cw_feat = ee.Geometry.Polygon(boundary_polygon)
-    feat = cw_feat.buffer(0, 1e-10)
-    boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-    park_boundary = ee.FeatureCollection(boundary_feature)
-    
-    end_date   = datetime.datetime.today()
-    start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear/2 )
-    logging.debug('getLatestLandsatImage() start:%s, end:%s ',start_date,  end_date)
-
-    image_collection = ee.ImageCollection(collection_name)
-    
-    if ('lpath' in params) and ('lrow' in params): 
-        
-        path = int(params['lpath'])
-        row = int(params['lrow'])
-        image_name =  collection_name[8:11] + "%03d%03d" %(path, row)
-        logging.debug("logging.debug: image name: %s", image_name)
-        #filter Landsat by Path/Row and date
-        resultingCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row)#) #latest image form this cell.
-    else:
-        resultingCollection = image_collection.filterDate(start_date, end_date).filterBounds(park_boundary) # latest image from any cells that overlaps the area. 
-    
-    sortedCollection = resultingCollection.sort('system:time_start', False )
-    
-    #logging.info('Collection description : %s', sortedCollection.getInfo())
-      #logging.debug("sortedCollection: %s", sortedCollection)
-    scenes  = sortedCollection.getInfo()
-    #logging.info('Scenes: %s', sortedCollection)
-    
-    try:
-        feature = scenes['features'][int(latest_depth)]
-        print 'feature: ', feature
-    except IndexError:
-        try:
-            feature = scenes['features'][0]
-        except IndexError:
-            logging.error("No Scenes in Filtered Collection")
-            logging.debug("scenes: ", scenes)
-            return 0
-
-    
-    id = feature['id']   
-    #logging.info('getLatestLandsatImage found scene: %s', id)
-    latest_image = ee.Image(id)
-    props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
-    #test = latest_image.getInfo()['bands']
-
-    crs = latest_image.getInfo()['bands'][0]['crs']
-    #path    = props['WRS_PATH']
-    #row     = props['STARTING_ROW']
-    system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
-    date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
-
-    logging.info('getLatestLandsatImage id: %s, date:%s latest:%s', id, date_str, latest_depth )
-    x = latest_image.getInfo()
-    latest_image.name = id
-    latest_image.capture_date = date_str
-    latest_image.capture_datetime = system_time_start
-    
-    #x['mynewkey'] = id 
-    return latest_image  #.clip(park_boundary)
-
 
 
 '''
@@ -444,7 +377,23 @@ def getOverlayPath(image, prefix, red, green, blue):
     logging.info('getOverlayPath: %s',       path)
     return path
 
+'''
+getLandsatOverlay()
+parameters:
+    coords - set of boundary points
+    satellite - "L8" maps to image collection LANDSAT/LC8_L1T_TOA. 
+                "L7" maps to image collection LANDSAT/LE7_L1T.
+    algorithm: - What visualisation of the image to return
+            'rgb' - visual
+            'ndvi' - NDVI
+    depth:
+        0 return the latest image in the collection 
+        1 return the image before that.
+        2 return the image before 1. 
 
+Returns an earth engine mapid that can be displayed on a google map with additional attributues from the ee.Image object:
+
+'''
 def getLandsatOverlay(coords, satellite, algorithm, depth, params):
     if satellite == 'l8':
         collection_name = 'LANDSAT/LC8_L1T_TOA'
@@ -492,7 +441,7 @@ def getLandsatOverlay(coords, satellite, algorithm, depth, params):
             mapid['path'] = props['WRS_PATH']
             mapid['row'] = props['WRS_ROW']
             mapid['collection'] = collection_name
-            mapid['capture_datetime'] = image.capture_datetime
+            mapid['capture_datetime'] = image.system_time_start
             
             return mapid
         
@@ -502,7 +451,7 @@ def getLandsatOverlay(coords, satellite, algorithm, depth, params):
         
 '''
 getPathRow returns max or min value of the sort_property in a collection.
-
+#FIXME - THis has a bug. It is not returning the expected values. However, I am no longer using it. So low priority.
 Example:
     max_path = getPathRow(boundCollection,"WRS_PATH", False)
     min_path = getPathRow(boundCollection,"WRS_PATH", True)
@@ -512,21 +461,20 @@ Example:
 def getPathRow(collection, sort_property, ascending):
     limited_collection_info = (collection.limit(1, sort_property, ascending).getInfo())        
     try:
-        max_prop= limited_collection_info['features'][0]['properties'][sort_property]
+        max_prop = limited_collection_info['features'][0]['properties'][sort_property]
         return max_prop
     except IndexError:
-        print 'getPathRow(): Index Exception'
+        logging.error('getPathRow(): Index Exception %s %s', sort_property, ascending)
         return -1
 
-    
 #determine the overlapping cells from the image collection returned and store them in area.cells.
 '''
-getLandsatCells taks and area and extracts is boundary. 
-Then is calls earth engine to generate a collection of L8 images from the last 2 years.
-It queries the collection for the images with the min and max paths and min and max row. This includes cells that don't overlap the area.
-It then loops through each path and row within these bounds to check for an image with that path row combination.
-If found, then the path/row cell overlaps the area and is added to the cells list.
-It returns the cells list as well as setting the max and min coordinates.
+getLandsatCells() takes an area and extracts is boundary. 
+  Then is calls earth engine to generate a collection of L8 images from the last 2 years.
+  It queries the collection for the images with the min and max paths and min and max row. This includes cells that don't overlap the area.
+  It then loops through each path and row within these bounds to check for an image with that path row combination.
+  If found, then the path/row cell overlaps the area and is added to the cells list.
+  It returns the cell list as well as setting the max and min coordinates.
 '''
 #TODOThere is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query.
 def getLandsatCells(area):
@@ -542,40 +490,38 @@ def getLandsatCells(area):
     boundary_feature_buffered = boundary_feature 
     park_boundary = ee.FeatureCollection(boundary_feature_buffered)
     end_date   = datetime.datetime.today()
-    #start_date = end_date - datetime.timedelta(seconds = 2 * secsperyear ) #years.
-    start_date = end_date - datetime.timedelta(years = 2) #years.
+    start_date = end_date - datetime.timedelta(weeks = 52) # last 52 weeks.
 
-    boundCollection = ee.ImageCollection('LANDSAT/LC8_L1T_TOA').filterBounds(park_boundary).filterDate(start_date, end_date)
+    boundCollection = ee.ImageCollection('LANDSAT/LE7_L1T').filterBounds(park_boundary).filterDate(start_date, end_date)
+    
+    features = boundCollection.getInfo()['features']
 
-    area.max_path = getPathRow(boundCollection,"WRS_PATH", False)
-    area.min_path = getPathRow(boundCollection,"WRS_PATH", True)
-    area.max_row  = getPathRow(boundCollection,"WRS_ROW", False)
-    area.min_row  = getPathRow(boundCollection,"WRS_ROW", True)
-    logging.debug('getLandsatCells(): max_path: %d, min_path: %d, max_row %d, min_row: %d', area.max_path, area.min_path, area.max_row, area.min_row)
-    cells = []
-    for p in range(area.min_path, area.max_path+1):
-        for r in range(area.min_row, area.max_row+1):
-            imageCollection = boundCollection.filterMetadata('WRS_PATH', 'equals', p).filterMetadata('WRS_ROW', 'equals', r)
-            scenes  = imageCollection.getInfo()
-            try:
-                scenes['features'][0]
-                cells.append([p,r])
-                logging.debug('getLandsatCells(): [%d, %d] overlaps area', p,r)
-                
-                cellname = str(p*1000+r)
-                      
-                logging.debug( "Creating Cell (%d, %d), %s", p, r, cellname)
-                cell = models.LandsatCell(parent=area.key(), key_name=str(p*1000+r), path = int(p), row = int(r)) 
-                #Note that multiple LandsatCell objects for the same Landsat Cell(p,r) can be created, one for each parent area to which it belongs.
-                db.put(cell) #FIXME should be in a transaction with area.cells updates.
-                area.cells.append(cell.key()) #This is added even though the owner has not selected this cell for monitoring.
-                
-            except IndexError:
-                logging.debug('getLandsatCells(): [%d, %d] does not overlap area', p,r)
-
-    db.put(area)
-    #cache.clear_area_cache("users", area) #FIXME only flush areas is all that required.   
+    def txn(keyname, area, p, r):
+        #cell = models.LandsatCell.get_by_key_name(keyname, parent=area) #Expensive to read for each cell. if cell is None:
+        logging.debug('getLandsatCells(): creating cell(%d, %d)', p, r)
+        cell = models.LandsatCell(parent=area.key(), key_name = keyname )
+        cell.path = p
+        cell.row = r
+        cell.Monitored = False
+        cell.put()
+        area.cells.append(cell.key()) #This is added even though the owner has not selected this cell for monitoring.
+        area.put() #TODO expensive to write for each cell.
+        return cell
+    
+    cellnames = []  #temporary array to detect duplicates without calling db.  
+    for image in features:
+        p = int(image['properties']['WRS_PATH'])
+        r = int(image['properties']['WRS_ROW'])
+        #TODO (NICE TO HAVE) Could add the latest observation here. First sort in reverse date order.#obs = image['properties']['system_date']
+        cell_name=str(p*1000+r)
+        if not cell_name in cellnames:
+            cellnames.append(cell_name)
+            cell = db.run_in_transaction(txn, cell_name, area, p, r)
+        else:
+            pass  # duplicate
+   
     cache.flush() # FIXME
-    return #(area.max_path, area.min_path, area.max_row, area.min_row, area.CellList)
+    
+    return 
 
 ################# EOF ############################################

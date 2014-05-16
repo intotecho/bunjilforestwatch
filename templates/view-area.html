@@ -15,20 +15,20 @@ body {
 	height: 100%
 }
 </style>
-<style type="text/css"> 
+<style type="text/css">
 
 /** For Bootstrap and Google Maps Info window styles problem - Fix from http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden **/
-img[src*="gstatic.com/"], img[src*="googleapis.com/"] {
-    max-width: none;
+img[src*="gstatic.com/"],img[src*="googleapis.com/"] {
+	max-width: none;
 }
-
 </style>
-<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
-<script type="text/javascript" src="/static/js/draggable-object.js"></script>	
+<script type="text/javascript"
+	src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
+<script type="text/javascript" src="/static/js/draggable-object.js"></script>
 <script type="text/javascript" src="/static/js/custom-tile-overlay.js"></script>
-<script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>  
-<script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>  
-<script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>  
+<script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>
+<script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>
+<script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>
 <script type="text/javascript" src="/static/js/landsat-grid.js"></script>
 <script type="text/javascript" src="/static/js/polygon-outliner.js"></script>
 <script type="text/javascript" src="/static/js/drawing-tools.js"></script>
@@ -49,9 +49,7 @@ var mapobj; //returned by last call to EE image overlay.
 var satellite = 'l8'
 var algorithm = 'rgb'; // ndvi 
 var latest = 0;  //latest - 0
-var showLandsatGridLayer = true;
 var overlayMaps = [];
-
 
 function initialize() {
     var map_center = new google.maps.LatLng({{area.map_center}});
@@ -76,7 +74,7 @@ function initialize() {
   	
   	google.maps.event.addListener(map, 'bounds_changed', function() {
   		
-  		if(showLandsatGridLayer == true)
+  		if(gridInitialised == true)
   		{
   		    requestLandsatGrid(map, true, true, cellarray ); //map, showlayer, clickable, cells
   		}
@@ -150,23 +148,20 @@ function initialize() {
               label: "Continue ...",
               className: "btn-success",
               callback: function() {
-              bootbox.hideAll();
+                  bootbox.hideAll();
               }
-              }
-              }
-          })
-         //bootbox.alert(instructions_str);
+            }
+          }
+        })
+        
         $.get(url).done(function(data) {
         	cellarray = jQuery.parseJSON(data);
             
             console.log('Init:Cellarray from ajax handler: ', cellarray);
             $('#observations_panel').empty();
             $('#observations_panel').append("Area has " + cellarray.length + " cells. " );
-            //if(showLandsatGridLayer == true) {
-                showLandsatGridLayer = true;
                 requestLandsatGrid(map, true, true, cellarray); //map, showlayer, clickable, cells
-            //}
-
+                $('.layer').prop('checked',true);
         }).error(function( jqxhr, textStatus, error ) {
             var err = textStatus + ', ' + error;
             console.log( "GetCells Failed: " + err);
@@ -176,11 +171,8 @@ function initialize() {
     } //get cells    
     else
    	{
-        //Can we initialise this now?     
-        if(showLandsatGridLayer == true) {
-            showLandsatGridLayer = true;
-            requestLandsatGrid(map, true, true, cellarray); //map, showlayer, clickable, cells
-        }
+        //server passed an existing cellarray - just display it (need to highlight monitored cells)
+    	requestLandsatGrid(map, true, true, cellarray); //map, showlayer, clickable, cells
    	}
     
     // Fetch Overlay Image of Latest Landsat
@@ -236,21 +228,18 @@ function initialize() {
  	//Checkbox to show/hide overlays  		
    	$('.layer').click(function(){
    			var layerID = parseInt($(this).attr('id'));
-   		    if(layerID == 0) //LANDSAT grid 
+   		    if(layerID === 0) //LANDSAT grid 
    		    {
-   	            //console.log('showLandsatGridLayer ', showLandsatGridLayer)   
-   		    	if(showLandsatGridLayer == false) {
-   		    	  showLandsatGridLayer = true;
+   		        if($(this).is(':checked')){
    		    	  requestLandsatGrid(map, true, true,  cellarray); //map, showlayer, clickable, cells
    		    	}
    		    	else {
-                    showLandsatGridLayer = false;
                     requestLandsatGrid(map, false, true, null); //map, showlayer, clickable, cells
-                    removeLandsatGrid();
+                    removeLandsatGrid();  //TODO put inside above funciton.
 	    		}
             }
    		    
-            if(layerID == 1) //Drawing Tools
+            if(layerID === 1) //Drawing Tools
             {
                 if($(this).is(':checked')){
                     drawingManager = createDrawingManager(map);
@@ -454,8 +443,8 @@ function jsonStringifySelectedCell()
 
 function cellSelected()
 {
-// Fetch Overlay of Latest Landsat
-    //var _url = ajaxActionUrl("overlay");
+// Fetch Outline and statuds of this Landsat Cell
+
   var httpget_url = "/selectcell/" + jsonStringifySelectedCell()
   console.log( "cellSelected() %d %d %s", selectedPath, selectedRow, httpget_url);
    
@@ -465,17 +454,29 @@ function cellSelected()
        $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
        $.get(httpget_url).done(function(data) {
               $('#observations_panel').empty();
-              $('#observations_panel').append(data);
-              if (data.search("Selected") > 0) 
-                  {
-                     console.log( "S Data " + data)
-                     monitor_cell(selectedPath, selectedRow, true);
-                  }
-              else
-                  {
-                     console.log( "U Data " + data)
-                     monitor_cell(selectedPath, selectedRow, false);
-                  }
+              
+              
+              var panel_str = "Cell:"          
+              var celldict = jQuery.parseJSON(data);
+              console.log(celldict)
+              if (celldict['result'] == "ok") {         	  	                          
+	              if (celldict.monitored == "true") 
+	                  {
+	            	    panel_str = "Now Monitoring Cell(" + celldict.path  + ", " +  celldict.row + ")<br>Last Obs: " + celldict.LC8_latest_capture;
+	            	    console.log( "Following: " + celldict.path  + ", " +  celldict.row)
+	                    monitor_cell(selectedPath, selectedRow, true);
+	                  }
+	              else
+	                  {
+                         panel_str = "Stopped Monitoring Cell(" + celldict.path  + ", " +  celldict.row + ") ";
+	            	     console.log( "Stopped Monitoring: " + celldict.path  +", " +  celldict.row)
+	                     monitor_cell(selectedPath, selectedRow, false);
+	                  }
+	              $('#observations_panel').append(panel_str);  
+               }
+               else {
+                   console.log( "Error: " + celldict['result']);
+               }             
         }).error(function( jqxhr, textStatus, error ) {
             var err = textStatus + ', ' + error;
             console.log( "Request Failed: " + err);
@@ -488,9 +489,9 @@ function cellSelected()
 
 </script>
 {% endblock %} {% block content %}
-<div><ul class="breadcrumb">
-		<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span
-			class="divider">/</span></li>
+<div>
+	<ul class="breadcrumb">
+		<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span class="divider">/</span></li>
 		<li class="active"><a href="{{ area|area_url }}">{{ area }}</a></li>
 	</ul>
 </div>
@@ -499,135 +500,137 @@ function cellSelected()
 	<div class="row-fluid">
 		<div class="span2">
 			<!--Sidebar content <div class="control-group"> -->
-	        <!-- Algorithm Selection button -->
-	        <div class="btn-toolbar" style="margin: 0;">
-	          <h5>
-                <i>View Image Settings</i>
-              </h5>
- 
-                    <div class="controls">
-                        <input id="instructions"  type="button" class="btn btn-lightblue" style="width:180px" rel="popover" value="Instructions"/>
-                </div>
-             <div class="btn-toolbar" role="toolbar">
-                <div class="btn-group">
-                    <button id='algorithm' type="button" style="width:50px" class="btn btn-small dropdown-toggle" data-toggle="dropdown" data-toggle="tooltip" title="Select RGB for true colour or NDVI to highlight vegetation change">
-                        RGB<span class="caret"></span></button>
-                    <ul class="dropdown-menu" role="menu">
-                       <li><a href="#" id='algorithm-visual'>RGB</a></li>
-                        <li class="divider"></li>
-                        <li><a href="#" id='algorithm-ndvi'>NDVI</a></li>
-                        <li><a href="#" id='algorithm-change'>Change</a></li>
-                    </ul>
-                </div>
-                <div class="btn-group">
-                    <button id='latest' type="button"  style="width:60px" class="btn btn-small dropdown-toggle" data-toggle="dropdown" data-toggle="tooltip" title="Select the latest image, the one before or the one before that)">
-                        Latest<span class="caret"></span></button>
-                    <ul class="dropdown-menu" role="menu">
-                       <li><a href="#" id='latest'>Latest</a></li>
-                        <li class="divider"></li>
-                        <li><a href="#" id='latest-1'>Latest-1</a></li>
-                        <li><a href="#" id='latest-2'>Latest-2</a></li>
-                        <li><a href="#" id='latest-3'>Latest-3</a></li>
-                    </ul>                
-                </div>
-                <div class="btn-group">
-                    <button id='satellite' type="button" style="width:40px" class="btn btn-small dropdown-toggle" data-toggle="dropdown" data-toggle="tooltip" title="Select Landsat7, Landsat 8)">
-                        L8<span class="caret"></span></button>
-                    <ul class="dropdown-menu" role="menu">
-                       <li><a href="#" id='satellite-l7'>L7</a></li>
-                        <li class="divider"></li>
-                        <li><a href="#" id='satellite-both'></a></li>
-                    </ul>                
-                </div>
-                </div>
-            </div>
-              <div class="btn-toolbar" style="margin: 0;">
-    			 <div class="btn-group">
-                    <button id='get_overlay_btn' type="button" style="width:43px" class="btn btn-small btn-lightblue" data-toggle="tooltip" title="Overlay selected image on the map">View</button>
-                </div>
-                 <div class="btn-group">
-                    <button id='get_download_btn' type="button" style="width:65px" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Download selected image to a (very large) file">Download</button>
-                 </div>
-                 <div class="btn-group">
-                    <button id='get_add_btn' type="button" style="width:43px" class="btn btn-small btn-lightblue" data-toggle="tooltip" title="Add selected cell to observation schedule">Add</button>
-                </div>
-  
-              </div>   
+			<!-- Algorithm Selection button -->
+			<div class="btn-toolbar" style="margin: 0;">
+				<h5>
+					<i>View Image Settings</i>
+				</h5>
+
+				<div class="controls">
+					<input id="instructions" type="button" class="btn btn-lightblue" style="width: 180px" rel="popover" value="Instructions" />
+				</div>
+				<div class="btn-toolbar" role="toolbar">
+					<div class="btn-group">
+						<button id='algorithm' type="button" style="width: 50px" class="btn btn-small dropdown-toggle" data-toggle="dropdown"
+							data-toggle="tooltip" title="Select RGB for true colour or NDVI to highlight vegetation change">
+							RGB<span class="caret"></span>
+						</button>
+						<ul class="dropdown-menu" role="menu">
+							<li><a href="#" id='algorithm-visual'>RGB</a></li>
+							<li class="divider"></li>
+							<li><a href="#" id='algorithm-ndvi'>NDVI</a></li>
+							<li><a href="#" id='algorithm-change'>Change</a></li>
+						</ul>
+					</div>
+					<div class="btn-group">
+						<button id='latest' type="button" style="width: 60px" class="btn btn-small dropdown-toggle" data-toggle="dropdown"
+							data-toggle="tooltip" title="Select the latest image, the one before or the one before that)">
+							Latest<span class="caret"></span>
+						</button>
+						<ul class="dropdown-menu" role="menu">
+							<li><a href="#" id='latest'>Latest</a></li>
+							<li class="divider"></li>
+							<li><a href="#" id='latest-1'>Latest-1</a></li>
+							<li><a href="#" id='latest-2'>Latest-2</a></li>
+							<li><a href="#" id='latest-3'>Latest-3</a></li>
+						</ul>
+					</div>
+					<div class="btn-group">
+						<button id='satellite' type="button" style="width: 40px" class="btn btn-small dropdown-toggle" data-toggle="dropdown"
+							data-toggle="tooltip" title="Select Landsat7, Landsat 8)">
+							L8<span class="caret"></span>
+						</button>
+						<ul class="dropdown-menu" role="menu">
+							<li><a href="#" id='satellite-l7'>L7</a></li>
+							<li class="divider"></li>
+							<li><a href="#" id='satellite-both'></a></li>
+						</ul>
+					</div>
+				</div>
+			</div>
+			<div class="btn-toolbar" style="margin: 0;">
+				<div class="btn-group">
+					<button id='get_overlay_btn' type="button" style="width: 43px" class="btn btn-small btn-lightblue" data-toggle="tooltip"
+						title="Overlay selected image on the map">View</button>
+				</div>
+				<div class="btn-group">
+					<button id='get_download_btn' type="button" style="width: 65px" class="btn btn-small btn-lightgreen" data-toggle="tooltip"
+						title="Download selected image to a (very large) file">Download</button>
+				</div>
+				<div class="btn-group">
+					<button id='get_add_btn' type="button" style="width: 43px" class="btn btn-small btn-lightblue" data-toggle="tooltip"
+						title="Add selected cell to observation schedule">Add</button>
+				</div>
+
+			</div>
 			<div>
-			<p>
-				<input type="checkbox" id="0" class="layer" unchecked data-toggle="tooltip" title="Show grid cells of landsat image boundaries"/><label for="0">Landsat Grid </label>
-				<input type="checkbox" id="1" class=layer unchecked/><label for="1">Make Report</label>
-			</div>	
+				<p>
+					<input type="checkbox" id="0" class="layer" checked data-toggle="tooltip"
+						title="Show grid cells of landsat image boundaries" /><label for="0">Landsat Grid </label> <input type="checkbox" id="1"
+						class=layer unchecked /><label for="1">Make Report</label>
+			</div>
 			<div class="accordion" id="accordion2">
-			  <div class="accordion-group">
-			    <div class="accordion-heading">
-			      <a class="accordion-toggle" data-toggle="collapse"  href="#description_panel">
-			        Area Description
-			      </a>
-			    </div>
-			    <div id="description_panel" class="accordion-body collapse in">
-			      <div class="accordion-inner">
-			        <p>{{ area.description }}</p>
-			      </div>
-			    </div>
-			  </div>
-			   <div class="accordion-group">
-			    <div class="accordion-heading">
-			      <a class="accordion-toggle" data-toggle="collapse" href="#observations_panel">
-			        Observations
-			      </a>
-			    </div>
-			    <div id="observations_panel" class="accordion-body collapse">
-			      <div class="accordion-inner">
-			        <p>No Observations.<p>
-			      </div>
-			    </div>
-			  </div>
-			   <div class="accordion-group">
-			    <div class="accordion-heading">
-			      <a class="accordion-toggle" data-toggle="collapse" href="#reports_panel">
-			        Reports
-			      </a>
-			    </div>
-			    <div id="reports_panel" class="accordion-body collapse">
-			      <div class="accordion-inner">
-			        <p>No reports<p>
-			      </div>
-			    </div>
-			  </div>
-			   <div class="accordion-group">
-			    <div class="accordion-heading">
-			      <a class="accordion-toggle" data-toggle="collapse" href="#boundary_panel">
-			        Boundary Coordinates
-			      </a>
-			    </div>
-			    <div id="boundary_panel" class="accordion-body collapse">
-			      <div class="accordion-inner">
-			        {% for j in area.coordinates %}
-						<p class="divider">{{j}}</p>
-					{% endfor %}
-			      </div>
-			    </div>
-			  </div>
-			  <div class="accordion-group">
-			    <div class="accordion-heading">
-			      <a class="accordion-toggle" data-toggle="collapse" href="#map_panel">
-			        Map View 
-			      </a>
-			    </div>
-			    <div id="map_panel" class="accordion-body collapse">
-			      <div class="accordion-inner">
-			       	<p class="divider">"Map initial view (saved)"</p>
-					<p class="divider">"Center: {{area.map_center}}"</p>
-					<p class="divider">"Zoom: {{area.map_zoom}}"</p>
-			      </div>
-			    </div>
-			  </div>
+				<div class="accordion-group">
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" href="#description_panel"> Area Description </a>
+					</div>
+					<div id="description_panel" class="accordion-body collapse in">
+						<div class="accordion-inner">
+							<p>{{ area.description }}</p>
+						</div>
+					</div>
+				</div>
+				<div class="accordion-group">
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" href="#observations_panel"> Observations </a>
+					</div>
+					<div id="observations_panel" class="accordion-body collapse">
+						<div class="accordion-inner">
+							<p>No Observations.
+							<p>
+						</div>
+					</div>
+				</div>
+				<div class="accordion-group">
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" href="#reports_panel"> Reports </a>
+					</div>
+					<div id="reports_panel" class="accordion-body collapse">
+						<div class="accordion-inner">
+							<p>No reports
+							<p>
+						</div>
+					</div>
+				</div>
+				<div class="accordion-group">
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" href="#boundary_panel"> Boundary Coordinates </a>
+					</div>
+					<div id="boundary_panel" class="accordion-body collapse">
+						<div class="accordion-inner">
+							{% for j in area.coordinates %}
+							<p class="divider">{{j}}</p>
+							{% endfor %}
+						</div>
+					</div>
+				</div>
+				<div class="accordion-group">
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" href="#map_panel"> Map View </a>
+					</div>
+					<div id="map_panel" class="accordion-body collapse">
+						<div class="accordion-inner">
+							<p class="divider">"Map initial view (saved)"</p>
+							<p class="divider">"Center: {{area.map_center}}"</p>
+							<p class="divider">"Zoom: {{area.map_zoom}}"</p>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 		<div class="span10">
 			<!--Body = Map content-->
-			
+
 			<div id="map-canvas"></div>
 		</div>
 	</div>
