@@ -219,6 +219,7 @@ class ViewAreas(BaseHandler):
             areas = cache.get_areas(db.Key(self.session['user']['key']))
             all_areas = cache.get_all_areas()
             #logging.info( "areas = %s", areas)
+    
             self.render('view-areas.html', {
 #                
                 'thisuser': True,
@@ -518,7 +519,7 @@ class NewAreaHandler(BaseHandler):
                 #be good to add a bounding box too.
         if     self.session['areas_list']:
             if len(self.session['areas_list']) >= models.AreaOfInterest.MAX_AREAS:
-                self.add_message('error', 'Sorry, only %i areas allowed per user.' %models.AreaOfInterest.MAX_AREAS)
+                self.add_message('warning', 'There is a quota of only %i areas per user.' %models.AreaOfInterest.MAX_AREAS)
         if not name:
             self.add_message('error', 'Your area of interest needs a short and unique name. Please try again') #FIXME - This check should be done in the browser.
         else:
@@ -586,39 +587,43 @@ class NewAreaHandler(BaseHandler):
         self.render('new-area.html')
 
 
-
+'''
+SelectCellHandler is called by Ajax when a user clicks on a Landsat Cell in the browser.
+This toggles the 'follwed' flag in the cell object in the datastore and flushes the cell and area cache.
+#TODO - Improve the information returned as a json dictionary of the cell rather than a string. Browser can format it into text.
+Also add the latest observation date to the return.
+'''
 class SelectCellHandler(BaseHandler):
     def get(self, celldata):
+        # get cell info in request.
         self.populate_user_session()
-        print 'SelectCellHandler get ', celldata
+        #print 'SelectCellHandler get ', celldata
         username = self.session['user']['name']
         cell_feature = json.loads(celldata)
-        print 'cell_feature ', cell_feature
+        #print 'cell_feature ', cell_feature
         path = cell_feature['properties']['path']
         row = cell_feature['properties']['row']
         displayAjaxResponse = 'Cell {0:d} {1:d}'.format(path, row)
         
+        #build cell info in response.
         cell = cache.get_cell(path, row)
         
         if cell is not None:
-            area_key = cell.aoi
-            if cell.followed == True:
-                cell.followed = False
-                displayAjaxResponse += ' Unselected '
+            #Update the followed flag.
+            if cell.monitored == True:
+                cell.monitored = False
             else:
-                cell.followed = True
-                displayAjaxResponse += ' Selected '
+                cell.monitored = True
             db.put(cell)
+            cell_dict = cell.Cell2Dictionary()
             cache.delete([cache.C_CELL_KEY %cell.key(),
                           cache.C_CELL %(path, row), 
                           cache.C_CELLS %(cell.aoi)])
+            self.response.write(json.dumps(cell_dict))
         else:
             logging.error('Selected Cell does not exist %d %d', path, row)
-            displayAjaxResponse = 'Does not exist'
-        
-        self.response.write(displayAjaxResponse)
+            self.response.write( {'error':'Not a cell'})
         return
-
     
     def post(self):
         print 'SelectCellHandler post'
@@ -688,19 +693,22 @@ class ViewArea(BaseHandler):
             # Make a list of the cells that overlap the area with their path, row and status. 
             #This may be an empty list for a new area.
             
-            for cell_key in area.cells:
-                cell = cache.get_cell_from_key(cell_key)
-                if cell is not None:
-                    #cell_list.append({"path":cell.path, "row":cell.row, "followed":cell.followed})
-                    if cell.followed:
-                        cell_list.append({"path":cell.path, "row":cell.row, "followed":"true"})
-                    else:
-                        cell_list.append({"path":cell.path, "row":cell.row, "followed":"false"})
-                else:
-                    logging.error ("ViewAreaHandler no cell returned from key %s ", cell_key)
-                
-                logging.debug('ViewArea area_name %s %s', area.name, cell_list)
-
+            #===================================================================
+            # for cell_key in area.cells:
+            #     cell = cache.get_cell_from_key(cell_key)
+            #     if cell is not None:
+            #         #cell_list.append({"path":cell.path, "row":cell.row, "followed":cell.followed})
+            #         if cell.monitored:
+            #             cell_list.append({"path":cell.path, "row":cell.row, "followed":"true"})
+            #         else:
+            #             cell_list.append({"path":cell.path, "row":cell.row, "followed":"false"})
+            #     else:
+            #         logging.error ("ViewAreaHandler no cell returned from key %s ", cell_key)
+            #     
+            #     logging.debug('ViewArea area_name %s %s', area.name, cell_list)
+            #===================================================================
+            
+            cell_list = area.CellList()    
             self.render('view-area.html', {
                 'username': self.session['user']['name'],
                 'area': area,
@@ -757,24 +765,12 @@ class GetLandsatCellsHandler(BaseHandler):
         #area.max_path, area.min_path, area.max_row, area.min_row, cell_list = eeservice.getLandsatCells(area)
         eeservice.getLandsatCells(area)
         area = cache.get_area(None, area_name) # refresh the cache as it has been updated by getLandsatCells().
-        
-        if area.max_path == -1 or area.min_path == -1 or area.max_row == -1 or area.min_row == -1:
-            self.populate_user_session()
-            #self.add_message('error','Error calculating Cells')
-            logging.error('GetLandsatCellsHandler: Error calculating Cells')
-            self.response.write('Error calculating Cells')
-            return
-        else:
-            cell_list = area.CellList()
-            
-            #celldata = {'max_path':area.max_path, 'min_path':area.min_path, 'max_row':area.max_row, 'min_row':area.min_row, 'cell_list':cell_list}
-            returnstr = 'Your area is covered by {0:d} Landsat Cells'.format(len(area.cells))
-            
-            #self.populate_user_session() # what does this do?
-            self.add_message('success',returnstr)
-            self.response.write(json.dumps(cell_list))
-            logging.debug(returnstr)
-            return 
+        cell_list = area.CellList()
+        returnstr = 'Your area is covered by {0:d} Landsat Cells'.format(len(area.cells))
+        self.add_message('success',returnstr)
+        self.response.write(json.dumps(cell_list))
+        logging.debug(returnstr)
+        return 
 
 class LandsatOverlayRequestHandler(BaseHandler):
     #This handler responds to Ajax request, hence it returns a response.write()
@@ -849,7 +845,7 @@ class CheckNewHandler(BaseHandler):
                     cell = cache.get_cell_from_key(cell_key)
                     if cell is not None:
                         #logging.debug("cell %s %s", cell.path, cell.row)
-                        if cell.followed:
+                        if cell.monitored:
                             returnstr += '({0!s}, {1!s}) '.format(cell.path,cell.row)
                             obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")  #"LANDSAT/LE7_L1T_TOA") # old value "LANDSAT/L7_L1T"
                             if obs is not None :

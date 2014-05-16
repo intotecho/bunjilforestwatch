@@ -145,8 +145,8 @@ class UserFollowingAreasIndex(db.Model): #A User has a list of areas in a UserFo
 
 class AreaOfInterest(db.Model):
 
-	ENTRIES_PER_PAGE = 5
-	MAX_AREAS = 24
+	ENTRIES_PER_PAGE = 5 #TODO Move to Settings.py
+	MAX_AREAS = 24       #TODO Move to Settings.py
 
 	# Area Description
 	name = db.StringProperty(required=True)
@@ -158,11 +158,10 @@ class AreaOfInterest(db.Model):
 	cells = db.ListProperty(db.Key, default=None) # list of Landsat cells overlapping this area - calculated on new.
 	entry_count = db.IntegerProperty(required=True, default=0) # reports related to this area - not used yet
 	
-	max_path = db.IntegerProperty(required=True, default=-1) # these are not important now we have a better intersect routine.
-	min_path = db.IntegerProperty(required=True, default=-1)
-	max_row  = db.IntegerProperty(required=True, default=-1)
-	min_row  = db.IntegerProperty(required=True, default=-1)
-	
+	max_path = db.IntegerProperty(required=False, default=-1) # these are not importantand will not be set correctly.
+	min_path = db.IntegerProperty(required=False, default=-1)
+	max_row  = db.IntegerProperty(required=False, default=-1)
+	min_row  = db.IntegerProperty(required=False, default=-1)
 	
 	#Geometry of area boundary
 	coordinates = db.ListProperty(db.GeoPt, default=None) # get rid of this and replace with fc.
@@ -208,24 +207,23 @@ class AreaOfInterest(db.Model):
 			#return webapp2.uri_for('view-area', username=self.key().parent().name(),  area_name= self.name)
 			return webapp2.uri_for('view-area', area_name= self.name)
 
-	
 	def CellList(self):
 		cell_list = []
 		for cell_key in self.cells:
+			#cell = cache.get_cell_from_key(cell_key)
 			cell = cache.get_cell_from_key(cell_key)
 			if cell is not None:
-				#cell_list.append({"path":cell.path, "row":cell.row, "followed":cell.followed})
-				if cell.followed:
-					cell_list.append({"path":cell.path, "row":cell.row, "followed":"true"})
-				else:
-					cell_list.append({"path":cell.path, "row":cell.row, "followed":"false"})
+				celldict = cell.Cell2Dictionary()
+				if celldict is not None:
+					cell_list.append(celldict)
 			else:
-				logging.error ("AreaofInterest::cell_list() no cell returned from key %s ", cell_key)
+				logging.error ("AreaofInterest::CellList() no cell returned from key %s ", cell_key)
 			
 			returnstr = 'AreaofInterest::CellList() area {0!s} has cells {1!s}'.format(self.name, cell_list)
-			logging.debug(returnstr)
+			#logging.debug(returnstr)
+			
 		return cell_list
-
+	
 
 '''
 Landsat Cell represents an 170sq km area where each image is captured. 
@@ -254,8 +252,24 @@ class LandsatCell(db.Model):
 	#L8_previous = db.ReferenceProperty(Observation, default=None)
 	#L7_latest   = db.ReferenceProperty(Observation, default=None)
 	#L7_previous = db.ReferenceProperty(Observation, default=None)
-	followed = db.BooleanProperty(required = True, default = False) # Set if cell is monitored
-	
+	monitored = db.BooleanProperty(required = True, default = False) # Set if cell is monitored for new data (i.e selected in view-area)
+
+	'''
+	Cell2Dictionary()converts a cell object into a dictionary of the path,row, monitored 
+	and date of latest image stored in datastore for L8 collection (other collections to follow)
+	'''	
+	def Cell2Dictionary(self):
+		#cell_list.append({"path":cell.path, "row":cell.row, "monitored":cell.monitored})
+		
+		celldict = {"path":int(self.path), "row":int(self.row), "monitored":"false", "LC8_latest_capture":"none", "result":"ok"}
+		
+		if self.monitored:
+			celldict['monitored'] = "true"
+		q = self.latestObservation('LANDSAT/LC8_L1T_TOA')
+		if q is not None:
+			celldict['LC8_latest_capture']	= q.captured.strftime("%Y-%m-%d @ %H:%M")
+		#print celldict
+		return celldict
 	
 	def latestObservation(self, collectionName="L8"): # query for latest observation from given imageColleciton.
 		#return db.GqlQuery("SELECT * FROM Observation WHERE ((landsatCell = self )AND (collection = collectionName)) ORDER_BY captured ASC LIMIT 1")
@@ -298,7 +312,9 @@ class ObservationTask(db.Model):
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
 
-
+'''
+A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
+'''
 class Journal(db.Model):
 	ENTRIES_PER_PAGE = 5
 	MAX_JOURNALS = 10

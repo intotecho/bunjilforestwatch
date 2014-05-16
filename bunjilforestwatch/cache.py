@@ -53,6 +53,7 @@ C_CELL      = 'cell_%s_%s'
 C_CELL_KEY = 'cellkey_%s'
 C_CELLS     = 'cells_%s'
 C_CELLS_ALL     = 'allcells'
+C_CELL_NAME = 'cellname_%s_%s'
 
 C_ENTRIES_KEYS = 'entries_keys_%s'
 C_ENTRIES_KEYS_PAGE = 'entries_keys_page_%s_%s'
@@ -530,7 +531,7 @@ def get_area(username, area_name):
     data = unpack(memcache.get(n))
     if data is None:
         area_key = get_area_key(username, area_name)
-        logging.debug("get_area() key %s", area_key)
+        #logging.debug("get_area() key %s", area_key)
         data = db.get(area_key)
         if data is None:
             logging.error("get_area() ERROR!!!! %s %s %s", username, area_name, area_key )
@@ -560,19 +561,34 @@ def get_area_key(username, area_name):
 def get_cell(path, row):
     n = C_CELL %(path, row)
     #print "get_cell() ", n
-    data = memcache.get(n)
+    data = unpack(memcache.get(n))
     if data is None:
         data = models.LandsatCell.all().filter('path =', int(path)).filter('row =', int(row)).get()
         if data is None:
-            logging.error("get_cell() Missing Cell Object")
+            logging.error("get_cell() Cache did not find cell object %d %d", path, row)
         else:
-            memcache.add(n, data)
+            memcache.add(n, pack(data))
     return data
-        
+
+def get_cell_from_keyname(cell_name, area): #TODO - Does not really add anything different to the generic cache.get_by_key()
+     
+    n = C_CELL_NAME %(cell_name, area)
+    #print "get_cell_from_key() ", n
+    data = unpack(memcache.get(n))
+    if data is None:
+        #data = models.LandsatCell.get()
+        data = models.LandsatCell.get_by_key_name( u'key_name', cell_name)
+        if data is None:
+            logging.error("get_cell_from_key() Missing Cell Object %s", cell_name)
+        else:
+            memcache.add(n, pack(data))
+    return data
+    
+       
 def get_cell_from_key(cell_key): #TODO - Does not really add anything different to the generic cache.get_by_key()
      
     n = C_CELL_KEY %(cell_key)
-    #print "get_cell_from_key() ", n
+    #print "get_cell_from_key() ",
     data = unpack(memcache.get(n))
     if data is None:
         #data = models.LandsatCell.get()
