@@ -137,7 +137,7 @@ function requestLandsatGrid(map, showlayer, clickable, cellarray) {
 			body.appendChild(script);
 		}
 	} else {
-		if (showlayer === false) {
+		if (showlayer === false) { // not sure this is working ...
 			console.log("Deleting landsat layer script");
 			resetInfoWindow();
 			gridInitialised = false;
@@ -149,6 +149,7 @@ function requestLandsatGrid(map, showlayer, clickable, cellarray) {
 															// is not working.
 			}
 		}
+		removeLandsatGrid(); 
 	}
 }
 

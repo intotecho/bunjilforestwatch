@@ -235,7 +235,7 @@ function initialize() {
    		    	}
    		    	else {
                     requestLandsatGrid(map, false, true, null); //map, showlayer, clickable, cells
-                    removeLandsatGrid();  //TODO put inside above funciton.
+                    //TODO put inside above funciton.
 	    		}
             }
    		    
@@ -264,6 +264,17 @@ function initialize() {
                     // map.overlayMapTypes.setAt(layerID, overlayMap);
                 }
             }
+            if(layerID === 2) //FORMA grid 
+            {
+                if($(this).is(':checked')){
+                  getFORMA(map, true); //map, showlayer,
+                }
+                else {
+                  getFORMA(map, false); //map, hide
+                    //removeLandsatGrid();  //TODO put inside above funciton.
+                }
+            }
+                
  	});
    		
  	//Change the text in the drop-down button when a selection is changed.
@@ -565,9 +576,9 @@ function cellSelected()
 			</div>
 			<div>
 				<p>
-					<input type="checkbox" id="0" class="layer" checked data-toggle="tooltip"
-						title="Show grid cells of landsat image boundaries" /><label for="0">Landsat Grid </label> <input type="checkbox" id="1"
-						class=layer unchecked /><label for="1">Make Report</label>
+					<input type="checkbox" id="0" class="layer" checked data-toggle="tooltip" title="Show grid cells of landsat image boundaries" /><label for="0">Landsat Grid </label> 
+					<input type="checkbox" id="1" class="layer" unchecked data-toggle="tooltip" title="Report a change or disturbance" /><label for=1">Make Report </label>
+                    <input type="checkbox" id="2" class="layer" unchecked data-toggle="tooltip" title="Show FORMA estimate of recent tree loss" /><label for=2">FORMA</label>
 			</div>
 			<div class="accordion" id="accordion2">
 				<div class="accordion-group">
