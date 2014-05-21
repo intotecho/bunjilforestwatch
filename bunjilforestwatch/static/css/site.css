@@ -16,6 +16,14 @@ textarea {
 	margin-left: 20px;
 }
 
+.page-header {
+  font-family: 'Chewy', cursive;
+  padding-bottom: 9px;
+  margin: 20px 0 30px;
+  border-bottom: 1px solid #eeeeee;
+  color: #004700 !important;
+ 
+}
 
 .btn-lightgreen {  /* http://charliepark.org/bootstrap_buttons/ */
   background-color: hsl(86, 79%, 44%) !important;

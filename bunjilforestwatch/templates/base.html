@@ -19,6 +19,8 @@
 {% endblock %}
 </head>
 <body>
+    {% if show_navbar %}
+
 	<div class="navbar">
 		<div class="navbar-inner">
 			<div class="container", > 
@@ -89,6 +91,8 @@
 			</div>
 		</div>
 	</div>
+	{% endif %}
+	
 	{% if messages %}
 	<div class="container">
 		<div class="row"><p></p></div>
@@ -104,7 +108,9 @@
 		{% endfor %}
 		</div>
 	{% endif %}
-        {% block content %}{% endblock %}
+	
+    {% block content %}{% endblock %}
+	
 	{% if google_analytics %}
 	<script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

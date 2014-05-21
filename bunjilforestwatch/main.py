@@ -77,6 +77,7 @@ class BaseHandler(webapp2.RequestHandler):
 
         if settings.GOOGLE_ANALYTICS:
             context['google_analytics'] = settings.GOOGLE_ANALYTICS
+       #context['show_navbar'] = True
 
         #logging.info('BaseHandler: render template %s with context <<%s>>,', _template, context)
         #logging.debug('BaseHandler: messages %s', context['messages'])
@@ -203,12 +204,15 @@ class MainPage(BaseHandler):
                 'followers': followers,#other users
                 'areas': areas,
                 'following_areas': following_areas,
-                'other_areas': other_areas #other areas.
+                'other_areas': other_areas, #other areas.
+                'show_navbar': True
                 #'following_areas_list': following_areas_list, #other areas.
                 #'all_areas': all_areas
             })
         else:
-            self.render('index.html') # not logged in.
+            self.render('index.html', {
+                        'show_navbar': False           
+                                      }) # not logged in.
 
 class ViewAreas(BaseHandler):
 
@@ -224,13 +228,13 @@ class ViewAreas(BaseHandler):
 #                
                 'thisuser': True,
                 'token': self.session['user']['token'],
-#                
-                'areas': areas
-                
+                'areas': areas,
+                'show_navbar': True
             })
         else:
-            self.render('index.html') # not logged in.
-
+            self.render('index.html', {
+                        'show_navbar': False           
+                                      }) # not logged in.
 
 class FacebookCallback(BaseHandler):
     def get(self):
@@ -712,6 +716,7 @@ class ViewArea(BaseHandler):
             self.render('view-area.html', {
                 'username': self.session['user']['name'],
                 'area': area,
+                'show_navbar': True,
                 'celllist':json.dumps(cell_list)
             })
             
