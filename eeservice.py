@@ -262,7 +262,7 @@ def getL8LatestNDVIImage(image):
     #getMapId(ndvi, {min:-1, max:1, palette:NDVI_PALETTE}, "NDVI");
     
     newImage = image.addBands(ndvi); #keep all the metadata of image, but add the new bands.
-    print('getL8NDVIImage: ', newImage)
+    logging.debug('getL8NDVIImage:%s ', newImage)
 
     mapparams = {    #'bands':  'red, green, blue', 
                      'min': -1,
@@ -420,14 +420,15 @@ def getLandsatOverlay(coords, satellite, algorithm, depth, params):
             
             return mapid
         elif algorithm == 'ndvi':
-            print "l8 ndvi"
+            print "l8 ndvi not implemented"
+            return None
             
     elif satellite == 'l7':
         collection_name = 'LANDSAT/LE7_L1T'  #Old name was 'LANDSAT/L7_L1T' 
         image = getLatestLandsatImage(coords, collection_name, depth, params)
         if not image:
             logging.error('getLatestLandsatImage() no image found')
-            return 0
+            return None
         if algorithm == 'rgb':
             sharpimage = SharpenLandsat7HSVUpres(image) #doesn't work with TOA.
             red   = 'red'
@@ -446,7 +447,8 @@ def getLandsatOverlay(coords, satellite, algorithm, depth, params):
             return mapid
         
         elif algorithm == 'ndvi':
-           print "l7 ndvi"
+           print "l7 ndvi not implemented"
+           return None
 
         
 '''
@@ -507,7 +509,8 @@ def getLandsatCells(area):
         area.cells.append(cell.key()) #This is added even though the owner has not selected this cell for monitoring.
         area.put() #TODO expensive to write for each cell.
         return cell
-    
+    if area.cells is not None:
+        logging.error("getLandsatCells assumes area has no cells, but it does!") #TODO - turn into an assert.
     cellnames = []  #temporary array to detect duplicates without calling db.  
     for image in features:
         p = int(image['properties']['WRS_PATH'])
