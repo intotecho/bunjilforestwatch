@@ -1,50 +1,60 @@
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
+<div class="container" style='margin-bottom: 0'>
 	<div class="page-header">
-		<h1>Register <small>to become a forest watch volunteer or subscriber</small></h1>
-	</div>
-
+		<h1>Welcome</h1>
+        <p>Thank you for registering with Bunjil Forest Watch.</p>	</div>
 	<div class="row">
-		<div class="span12">
-			<p>Welcome. Please register to use Bunjil Forest Watch - it's free.</p>
+		<div class="col-xs-8">
+		  <h4>Username</h4>
+			Please enter your username for this site. <i>(no spaces)</i>
 			<form class="form-horizontal" method="POST" action="{{ "register"|url }}">
 				<fieldset>
 					<div class="control-group{% if errors.username %} error{% endif %}">
-						<label class="control-label" for="username">username</label>
+						<label class="control-label" for="username">username <span style="color: #ff0000">*</span></label>
 						<div class="controls">
-							<input class="input-large" id="username" name="username" type="text" value="{{ username }}">
-							{% if errors.username %}<span class="help-inline">{{ errors.username }}</span>{% endif %}
+							<input class="input-large" id="username" name="username" type="text" value="{{ username }}"> {% if
+							errors.username %}<span class="help-inline">{{ errors.username }}</span>{% endif %}
 						</div>
 					</div>
+					<h4>How will you mainly use Bunjil Forest Watch?</h4>
+					<label class="control-label" for="role"><b>Select your main role </b><span style="color: #ff0000">*</span></label>
 					<div class="control-group">
-						<label class="control-label" for="email">email address</label>
 						<div class="controls">
-							<input id="email" name="email" type="text" value="{{ email }}">
+							<label class="radio" for "role" > 
+							<input type="radio" name="roleoptionsRadios" id="optionsRadios1" value="local" unchecked='true' 
+								onClick="document.getElementById('submit1').disabled = false;
+                                document.getElementById('submit1').removeAttribute('disabled');">I look after a nearby forest or
+								park. Please alert me when anything changes.
+							</label>
+						</div>
+						<div class="controls">
+							<label class="radio"> 
+							<input type="radio" name="roleoptionsRadios" id="optionsRadios2" value="volunteer" unchecked='true' 
+							    onClick="document.getElementById('submit1').disabled = false;
+					            document.getElementById('submit1').removeAttribute('disabled');">I want to help locals in remote
+								areas to protect their forest. I can volunteer time.
+							</label>
 						</div>
 					</div>
-					
-					<label class="control-label" for="role"><b>role</b></label>
-						<div class="control-group">
-						<div class="controls">
-						<h3>Choose what best describes you?</h3>
-						<label class="radio" for "role">
-  						<input type="radio" name="roleoptionsRadios" id="optionsRadios1" value="local" checked>I look after a nearby forest or park. Please alert me when anything changes.</label>
-  						</div>
-  					</div>
-  					<div>
-  						<div class="controls">
-						<label class="radio">
-	  					<input type="radio" name="roleoptionsRadios" id="optionsRadios2" value="volunteer">I want to help locals in remote areas to protect their forest. I can volunteer time.</label>
-	  					</div>
-  					</div>
-					
+
 					<div class="form-actions">
-						<input type="submit" class="btn btn-primary" name="submit" value="Register">
+					       <p></p>
+						<input id="submit1" type="submit" disabled class="btn btn-primary" name="submit" value="Register">
 					</div>
-					
-  					</fieldset>
+                    <div class="control-group">
+                        <br><p>When you register, Bunjil Forest watch will send emails to this address about forest monitoring</p>
+                        <label class="control-label" for="email" style="color:#707070">your email address</label>
+                        <div class="controls">
+                            <p class="form-control-static" style="color:#707070">"{{ email }}"</p>
+                            <!-- <input id="email" name="email" type="text" value="{{ email }}">  -->
+                        </div>
+                    </div>
+
+
+				</fieldset>
 			</form>
 		</div>
 	</div>
+</div>
+
 {% endblock %}

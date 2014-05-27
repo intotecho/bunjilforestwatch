@@ -58,3 +58,14 @@ $(function() {
 	$('.alert').alert();
 	$('a[rel=tooltip], .show-tooltip').tooltip();
 });
+
+
+$(document).ready(function() {
+
+	
+	$('[data-toggle=offcanvas]').click(function() {
+	    $('.row-offcanvas').toggleClass('active');
+	  });
+	});
+
+
