@@ -9,15 +9,16 @@
         <li class="active">home (role: {{user.role}})</li>
     </ul>
     </p>
+<div class="container">
 <div class="row">
-   <div class="span6"><pre>
+   <div class="col-md-4"><pre>
                 {% if not areas %}
                     You don't have any areas yet.
                 {% else %}
                     {% include "areas.html" %}
                 {% endif %}
                 </pre><a href="{{ "new-area"|url}}" class="btn btn-lightblue">Create new area</a></div>
-   <div class="span6"><pre>
+   <div class="col-md-4"><pre>
                 {% if not all_areas %}
                     You don't have any areas yet.
                 {% else %}
@@ -25,4 +26,7 @@
                 {% endif %} 
                 </pre>           
   </div>   
+</div>
+</div>
+
 {% endblock %}

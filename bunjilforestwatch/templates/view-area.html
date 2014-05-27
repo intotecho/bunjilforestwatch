@@ -22,6 +22,10 @@ img[src*="gstatic.com/"],img[src*="googleapis.com/"] {
 	max-width: none;
 }
 </style>
+
+<link href="/static/css/jquery.nouislider.css" rel="stylesheet">
+
+
 <script type="text/javascript"
 	src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
 <script type="text/javascript" src="/static/js/draggable-object.js"></script>
@@ -33,6 +37,23 @@ img[src*="gstatic.com/"],img[src*="googleapis.com/"] {
 <script type="text/javascript" src="/static/js/polygon-outliner.js"></script>
 <script type="text/javascript" src="/static/js/drawing-tools.js"></script>
 <script type="text/javascript" src="/static/js/bootbox.min.js"></script>
+<script type="text/javascript" src="/static/js/jquery.nouislider.min.js"></script>
+
+        <script>
+             // On document ready, initialize noUiSlider.
+            $(function(){
+
+                $('.slider').noUiSlider({
+                    start: [ 100 ],
+                    range: {
+                        'min': 0,
+                        'max': 100
+                    },
+                    connect:"lower" 
+                });
+            });
+
+        </script>
 
 <script>
 
@@ -119,7 +140,9 @@ function initialize() {
                 fillOpacity: 0.15
     });
     
+    
     areaBoundary.setMap(map);
+    //addToMap(map, areaBoundary, "boundary")
 
 	/*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
 	 *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
@@ -267,11 +290,24 @@ function initialize() {
             if(layerID === 2) //FORMA grid 
             {
                 if($(this).is(':checked')){
-                  getFORMA(map, true); //map, showlayer,
+                  //getFORMA(map, true); //map, showlayer,
+                  
+                    $("#layers_panel").collapse('show');
+                    $('#sliders_array').append("<div class=\"slider\" id=\"slider1\">.</div>");
+                    $('#slider1').noUiSlider({
+                        start: [ 100 ],
+                        range: {
+                            'min': 0,
+                            'max': 100
+                        },
+                        connect:"lower"
+                    });
+                    $('#slider1').show()
                 }
                 else {
-                  getFORMA(map, false); //map, hide
+                  //getFORMA(map, false); //map, hide
                     //removeLandsatGrid();  //TODO put inside above funciton.
+                    //$("#layers_panel").collapse('hide');
                 }
             }
                 
@@ -363,8 +399,33 @@ function initialize() {
    		
 };//initialize
 google.maps.event.addDomListener(window, 'load', initialize); 
-	
 
+
+function addToMap(map, overlay, overlay_id)
+{
+    overlay.show();
+    overlay.name = overlay_id;
+    overlayMaps.push(overlay);
+    slider_id = "#slider" + overlay_id; 
+    //$("#layers_panel").collapse('show');
+    $('#sliders_array').append("<div class=\"slider\" id=\"" + overlay_id + "\"></div>");
+    $(slider_id).noUiSlider({
+        start: [ 100 ],
+        range: {
+            'min': 0,
+            'max': 100
+        },
+        connect:"lower"
+    });
+    $('#overlay_id').show();
+}
+
+function removeFromMap(map, overlay_id)
+{
+    overlay = overlayMaps.pop(); //needs to be a splice not a pop.
+    overlay.hide();
+    //hide slider
+}
 
 function createImageOverlay(show, mapid,  token, slider_name)
 {
@@ -376,16 +437,15 @@ function createImageOverlay(show, mapid,  token, slider_name)
         google.maps.event.addListener(map, 'tilesloaded', function () {
             overlay.deleteHiddenTiles(map.getZoom());
         });
-        overlay.show();
-        overlayMaps.push(overlay);
+        addToMap(map, overlay, slider_name.substring(5))
         
         // Add opacity control and set initial value
-        createOpacityControl(map, initialOpacity, slider_name.substring(5));    
+        
+        //createOpacityControl(map, initialOpacity, slider_name.substring(5));    
     }
     else 
     {
-        overlay = overlayMaps.pop();
-        overlay.hide();
+        removeFromMap(map, slider_name.substring(5) );
     }
 }
 
@@ -499,17 +559,20 @@ function cellSelected()
 
 
 </script>
+
 {% endblock %} {% block content %}
-<div>
+<div class="container" >
 	<ul class="breadcrumb">
 		<li><a href="{{ "user"|url(username) }}">{{ username }}</a> <span class="divider">/</span></li>
 		<li class="active"><a href="{{ area|area_url }}">{{ area }}</a></li>
 	</ul>
 </div>
 
-<div class="container-fluid">
-	<div class="row-fluid">
-		<div class="span2">
+
+
+<div style="padding:0 15px;">
+	<div class="row">
+		<div class="col-md-2">
 			<!--Sidebar content <div class="control-group"> -->
 			<!-- Algorithm Selection button -->
 			<div class="btn-toolbar" style="margin: 0;">
@@ -522,7 +585,7 @@ function cellSelected()
 				</div>
 				<div class="btn-toolbar" role="toolbar">
 					<div class="btn-group">
-						<button id='algorithm' type="button" style="width: 50px" class="btn btn-small dropdown-toggle" data-toggle="dropdown"
+						<button id='algorithm' type="button" style="width: 50px" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
 							data-toggle="tooltip" title="Select RGB for true colour or NDVI to highlight vegetation change">
 							RGB<span class="caret"></span>
 						</button>
@@ -534,7 +597,7 @@ function cellSelected()
 						</ul>
 					</div>
 					<div class="btn-group">
-						<button id='latest' type="button" style="width: 60px" class="btn btn-small dropdown-toggle" data-toggle="dropdown"
+						<button id='latest' type="button" style="width: 60px" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
 							data-toggle="tooltip" title="Select the latest image, the one before or the one before that)">
 							Latest<span class="caret"></span>
 						</button>
@@ -547,7 +610,7 @@ function cellSelected()
 						</ul>
 					</div>
 					<div class="btn-group">
-						<button id='satellite' type="button" style="width: 40px" class="btn btn-small dropdown-toggle" data-toggle="dropdown"
+						<button id='satellite' type="button" style="width: 40px" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
 							data-toggle="tooltip" title="Select Landsat7, Landsat 8)">
 							L8<span class="caret"></span>
 						</button>
@@ -561,15 +624,15 @@ function cellSelected()
 			</div>
 			<div class="btn-toolbar" style="margin: 0;">
 				<div class="btn-group">
-					<button id='get_overlay_btn' type="button" style="width: 43px" class="btn btn-small btn-lightblue" data-toggle="tooltip"
+					<button id='get_overlay_btn' type="button" style="width: 43px" class="btn btn-xs btn-lightblue" data-toggle="tooltip"
 						title="Overlay selected image on the map">View</button>
 				</div>
 				<div class="btn-group">
-					<button id='get_download_btn' type="button" style="width: 65px" class="btn btn-small btn-lightgreen" data-toggle="tooltip"
+					<button id='get_download_btn' type="button" style="width: 65px" class="btn btn-xs btn-lightgreen" data-toggle="tooltip"
 						title="Download selected image to a (very large) file">Download</button>
 				</div>
 				<div class="btn-group">
-					<button id='get_add_btn' type="button" style="width: 43px" class="btn btn-small btn-lightblue" data-toggle="tooltip"
+					<button id='get_add_btn' type="button" style="width: 43px" class="btn btn-xs btn-lightblue" data-toggle="tooltip"
 						title="Add selected cell to observation schedule">Add</button>
 				</div>
 
@@ -581,6 +644,20 @@ function cellSelected()
                     <input type="checkbox" id="2" class="layer" unchecked data-toggle="tooltip" title="Show FORMA estimate of recent tree loss" /><label for=2">FORMA</label>
 			</div>
 			<div class="accordion" id="accordion2">
+                </div>
+                    <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#layers_panel"> Layers </a>
+                    </div>
+                    <div id="layers_panel" class="accordion-body collapse in">
+                        <div class="accordion-inner">
+                        <ul id="sliders_array">
+                               <div class="slider"></div>
+                        </ul>
+                        </div>
+                    </div>
+                </div>
+
 				<div class="accordion-group">
 					<div class="accordion-heading">
 						<a class="accordion-toggle" data-toggle="collapse" href="#description_panel"> Area Description </a>
@@ -612,7 +689,6 @@ function cellSelected()
 							<p>
 						</div>
 					</div>
-				</div>
 				<div class="accordion-group">
 					<div class="accordion-heading">
 						<a class="accordion-toggle" data-toggle="collapse" href="#boundary_panel"> Boundary Coordinates </a>
@@ -639,7 +715,7 @@ function cellSelected()
 				</div>
 			</div>
 		</div>
-		<div class="span10">
+		<div class="col-md-10">
 			<!--Body = Map content-->
 
 			<div id="map-canvas"></div>
