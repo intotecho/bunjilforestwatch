@@ -874,8 +874,7 @@ class CheckNewHandler(BaseHandler):
                  returnstr += '{0!s} has no followers. <br>'.format(area.name)
                 
         logging.info(returnstr)        
-        self.response.write(returnstr)        
-
+        self.response.write(returnstr) 
 
 '''
 MailTestHandler() - This handler sends a test email 
@@ -906,15 +905,25 @@ class ObservationTaskHandler(BaseHandler):
         user = cache.get_user(username)
         task = cache.get_task(taskname)  #FIXME Must be typesafe
         if task is not None:
+            #area = db.get(task.aoi) #FIXME use the cache.
             resultstr = "ObservationTaskHandler: Stub [Sorry - Not yet implemented] <br> {0!s} {1!s}".format(user.name, str(task.key()))
             logging.info(resultstr)
+            self.add_message('success', resultstr)
         else:
+            area = None
             resultstr = "ObservationTaskHandler: Invalid key {0!s}".format(taskname)
+            self.add_message('error', resultstr)
         #following = cache.get_by_keys(cache.get_following(username), 'User')
         #followers = cache.get_by_keys(cache.get_followers(username), 'User')
 
         #self.render('following.html', {'u': u, 'following': following, 'followers': followers})
-        self.response.write( resultstr)
+        #self.response.write( resultstr)
+        
+        self.render('view-task.html', {
+                'username': self.session['user']['name'],
+                'area'    : task.aoi
+                #'result'  :resultstr
+        })       
 
 
 class ViewJournal(BaseHandler):
@@ -1165,7 +1174,7 @@ class FollowAreaHandler(BaseHandler):
 
         ########### create a journal for each followed area - should be in above txn and a function call as duplicated ##############
 
-        name = "Observations for " + area_name # name is used by view-area.html to make reports.
+        name = "Observations for " + area_name # name is used by view-task.html to make reports.
         journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
         for journal_url, journal_name, journal_type in self.session['journals']:
             if journal.name == journal_name:
@@ -2143,7 +2152,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
     # observation tasks
-    webapp2.Route(r'/obs/<username>/<taskname>', handler=ObservationTaskHandler, name='obs-task'),
+    webapp2.Route(r'/obs/<username>/<taskname>', handler=ObservationTaskHandler, name='view-task'),
 
     # taskqueue
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
