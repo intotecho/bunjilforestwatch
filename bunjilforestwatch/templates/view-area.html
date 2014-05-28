@@ -1,10 +1,11 @@
 {% extends "base.html" %} {% block head %}
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+
+<!-- /*TODO what if anything does this do? */  -->
 <style type="text/css">
 html {
 	height: 100%
 }
-
 body {
 	height: 100%;
 	margin: 10;
@@ -15,19 +16,12 @@ body {
 	height: 100%
 }
 </style>
-<style type="text/css">
-
-/** For Bootstrap and Google Maps Info window styles problem - Fix from http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden **/
-img[src*="gstatic.com/"],img[src*="googleapis.com/"] {
-	max-width: none;
-}
-</style>
 
 <link href="/static/css/jquery.nouislider.css" rel="stylesheet">
 
-
 <script type="text/javascript"
-	src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
+	src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> 
+</script>
 <script type="text/javascript" src="/static/js/draggable-object.js"></script>
 <script type="text/javascript" src="/static/js/custom-tile-overlay.js"></script>
 <script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>
