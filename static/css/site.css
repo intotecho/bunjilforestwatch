@@ -1,3 +1,11 @@
+/** For Bootstrap and Google Maps Info window styles problem - 
+Fix from http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden 
+TODO: Should test to see if this is still required**/
+img[src*="gstatic.com/"],img[src*="googleapis.com/"] {
+    max-width: none;!important
+}
+
+
 textarea {
 	height: 200px;
 }
