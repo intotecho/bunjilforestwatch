@@ -1,26 +1,25 @@
 {% extends "base.html" %}
 {% block head %}
-<style type="text/css"> 
-/** FIX for Bootstrap and Google Maps Info window styes problem http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden **/
-img[src*="gstatic.com/"], img[src*="googleapis.com/"] {
-max-width: none;
-}
-var map;
+
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-    <style type="text/css">
+
+<style type="text/css"> 
+/*TODO what if anything does this do? */
       html { height: 100% }
       body { height: 100%; margin: 0; padding: 0 }
       #map-canvas { height: 100% }
-    </style>
-    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
-	<script src="/static/js/polygon-outliner.js"></script>
-	<script src="/static/js/GeoJSON.js"></script>
-	<script type="text/javascript" src="/static/js/landsat-grid.js"></script> 
-	<script type="text/javascript" src="/static/js/bootbox.min.js"></script>
-	<script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>  
-    <script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>  
-    <script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>  
-	<script>
+</style>
+    
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
+<script src="/static/js/polygon-outliner.js"></script>
+<script src="/static/js/GeoJSON.js"></script>
+<script type="text/javascript" src="/static/js/landsat-grid.js"></script> 
+<script type="text/javascript" src="/static/js/bootbox.min.js"></script>
+<script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>  
+<script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>  
+<script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>  
+<script>
+	var map;
     
       function initialize() {
     	  //bootbox.alert("Modal Dialog!");
