@@ -43,6 +43,7 @@ import markdown
 import rst_directive
 import textile
 
+#env = jinja2.Environment(loader=jinja2.FileSystemLoader('templates'))
 env = jinja2.Environment(loader=jinja2.FileSystemLoader( 'templates'))
 env.filters.update(filters.filters)
 
