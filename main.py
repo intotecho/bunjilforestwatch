@@ -42,6 +42,13 @@ import twitter
 import utils
 
 
+# from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
+PRODUCTION_MODE = not os.environ.get(
+    'SERVER_SOFTWARE', 'Development').startswith('Development')
+if not PRODUCTION_MODE:
+    from google.appengine.tools.devappserver2.python import sandbox
+    sandbox._WHITE_LIST_C_MODULES += ['_ctypes', 'gestalt']
+
 def rendert(s, p, d={}):
     session = s.session
     d['session'] = session
@@ -106,7 +113,8 @@ class BaseHandler(webapp2.RequestHandler):
         return self.session_store.get_session(backend='datastore')
 
     # This should be called anytime the session data needs to be updated.
-     # session['var'] = var should never be used, except in this function
+    # session['var'] = var should never be used, except in this function
+    #This function adds the below data to the data returned to the template. 
     def populate_user_session(self, user=None):
         if 'user' not in self.session and not user:
             logging.error("populate_session() - no user!")
@@ -124,7 +132,7 @@ class BaseHandler(webapp2.RequestHandler):
             'role' : user.role
         }
         self.session['journals'] = cache.get_journal_list(db.Key(self.session['user']['key']))
-        self.session['areas_list']    = cache.get_areas_list(db.Key(self.session['user']['key']))
+        self.session['areas_list']    = cache.get_areas_list(db.Key(self.session['user']['key'])) #TOD This list can be long and expensive.
         self.session['following_areas_list'] = cache.get_following_areas_list(self.session['user']['name'])
         #self.session['areas']    = cache.get_areas(db.Key(self.session['user']['key']))
         #self.session['following_areas']    = cache.get_by_keys(cache.get_following_areas(self.session['user']['name']), 'AreaOfInterest')
@@ -905,25 +913,39 @@ class ObservationTaskHandler(BaseHandler):
         user = cache.get_user(username)
         task = cache.get_task(taskname)  #FIXME Must be typesafe
         if task is not None:
-            #area = db.get(task.aoi) #FIXME use the cache.
-            resultstr = "ObservationTaskHandler: Stub [Sorry - Not yet implemented] <br> {0!s} {1!s}".format(user.name, str(task.key()))
-            logging.info(resultstr)
+            area = task.aoi 
+            print area.name
+            resultstr = "ObservationTaskHandler: Stub<br> {0!s} {1!s} {2!s}".format(user.name, str(task.key()), area.name )
+            logging.debug(resultstr)
+            #print loaders.list_templates()
             self.add_message('success', resultstr)
+#            celllist = {}
+#             self.render('view-area.html', {
+#                 'username': self.session['user']['name'],
+#                 'area'    : area,
+#                 #'action': "notused",
+#                 #'algorithm': "notused",
+#                 #'satelite' : "notused",
+#                 #'latest' : "notused",
+#                 'show_navbar': True,
+#                 'celllist':json.dumps(celllist)
+#             })
+#             
+            
+            cell_list = area.CellList()    
+            self.render('view-obs.html', {
+                'username': self.session['user']['name'],
+                'area': area,
+                'show_navbar': True,
+                'celllist':json.dumps(cell_list)
+            })
+            
+            
         else:
-            area = None
             resultstr = "ObservationTaskHandler: Invalid key {0!s}".format(taskname)
             self.add_message('error', resultstr)
-        #following = cache.get_by_keys(cache.get_following(username), 'User')
-        #followers = cache.get_by_keys(cache.get_followers(username), 'User')
-
-        #self.render('following.html', {'u': u, 'following': following, 'followers': followers})
-        #self.response.write( resultstr)
-        
-        self.render('view-task.html', {
-                'username': self.session['user']['name'],
-                'area'    : task.aoi
-                #'result'  :resultstr
-        })       
+            self.response.write( resultstr)
+          
 
 
 class ViewJournal(BaseHandler):
@@ -2152,7 +2174,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
     # observation tasks
-    webapp2.Route(r'/obs/<username>/<taskname>', handler=ObservationTaskHandler, name='view-task'),
+    webapp2.Route(r'/obs/<username>/<taskname>', handler=ObservationTaskHandler, name='view-obs'),
 
     # taskqueue
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
