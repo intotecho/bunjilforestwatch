@@ -345,7 +345,7 @@ function drawLandsatGrid(data, clickable) {
 					strokeWeight : 1,
 					strokeOpacity : 0.5
 				})
-				console.log("drawLandsatGrid() unmonitored cell");
+				//console.log("drawLandsatGrid() unmonitored cell");
 				landsat_cell.set('Monitored', false);
 			}
 
@@ -375,7 +375,7 @@ function drawLandsatGrid(data, clickable) {
 			console.log("no geometry ", i);
 		}
 	} // each row
-	console.log(landsat_overlays);
+	//console.log(landsat_overlays);
 
 }// drawLandsatGrid
 
