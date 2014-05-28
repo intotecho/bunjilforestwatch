@@ -111,7 +111,7 @@ CustomTileOverlay.prototype.getTile = function (p, z, ownerDocument) {
 	// If tile already exists then use it
 	for (var n = 0; n < this.tiles.length; n++) {
 		if (this.tiles[n].id == 't_' + p.x + '_' + p.y + '_' + z) {
-			console.log("getTile: already got: ", this.tiles[n].id , n, this.tiles[n].style.backgroundImage);
+			//console.log("getTile: already got: ", this.tiles[n].id , n, this.tiles[n].style.backgroundImage);
 			return this.tiles[n];
 		}
 	}
@@ -134,7 +134,7 @@ CustomTileOverlay.prototype.getTile = function (p, z, ownerDocument) {
 	this.tiles.push(tile)
 
 	this.setObjectOpacity(tile);
-	console.log("getTile: fetch new: ", tile.id, tile.style.backgroundImage);
+	//console.log("getTile: fetch new: ", tile.id, tile.style.backgroundImage);
 
 	return tile;
 }
