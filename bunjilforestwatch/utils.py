@@ -18,7 +18,7 @@ import unicodedata
 #from google.appengine.api import conversion
 from google.appengine.ext import blobstore
 from google.appengine.ext import db
-from google.appengine.ext.webapp import template
+#from google.appengine.ext.webapp import template
 import jinja2
 import webapp2
 
