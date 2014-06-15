@@ -8,9 +8,12 @@ var MAPS_API_KEY = 'AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I';    // #Google Maps
 
 var landsat_overlays = [];
 var landsatgrid_panel = '#map_panel'; // display info about the selected cell.
-var landsatgrid_isclickable; // for new-area, we want it to be visible but
-								// non-interactive. For view-area, we want to be
-								// able to click on cells.
+var global_landsatgrid_isclickable; // for new-area, we want it to be visible but non-interactive. 
+									// For view-area, we want to be able to click on grid cells.
+									//don't know how to pass this to drawLandsatGrid callback yet so this is a hack.
+
+var global_current_map;	// dont know how to pass map to callback drawLandsatGrid so this is a workaround.
+
 var gridInitialised = false; // Is it already on the map?
 
 // Path Row and Coordinates of the Landsat Cell selected (e.g. by mouse click)
@@ -28,6 +31,7 @@ var selectedLON_LR;
 var infoWindowArray = [];
 var cellarray = [];
 
+
 function resetInfoWindow() {
 	"use strict";
 	var i;
@@ -40,8 +44,8 @@ function resetInfoWindow() {
 
 // return the cells within a RADIUS of the map center.
 function queryLandsatFusionTableRadius(map) {
-	var map_center = map.getCenter(); // new
-	// google.maps.LatLng({{area.map_center}});
+	
+	var map_center = map.getCenter();
 
 	var map_distance = google.maps.geometry.spherical.computeDistanceBetween(
 			map.getBounds().getNorthEast(), 
@@ -91,7 +95,7 @@ function queryLandsatFusionTableBounds(map, latlngbounds) {
 }
 
 function queryLandsatFusionTableCellArray(map, cellarray) {
-
+	
 	var url = [ 'https://www.googleapis.com/fusiontables/v1/query?' ];
 	url.push('sql=');
 
@@ -107,6 +111,7 @@ function queryLandsatFusionTableCellArray(map, cellarray) {
 	var encodedQuery = encodeURIComponent(query);
 	url.push(encodedQuery);
 	url.push('&callback=drawLandsatGrid');
+	
 	url.push('&key=' + MAPS_API_KEY);
 	console.log("ft query: ", query);
 	console.log("ft url: ", url);
@@ -115,12 +120,12 @@ function queryLandsatFusionTableCellArray(map, cellarray) {
 
 function requestLandsatGrid(map, showlayer, clickable, cellarray) {
 	"use strict";
-	// Initialize JSONP request for LANSAT grid Fusion Table
-	// Based on
-	// https://developers.google.com/fusiontables/docs/samples/mouseover_map_styles
-	// Landsat grid in fusion table was initially published by USGS.
+	// Initialize JSONP request for LANSAT grid Fusion Table. Based on
+	// developers.google.com/fusiontables/docs/samples/mouseover_map_styles
+	// Landsat grid in fusion table based on data published by USGS.
 
-	landsatgrid_isclickable = clickable;
+	global_landsatgrid_isclickable = clickable;
+	global_current_map = map;
 	var script = null;
 	if (gridInitialised != true) {
 		if (showlayer === true) {
@@ -132,7 +137,9 @@ function requestLandsatGrid(map, showlayer, clickable, cellarray) {
 				url = queryLandsatFusionTableCellArray(map, cellarray);
 			}
 			var script = document.createElement('script');
+			
 			script.src = url.join('');
+			script.setAttribute('sides', map.side);
 			var body = document.getElementsByTagName('body')[0];
 			body.appendChild(script);
 		}
@@ -186,11 +193,11 @@ function display_cell_info(e, isSelected) {
 
 	$(landsatgrid_panel).empty();
 	htmlString = "<p><font-size:50%;color:blue strong>zoom:</strong> "
-			+ map.getZoom() + "</p>";
-	htmlString += "<p>lat: " + map.getCenter().lat().toFixed(3) + ", lng: "
-			+ map.getCenter().lng().toFixed(3) + "<br>" + "Path: "
-			+ parseInt(cellobject['<strong>PATH</strong>'], 10) + " Row: "
-			+ parseInt(cellobject['<strong>ROW</strong>'], 10);
+	//		+ map.getZoom() + "</p>"
+	//      + "<p>lat: " + map.getCenter().lat().toFixed(3) + ", lng: "
+	//		+ map.getCenter().lng().toFixed(3) + "<br>" 
+			+ "Path: " + parseInt(cellobject['<strong>PATH</strong>'], 10) 
+			+ " Row: " + parseInt(cellobject['<strong>ROW</strong>'], 10);
 	if (e.get("Monitored") == true) {
 		htmlString += " Monitored"
 	} else {
@@ -275,12 +282,11 @@ function isMonitored(selectedPath, selectedRow, cellarray) {
 	return false;
 }
 
-function drawLandsatGrid(data, clickable) {
+function drawLandsatGrid(data) {
 	"use strict";
-
+	//current_map = map; //TODO This is asynchronus hack and buggy.
 	var rows = data.rows;
-	// var currentBounds = map.getBounds(); // get bounds of the map object's
-	// current (initial) viewport
+	
 	for ( var i in rows) {
 		var infoWindow = new google.maps.InfoWindow();
 		infoWindowArray.push(infoWindow);
@@ -323,7 +329,7 @@ function drawLandsatGrid(data, clickable) {
 				strokeOpacity : 0.5,
 				fillOpacity : 0,
 				editable : false,
-				clickable : landsatgrid_isclickable,
+				clickable : global_landsatgrid_isclickable,
 				suppressInfoWindows : true,
 				goedesic : true,
 				// pointer-events: none,
@@ -367,7 +373,8 @@ function drawLandsatGrid(data, clickable) {
 			// google.maps.event.addListener(landsat_cell, 'click',
 			// landsatGrid_click);
 
-			landsat_cell.setMap(map);
+				
+			landsat_cell.setMap(global_current_map);
 
 			$(landsatgrid_panel).collapse('show');
 		} // if geometry
