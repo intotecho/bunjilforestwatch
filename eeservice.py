@@ -102,7 +102,7 @@ def checkForNewObservationInCell(area, cell, collection_name):
     return None
 
 '''
-getLandsatImage(array of points, string as name of ee.imagecollection)
+getLatestLandsatImage(array of points, string as name of ee.imagecollection)
 
 returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
 Could also clip the image to the coordinates to reduce the size.
@@ -183,6 +183,35 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     
     #x['mynewkey'] = id 
     return latest_image  #.clip(park_boundary)
+
+
+
+'''
+getLandsatImageById(collection_name,image_id, algorithm )
+
+'''
+
+def getLandsatImageById(collection_name,image_id, algorithm ):
+
+    image = ee.Image(image_id)
+    
+    scenes  = image.getInfo()
+    
+    props = image.getInfo()['properties'] #logging.info('image properties: %s', props)
+    
+    #test = latest_image.getInfo()['bands']
+
+    crs = image.getInfo()['bands'][0]['crs']
+    system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
+    date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
+
+    logging.info('getLandsatImageById id: %s, date:%s', id, date_str)
+    # add some properties to Image object to make them easier to retrieve later.
+    image.name = id
+    image.capture_date = date_str
+    image.system_time_start = system_time_start
+    
+    return image
 
 
 '''
@@ -378,11 +407,10 @@ def getOverlayPath(image, prefix, red, green, blue):
     return path
 
 '''
-getLandsatOverlay()
+visualizeImage()
 parameters:
-    coords - set of boundary points
-    satellite - "L8" maps to image collection LANDSAT/LC8_L1T_TOA. 
-                "L7" maps to image collection LANDSAT/LE7_L1T.
+    collection_name - name of EE image collection LANDSAT/LC8_L1T_TOA or LANDSAT/LE7_L1T
+    image -  returned by ee.Image.
     algorithm: - What visualisation of the image to return
             'rgb' - visual
             'ndvi' - NDVI
@@ -394,6 +422,53 @@ parameters:
 Returns an earth engine mapid that can be displayed on a google map with additional attributues from the ee.Image object:
 
 '''
+def visualizeImage(collection_name, image, algorithm):
+    if collection_name == 'LANDSAT/LC8_L1T_TOA' :
+        if algorithm.lower() == 'rgb':
+            sharpimage = SharpenLandsat8HSVUpres(image)
+            red = 'red'
+            green = 'green'
+            blue = 'blue'    
+            #path = getOverlayPath(sharpimage, "L8TOA", red, green, blue)
+            mapid = getVisualMapId(sharpimage, red, green, blue)
+            info = image.getInfo() #logging.info("info", info)
+            #print info
+            props = info['properties']
+            mapid['date_acquired'] = props['DATE_ACQUIRED']
+            mapid['capture_datetime'] = image.system_time_start
+            mapid['id'] = props['system:index']
+            mapid['path'] = props['WRS_PATH']
+            mapid['row'] = props['WRS_ROW']
+            mapid['collection'] = collection_name
+            
+            return mapid
+        elif algorithm.lower() == 'ndvi':
+            print "l8 ndvi not implemented"
+            return None
+            
+    elif collection_name == 'LANDSAT/LE7_L1T':  #Old name was 'LANDSAT/L7_L1T' 
+        if algorithm.lower() == 'rgb':
+            sharpimage = SharpenLandsat7HSVUpres(image) #doesn't work with TOA.
+            red   = 'red'
+            green = 'green'
+            blue  = 'blue'    
+            mapid = getVisualMapId(sharpimage, red, green, blue)
+            props = image.getInfo()['properties'] 
+            #props = info['properties']
+            mapid['date_acquired'] = props['DATE_ACQUIRED']
+            mapid['id'] = props['system:index']
+            mapid['path'] = props['WRS_PATH']
+            mapid['row'] = props['WRS_ROW']
+            mapid['collection'] = collection_name
+            mapid['capture_datetime'] = image.system_time_start
+            
+            return mapid
+        
+        elif algorithm.lower() == 'ndvi':
+           print "l7 ndvi not implemented"
+           return None
+
+
 def getLandsatOverlay(coords, satellite, algorithm, depth, params):
     if satellite == 'l8':
         collection_name = 'LANDSAT/LC8_L1T_TOA'
@@ -449,6 +524,7 @@ def getLandsatOverlay(coords, satellite, algorithm, depth, params):
         elif algorithm == 'ndvi':
            print "l7 ndvi not implemented"
            return None
+
 
         
 '''
