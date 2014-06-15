@@ -288,11 +288,24 @@ class Observation(db.Model):
 	image_collection = db.StringProperty(required=False)				#identifies the ImageCollection
 	captured = db.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
 	image_id = db.StringProperty(required=False)           		# LANDSAT Image ID of Image - key to query EE.
-	rgb_map_id = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
-	rgb_token	= db.StringProperty(required=False, default=None) 	# RGB Mpa Overlay Token might have expired.
+	map_id = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
+	token	= db.StringProperty(required=False, default=None) 	# RGB Map Overlay Token might have expired.
 	algorithm = db.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this. 
 	#landsatCell = db.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
 
+	def Observation2Dictionary(self):		
+		obsdict = {
+			"image_collection":self.image_collection, 
+			"captured": self.captured.strftime("%Y-%m-%d @ %H:%M"), 
+			"image_id":self.image_id, 
+			"map_id":self.map_id, 
+			"token":self.token, 
+			"algorithm":self.algorithm,
+			"key": str(self.key())
+		}
+		return obsdict
+
+	
 
 '''
 class Task is an observation task, based on a landsat image in an AOI. The task includes a user who is responsible for completing the task.

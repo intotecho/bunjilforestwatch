@@ -19,8 +19,8 @@ import re
 import os
 import geojson
 
-import django
-from django.utils import html
+#import django
+#from django.utils import html
 from google.appengine.api import files
 from google.appengine.api import taskqueue
 from google.appengine.api import users
@@ -475,8 +475,13 @@ class AccountHandler(BaseHandler):
 
 class NewAreaHandler(BaseHandler):
     def get(self):
-        username = self.session['user']['name']
-
+        try:
+            username = self.session['user']['name']
+        except: 
+            self.render('index.html', {
+                        'show_navbar': False           
+            }) # no user so not logged in -redirect to login page.
+              
         self.render('new-area.html', {
                 'username': username
             })    
@@ -837,6 +842,79 @@ class LandsatOverlayRequestHandler(BaseHandler):
         self.populate_user_session()
         self.response.write(json.dumps(map_id))
 
+
+# if Image is known.
+class GetObservationHandler(BaseHandler):
+    #This handler responds to Ajax request, hence it returns a response.write()
+
+    def get(self, username, obskey):
+        user = cache.get_user(username) #not used.
+        obstask= cache.get_by_key(obskey) #FIXME make type safe for security.
+        logging.debug("GetObservationHandler() Fetching image %s from collection :%s", obstask.image_id, obstask.image_collection )
+        if not obstask :
+            logging.error('GetObservationHandler() - bad task')
+            self.error(404)
+            return
+            
+        eeservice.initEarthEngineService() # we need earth engine now.
+     
+        map_id = eeservice.getLandsatImageById(obstask.image_collection,  obstask.image_id, osbtask.algorithm)
+        if not map_id:
+            logging.error('Could not find Image') #needs a reload to display messages. 
+            self.populate_user_session()
+            self.response.write(json.dumps(map_id))
+            return
+      
+        #Save the image overlay in the observation task
+                 
+        #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
+        obstask.map_id = map_id['mapid'] 
+        obstask.token  = map_id['token']  
+        obstask.captured   = map_id['capture_datetime']
+        obstask.algorithm  = "rgb"
+        db.put(obs)
+    
+        del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
+        del map_id['capture_datetime'] #can't serialise a memory object, and browser won't need it so remove
+        #logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
+        self.populate_user_session()
+        self.response.write(json.dumps(map_id))
+
+'''
+ObservationTaskHandler() when a user clicks on a link in an obstask email they come here to see the new image.
+'''
+
+class ObservationTaskHandler(BaseHandler):
+    def get(self, username, taskname):
+        user = cache.get_user(username)
+        task = cache.get_task(taskname)  #FIXME Must be typesafe
+        if task is not None:
+            area = task.aoi 
+            cell_list = area.CellList()  
+            resultstr = "New Task for {0!s} to check area {1!s}".format(user.name, area.name )
+            #self.add_message('success', resultstr)
+            debugstr = resultstr + " task: " + str(task.key()) + " has " + str(len(task.observations)) + "observations"
+            obslist = []
+            for obs_key in task.observations:
+                obs = cache.get_by_key(obs_key) 
+                obslist.append(obs.Observation2Dictionary())
+                
+            #logging.debug( json.dumps(obslist))
+            
+            self.render('view-obs.html', {
+                'username': self.session['user']['name'],
+                'area': area,
+                'task': task,
+                'show_navbar': True,
+                'obslist': json.dumps(obslist),
+                'celllist':json.dumps(cell_list)
+            })
+  
+        else:
+            resultstr = "Sorry, Task not found. ObservationTaskHandler: key {0!s}".format(taskname)
+            self.add_message('error', resultstr)
+            self.response.write(resultstr)
+   
 '''
 CheckNewHandler() looks at each subscribed area of interest and checks each monitored cell to see if there is a new image in EE since the last check.
 '''
@@ -894,10 +972,10 @@ class MailTestHandler(BaseHandler):
 #     if 'user' in self.session:
 #         areas = cache.get_areas(db.Key(self.session['user']['key'])) # areas user created
 #         self.populate_user_session() #Only need to do this when areas, journals  or followers change
-#         username = "intotecho@gmail.com"
+#         username = "myemail@gmail.com"
 #     
 #     else:
-#         username = "bunjilforestwatch@gmail.com"
+#         username = "myotheremail@gmail.com"
     
     user = cache.get_user(self.session['user']['name'])
     tasks = models.ObservationTask.all().order('-created_date').fetch(2)
@@ -908,45 +986,7 @@ class MailTestHandler(BaseHandler):
     
     self.response.write( resultstr)        
 
-class ObservationTaskHandler(BaseHandler):
-    def get(self, username, taskname):
-        user = cache.get_user(username)
-        task = cache.get_task(taskname)  #FIXME Must be typesafe
-        if task is not None:
-            area = task.aoi 
-            print area.name
-            resultstr = "ObservationTaskHandler: Stub<br> {0!s} {1!s} {2!s}".format(user.name, str(task.key()), area.name )
-            logging.debug(resultstr)
-            #print loaders.list_templates()
-            self.add_message('success', resultstr)
-#            celllist = {}
-#             self.render('view-area.html', {
-#                 'username': self.session['user']['name'],
-#                 'area'    : area,
-#                 #'action': "notused",
-#                 #'algorithm': "notused",
-#                 #'satelite' : "notused",
-#                 #'latest' : "notused",
-#                 'show_navbar': True,
-#                 'celllist':json.dumps(celllist)
-#             })
-#             
-            
-            cell_list = area.CellList()    
-            self.render('view-obs.html', {
-                'username': self.session['user']['name'],
-                'area': area,
-                'show_navbar': True,
-                'celllist':json.dumps(cell_list)
-            })
-            
-            
-        else:
-            resultstr = "ObservationTaskHandler: Invalid key {0!s}".format(taskname)
-            self.add_message('error', resultstr)
-            self.response.write( resultstr)
-          
-
+         
 
 class ViewJournal(BaseHandler):
     def get(self, username, journal_name):
@@ -2174,8 +2214,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
     # observation tasks
+    webapp2.Route(r'/obs/<username>/image/<obskey>', handler=GetObservationHandler, name='view-image'), #AJAX call
     webapp2.Route(r'/obs/<username>/<taskname>', handler=ObservationTaskHandler, name='view-obs'),
-
+    
     # taskqueue
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
     webapp2.Route(r'/tasks/backup', handler=BackupHandler, name='backup'),
@@ -2238,6 +2279,7 @@ RESERVED_NAMES = set([
     'googledocs',
     'googleplus',
     'help',
+    'image',
     'journal',
     'journaler',
     'journalr',
