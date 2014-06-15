@@ -531,7 +531,9 @@ def get_area(username, area_name):
     data = unpack(memcache.get(n))
     if data is None:
         area_key = get_area_key(username, area_name)
-        #logging.debug("get_area() key %s", area_key)
+        if area_key is None:
+            logging.error("get_area() no key for %s %s", username, area_name)
+            return None
         data = db.get(area_key)
         if data is None:
             logging.error("get_area() ERROR!!!! %s %s %s", username, area_name, area_key )
