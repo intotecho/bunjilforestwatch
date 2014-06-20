@@ -6,7 +6,7 @@ Licences: Creative Commons Attribution 3.0 New Zealand License
 http://creativecommons.org/licenses/by/3.0/nz/
 ******************************************************************************/
 var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
-var initialOpacity = 50;
+var initialOpacity = 100;
 
 function createOpacityControl(map, opacity, layerLabel) {
 	var sliderImageUrl = "/static/img/opacity-slider3d7.png";
