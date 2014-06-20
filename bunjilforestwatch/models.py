@@ -285,11 +285,11 @@ This allows the app to redraw the overlay computed by earth engine on a new brow
 In which case, app will need to regenerate the observation.    
 '''
 class Observation(db.Model):
-	image_collection = db.StringProperty(required=False)				#identifies the ImageCollection
-	captured = db.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
-	image_id = db.StringProperty(required=False)           		# LANDSAT Image ID of Image - key to query EE.
-	map_id = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
-	token	= db.StringProperty(required=False, default=None) 	# RGB Map Overlay Token might have expired.
+	image_collection = db.StringProperty(required=False)				#identifies the ImageCollection name, not an EE object.
+	captured  = db.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
+	image_id  = db.StringProperty(required=False)           		# LANDSAT Image ID of Image - key to query EE.
+	map_id    = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
+	token	  = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Token might have expired.
 	algorithm = db.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this. 
 	#landsatCell = db.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
 

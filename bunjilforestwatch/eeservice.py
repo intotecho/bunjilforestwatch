@@ -69,7 +69,8 @@ def initEarthEngineService():
             #self.add_message('error', 'An error occurred with Earth Engine. Try again.')
             logging.error("Failed to connect to Earth Engine. Exception: %s", e)
             return False
-
+    else:
+        return True    
 
 '''
 checkForNewObservationInCell() checks the collection for the latest image and compares it to the last stored. 
@@ -86,7 +87,7 @@ def checkForNewObservationInCell(area, cell, collection_name):
     if latest_image is not None:
         storedlastObs = cell.latestObservation(collection_name)             #FIXME - Need to use the cache here.
         if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-            obs = models.Observation(parent = cell, image_collection = collection_name, captured = latest_image.system_time_start, image_id = latest_image.name, rgb_map_id = None, rgb_token = None,  algorithm = None)
+            obs = models.Observation(parent = cell, image_collection = collection_name, captured = latest_image.system_time_start, image_id = latest_image.name, map_id = None, token = None,  algorithm = "")
             db.put(obs)
             if storedlastObs is None:
                 logging.debug('checkForNewObservationInCell FIRST observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
@@ -175,13 +176,11 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
     logging.info('getLatestLandsatImage id: %s, date:%s latest:%s', id, date_str, latest_depth )
-    x = latest_image.getInfo()
     # add some properties to Image object to make them easier to retrieve later.
     latest_image.name = id
     latest_image.capture_date = date_str
     latest_image.system_time_start = system_time_start
     
-    #x['mynewkey'] = id 
     return latest_image  #.clip(park_boundary)
 
 
@@ -191,7 +190,7 @@ getLandsatImageById(collection_name,image_id, algorithm )
 
 '''
 
-def getLandsatImageById(collection_name,image_id, algorithm ):
+def getLandsatImageById(collection_name,image_id, algorithm):
 
     image = ee.Image(image_id)
     
@@ -211,7 +210,7 @@ def getLandsatImageById(collection_name,image_id, algorithm ):
     image.capture_date = date_str
     image.system_time_start = system_time_start
     
-    return image
+    return visualizeImage(collection_name, image, algorithm)
 
 
 '''
@@ -423,6 +422,8 @@ Returns an earth engine mapid that can be displayed on a google map with additio
 
 '''
 def visualizeImage(collection_name, image, algorithm):
+    if not algorithm:
+        algorithm= 'rgb'
     if collection_name == 'LANDSAT/LC8_L1T_TOA' :
         if algorithm.lower() == 'rgb':
             sharpimage = SharpenLandsat8HSVUpres(image)
@@ -468,63 +469,18 @@ def visualizeImage(collection_name, image, algorithm):
            print "l7 ndvi not implemented"
            return None
 
-
 def getLandsatOverlay(coords, satellite, algorithm, depth, params):
     if satellite == 'l8':
         collection_name = 'LANDSAT/LC8_L1T_TOA'
-        image = getLatestLandsatImage(coords, collection_name, depth, params)
-        if not image:
-            logging.error('getLatestLandsatImage() no image found')
-            return 0
-        if algorithm == 'rgb':
-            sharpimage = SharpenLandsat8HSVUpres(image)
-            red = 'red'
-            green = 'green'
-            blue = 'blue'    
-            #path = getOverlayPath(sharpimage, "L8TOA", red, green, blue)
-            mapid = getVisualMapId(sharpimage, red, green, blue)
-            info = image.getInfo() #logging.info("info", info)
-            #print info
-            props = info['properties']
-            mapid['date_acquired'] = props['DATE_ACQUIRED']
-            mapid['capture_datetime'] = image.system_time_start
-            mapid['id'] = props['system:index']
-            mapid['path'] = props['WRS_PATH']
-            mapid['row'] = props['WRS_ROW']
-            mapid['collection'] = collection_name
-            
-            return mapid
-        elif algorithm == 'ndvi':
-            print "l8 ndvi not implemented"
-            return None
-            
     elif satellite == 'l7':
         collection_name = 'LANDSAT/LE7_L1T'  #Old name was 'LANDSAT/L7_L1T' 
-        image = getLatestLandsatImage(coords, collection_name, depth, params)
-        if not image:
-            logging.error('getLatestLandsatImage() no image found')
-            return None
-        if algorithm == 'rgb':
-            sharpimage = SharpenLandsat7HSVUpres(image) #doesn't work with TOA.
-            red   = 'red'
-            green = 'green'
-            blue  = 'blue'    
-            mapid = getVisualMapId(sharpimage, red, green, blue)
-            props = image.getInfo()['properties'] 
-            #props = info['properties']
-            mapid['date_acquired'] = props['DATE_ACQUIRED']
-            mapid['id'] = props['system:index']
-            mapid['path'] = props['WRS_PATH']
-            mapid['row'] = props['WRS_ROW']
-            mapid['collection'] = collection_name
-            mapid['capture_datetime'] = image.system_time_start
-            
-            return mapid
-        
-        elif algorithm == 'ndvi':
-           print "l7 ndvi not implemented"
-           return None
 
+    image = getLatestLandsatImage(coords, collection_name, depth, params)
+    
+    if not image:
+        logging.error('getLatestLandsatImage() no image found')
+        return 0
+    return visualizeImage(collection_name, image, algorithm)
 
         
 '''

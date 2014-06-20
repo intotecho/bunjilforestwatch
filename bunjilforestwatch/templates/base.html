@@ -13,8 +13,8 @@
 <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
 <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
-<!-- Do we need this theme?  
 <link rel="stylesheet" href="/static/css/wbpreview-theme.css">
+<!-- Do we need this theme?  
 -->
 
 <link rel="stylesheet" href="/static/css/site.css">
@@ -103,6 +103,7 @@
                         <ul class="dropdown-menu">
                             <li><a href="{{ "flush-memcache"|url }}">flush memcache</a></li>
                             <li><a href="{{ "update-users"|url }}">update users</a></li>
+                            <li><a href="{{ "check-new-images"|url }}">check for new images</a></li>
                         </ul
                     </li> 
                     {% endif %}
@@ -134,83 +135,7 @@
 	{% endif %} 
 	
 	
-	
-	{% if show_oldnavbar %}
-
-	<div class="navbar">
-		<div class="navbar-inner">
-			<div class="container", >
-				<a href="/" class="brand">Community Forest Watch (Bunjil)</a>
-				<ul class="nav">
-					<li {% if active== "index" or active== "index-user" %} class="active"{% endif %}><a href="{{ "main"|url }}">home</a></li>
-					<li {% if active== "index" or active== "index-user" %} class="active"{% endif %}><a
-						href="http://bunjilforestwatch.wordpress.com/">blog</a></li> {% if user %}
-					<!-- 				<li{% if active == "stats" %} class="active"{% endif %}><a href="{{ "stats"|url }}">stats</a></li> -->
-					<!-- 					<li{% if active == "blog" or active == "blog-entry" %} class="active"{% endif %}><a href="{{ "blog"|url }}">my blog</a></li>  -->
-					{% endif %}
-					<li {% if active== "about" %} class="active"{% endif %}><a href="{{ "about"|url }}">about</a></li>
-				</ul>
-				<ul class="nav pull-right">
-					{% if user %} {% if user.admin %}
-					<li class="dropdown{% if active  == "admin" %} active{% endif %}"><a href="#" class="dropdown-toggle"
-						data-toggle="dropdown">admin <b class="caret"></b></a>
-						<ul class="dropdown-menu">
-							<li><a href="{{ "new-blog"|url }}">new blog entry</a></li>
-							<li><a href="{{ "blog-drafts"|url }}">blog drafts</a></li>
-							<li><a href="{{ "flush-memcache"|url }}">flush memcache</a></li>
-							<li><a href="{{ "update-users"|url }}">update users</a></li>
-						</ul></li> {% endif %}
-					<li class="dropdown{% if active  == " view-journal" or active== "entry" or active=="new-journal" %} active{% endif %}">
-						<a href="#" class="dropdown-toggle" data-toggle="dropdown">journals<b class="caret"></b></a>
-						<ul class="dropdown-menu">
-							{% for j in session.journals %}
-							<li {% if active== "view-journal" and j.1== journal.name %} class="active"{% endif %}>
-						      <a href="{{ j.0 }}">
-							     {% if j.2 == "observations" %}
-							         <span>class="glyphicon glyphicon-eye-open"></span> 
-							     {% endif %}
-							     {{ j.1 }}
-						      </a>
-							</li> 
-							{% endfor %}
-							<li class="divider"></li>
-							<li><a href="{{ "user"|url(user.name) }}"><span>class="glyphicon glyphicon-eye-open"></span>my journals</a></li>
-							<li {% if active== "new-journal" %} class="active"{% endif %}><a href="{{ "new-journal"|url }}">new journal</a></li>
-						</ul>
-					</li>
-					<li class="dropdown{% if active  == " view-area" or active== "entry" or active=="new-area" %} active{% endif %}"><a
-						href="#" class="dropdown-toggle" data-toggle="dropdown">areas <b class="caret"></b></a>
-						<ul class="dropdown-menu">
-							{% for ar in session.areas_list %}
-							<li {% if active== "view-area" and ar.1== area.name %} class="active"{% endif %}><a href="{{ ar.0 }}"><i
-									<span>class="glyphicon glyphicon-eye-open"></span></i> {{ ar.1 }}</a></li> {% endfor %}
-							<li class="divider"></li> {% for arf in session.following_areas_list %}
-							<li {% if active== "view-area" and arf.1== area.name %} class="active"{% endif %}><a href="{{ arf.0 }}">
-							<span>class="glyphicon glyphicon-eye-open"></i> {{ arf.1 }}</span></a></li> {% endfor %}
-							<li class="divider"></li>
-							<li><a href="{{ "user"|url(user.name)}}/myareas">my areas</a></li>
-							<li {% if active== "new-area" %} class="active"{% endif %}><a href="{{ "new-area"|url }}"><i
-									class="icon-plus-sign"></i> new area</a></li>
-						</ul></li>
-					<li class="dropdown{% if active == "account" %} active{% endif %}"><a href="#" class="dropdown-toggle"
-						data-toggle="dropdown">{{ user.name }} <img class="topbar-img-gravatar" src="{{ user.avatar }}&amp;s=30"
-							alt="{{ user.name }}" width="30" height="30"> <b style="margin-left: 34px" class="caret"></b></a>
-						<ul class="dropdown-menu">
-							<li {% if active== "account" %} class="active"{% endif %}><a href="{{ "account"|url }}"><i class="icon-user"></i>
-									account</a></li>
-							<li><a href="{{ "logout"|url }}">logout</a></li> {% if login_source == "google" %}
-							<li><a href="{{ "logout-google"|url }}">switch account</a></li>{% endif %}
-						</ul></li> {% else %}
-					<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">login<b class="caret"></b></a>
-						<ul class="dropdown-menu">
-							<li><a href="{{ "login-google"|url }}">with google</a></li>
-							<li><a href="{{ "login-facebook"|url }}">with facebook</a></li>
-						</ul></li> {% endif %}
-				</ul>
-			</div>
-		</div>
-	</div>
-	{% endif %} {% if messages %}
+	{% if messages %}
 	<div class="container">
 		<div class="row">
 			<p></p>

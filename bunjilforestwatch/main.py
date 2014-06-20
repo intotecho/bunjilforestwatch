@@ -314,6 +314,7 @@ class Register(BaseHandler):
                     uid = self.session['register']['uid']
 
                     if not email:
+                        errors['email'] = 'You must have an email to use this service.'
                         email = None
 
                     user = models.User.get_or_insert(username,
@@ -543,7 +544,11 @@ class NewAreaHandler(BaseHandler):
             maxlatlon = db.GeoPt(float(tmax_lat), float(tmax_lon))
             minlatlon = db.GeoPt(float(tmin_lat), float(tmin_lon))
 
-            eeservice.initEarthEngineService() # we need earth engine now.
+            if not eeservice.initEarthEngineService(): # we need earth engine now.
+                self.add_message('error', 'Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later')
+                self.redirect(webapp2.uri_for('main'))
+                return
+
             polypoints = []
             for geopt in coords:
                 polypoints.append([geopt.lon, geopt.lat])
@@ -776,18 +781,28 @@ class GetLandsatCellsHandler(BaseHandler):
             logging.info('GetLandsatCellsHandler - bad area returned %s', area_name)
             self.error(404)
             return
+        cell_list = area.CellList()
+        reason = ''
+        result ='success'
+ 
         #logging.debug('GetLandsatCellsHandler area.name: %s type: %d area.key(): %s', area.name, type(area), area.key())
     
-        eeservice.initEarthEngineService() # we need earth engine now.
-    
-        #area.max_path, area.min_path, area.max_row, area.min_row, cell_list = eeservice.getLandsatCells(area)
-        eeservice.getLandsatCells(area)
-        area = cache.get_area(None, area_name) # refresh the cache as it has been updated by getLandsatCells().
-        cell_list = area.CellList()
-        returnstr = 'Your area is covered by {0:d} Landsat Cells'.format(len(area.cells))
-        self.add_message('success',returnstr)
-        self.response.write(json.dumps(cell_list))
-        logging.debug(returnstr)
+        if not eeservice.initEarthEngineService(): # we need earth engine now.
+            result = 'error'
+            reason = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
+            self.add_message('error', reason)
+            logging.error(reason)
+        else:
+            #area.max_path, area.min_path, area.max_row, area.min_row, cell_list = eeservice.getLandsatCells(area)
+            eeservice.getLandsatCells(area)
+            area = cache.get_area(None, area_name) # refresh the cache as it has been updated by getLandsatCells(). #TODO test this works
+            cell_list = area.CellList()
+            reason = 'Your area is covered by {0:d} Landsat Cells'.format(len(area.cells))
+            self.add_message('success',reason)
+            logging.debug(reason)
+        
+        getCellsResult = {'result': result, 'reason': reason, 'cell_list': cell_list }
+        self.response.write(json.dumps(getCellsResult))
         return 
 
 class LandsatOverlayRequestHandler(BaseHandler):
@@ -816,6 +831,13 @@ class LandsatOverlayRequestHandler(BaseHandler):
         for geopt in area.coordinates:
             poly.append([geopt.lon, geopt.lat])
         eeservice.initEarthEngineService() # we need earth engine now.
+        if not eeservice.initEarthEngineService(): # we need earth engine now.
+            #result = 'error'
+            reason = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
+            #self.add_message('error', reason)
+            logging.error(reason)
+            self.response.write("")
+        
         map_id = eeservice.getLandsatOverlay(poly, satelite, algorithm, latest, opt_params)
         if not map_id:
             #self.add_message('info','no overlapping image found for this cell') add_message needs a reload to display messages. 
@@ -849,16 +871,16 @@ class GetObservationHandler(BaseHandler):
 
     def get(self, username, obskey):
         user = cache.get_user(username) #not used.
-        obstask= cache.get_by_key(obskey) #FIXME make type safe for security.
-        logging.debug("GetObservationHandler() Fetching image %s from collection :%s", obstask.image_id, obstask.image_collection )
-        if not obstask :
+        obs = cache.get_by_key(obskey) #FIXME make type safe for security.
+        logging.debug("GetObservationHandler() Fetching %s visualization of image %s from collection :%s", obs.algorithm, obs.image_id, obs.image_collection)
+        if not obs :
             logging.error('GetObservationHandler() - bad task')
             self.error(404)
             return
             
         eeservice.initEarthEngineService() # we need earth engine now.
      
-        map_id = eeservice.getLandsatImageById(obstask.image_collection,  obstask.image_id, osbtask.algorithm)
+        map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, obs.algorithm)
         if not map_id:
             logging.error('Could not find Image') #needs a reload to display messages. 
             self.populate_user_session()
@@ -868,14 +890,18 @@ class GetObservationHandler(BaseHandler):
         #Save the image overlay in the observation task
                  
         #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-        obstask.map_id = map_id['mapid'] 
-        obstask.token  = map_id['token']  
-        obstask.captured   = map_id['capture_datetime']
-        obstask.algorithm  = "rgb"
+        obs.map_id = map_id['mapid'] 
+        obs.token  = map_id['token']  
+        obs.captured   = map_id['capture_datetime']
+        obs.algorithm  = "rgb"
         db.put(obs)
-    
+        #cache.delete_item(obskey)
+        #cache.set  (  obskey, obs)
+        cache.set_keys([obs])
+        
+        logging.debug("Added map_id and token to observation")
         del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
-        del map_id['capture_datetime'] #can't serialise a memory object, and browser won't need it so remove
+        del map_id['capture_datetime'] #can't serialise a memory object
         #logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
         self.populate_user_session()
         self.response.write(json.dumps(map_id))
@@ -897,8 +923,10 @@ class ObservationTaskHandler(BaseHandler):
             obslist = []
             for obs_key in task.observations:
                 obs = cache.get_by_key(obs_key) 
-                obslist.append(obs.Observation2Dictionary())
-                
+                if obs is not None:
+                    obslist.append(obs.Observation2Dictionary())
+                else:
+                    logging.error("Missing observation from cache")
             #logging.debug( json.dumps(obslist))
             
             self.render('view-obs.html', {
@@ -923,14 +951,14 @@ class CheckNewHandler(BaseHandler):
     
     def get(self):
         logging.info("Cron CheckNewHandler check-new-images")
-        returnstr = "checking areas for new observations <br>"
+        returnstr = "<h1>checking areas for new observations</h1><br>"
         all_areas = cache.get_all_areas()
         eeservice.initEarthEngineService()
         for area in all_areas:
             #area_followers_key = cache.get_area_followers(area.name) # who follows this area.
             area_followers  = models.AreaFollowersIndex.get_by_key_name(area.name, area) 
             if area_followers:
-                returnstr += 'area:{0!s} ['.format(area.name)
+                returnstr += '<br><br>Area:<b>{0!s} </b>['.format(area.name)
                 new_observations = []
                 for cell_key in area.cells:
                     cell = cache.get_cell_from_key(cell_key)
@@ -955,9 +983,11 @@ class CheckNewHandler(BaseHandler):
                     new_task.original_owner = user
                     db.put(new_task)
                     mailer.new_image_email(new_task, self.request.headers.get('host', 'no host'))
-                    returnstr += "created task<br>"
+                    returnstr += "<br>created task with " + str(len(new_observations)) +" observations.<br>"
+                    taskurl = "/obs/" + user.name + "/" + str(new_task.key())
+                    returnstr += '<a href=' + taskurl + '>' + taskurl + '</a>'
             else:
-                 returnstr += '{0!s} has no followers. <br>'.format(area.name)
+                 returnstr += '<br><b>{0!s}</b> has no followers so no task created<br>'.format(area.name)
                 
         logging.info(returnstr)        
         self.response.write(returnstr) 
@@ -1225,7 +1255,7 @@ class FollowAreaHandler(BaseHandler):
         elif op == 'del':
             self.add_message('success', 'You are no longer following area %s.' %area_name)
 
-        cache.flush() # FIXME: Better to just delete the dirty items!!!
+        cache.flush() # FIXME: Better fix by setting data into the cache as this will be expensive!!!
         #cache.set_multi({
         #    cache.C_AREA_FOLLOWERS %area.name: followers.users,  #doesn't look right.
         #    cache.C_FOLLOWING_AREAS %thisuser: areas_following #areas_following.areas,
@@ -2182,6 +2212,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/admin/flush', handler=FlushMemcache, name='flush-memcache'),
     webapp2.Route(r'/admin/new/blog', handler=NewBlogHandler, name='new-blog'),
     webapp2.Route(r'/admin/update/users', handler=UpdateUsersHandler, name='update-users'),
+    webapp2.Route(r'/admin/checknew', handler=CheckNewHandler, name='check-new-images'),
     webapp2.Route(r'/blob/<key>', handler=BlobHandler, name='blob'),
     webapp2.Route(r'/blog', handler=BlogHandler, name='blog'),
     webapp2.Route(r'/blog/<entry>', handler=BlogEntryHandler, name='blog-entry'),
@@ -2201,7 +2232,6 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/new/journal', handler=NewJournal, name='new-journal'),
     webapp2.Route(r'/register', handler=Register, name='register'),
     webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
-    webapp2.Route(r'/checknew', handler=CheckNewHandler, name='check-new-images'),
     webapp2.Route(r'/mailtest', handler=MailTestHandler, name='mail-test'),
     webapp2.Route(r'/selectcell/<celldata>', handler=SelectCellHandler, name='select-cell'),
 
@@ -2260,6 +2290,7 @@ RESERVED_NAMES = set([
     'backup',
     'blob',
     'blog',
+    'checknew',
     'checknew',
     'contact',
     'docs',
