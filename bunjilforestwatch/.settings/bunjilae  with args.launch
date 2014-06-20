@@ -7,7 +7,7 @@
 </listAttribute>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="${GOOGLE_APP_ENGINE}/dev_appserver.py"/>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_OTHER_WORKING_DIRECTORY" value="${workspace_loc:}"/>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="&quot;${project_loc:bunjilae}&quot;&#13;&#10;--skip_sdk_update_check=no&#13;&#10;--port=8001&#13;&#10;--logs_path=/bunjilsrc/logs/bunjilae.log&#13;&#10;--log_level=debug&#13;&#10;--smtp_host=localhost&#13;&#10;--smtp_port=25 &#13;&#10;--smtp_user=Postmaster@bunjilforestwatch.org&#13;&#10;--smtp_password=password&#13;&#10;--clear_datastore=no"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="&quot;${project_loc:bunjilae}&quot;&#13;&#10;--skip_sdk_update_check=yes&#13;&#10;--port=8001&#13;&#10;--logs_path=/bunjilsrc/logs/bunjilae.log&#13;&#10;--log_level=debug&#13;&#10;--smtp_host=localhost&#13;&#10;--smtp_port=25 &#13;&#10;--smtp_user=Postmaster@bunjilforestwatch.org&#13;&#10;--smtp_password=password&#13;&#10;--clear_datastore=no"/>
 <stringAttribute key="org.python.pydev.debug.ATTR_INTERPRETER" value="__default"/>
 <stringAttribute key="org.python.pydev.debug.ATTR_PROJECT" value="bunjilae"/>
 <intAttribute key="org.python.pydev.debug.ATTR_RESOURCE_TYPE" value="4"/>
