@@ -71,12 +71,11 @@ function getTaskImageOverlay(obs) {
                $('#observations_panel').empty();
               mapobj = jQuery.parseJSON(data);
               if (mapobj) {
-                    tooltip = "Captured: " +  mapobj.date_acquired +  "Id: " + mapobj.id + "Path: " + mapobj.path + " Row: " +  mapobj.row;
+                    tooltip = "Captured: " +  mapobj.date_acquired +  " Id: " + mapobj.id + " Path: " + mapobj.path + " Row: " +  mapobj.row;
                     $('#observations_panel').append(tooltip);
-                    var overlayname= mapobj.date_acquired;
-                    var shortname = overlayname.substr(0, overlayname.indexOf("@")); //@ is invalid tag id.
-                    
-                    createImageOverlay(true, map_lhs, mapobj.map_id,  mapobj.token, shortname, tooltip, "blue");
+                    var overlayname = mapobj.date_acquired;
+                    //var shortname = overlayname.substr(0, overlayname.indexOf("@")); //@ is invalid tag id
+                    createImageOverlay(true, map_lhs, mapobj.mapid,  mapobj.token, overlayname, tooltip, "blue");
                   }
               else {
             	       $('#observations_panel').append("No Sat Data");
@@ -94,8 +93,8 @@ function getTaskImageOverlay(obs) {
         tooltip = "Collection: " +  obs.collection +  "Image Id: " + obs.image_id + "Visualisation: " + obs.algorithm;
         $('#observations_panel').append(tooltip);
         var overlayname=  obs.captured;
-        var shortname = overlayname.substr(0, overlayname.indexOf("@")); //@ is invalid tag id.
-        createImageOverlay(true, map_rhs, obs.map_id,  obs.token, shortname, tooltip, "red");
+        //var shortname = overlayname.substr(0, overlayname.indexOf("@")); //@ is invalid tag id.
+        createImageOverlay(true, map_rhs, obs.map_id,  obs.token, overlayname, tooltip, "red");
 	}
 }
 
@@ -194,8 +193,8 @@ function initialize() {
     areaBoundary_lhs.setMap(map_lhs);
     areaBoundary_rhs.setMap(map_rhs);
     
-    addLayer("1", {{area.name}}, "yellow",  0, "Boundary of Area {{area.name}}" /*, layerslider_callback*/);
-    addLayer("2", "Landsat Cells", "gray",100, "Each Landsat image covers one of these cells." /* , layerslider_callback*/ );
+    addLayer("1", "{{area.name}} Border", "yellow",  0, "Boundary of Area {{area.name}}" /*, layerslider_callback*/);
+    addLayer("2", "Landsat Cell Border", "gray",100, "Each Landsat image covers one of these cells." /* , layerslider_callback*/ );
 
     /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
      *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
@@ -279,7 +278,7 @@ function initialize() {
                 {
                   tooltip = "Captured: " +  mapobj.date_acquired +  "Id: " + mapobj.id + "Path: " + mapobj.path + " Row: " +  mapobj.row;
                   $('#observations_panel').append(tooltip);
-                  createImageOverlay(true, map_lhs, mapobj.map_id,  mapobj.token, mapobj.date_acquired, tooltip, "cyan");
+                  createImageOverlay(true, map_lhs, mapobj.map_id, mapobj.token, mapobj.date_acquired, tooltip, "cyan");
                 }
             else
                 {
@@ -471,19 +470,24 @@ function removeFromMap(map, overlay_id)
     //overlay.hide();
 }
 
-//       createImageOverlay(true, map_lhs, mapobj.map_id,  mapobj.token, mapobj.date_acquired, tooltip, "cyan");
+/*      
+ * createImageOverlay(true, map_lhs, mapobj.mapid,  mapobj.token, mapobj.date_acquired, tooltip, "cyan");
+ * 
+ */
 function createImageOverlay(show, google_map, map_id,  token, overlay_name, tooltip, color)
 {
     if(show == true)
     {
-    	
-        if (findOverlayLayer(overlay_name, overlayMaps) != -1) {
-        	console.log("Server sent duplicate overlay: " + overlay_name );
+        var shortname = overlay_name.substr(0, overlay_name.indexOf("@")); //@ is invalid in DIV tag id.
+          	
+        if (findOverlayLayer(shortname, overlayMaps) != -1) {
+        	console.log("Server returned a duplicate overlay: " + overlay_name );
         	return
         }
         
         var overlay = new CustomTileOverlay(google_map, initialOpacity, map_id, token);
-        overlay.name = overlay_name;
+  
+        overlay.name = shortname;
         overlay.color = color;
         overlayMaps.push(overlay);
         
@@ -491,7 +495,7 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
             overlay.deleteHiddenTiles(google_map.getZoom());
         });
         
-        addLayer(overlay_name, overlay_name, color,  100, tooltip , layerslider_callback ); //create slider.
+        addLayer(shortname, overlay_name, color,  100, tooltip , layerslider_callback ); //create slider.
         overlay.show();
 
 

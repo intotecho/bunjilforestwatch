@@ -951,14 +951,18 @@ class CheckNewHandler(BaseHandler):
     
     def get(self):
         logging.info("Cron CheckNewHandler check-new-images")
-        returnstr = "<h1>checking areas for new observations</h1><br>"
+        returnstr = "<h1>Check areas for new observations</h1>"
+        returnstr += "<p>The scheduled task is looking for new images over all areas of interest</p>"
+        returnstr += "<p>The area must have at least one cell selected for monitoring and at least one follower for a observation task to be created.</p>"
+        returnstr += "<p>If an observation task is created, the first follower of the area receives an email with an observation task.</p>"
         all_areas = cache.get_all_areas()
         eeservice.initEarthEngineService()
         for area in all_areas:
             #area_followers_key = cache.get_area_followers(area.name) # who follows this area.
             area_followers  = models.AreaFollowersIndex.get_by_key_name(area.name, area) 
+            returnstr += '<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
             if area_followers:
-                returnstr += '<br><br>Area:<b>{0!s} </b>['.format(area.name)
+                returnstr += '<p>Checking cells ['
                 new_observations = []
                 for cell_key in area.cells:
                     cell = cache.get_cell_from_key(cell_key)
@@ -975,7 +979,7 @@ class CheckNewHandler(BaseHandler):
                                 # send them an email
                     else:
                         logging.error ("CheckNewHandler no cell returned from key %s ", cell_key)
-                returnstr += '] '
+                returnstr += ']</p>'
                 if new_observations:
                     new_task = models.ObservationTask(aoi = area.key(), observations=new_observations) # always select the first follower.
                     user = cache.get_user(area_followers.users[0]) # TODO - THis always assigns tasks to the first follower. 
@@ -983,11 +987,13 @@ class CheckNewHandler(BaseHandler):
                     new_task.original_owner = user
                     db.put(new_task)
                     mailer.new_image_email(new_task, self.request.headers.get('host', 'no host'))
-                    returnstr += "<br>created task with " + str(len(new_observations)) +" observations.<br>"
+                    returnstr += "<p>created task with " + str(len(new_observations)) +" observations.</p>"
                     taskurl = "/obs/" + user.name + "/" + str(new_task.key())
-                    returnstr += '<a href=' + taskurl + '>' + taskurl + '</a>'
+                    returnstr += '<a href=' + taskurl + ' target="_blank">' + taskurl + '</a>'
+                else:
+                    returnstr += "<p>No new observations found.</p>"
             else:
-                 returnstr += '<br><b>{0!s}</b> has no followers so no task created<br>'.format(area.name)
+                 returnstr += 'Area has no followers so no task created.<br>'.format(area.name)
                 
         logging.info(returnstr)        
         self.response.write(returnstr) 
