@@ -5,8 +5,8 @@ directly unless you're implementing new methods we haven't added to the SDK yet.
 """
 
 import httplib
-#import simplejson as json
-from django.utils import simplejson as json
+import simplejson as json
+#from django.utils import simplejson as json
 import socket
 import urllib
 import urlparse
