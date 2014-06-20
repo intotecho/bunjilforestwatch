@@ -37,12 +37,13 @@ body {
 <script>
 
 var instructions_str =  
-    "Earth Engine is now calculating which Landsat cells overlap your new area. This can take a few minutes. <br />" +
-    "Then it will display the cells as rectangles overlapping your area. <br />" + 
+    "Earth Engine is now finding the Landsat cells that cover your new area. <br />" +
+    "This may take a few minutes. <br />" +
+    "Then you will see the cells displayed as rectangles overlapping your area. <br/><br/>" + 
     //"You can also hide or show them with the 'Landsat Grid' togle <br />" +
-    "Select the cells you wish to include in reports by clicking on them. <br />" +
-    "Click again to unselect the cell and remove it from reports. <br /><br>" + 
-    "Each cell generates more work for reviewers every 8 days. <br />Only select cells that overlap critical areas you wish to monitor.";
+    "Click on the cells covering area you wish to monitor. These cells will be highlighted.<br />" +
+    "Click again to unselect the cell and remove it from monitoring reports. <br /><br>" + 
+    "Each cell generates more work for reviewers.So only select cells that overlap critical areas you wish to monitor.";
 
 var map;
 var mapobj; //returned by last call to EE image overlay.
@@ -157,18 +158,25 @@ function initialize() {
         })
         
         $.get(url).done(function(data) {
-        	cellarray = jQuery.parseJSON(data);
-            
-            console.log('Init:Cellarray from ajax handler: ', cellarray);
-            $('#observations_panel').empty();
-            $('#observations_panel').append("Area has " + cellarray.length + " cells. " );
-                requestLandsatGrid(map, true, true, cellarray); //map, showlayer, clickable, cells
-                $('.layer').prop('checked',true);
+        	  var getCellsResult = jQuery.parseJSON(data);
+              cellarray = getCellsResult.cell_list;
+              $('#observations_panel').empty();
+              console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
+              if (getCellsResult.result == 'success'){
+                  $('#observations_panel').append("Area has " + cellarray.length + " cells. " );
+                  requestLandsatGrid(map, true, true, cellarray); //map, showlayer, clickable, cells
+                  $('.layer').prop('checked',true);
+              }
+              else
+              {
+                  $('#observations_panel').append("<p>GetCells Failed: Please try later: " + getCellsResult.reason + "</p>");
+                  //Redirect to home?
+              }
         }).error(function( jqxhr, textStatus, error ) {
             var err = textStatus + ', ' + error;
             console.log( "GetCells Failed: " + err);
             $('#observations_panel').empty();
-            $('#observations_panel').append("<p>GetCells Failed: " + err + "</p>"); 
+            $('#observations_panel').append("<p>GetCells Failed. Please try again later: " + err + "</p>"); 
         });
     } //get cells    
     else

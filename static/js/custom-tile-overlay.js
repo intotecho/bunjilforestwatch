@@ -6,7 +6,7 @@ Licences: Creative Commons Attribution 3.0 New Zealand License
 http://creativecommons.org/licenses/by/3.0/nz/
 ******************************************************************************/
 var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
-var initialOpacity = 100;
+var initialOpacity = 50;
 
 function createOpacityControl(map, opacity, layerLabel) {
 	var sliderImageUrl = "/static/img/opacity-slider3d7.png";
@@ -41,7 +41,7 @@ function createOpacityControl(map, opacity, layerLabel) {
 	google.maps.event.addListener(opacityCtrlKnob, "dragend", function () {
 		setOpacity(opacityCtrlKnob.valueX());
 	});
-
+ 
 	google.maps.event.addDomListener(opacityDiv, "click", function (e) {
 		var left = findPosLeft(this);
 		var x = e.pageX - left - 5; // - 5 as we're using a margin of 5px on the div
@@ -58,7 +58,7 @@ function createOpacityControl(map, opacity, layerLabel) {
 	setOpacity(initialValue);
 }
 
-function setOpacity(pixelX) {
+function setOpacity(pixelX, overlay) {
 	// Range = 0 to OPACITY_MAX_PIXELS
 	var value = (100 / OPACITY_MAX_PIXELS) * pixelX;
 	if (value < 0) value = 0;
