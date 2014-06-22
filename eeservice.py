@@ -137,7 +137,7 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
         
         path = int(params['lpath'])
         row = int(params['lrow'])
-        image_name =  collection_name[8:11] + "%03d%03d" %(path, row)
+        #image_name =  collection_name[8:11] + "%03d%03d" %(path, row)
         #logging.debug("logging.debug: image name: %s", image_name)
         #filter Landsat by Path/Row and date
         resultingCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row)#) #latest image form this cell.
@@ -167,9 +167,9 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     #logging.info('getLatestLandsatImage found scene: %s', id)
     latest_image = ee.Image(id)
     props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
-    test = latest_image.getInfo()['bands']
+    #test = latest_image.getInfo()['bands']
 
-    crs = latest_image.getInfo()['bands'][0]['crs']
+    #crs = latest_image.getInfo()['bands'][0]['crs']
     #path    = props['WRS_PATH']
     #row     = props['STARTING_ROW']
     system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
@@ -194,13 +194,12 @@ def getLandsatImageById(collection_name,image_id, algorithm):
 
     image = ee.Image(image_id)
     
-    scenes  = image.getInfo()
     
     props = image.getInfo()['properties'] #logging.info('image properties: %s', props)
     
     #test = latest_image.getInfo()['bands']
 
-    crs = image.getInfo()['bands'][0]['crs']
+    #crs = image.getInfo()['bands'][0]['crs']
     system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
@@ -271,16 +270,35 @@ def SharpenLandsat8HSVUpres(image):
 #       so check the developers list if this example stops working.
 
 # Return the percentile values for each band in an image.
+#
+#===============================================================================
+# ee.Reducer.percentile(percentiles, outputNames, maxBuckets, minBucketWidth, maxRaw)
+# Create a reducer that will compute the specified percentiles, e.g. given [0, 50, 100] 
+# will produce outputs named 'p0', 'p50', and 'p100' with the min, median, and max respectively. 
+# For small numbers of inputs (up to maxRaw) the percentiles will be computed directly; 
+# for larger numbers of inputs the percentiles will be derived from a histogram.
+# Arguments:
+# percentiles (List)
+# A list of numbers between 0 and 100.
+# outputNames (List, default: null)
+# A list of names for the outputs, or null to get default names.
+# maxBuckets (Integer, default: null)
+# The maximum number of buckets to use when building a histogram; will be rounded up to a power of 2.
+# minBucketWidth (Float, default: null)
+# The minimum histogram bucket width, or null to allow any power of 2.
+# maxRaw (Integer, default: null)
+# The number of values to accumulate before building the initial histogram.
+#===============================================================================
+
 def getPercentile(image, percentile, crs):
-    return image.reduceRegion(
-        ee.Reducer.percentile([percentile]), # reducer
+    return image.reduceRegion(                                    
+        ee.Reducer.percentile(percentile), # reducer
         None, # geometry (Defaults to the footprint of the image's first band)
         None, # scale (Set automatically because bestEffort == true)
         crs,
         None, # crsTransform,
         True  # bestEffort
         ).getInfo()
-
 
 def getL8LatestNDVIImage(image):
     NDVI_PALETTE = {'FF00FF','00FF00'}
@@ -313,12 +331,11 @@ def getL8LatestNDVIImage(image):
 def getVisualMapId(image, red, green, blue):
     #original image is used for original metadata lost in image so caller must keep a reference to the image
     crs = image.getInfo()['bands'][0]['crs']
-    p05 = []
-    p95 = []
-    p05 = getPercentile(image, 5, crs)
-    p95 = getPercentile(image, 95, crs) 
-    min = str(p05[red]) + ', ' + str(p05[green]) + ', ' + str(p05[blue])
-    max = str(p95[red]) + ', ' + str(p95[green]) + ', ' + str(p95[blue])
+  
+    pcdict = getPercentile(image, [5,95], crs)
+  
+    min = str(pcdict['red_p5']) + ', '  + str(pcdict['green_p5'])  + ', ' + str(pcdict['blue_p5'])
+    max = str(pcdict['red_p95']) + ', ' + str(pcdict['green_p95']) + ', ' + str(pcdict['blue_p95'])
     logging.debug('Percentile  5%% %s 95%% %s', min, max)
     
     # Define visualization parameters, based on the image statistics.
@@ -337,6 +354,7 @@ def getThumbnailPath(image):
         imgbands = image.getInfo()['bands']
         for b in imgbands:
             print b
+        #FIXME: If this is used update call to getPercentile()    
         p05 = []
         p95 = []
         p05 = getPercentile(image, 5, crs)
@@ -371,7 +389,7 @@ def getThumbnailPath(image):
 def getOverlayPath(image, prefix, red, green, blue):
 
     crs = image.getInfo()['bands'][0]['crs']
-    imgbands = image.get('bands')
+    #imgbands = image.get('bands')
     
     p05 = []
     p95 = []
