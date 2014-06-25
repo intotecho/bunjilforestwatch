@@ -8,7 +8,12 @@ http://creativecommons.org/licenses/by/3.0/nz/
 var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
 var initialOpacity = 100;
 
-function createOpacityControl(map, opacity, layerLabel) {
+function createOpacityControl(map, opacity, layerLabel, overlay) {
+	
+	if (typeof overlay === 'undefined')
+	{ 
+		return;
+	}
 	var sliderImageUrl = "/static/img/opacity-slider3d7.png";
 	
 	// Create main div to hold the control.
@@ -55,11 +60,16 @@ function createOpacityControl(map, opacity, layerLabel) {
 	// Set initial value
 	var initialValue = OPACITY_MAX_PIXELS / (100 / opacity);
 	opacityCtrlKnob.setValueX(initialValue);
-	setOpacity(initialValue);
+	setOpacity(initialValue, overlay);
 }
 
 function setOpacity(pixelX, overlay) {
 	// Range = 0 to OPACITY_MAX_PIXELS
+	
+	if (typeof overlay === 'undefined')
+	{ 
+		return;
+	}
 	var value = (100 / OPACITY_MAX_PIXELS) * pixelX;
 	if (value < 0) value = 0;
 	if (value == 0) {
