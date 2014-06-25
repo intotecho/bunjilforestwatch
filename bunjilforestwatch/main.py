@@ -19,8 +19,7 @@ import re
 import os
 import geojson
 
-#import django
-#from django.utils import html
+
 from google.appengine.api import files
 from google.appengine.api import taskqueue
 from google.appengine.api import users
@@ -163,6 +162,9 @@ class BaseHandler(webapp2.RequestHandler):
             if k in self.session:
                 del self.session[k]
 
+
+
+
 class BaseUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     session_store = None
 
@@ -178,6 +180,17 @@ class BaseUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
         if not self.session_store:
             self.session_store = sessions.get_store(request=self.request)
         return self.session_store.get_session(backend='datastore')
+
+
+class EarthEngineWarmUpHandler(BaseHandler):
+    initEarthEngine = eeservice.EarthEngineService()
+
+    def get(self):
+        logging.debug('main.py EarthEngineWarmUpHandler')
+        initEarthEngine.isReady()
+        self.response.status = 202 #The request has been accepted for processing
+        self.response.write("")
+        return
 
 class MainPage(BaseHandler):
 
@@ -620,7 +633,7 @@ class SelectCellHandler(BaseHandler):
         # get cell info in request.
         self.populate_user_session()
         #print 'SelectCellHandler get ', celldata
-        username = self.session['user']['name']
+        #username = self.session['user']['name']
         cell_feature = json.loads(celldata)
         #print 'cell_feature ', cell_feature
         path = cell_feature['properties']['path']
@@ -817,9 +830,7 @@ class LandsatOverlayRequestHandler(BaseHandler):
             return
 
         if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            print 'This is a normal request' # render the ViewArea page, then send image.
-        else:
-            logging.debug('LandsatOverlayRequestHandler - AJAX request ') 
+            logging.error('LandsatOverlayRequestHandler(): Ajax request expected ')
         
         logging.debug("LandsatOverlayRequestHandler area:%s, action:%s, satelite:%s, algorithm:%s, latest:%s", area_name, action, satelite, algorithm, latest) #, opt_params['lpath'], opt_params['lrow'])
         if not area:
@@ -830,7 +841,7 @@ class LandsatOverlayRequestHandler(BaseHandler):
         poly = []
         for geopt in area.coordinates:
             poly.append([geopt.lon, geopt.lat])
-        eeservice.initEarthEngineService() # we need earth engine now.
+        #eeservice.initEarthEngineService() # we need earth engine now.
         if not eeservice.initEarthEngineService(): # we need earth engine now.
             #result = 'error'
             reason = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
@@ -951,52 +962,70 @@ class CheckNewHandler(BaseHandler):
     
     def get(self):
         logging.info("Cron CheckNewHandler check-new-images")
-        returnstr = "<h1>Check areas for new observations</h1>"
-        returnstr += "<p>The scheduled task is looking for new images over all areas of interest</p>"
-        returnstr += "<p>The area must have at least one cell selected for monitoring and at least one follower for a observation task to be created.</p>"
-        returnstr += "<p>If an observation task is created, the first follower of the area receives an email with an observation task.</p>"
+        initstr = "<h1>Check areas for new observations</h1>"
+        initstr += "<p>The scheduled task is looking for new images over all areas of interest</p>"
+        initstr += "<p>The area must have at least one cell selected for monitoring and at least one follower for a observation task to be created.</p>"
+        initstr += "<p>If an observation task is created, the first follower of the area receives an email with an observation task.</p>"
         all_areas = cache.get_all_areas()
-        eeservice.initEarthEngineService()
+        
+        if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
+            initstr = 'CheckNewHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
+            self.add_message('error', initstr)
+            self.response.write(initstr) 
+            return
+
+        self.response.write(initstr) 
+        returnstr = initstr
+
         for area in all_areas:
             #area_followers_key = cache.get_area_followers(area.name) # who follows this area.
             area_followers  = models.AreaFollowersIndex.get_by_key_name(area.name, area) 
-            returnstr += '<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
+            linestr = '<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
             if area_followers:
-                returnstr += '<p>Checking cells ['
+                linestr += '<p>Monitored cells ['
                 new_observations = []
                 for cell_key in area.cells:
                     cell = cache.get_cell_from_key(cell_key)
                     if cell is not None:
-                        #logging.debug("cell %s %s", cell.path, cell.row)
+                        logging.debug("cell %s %s", cell.path, cell.row)
                         if cell.monitored:
-                            returnstr += '({0!s}, {1!s}) '.format(cell.path,cell.row)
+                            linestr += '({0!s}, {1!s}) '.format(cell.path,cell.row)
                             obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")  #"LANDSAT/LE7_L1T_TOA") # old value "LANDSAT/L7_L1T"
                             if obs is not None :
                                 db.put(obs)
-                                returnstr += 'New '
+                                linestr += 'New '
                                 new_observations.append(obs.key())
                                 # find followers of this area
                                 # send them an email
                     else:
                         logging.error ("CheckNewHandler no cell returned from key %s ", cell_key)
-                returnstr += ']</p>'
+                linestr += ']</p>'
+                
                 if new_observations:
-                    new_task = models.ObservationTask(aoi = area.key(), observations=new_observations) # always select the first follower.
-                    user = cache.get_user(area_followers.users[0]) # TODO - THis always assigns tasks to the first follower. 
+                    new_task = models.ObservationTask(aoi=area.key(), observations=new_observations) # always select the first follower.
+                    user = cache.get_user(area_followers.users[0]) # TODO - This always assigns tasks to the first follower. 
                     new_task.assigned_owner = user
                     new_task.original_owner = user
                     db.put(new_task)
                     mailer.new_image_email(new_task, self.request.headers.get('host', 'no host'))
-                    returnstr += "<p>created task with " + str(len(new_observations)) +" observations.</p>"
+                    linestr += "<p>Created task with " + str(len(new_observations)) +" observations.</p>"
+                    
                     taskurl = "/obs/" + user.name + "/" + str(new_task.key())
-                    returnstr += '<a href=' + taskurl + ' target="_blank">' + taskurl + '</a>'
+                    linestr += '<a href=' + taskurl + ' target="_blank">' + taskurl + '</a>'
+                    linestr += '<ul>'
+                    for ok in new_observations:
+                        o = cache.get_by_key(ok)
+                        linestr += '<li>image_id:' + o.image_id + '</li>' 
+                    linestr += '</ul>'
                 else:
-                    returnstr += "<p>No new observations found.</p>"
+                    linestr += "<p>No new observations found.</p>"
             else:
-                 returnstr += 'Area has no followers so no task created.<br>'.format(area.name)
-                
+                 linestr += 'Area has no followers so no task created.<br>'.format(area.name)
+            self.response.write(linestr) 
+
+        returnstr += linestr        
         logging.info(returnstr)        
-        self.response.write(returnstr) 
+        self.response.write("This is an extra line") 
 
 '''
 MailTestHandler() - This handler sends a test email 
@@ -2200,6 +2229,7 @@ class GoogleCallback(BaseHandler):
             self.redirect(webapp2.uri_for('account'))
 
 SECS_PER_WEEK = 60 * 60 * 24 * 7
+
 config = {
     'webapp2_extras.sessions': {
         'secret_key': settings.COOKIE_KEY,
@@ -2209,6 +2239,7 @@ config = {
 }
 
 app = webapp2.WSGIApplication([
+    webapp2.Route(r'_ah/warmup', handler=EarthEngineWarmUpHandler, name='earth-engine'),
     webapp2.Route(r'/', handler=MainPage, name='main'),
     webapp2.Route(r'/about', handler=AboutHandler, name='about'),
     webapp2.Route(r'/account', handler=AccountHandler, name='account'),
@@ -2285,6 +2316,8 @@ app = webapp2.WSGIApplication([
 
 RESERVED_NAMES = set([
     '',
+    '_ah',
+    'warmup',
     '<username>',
     'about',
     'myareas',
@@ -2346,6 +2379,7 @@ RESERVED_NAMES = set([
     'users',
 ])
 
+
 # assert that all routes are listed in RESERVED_NAMES
 for i in app.router.build_routes.values():
     name = i.template.partition('/')[2].partition('/')[0]
@@ -2354,5 +2388,4 @@ for i in app.router.build_routes.values():
         logging.critical('%s not in RESERVED_NAMES', name)
         print '%s not in RESERVED_NAMES' %name
         sys.exit(1)
-
-
+        
