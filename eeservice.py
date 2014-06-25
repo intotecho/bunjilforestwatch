@@ -48,29 +48,42 @@ SERVER_SOFTWARE: In the development web server, this value is "Development/X.Y" 
 When running on App Engine, this value is "Google App Engine/X.Y.Z".
 
 '''
-earthengine_intialised = False
+def reallyinitEarthEngineService():
+    util.positional_parameters_enforcement = util.POSITIONAL_IGNORE   # avoid the WARNING [util.py:129] new_request() takes at most 1 positional argument (4 given)
+    try:
+        if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
+            logging.info("Initialising Earth Engine authenticated connection from devserver")
+            EE_CREDENTIALS = ee.ServiceAccountCredentials(settings.MY_LOCAL_SERVICE_ACCOUNT, settings.MY_LOCAL_PRIVATE_KEY_FILE)
+        else:
+            logging.info("Initialising Earth Engine authenticated connection from App Engine")
+            EE_CREDENTIALS = AppAssertionCredentials(ee.OAUTH2_SCOPE)
+        ee.Initialize(EE_CREDENTIALS) 
+        return True
+    except Exception, e:
+        #self.add_message('error', 'An error occurred with Earth Engine. Try again.')
+        logging.error("Failed to connect to Earth Engine. Exception: %s", e)
+        return False
 
+class EarthEngineService():
+
+    #this will call reallyinitEarthEngineService() when module is imported.  
+    logging.info("Init class EarthEngineService")
+    earthengine_intialised = False   
+    
+    @staticmethod
+    def isReady():
+        if not EarthEngineService.earthengine_intialised:
+            logging.info("EarthEngineService Not Ready - Initialising ...")
+            EarthEngineService.earthengine_intialised = reallyinitEarthEngineService()
+        else:
+            logging.info("EarthEngineService is Ready")
+                
+        return EarthEngineService.earthengine_intialised
+   
+#to maintain backward compatibility with existing calls ...
 def initEarthEngineService():
-
-    global earthengine_intialised
-    if earthengine_intialised == False:
-        util.positional_parameters_enforcement = util.POSITIONAL_IGNORE   # avoid the WARNING [util.py:129] new_request() takes at most 1 positional argument (4 given)
-        try:
-            if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
-                logging.info("Initialising Earth Engine authenticated connection from devserver")
-                EE_CREDENTIALS = ee.ServiceAccountCredentials(settings.MY_LOCAL_SERVICE_ACCOUNT, settings.MY_LOCAL_PRIVATE_KEY_FILE)
-            else:
-                logging.info("Initialising Earth Engine authenticated connection from App Engine")
-                EE_CREDENTIALS = AppAssertionCredentials(ee.OAUTH2_SCOPE)
-            ee.Initialize(EE_CREDENTIALS) 
-            earthengine_intialised = True
-            return True
-        except Exception, e:
-            #self.add_message('error', 'An error occurred with Earth Engine. Try again.')
-            logging.error("Failed to connect to Earth Engine. Exception: %s", e)
-            return False
-    else:
-        return True    
+    return EarthEngineService.isReady()
+                                      
 
 '''
 checkForNewObservationInCell() checks the collection for the latest image and compares it to the last stored. 
@@ -83,16 +96,17 @@ def checkForNewObservationInCell(area, cell, collection_name):
     poly = [] #TODO Move poly to a method of models.AOI
     for geopt in area.coordinates:
         poly.append([geopt.lon, geopt.lat]) 
-    latest_image = getLatestLandsatImage(poly, collection_name, 0, params = [cell.path, cell.row]) # most recent image for this cell in the collection
+    latest_image = getLatestLandsatImage(poly, collection_name, 0, params=[cell.path, cell.row]) # most recent image for this cell in the collection
     if latest_image is not None:
         storedlastObs = cell.latestObservation(collection_name)             #FIXME - Need to use the cache here.
         if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-            obs = models.Observation(parent = cell, image_collection = collection_name, captured = latest_image.system_time_start, image_id = latest_image.name, map_id = None, token = None,  algorithm = "")
+            obs = models.Observation(parent=cell, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, map_id=None, token=None,  algorithm="")
             db.put(obs)
             if storedlastObs is None:
                 logging.debug('checkForNewObservationInCell FIRST observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
             else:
                 logging.debug('checkForNewObservationInCell NEW observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
+                
             return obs
         else:
             logging.debug('checkForNewObservationInCell no newer observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
@@ -147,7 +161,7 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     sortedCollection = resultingCollection.sort('system:time_start', False )
     
     #logging.info('Collection description : %s', sortedCollection.getInfo())
-      #logging.debug("sortedCollection: %s", sortedCollection)
+    #logging.debug("sortedCollection: %s", sortedCollection)
     scenes  = sortedCollection.getInfo()
     #logging.info('Scenes: %s', sortedCollection)
     
@@ -193,14 +207,9 @@ getLandsatImageById(collection_name,image_id, algorithm )
 def getLandsatImageById(collection_name,image_id, algorithm):
 
     image = ee.Image(image_id)
-    
-    
     props = image.getInfo()['properties'] #logging.info('image properties: %s', props)
     
-    #test = latest_image.getInfo()['bands']
-
-    #crs = image.getInfo()['bands'][0]['crs']
-    system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
+    system_time_start = datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
     logging.info('getLandsatImageById id: %s, date:%s', id, date_str)
@@ -233,11 +242,6 @@ def SharpenLandsat7HSVUpres(image):
         #Convert to HSV, swap in the pan band, and convert back to RGB.
         huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
         upres = ee.Image.cat(huesat, pan).hsvtorgb()  
-        # Display before and after layers using the same vis parameters.
-        #var visparams = {min: [0.15, 0.15, 0.25],
-        #         max: [1, 0.9, 0.9],
-        #         gamma: 1.6};
-        
         byteimage = upres.multiply(255).byte()
         newImage = image.addBands(byteimage); #keep all the metadata of image, but add the new bands.
         return(newImage)
@@ -254,40 +258,17 @@ def SharpenLandsat8HSVUpres(image):
         newImage = image.addBands(byteimage); #keep all the metadata of image, but add the new bands.
         return(newImage)
 
-# def getL8SharpImage(coords, depth): # wont use now
-#     image = getLatestLandsatImage(coords, 'LANDSAT/LC8_L1T_TOA', depth)
-#     sharpimage = SharpenLandsat8HSVUpres(image)
-#     return sharpimage
 
 ###################################
-# Image statistics
-
-# Calculate the 5% and 95% values for each band in a Landsat image,
-# and use them to construct visualization parameters for displaying the image.
+# getPercentile(image, percentile, crs)
 #
-# Example created: August 8, 2013
-# NOTE: The syntax for the reducer objects is expected to change in the near future
-#       so check the developers list if this example stops working.
-
 # Return the percentile values for each band in an image.
+# 
+# If percentile is passed as[5,95] then this will calculate the 5% and 95% values for each band in a Landsat image.
+# We use these to construct visualization parameters for displaying the image. Mainly interested in RGB but all bands are returned.
 #
-#===============================================================================
-# ee.Reducer.percentile(percentiles, outputNames, maxBuckets, minBucketWidth, maxRaw)
-# Create a reducer that will compute the specified percentiles, e.g. given [0, 50, 100] 
-# will produce outputs named 'p0', 'p50', and 'p100' with the min, median, and max respectively. 
-# For small numbers of inputs (up to maxRaw) the percentiles will be computed directly; 
-# for larger numbers of inputs the percentiles will be derived from a histogram.
-# Arguments:
-# percentiles (List)
-# A list of numbers between 0 and 100.
-# outputNames (List, default: null)
-# A list of names for the outputs, or null to get default names.
-# maxBuckets (Integer, default: null)
-# The maximum number of buckets to use when building a histogram; will be rounded up to a power of 2.
-# minBucketWidth (Float, default: null)
-# The minimum histogram bucket width, or null to allow any power of 2.
-# maxRaw (Integer, default: null)
-# The number of values to accumulate before building the initial histogram.
+# Example on groups list: August 8, 2013
+#
 #===============================================================================
 
 def getPercentile(image, percentile, crs):
@@ -303,9 +284,6 @@ def getPercentile(image, percentile, crs):
 def getL8LatestNDVIImage(image):
     NDVI_PALETTE = {'FF00FF','00FF00'}
     ndvi = image.normalizedDifference(["B4", "B3"]).median();   
-    
-    #addToMap(ndvi.median(), {min:-1, max:1}, "Median NDVI");
-    #getMapId(ndvi, {min:-1, max:1, palette:NDVI_PALETTE}, "NDVI");
     
     newImage = image.addBands(ndvi); #keep all the metadata of image, but add the new bands.
     logging.debug('getL8NDVIImage:%s ', newImage)
@@ -328,6 +306,7 @@ def getL8LatestNDVIImage(image):
     mapid['row'] = props['WRS_ROW']
     return mapid
 
+
 def getVisualMapId(image, red, green, blue):
     #original image is used for original metadata lost in image so caller must keep a reference to the image
     crs = image.getInfo()['bands'][0]['crs']
@@ -348,13 +327,12 @@ def getVisualMapId(image, red, green, blue):
     mapid  = image.getMapId(mapparams)
     return mapid
 
-def getThumbnailPath(image):
-        # GET THUMBNAIL
+def getThumbnailPath(image): # Function Not Used.
+        
         crs = image.getInfo()['bands'][0]['crs']
         imgbands = image.getInfo()['bands']
         for b in imgbands:
             print b
-        #FIXME: If this is used update call to getPercentile()    
         p05 = []
         p95 = []
         p05 = getPercentile(image, 5, crs)
@@ -528,7 +506,7 @@ getLandsatCells() takes an area and extracts is boundary.
   If found, then the path/row cell overlaps the area and is added to the cells list.
   It returns the cell list as well as setting the max and min coordinates.
 '''
-#TODOThere is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query.
+#TODO: There is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query.
 def getLandsatCells(area):
     #TODO: Better to store area.coordinates as an ee.FeatureCollection type. Then this is not repeated for each new image.
     boundary_polygon = []
@@ -571,9 +549,9 @@ def getLandsatCells(area):
             cellnames.append(cell_name)
             cell = db.run_in_transaction(txn, cell_name, area, p, r)
         else:
-            pass  # duplicate
+            pass  # found a duplicate, skipping
    
-    cache.flush() # FIXME
+    cache.flush() # FIXME: want to do cache.set(area, cell)
     
     return 
 

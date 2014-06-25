@@ -11,8 +11,6 @@ builtins:
 - remote_api: off
 
 libraries:
-- name: django
-  version: latest
 - name: jinja2
   version: latest
 - name: markupsafe
@@ -23,6 +21,9 @@ libraries:
   version: latest
 - name: pycrypto
   version: latest
+
+inbound_services:
+- warmup
 
 handlers:
 - url: /static
