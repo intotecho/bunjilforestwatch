@@ -162,9 +162,6 @@ class BaseHandler(webapp2.RequestHandler):
             if k in self.session:
                 del self.session[k]
 
-
-
-
 class BaseUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     session_store = None
 
