@@ -47,6 +47,8 @@
 <path>${GOOGLE_APP_ENGINE}/lib/yaml-3.10</path>
 <path>${GOOGLE_APP_ENGINE}/lib/yaml/lib</path>
 <path>C:\Python27\Lib\site-packages\rainbow_logging_handler-2.2.0-py2.7.egg-info</path>
+<path>C:\Python27\Lib\site-packages\earthengine_api-0.1.31-py2.7.egg-info</path>
+<path>C:\bunjilsrc\code\bunjilforestwatch\earthengine_api-0.1.31-py2.7.egg-info\PKG-INFO</path>
 </pydev_pathproperty>
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
 </pydev_pathproperty>
