@@ -258,3 +258,8 @@ iframe { /* retain video aspect ratio */
 	height:100%;
 	position:absolute;left:0;top:0
 }
+
+
+.navbar-margin{
+  margin-bottom:  2px;
+}

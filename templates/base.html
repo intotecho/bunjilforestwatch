@@ -13,9 +13,7 @@
 <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
 <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
-<link rel="stylesheet" href="/static/css/wbpreview-theme.css">
-<!-- Do we need this theme?  
--->
+<link rel="stylesheet" href="/static/css/wbpreview-theme.css"> <!-- Theme for the messages -->
 
 <link rel="stylesheet" href="/static/css/site.css">
 
@@ -31,7 +29,7 @@
 
 	{% if show_navbar %}
 	<div class="container" >
-		<nav role="navigation" class="navbar navbar-default">
+		<nav role="navigation" class="navbar navbar-default navbar-margin">
 			<!-- Brand and toggle get grouped for better mobile display -->
 			<div class="navbar-header">
 				<button type="button" data-target="#navbarCollapse" data-toggle="collapse" class="navbar-toggle">
@@ -133,8 +131,6 @@
 		</nav>
 	</div>
 	{% endif %} 
-	
-	
 	{% if messages %}
 	<div class="container">
 		<div class="row">
