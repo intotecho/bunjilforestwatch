@@ -8,8 +8,8 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
-#import os
-#from os import environ
+from django.utils import html # used for entry.html markup
+
 import eeservice
 import ee
 import mailer
@@ -829,7 +829,7 @@ class LandsatOverlayRequestHandler(BaseHandler):
         if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             logging.error('LandsatOverlayRequestHandler(): Ajax request expected ')
         
-        logging.debug("LandsatOverlayRequestHandler area:%s, action:%s, satelite:%s, algorithm:%s, latest:%s", area_name, action, satelite, algorithm, latest) #, opt_params['lpath'], opt_params['lrow'])
+        logging.debug("LandsatOverlayRequestHandler area:%s, action:%s, satelite:%s, algorithm:%s, latest:%s", area_name, action, satelite, algorithm, latest) #, opt_params['path'], opt_params['row'])
         if not area:
             logging.info('LandsatOverlayRequestHandler - bad area returned %s, %s', area, area_name)
             self.error(404)
@@ -854,9 +854,9 @@ class LandsatOverlayRequestHandler(BaseHandler):
             return
         
         #Save observation 
-        if 'lpath' in opt_params and 'lrow' in opt_params:
-            path = int(opt_params['lpath'])
-            row =  int(opt_params['lrow'])
+        if 'path' in opt_params and 'row' in opt_params:
+            path = int(opt_params['path'])
+            row =  int(opt_params['row'])
             
             logging.debug("LandsatOverlayRequestHandler() path %s, row %s", path, row)
             cell = cache.get_cell(path, row)
@@ -956,6 +956,7 @@ CheckNewHandler() looks at each subscribed area of interest and checks each moni
 '''
 class CheckNewHandler(BaseHandler):
     #This handler responds to Cron requests to check for new images in each AOI, no need to return a response
+    #But is also called from the admin menu
     
     def get(self):
         logging.info("Cron CheckNewHandler check-new-images")
@@ -967,11 +968,11 @@ class CheckNewHandler(BaseHandler):
         
         if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
             initstr = 'CheckNewHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
-            self.add_message('error', initstr)
+            #self.add_message('error', initstr)
             self.response.write(initstr) 
             return
 
-        self.response.write(initstr) 
+        #self.response.write(initstr) 
         returnstr = initstr
 
         for area in all_areas:
@@ -984,10 +985,10 @@ class CheckNewHandler(BaseHandler):
                 for cell_key in area.cells:
                     cell = cache.get_cell_from_key(cell_key)
                     if cell is not None:
-                        logging.debug("cell %s %s", cell.path, cell.row)
+                        #logging.debug("cell %s %s", cell.path, cell.row)
                         if cell.monitored:
                             linestr += '({0!s}, {1!s}) '.format(cell.path,cell.row)
-                            obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")  #"LANDSAT/LE7_L1T_TOA") # old value "LANDSAT/L7_L1T"
+                            obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")
                             if obs is not None :
                                 db.put(obs)
                                 linestr += 'New '
@@ -1012,17 +1013,16 @@ class CheckNewHandler(BaseHandler):
                     linestr += '<ul>'
                     for ok in new_observations:
                         o = cache.get_by_key(ok)
-                        linestr += '<li>image_id:' + o.image_id + '</li>' 
+                        linestr += '<li>image_id: ' + o.image_id + '</li>' 
                     linestr += '</ul>'
                 else:
                     linestr += "<p>No new observations found.</p>"
             else:
-                 linestr += 'Area has no followers so no task created.<br>'.format(area.name)
-            self.response.write(linestr) 
+                linestr += 'Area has no followers. Skipping check for new observations.<br>'.format(area.name)
+            logging.debug(linestr)
+            returnstr += linestr             
 
-        returnstr += linestr        
-        logging.info(returnstr)        
-        self.response.write("This is an extra line") 
+        self.response.write(returnstr) 
 
 '''
 MailTestHandler() - This handler sends a test email 
@@ -1069,6 +1069,7 @@ class ViewJournal(BaseHandler):
                 'journal': journal,
                 'entries': cache.get_entries_page(username, journal_name, page, journal.key()),
                 'page': page,
+                'show_navbar': True,
                 'pagelist': utils.page_list(page, journal.pages),
             })
 
@@ -1445,6 +1446,7 @@ class ViewEntryHandler(BaseHandler):
             'blobs': blobs,
             'content': content,
             'entry': entry,
+            'show_navbar': True,
             'journal_type': type,
             'journal_name': journal_name,
             'render': cache.get_entry_render(username, journal_name, entry_id),
@@ -1568,16 +1570,17 @@ class SaveEntryHandler(BaseHandler):
 
             date = self.request.get('date').strip()
             time = self.request.get('time').strip()
-            if not time:
-                time = '12:00 AM'
-
-            try:
-                #newdate = datetime.datetime.strptime('{0!s} {1!s}'.format(date, time),'%m/%d/%Y %I:%M %p') # new format
-                newdate = datetime.datetime.strptime('%s %s' %(date, time), '%m/%d/%Y %I:%M %p') # old format
-
-            except:
-                self.add_message('error', 'Couldn\'t understand that date: %s %s' %(date, time))
+            if not date:
                 newdate = entry.date
+            else:
+                if not time:
+                    time = '00:00'
+                try:
+                    #Bootstrap3's date-control format 2014-12-31 23:59 
+                    newdate = datetime.datetime.strptime('{0!s} {1!s}'.format(date, time),'%Y-%m-%d %H:%M')
+                except:
+                    self.add_message('error', 'Couldn\'t understand that date: {0!s} {1!s}'.format(date, time))
+                    newdate = entry.date
 
             if tags:
                 tags = [i.strip() for i in self.request.get('tags').split(',')]
@@ -1697,6 +1700,7 @@ class SaveEntryHandler(BaseHandler):
                 'blobs': blobs,
                 'content': content,
                 'entry': entry,
+                'show_navbar': True,
                 'entry_url': webapp2.uri_for('view-entry', username=username, journal_name=journal_name, entry_id=entry_id),
             })
             cache.set(entry_render, cache.C_ENTRY_RENDER, username, journal_name, entry_id)
@@ -2295,7 +2299,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #was new-obstask
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
     #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
-    webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<lpath:\d+>/<lrow:\d+>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
+    webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
         
     #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
     #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-obstask'),

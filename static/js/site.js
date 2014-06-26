@@ -3,10 +3,10 @@ $(function() {
 	if(document.createElement('input').webkitSpeech != undefined)
 	{
 		$(".post-speech").before('\
-						<div class="control-group"> \
+						<div class="form-group"> \
 							<label class="control-label" for="speech">speech</label> \
 							<div class="controls"> \
-								<input class="input-xlarge" id="speech" name="speech" type="text" x-webkit-speech /> \
+								<input class="input-lg" rows=10 id="speech" name="speech" type="text" x-webkit-speech /> \
 								<span class="help-inline">click the mic icon and your speech will be added below</span> \
 							</div> \
 						</div> \

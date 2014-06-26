@@ -14,7 +14,7 @@ import os.path
 import re
 import unicodedata
 
-#from django.utils import html
+from django.utils import html
 #from google.appengine.api import conversion
 from google.appengine.ext import blobstore
 from google.appengine.ext import db
