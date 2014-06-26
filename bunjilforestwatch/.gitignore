@@ -12,6 +12,7 @@ app-journalr/
 Crypto/*
 PIL/*
 ee/*
+django/*
 oauth2client/*
 Servers/
 .metadata/*
