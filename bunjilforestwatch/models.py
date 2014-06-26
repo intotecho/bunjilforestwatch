@@ -305,7 +305,6 @@ class Observation(db.Model):
 		}
 		return obsdict
 
-	
 
 '''
 class Task is an observation task, based on a landsat image in an AOI. The task includes a user who is responsible for completing the task.

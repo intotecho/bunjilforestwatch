@@ -2,58 +2,63 @@
 <!-- This is index page or localhost:8001 when user is logged in -->
 <!-- See also localhost:8001/username - my areas from the menu -->
 {% block content %}
+
+
 <div class="container">
-   <p>
     <ul class="breadcrumb">
         <li><a href="{{ "user"|url(user.name) }}">{{ user.name }}</a>  <span class="divider">/</span></li>
-  <!--       <li class="active">home (role: {{user.role}})</li> -->
+  <!-- <li class="active">home (role: {{user.role}})</li> -->
     </ul>
-    </p>
+</div>
+
+<div class="container">
 <div class="row">
-  <div class="span4 body" ><body>
-    <div class="row body">
-      <div class="span2"><h3>Your Areas</h3></div>
-      <div class="span2"><a href="{{ "new-area"|url}}" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Create a new area. Volunteers will review images and send you alerts.">New area</a></div>
-    </div>  
-         {% if not areas%}
-           You have not created any of your own areas.
-         {% else %}
-            Areas you created
-            {% include "areas.html" %}
-         {% endif %}
-          <h3>Following Areas</h3>
+  <div class="col-xs-4 body">
+    <div class="container-fluid">
+        <div class="row body">
+          <div class="col-xs-6"><h3>Your Areas</h3></div>
+          <div class="col-xs-6">
+          <a href="{{ "new-area"|url}}" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Create a new area. Volunteers will review images and send you alerts.">New area</a></div>
+        </div>
+    </div> 
+    <div class="container-fluid">
+        <div class="row body">
+	         {% if not areas%}
+	           You have not created any of your own areas.
+	         {% else %}
+	            Areas you created
+	            {% include "areas.html" %}
+	         {% endif %}
+         </div>
+         <div class = 'row body"'>
+         <h3>Other Areas</h3>
+                {% if not other_areas %}
+                    No other areas defined!
+                {% else %}
+                    Areas you neither own nor follow 
+                    {% include "allareas.html" %}
+                {% endif %}
+          </div>
+    </div>
+  </div>
+  <div class="col-xs-4 body">
+         <h3>Following Areas</h3>
          {% if not following_areas%}
              You are not following any areas.
          {% else %}
             Areas you follow
             {% include "following-areas.html"  %}
          {% endif %}
-      </body>
-   </div>
-   
-   <div class="row">
-  <div class="span4 body" ><body>
-    <div class="row body">
-      <div class="span2"><h3>Other Areas</h3></div>
-    </div>  
-                {% if not other_areas %}
-                    No other areas defined!
-                {% else %}
-                     Areas you neither own nor follow 
-                    {% include "allareas.html" %}
-                {% endif %}
-     </body>
-   </div>
-    <div class="span4"><h3>Your Journals </h3>
-                {% if not journals %}
-                    No reports yet.
-                {% else %}
-                    {% include "journals.html" %}
-                {% endif %}</div>
- 
- 
-  <div class="row">
-
-
-	
+      
+  </div> 
+  <div class="col-xs-4  body">
+    <div><h3>Your Journals</h3></div>
+         {% if not journals %}
+             No reports yet.
+         {% else %}
+             Reports you have recorded.
+             {% include "journals.html" %}
+         {% endif %}
+  </div>
+</div>   
 {% endblock %}

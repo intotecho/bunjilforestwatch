@@ -18,8 +18,6 @@ html {
 </style>
 
 <link href="/static/css/jquery.nouislider.css" rel="stylesheet">
-
-
 <script type="text/javascript"
 
 src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
@@ -89,8 +87,8 @@ function getTaskImageOverlay(obs) {
 	}
 	else
 	{
-	    console.log( "map_id already in observation");
-        tooltip = "Collection: " +  obs.collection +  "Image Id: " + obs.image_id + "Visualisation: " + obs.algorithm;
+	    console.log( "Displaying existing visualization Observation");
+        tooltip = "Collection: " +  obs.collection +  " Image Id: " + obs.image_id + "Visualisation: " + obs.algorithm;
         $('#observations_panel').append(tooltip);
         var overlayname=  obs.captured;
         //var shortname = overlayname.substr(0, overlayname.indexOf("@")); //@ is invalid tag id.
@@ -269,7 +267,7 @@ function initialize() {
         console.log( "urls", httpget_url);
        $("#observations_panel").collapse('show');
            $('#observations_panel').empty();
-           $('#observations_panel').append("Getting Sat Data...");
+           $('#observations_panel').append("Loading Satelite Data...");
            $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
            $.get(httpget_url).done(function(data) {
              $('#observations_panel').empty();

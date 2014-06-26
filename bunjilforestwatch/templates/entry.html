@@ -10,86 +10,96 @@
 			</ul>
 		</p>
 	</div>
-
+</div>	
+<div class="container">
 	<div class="row">
-		<div class="span12">
-			<form class="form-horizontal" id="form" method="POST" action="{{ "entry-save"|url }}">
-			<input type="hidden" name="journal_name" value="{{ journal_name }}">
-			<input type="hidden" name="username" value="{{ username }}">
-			<input type="hidden" name="entry_id" value="{{ entry.key().id() }}">
-				<fieldset>
-					<div class="control-group">
-						<label class="control-label" for="subject">subject</label>
-						<div class="controls">
-							<input class="input-xxlarge" id="subject" name="subject" type="text" value="{{ content.subject|default('', True) }}" />
-						</div>
-					</div>
-					<div class="control-group">
-						<label class="control-label" for="date">date</label>
-						<div class="controls">
-							<input class="input-small" id="date" name="date" type="text" value="{{ entry.date|date("%m/%d/%Y") }}" />
-							<input class="input-mini" id="time" name="time" type="text" value="{{ entry.time }}" />
-							<span class="help-inline">date format: MM/DD/YYYY; time is optional, format is HH:MM AM/PM</span>
-						</div>
-					</div>
-					{% if journal_type == "observations" %}
-                    <div class="control-group">
-                        <label class="control-label" for="type">journal type</label>
-                        <div class="controls">
-                            <input class="input-small" id="overlay" name="satimage" type="text" value="{{journal_type}}" />
-                            <span class="help-inline">identifies journal purpose</span>
-                        </div>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label" for="images">images</label>
-                        <div class="controls">
-                            <input class="input-xlarge" id="images" name="images" type="text" value="{{ content.images|join(", ") }}" />
-                            <span class="help-inline">identifies the Landsat image(s) that this observation is based on</span>
-                        </div>
-                    </div>
-                    {% endif %}
-					<div class="control-group post-speech">
-						<label class="control-label" for="text">text</label>
-						<div class="controls">
-							<textarea class="input-xxlarge" id="text" name="text">{{ content.text|default('', True) }}</textarea>
-						</div>
-					</div>
-					<div class="control-group">
-						<label class="control-label" for="markup">markup</label>
-						<div class="controls">
-							<select id="markup" name="markup">{{ markup_options|safe }}</select>
-							<span class="help-inline">? <a href="{{ "markup"|url }}" target="#_blank">brief explanation</a> about markups</span>
-						</div>
-					</div>
-					<div class="control-group">
-						<label class="control-label" for="tags">tags</label>
-						<div class="controls">
-							<input class="input-xlarge" id="tags" name="tags" type="text" value="{{ content.tags|join(", ") }}" />
-							<span class="help-inline">comma separated (ex: road, clearing, fire, park)</span>
-						</div>
-					</div>
-					{% for b in blobs %}
-					<div class="control-group">
-						<div class="controls">
-							<input type="checkbox" name="blob" value="{{ b.key().id }}" checked>
-							{{ b.size|filesizeformat }}, <a href="{{ b.get_url() }}">{{ b.name }}</a>
-						</div>
-					</div>
-					{% endfor %}
-					<div class="form-actions post-attach">
-						<button id="save" class="btn btn-primary"><i class="icon-pencil icon-white"></i> Save</button>
-						<a href="javascript:(function(){document.body.appendChild(document.createElement('script')).src='https://encipher.it/javascripts/inject.v2.js';})();" class="btn btn-info" rel="tooltip" title="Click on the security link at the top to learn more about this."><i class="icon-lock icon-white"></i> Encipher It</a>
-						<button id="delete" class="btn btn-danger disabled show-tooltip" disabled="disabled" title="This will delete all files attached to this entry, too."><i class="icon-trash icon-white"></i> Delete entry</button>
-						<input id="sure" type="checkbox" name="sure">
-						<span>I'm sure</span>
-					</div>
-				</fieldset>
-			</form>
-		</div>
+		<div class="col-xs-12">
+		  <form class="form" role='form' id="form" method="POST" action="{{ "entry-save"|url }}">
+            <input type="hidden" name="journal_name" value="{{ journal_name }}">
+            <input type="hidden" name="username" value="{{ username }}">
+            <input type="hidden" name="entry_id" value="{{ entry.key().id() }}">
+        
+			  <div class="form-group">
+			  
+			    <label class="control-label" for="subject">Subject</label>
+			        <div class="controls">
+			        <input class="form-control" id="subject" name="subject" type="text" value="{{ content.subject|default('', True) }}" />
+                    <span class="help-block">Title of this report. Summarise the contents</span>
+			  </div>
+
+                			  
+              <div class="form-group">
+                      <label class="control-label" for="date">Date and Time</label>
+                      <div class="controls">
+                          <input class="input-sm" id="date" name="date" type="date" value="{{ entry.date|date("%m/%d/%Y") }}" />
+                          <input class="input-sm" id="time" name="time" type="time" value="{{ entry.time }}" />
+                          <span class="help-block">Optional. If a date or time is entered it will be used instead of the current time.</span>
+                      </div>                     
+              </div>
+              <div class="form-group post-speech">
+                  <label class="control-label" for="text">Your Report</label>
+                  <div class="controls">
+                      <textarea class="form-control" rows=8 type="text" id="text" name="text">{{ content.text|default('', True) }}</textarea>
+                      <span class="help-block">Describe the disturbance or changes your can see.</span>
+                  </div>
+              </div>
+              <div class="form-group col-xs-3">
+                  <label class="control-label" for="markup">Use markup</label>
+                  <div class="controls">
+                      <select class="form-control input-sm" select id="markup" type="text" name="markup">{{ markup_options|safe }}</select>
+                      <span class="help-inline">? <a href="{{ "markup"|url }}" target="#_blank">brief explanation</a> about markups</span>
+                  </div>
+              </div>
+              
+              <div class="form-group col-xs-9">
+                  <label class="control-label" for="tags">Tags</label>
+                  <div class="controls">
+                      <input class="form-control input-sm" id="tags" name="tags" type="text" value="{{ content.tags|join(", ") }}" />
+                      <span class="help-block">Comma separated (ex: road, clearing, fire, park)</span>
+                  </div>
+              </div>
+           
+            {% for b in blobs %}
+              <div class="form-group">
+                  <div class="form-control">
+                      <input class="btn btn-default" type="checkbox" name="blob" value="{{ b.key().id }}" checked>
+                      {{ b.size|filesizeformat }}, <a href="{{ b.get_url() }}">{{ b.name }}</a>
+                  </div>
+              </div>
+            {% endfor %}
+            
+            {% if journal_type == "observations" %}
+    
+               <div class="form-group col-xs-9">
+                   <label class="control-label" for="images">Satellite Images</label>
+                   <div class="controls">
+                       <input class="form-control input-sm" id="images" name="images" type="text" value="{{ content.images|join(", ") }}" />
+                       <span class="help-block">Identifies the Landsat image(s) that this observation is based on</span>
+                   </div>
+               </div>
+               <div class="form-group col-xs-3">
+                   <label class="control-label" for="type">Journal type</label>
+                   <div class="controls">
+                       <input class="form-control input-sm" disabled id="overlay" name="satimage" type="text" value="{{journal_type}}" />
+                       <span class="help-block">Identifies journal purpose</span>
+                   </div>
+                </div>
+            {% endif %}
+            
+            
+            <div class="form-actions post-attach">
+                <button id="save" class="btn btn-lightgreen"><i class="icon-pencil icon-white"></i> Save</button>
+                <a href="javascript:(function(){document.body.appendChild(document.createElement('script')).src='https://encipher.it/javascripts/inject.v2.js';})();" class="btn  btn-lightblue" rel="tooltip" title="Click on the security link at the top to learn more about this."><i class="icon-lock icon-white"></i> Encipher It</a>
+                <button id="delete" class="btn btn-danger disabled show-tooltip" disabled="disabled" title="This will delete all files attached to this entry, too."><i class="icon-trash icon-white"></i> Delete entry</button>
+                <input id="sure" type="checkbox" name="sure">
+                <span>I'm sure</span>
+            </div>
+        </form>
 	</div>
+</div>
 
 	<div class="row">
-		<div class="span12">
+		<div class="col-xs-12">
 			<p>Download as: <a href="?pdf" class="btn"><i class="icon-download"></i> PDF</a></p>
 		</div>
 	</div>
@@ -112,11 +122,11 @@
 	// file attaching
 	$(function() {
 		var attach = '\
-			<div class="control-group"> \
-				<label class="control-label" for="attach" class="label-attach">attach a file</label> \
+			<div class="form-group"> \
+				<label class="control-label" for="attach" class="label-attach">Attach a file</label> \
 					<form method="POST" enctype="multipart/form-data"> \
 						<div class="controls"> \
-							<input class="input-xlarge file-attach" id="attach" name="attach" type="file" /> \
+							<input class="input-sm file-attach" id="attach" name="attach" type="file" /> \
 							<span id="span-attach" class="help-block">we currently only support images, up to 4MB</span> \
 						</div> \
 					</form> \
