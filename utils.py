@@ -47,7 +47,8 @@ import textile
 env = jinja2.Environment(loader=jinja2.FileSystemLoader( 'templates'))
 env.filters.update(filters.filters)
 
-logging.debug(env.list_templates())
+#show all templates in router 
+#logging.debug(env.list_templates())
 
 def prefetch_refprops(entities, *props):
 	fields = [(entity, prop) for entity in entities for prop in props]
