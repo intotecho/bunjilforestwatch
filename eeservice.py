@@ -67,7 +67,7 @@ def reallyinitEarthEngineService():
 class EarthEngineService():
 
     #this will call reallyinitEarthEngineService() when module is imported.  
-    logging.info("Init class EarthEngineService")
+    #logging.info("Init class EarthEngineService")
     earthengine_intialised = False   
     
     @staticmethod
@@ -96,11 +96,13 @@ def checkForNewObservationInCell(area, cell, collection_name):
     poly = [] #TODO Move poly to a method of models.AOI
     for geopt in area.coordinates:
         poly.append([geopt.lon, geopt.lat]) 
-    latest_image = getLatestLandsatImage(poly, collection_name, 0, params=[cell.path, cell.row]) # most recent image for this cell in the collection
+    params = {'path':cell.path, 'row':cell.row}
+    latest_image = getLatestLandsatImage(poly, collection_name, 0, params) # most recent image for this cell in the collection
     if latest_image is not None:
         storedlastObs = cell.latestObservation(collection_name)             #FIXME - Need to use the cache here.
         if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-            obs = models.Observation(parent=cell, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, map_id=None, token=None,  algorithm="")
+            #obs = models.Observation(parent=cell, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, map_id=None, token=None,  algorithm="")
+            obs = models.Observation(parent=cell, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name)
             db.put(obs)
             if storedlastObs is None:
                 logging.debug('checkForNewObservationInCell FIRST observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
@@ -135,8 +137,8 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     
     #boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
     #logging.debug('Temporarily disabled buffer to allow AOI points in clockwise order due to EEAPI bug')
-
     #boundary_feature_buffered = boundary_feature 
+
     park_boundary = ee.FeatureCollection(boundary_feature)
     
     end_date   = datetime.datetime.today()
@@ -147,13 +149,12 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     image_collection = ee.ImageCollection(collection_name)
     #print image_collection.getInfo()
     
-    if ('lpath' in params) and ('lrow' in params): 
-        
-        path = int(params['lpath'])
-        row = int(params['lrow'])
+    if ('path' in params) and ('row' in params): 
+
+        print "filter Landsat by Path/Row and date"
+        path = int(params['path'])
+        row = int(params['row'])
         #image_name =  collection_name[8:11] + "%03d%03d" %(path, row)
-        #logging.debug("logging.debug: image name: %s", image_name)
-        #filter Landsat by Path/Row and date
         resultingCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row)#) #latest image form this cell.
     else:
         resultingCollection = image_collection.filterDate(start_date, end_date).filterBounds(park_boundary) # latest image from any cells that overlaps the area. 
@@ -189,7 +190,11 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
-    logging.info('getLatestLandsatImage id: %s, date:%s latest:%s', id, date_str, latest_depth )
+    if ('path' in params) and ('row' in params): 
+        logging.info('getLatestLandsatImage id: %s, date:%s latest for [%d,%d] :%s, ', id, date_str, path, row, latest_depth, )
+    else:
+        logging.info('getLatestLandsatImage id: %s, date:%s latest:%s', id, date_str, latest_depth )
+    
     # add some properties to Image object to make them easier to retrieve later.
     latest_image.name = id
     latest_image.capture_date = date_str
@@ -212,7 +217,7 @@ def getLandsatImageById(collection_name,image_id, algorithm):
     system_time_start = datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
-    logging.info('getLandsatImageById id: %s, date:%s', id, date_str)
+    logging.info('getLandsatImageById id: %s, date:%s', image_id, date_str)
     # add some properties to Image object to make them easier to retrieve later.
     image.name = id
     image.capture_date = date_str
