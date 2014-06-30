@@ -277,21 +277,52 @@ class LandsatCell(db.Model):
 		return q.get()
 
 
-'''
-class Observation contains the metadata and map_id for a (Landsat) satelite image that has been retrieved and converted to a usable (visible/NDVI) format.
 
-The main use is the captured date. Once this observation has been actioned, it becomes the latest, against which future observations are base lined.
+'''
+class Overlay describes a visualisation of an image asset.
+It includes the map_id and token, an algorithm and information about the type. 
+Used for a (Landsat) satelite image that has been retrieved and converted to a usable (visible/NDVI) format.
+The image is based on an Observatioin Asset.
+'''
+class Overlay(db.Model):
+	map_id    = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
+	token	  = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Token might have expired.
+	algorithm = db.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
+	 
+	observation = db.ReferenceProperty(db.Model) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
+
+	def Overlay2Dictionary(self):		
+		obsdict = {
+			"map_id":self.map_id, 
+			"token":self.token, 
+			"algorithm":self.algorithm,
+			"key": str(self.key())
+		}
+		return obsdict
+
+
+'''
+class Observation (or ObservationAsset) describes a satellite image that has been retrieved.
+
+It contains a reference to zero, one or more visualizations as a list of Overlay objects.
+
+The main use is the captured date. Once this observation has been actioned, it becomes the latest, against which future observations are base-lined.
 This allows the app to redraw the overlay computed by earth engine on a new browser session without recalculating it - providing the overlay token has not expired.
 In which case, app will need to regenerate the observation.    
 '''
+
 class Observation(db.Model):
-	image_collection = db.StringProperty(required=False)				#identifies the ImageCollection name, not an EE object.
-	captured  = db.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
+	image_collection = db.StringProperty(required=False)			#identifies the ImageCollection name, not an EE object.
 	image_id  = db.StringProperty(required=False)           		# LANDSAT Image ID of Image - key to query EE.
-	map_id    = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
-	token	  = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Token might have expired.
-	algorithm = db.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this. 
+	captured  = db.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
+
+	map_id    = db.StringProperty(required=False, default=None) 	# move to Overlay
+	token	  = db.StringProperty(required=False, default=None) 	# move to Overlay
+	algorithm = db.StringProperty(required=False)				#move to Overlay. 
+	role      = db.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
+	
 	#landsatCell = db.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
+	overlays = db.ListProperty(db.Key, default=None) # list of keys to overlays (visualisations of this observation asset) 
 
 	def Observation2Dictionary(self):		
 		obsdict = {
@@ -306,6 +337,8 @@ class Observation(db.Model):
 		return obsdict
 
 
+
+
 '''
 class Task is an observation task, based on a landsat image in an AOI. The task includes a user who is responsible for completing the task.
 Each task has a unique ID.
@@ -318,7 +351,7 @@ class ObservationTask(db.Model):
 
 	#people - 	Expected to be a user  who is one of the area's followers. volunteering to follow the AOI
 	original_owner = db.ReferenceProperty(User, collection_name='original_user') # user originally assigned the the task
-	assigned_owner = db.ReferenceProperty(User, collection_name='assigned_user') # user who is assigned the the task
+	assigned_owner = db.ReferenceProperty(User, collection_name='assigned_user') # user who is currently assigned the the task
 	
 	#timestsamps
 	created_date = db.DateTimeProperty(auto_now_add=True)
@@ -326,6 +359,7 @@ class ObservationTask(db.Model):
 
 '''
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
+Based on journalr.org 
 '''
 class Journal(db.Model):
 	ENTRIES_PER_PAGE = 5
