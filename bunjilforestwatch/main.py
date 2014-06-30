@@ -1,4 +1,3 @@
-#bunjilae main
 
 from __future__ import with_statement
 
@@ -47,7 +46,8 @@ PRODUCTION_MODE = not os.environ.get(
 if not PRODUCTION_MODE:
     from google.appengine.tools.devappserver2.python import sandbox
     sandbox._WHITE_LIST_C_MODULES += ['_ctypes', 'gestalt']
-
+    disable_ssl_certificate_validation = True # bug in HTTPlib i think
+    
 def rendert(s, p, d={}):
     session = s.session
     d['session'] = session
@@ -863,8 +863,13 @@ class LandsatOverlayRequestHandler(BaseHandler):
             
             if cell is not None:
                 #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-                obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
+                obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], 
+                                         rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
+                overlay = models.Overlay(parent = obs, image_id = map_id['id'], 
+                                         rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
+ 
                 db.put(obs)
+                db.put(overlay) #TODO: Add to a single transaction.
 
         del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
         del map_id['capture_datetime'] #can't serialise a memory object, and browser won't need it so remove
@@ -887,25 +892,42 @@ class GetObservationHandler(BaseHandler):
             return
             
         eeservice.initEarthEngineService() # we need earth engine now.
-     
-        map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, obs.algorithm)
+        algorithm = 'rgb'
+        
+        map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, algorithm)
         if not map_id:
             logging.error('Could not find Image') #needs a reload to display messages. 
             self.populate_user_session()
             self.response.write(json.dumps(map_id))
             return
       
-        #Save the image overlay in the observation task
-                 
         #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
+        overlay = models.Overlay(parent = obs, 
+                                 image_id = map_id['id'], 
+                                 rgb_map_id = map_id['mapid'], 
+                                 rgb_token = map_id['token'],  
+                                 algorithm = algorithm)
+ 
+        overlay.map_id = map_id['mapid'] 
+        overlay.token  = map_id['token']  
+        #overlay.captured   = map_id['capture_datetime']
+        overlay.algorithm  = "rgb"
+        
+        db.put(overlay) #TODO make a safe transaction
+        
         obs.map_id = map_id['mapid'] 
         obs.token  = map_id['token']  
         obs.captured   = map_id['capture_datetime']
         obs.algorithm  = "rgb"
+        obs.overlays.append(overlay.key())
         db.put(obs)
+        
+    
+ 
         #cache.delete_item(obskey)
         #cache.set  (  obskey, obs)
         cache.set_keys([obs])
+        cache.set_keys([overlay])
         
         logging.debug("Added map_id and token to observation")
         del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
@@ -933,8 +955,15 @@ class ObservationTaskHandler(BaseHandler):
                 obs = cache.get_by_key(obs_key) 
                 if obs is not None:
                     obslist.append(obs.Observation2Dictionary())
+#                     for overlay_key in obs.observations:
+#                         overlay=cache.get_by_key(overlay_key)
+#                         if overlay is not None:
+#                             overlaylist.append(overlay.Overlay2Dictionary())
+#                         else:
+#                             logging.error("Missing Overlay from cache")
                 else:
-                    logging.error("Missing observation from cache")
+                    logging.error("Missing Observation from cache")
+                    
             #logging.debug( json.dumps(obslist))
             
             self.render('view-obs.html', {
