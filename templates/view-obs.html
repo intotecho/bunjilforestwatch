@@ -432,6 +432,25 @@ function initialize() {
             content: instructions_content
             });
         $('#instructions').popover();
+        
+        $('#lock-map-rhs').click(function(e){
+            alert ("lock map - not implemented");
+            console.log("lock map");
+        });
+
+        $('#expand-map-rhs').click(function(e){
+           if($(this).checked()) {
+            $('#map-div-left').hide();
+            $('#map-div-right').removeClass('col-md-5');
+            $('#map-div-right').addClass('col-md-10');
+           }
+           else {
+                  $('#map-div-right').removeClass('col-md-10');
+                  $('#map-div-right').addClass('col-md-5');  	   
+                  $('#map-div-left').shopw();
+           }
+        });
+
 };//initialize
 
 google.maps.event.addDomListener(window, 'load', initialize); 
@@ -614,7 +633,6 @@ function cellSelected()
 }
 
 
-
 </script>
 
 {% endblock %} {% block content %}
@@ -630,7 +648,8 @@ function cellSelected()
 		</div>
 		<div class="col-xs-5">
 			<ul class="breadcrumb">
-				<input type="checkbox" id="0" class="layer" checked data-toggle="tooltip">Lock to Left Map
+				<input type="checkbox" id="lock-map-rhs" class="layer" checked data-toggle="tooltip">Lock to Left Map
+                <input type="checkbox" id="expand-map-rhs" class="layer" data-toggle="tooltip">Expand
 			</ul>
 		</div>
 	</div>
@@ -782,11 +801,11 @@ function cellSelected()
 			</div>
 		</div>
 
-		<div class="col-md-5">
+		<div id="map-div-left" class="col-md-5">
 			<!-- Left Hand Map Element -->
 			<div id="map-canvas-left"></div>
 		</div>
-		<div class="col-md-5">
+		<div id="map-div-right" class="col-md-5">
 			<!--Right Hand Map Element -->
 			<div id="map-canvas-right"></div>
 		</div>
