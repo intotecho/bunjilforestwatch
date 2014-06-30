@@ -553,7 +553,7 @@ def get_area_key(username, area_name):
         n = C_AREA_KEY %(username, area_name)
         data = memcache.get(n)
         if data is None:
-            user_key = db.Key.from_path('User', username)
+            #user_key = db.Key.from_path('User', username)
             data = models.AreaOfInterest.all(keys_only=True).filter('owner =', username).filter('name', area_name.decode('utf-8')).get() #FIXME - Is why is there an '='  in owner =' but not for other string matches?
             #print ("get_area_userkey for user: ", username, data, )
             memcache.add(n, data)
