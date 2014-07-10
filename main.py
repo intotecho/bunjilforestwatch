@@ -865,7 +865,7 @@ class LandsatOverlayRequestHandler(BaseHandler):
                 #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
                 obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], 
                                          rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
-                overlay = models.Overlay(parent = obs, image_id = map_id['id'], 
+                overlay = models.Overlay(parent = db.Key(obs), image_id = map_id['id'], 
                                          rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
  
                 db.put(obs)
@@ -921,9 +921,7 @@ class GetObservationHandler(BaseHandler):
         obs.algorithm  = "rgb"
         obs.overlays.append(overlay.key())
         db.put(obs)
-        
-    
- 
+
         #cache.delete_item(obskey)
         #cache.set  (  obskey, obs)
         cache.set_keys([obs])
@@ -1264,7 +1262,18 @@ class FollowAreaHandler(BaseHandler):
             self.error(404)
             return
         
-        thisuser = self.session['user']['name']
+
+        thisuser = username  #self.session['user']['name']
+   
+        if 'user' not in self.session:
+            logging.error("FollowAreaHandler() Error: user %s not logged in", username)
+            self.error(404)
+            return
+            
+        if username != self.session['user']['name']:
+            logging.error ("FollowAreaHandler() Error: different user logged in %s %s", username, self.session['user']['name'])
+            self.error(404)
+            return
 
         if 'unfollow' in self.request.GET:
             op = 'del'
@@ -1277,7 +1286,7 @@ class FollowAreaHandler(BaseHandler):
 
         def txn(thisuser, area, op):
             tu, ar = db.get([thisuser, area])
-            print("FollowAreaHandler() adding key=", thisuser)
+            #print("FollowAreaHandler() adding key=", thisuser)
             if not tu:
                 tu = models.UserFollowingAreasIndex(key=thisuser)
             if not ar:
