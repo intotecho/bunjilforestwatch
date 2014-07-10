@@ -7,7 +7,7 @@ function setLayerOpacity(e) {
     //console.log("setLayerOpacity");
     var slider = $(this);
     var val = slider.val();
-    var layername = slider.context.id.substr(7);
+    var layername = slider.context.id.substr(7); //strip "slider_"
     var checkbox_id = "#checkbox_" + layername;
     //var slider_id   = "#slider_" + layername;
     //var layer_id    = "#" + layername;
@@ -30,13 +30,19 @@ function setLayerOpacity(e) {
 
 function toggleLayer(e){
   var checkbox = $(this);
-  var slider = checkbox.parent().parent().find(".slider");    
+  
+  var val;
   if ( checkbox.is(':checked') ) {
-     slider.val(100);
+	 val = 100;
   }
-  else{
-     slider.val(0);
+  else {
+     val = 0;
   }
+  var slider = checkbox.parent().parent().find(".slider");    
+  slider.val(val);
+  
+  var layername = slider.context.id.substr(9); //strip "checkbox_"
+  callbacks.fire(layername, val);
 }
 
 
