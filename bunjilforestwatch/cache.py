@@ -338,7 +338,7 @@ def get_stats():
     return data
 
 def clear_area_cache(user_key, area_key):
-    print "clear_area_cache(%s, %s)", user_key, area_key
+    #print "clear_area_cache(%s, %s)", user_key, area_key
     tag = "users"
     memcache.delete_multi([    C_AREAS_ALL,
                             C_AREA_ALL_LIST,
@@ -538,7 +538,7 @@ def get_area(username, area_name):
         if data is None:
             logging.error("get_area() ERROR!!!! %s %s %s", username, area_name, area_key )
         memcache.add(n, pack(data))
-    logging.debug("get_area() returns: %s", data )
+    #logging.debug("get_area() returns: %s", data )
     return data
 
 

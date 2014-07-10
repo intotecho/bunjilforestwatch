@@ -151,9 +151,9 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     
     if ('path' in params) and ('row' in params): 
 
-        print "filter Landsat by Path/Row and date"
         path = int(params['path'])
         row = int(params['row'])
+        logging.debug("filter Landsat by Path/Row and date %d/%d", path, row)
         #image_name =  collection_name[8:11] + "%03d%03d" %(path, row)
         resultingCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row)#) #latest image form this cell.
     else:

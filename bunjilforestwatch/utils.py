@@ -61,7 +61,7 @@ def prefetch_refprops(entities, *props):
 	return entities
 
 def render(_template, context): 
-	logging.info('render%s', context)
+	logging.debug('render%s', context)
 	return env.get_template(_template).render(**context)
 
 NUM_PAGE_DISP = 5
