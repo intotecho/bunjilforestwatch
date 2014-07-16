@@ -8,6 +8,7 @@ http://creativecommons.org/licenses/by/3.0/nz/
 var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
 var initialOpacity = 100;
 
+/*
 function createOpacityControl(map, opacity, layerLabel, overlay) {
 	
 	if (typeof overlay === 'undefined')
@@ -62,6 +63,7 @@ function createOpacityControl(map, opacity, layerLabel, overlay) {
 	opacityCtrlKnob.setValueX(initialValue);
 	setOpacity(initialValue, overlay);
 }
+*/
 
 function setOpacity(pixelX, overlay) {
 	// Range = 0 to OPACITY_MAX_PIXELS
@@ -105,7 +107,6 @@ CustomTileOverlay = function (map, opacity, mapid, token) {
 	
 	this.map = map;
 	this.opacity = opacity;
-	this.tiles = [];
 	
 	this.visible = false;
 	this.initialized = false;
@@ -116,6 +117,18 @@ CustomTileOverlay = function (map, opacity, mapid, token) {
 }
 
 CustomTileOverlay.prototype = new google.maps.OverlayView();
+
+CustomTileOverlay.prototype.initialize = function () {
+	if (this.initialized) {
+		return;
+	}
+	var self = this.self;
+	this.map.overlayMapTypes.insertAt(0, self);
+	this.initialized = true;
+	this.map_id = null;
+	this.tiles = [];
+}
+
 
 CustomTileOverlay.prototype.getTile = function (p, z, ownerDocument) {
 	// If tile already exists then use it
@@ -238,15 +251,6 @@ CustomTileOverlay.prototype.getTileUrl = function (coord, zoom) {
 	}
 }
 
-CustomTileOverlay.prototype.initialize = function () {
-	if (this.initialized) {
-		return;
-	}
-	var self = this.self;
-	this.map.overlayMapTypes.insertAt(0, self);
-	this.initialized = true;
-	this.map_id = null;
-}
 
 CustomTileOverlay.prototype.hide = function () {
 	this.visible = false;
@@ -259,8 +263,8 @@ CustomTileOverlay.prototype.hide = function () {
 
 CustomTileOverlay.prototype.show = function () {
 	this.initialize();
-	this.visible = true;
 	var tileCount = this.tiles.length;
+	this.visible = true;
 	for (var n = 0; n < tileCount; n++) {
 		this.tiles[n].style.display = '';
 	}
