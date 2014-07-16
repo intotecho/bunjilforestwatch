@@ -349,59 +349,10 @@ function landsatGrid_mouseout(e) {
 function landsatGrid_click(e) {
 	display_cell_info(this, true)
 	this.parent.selectedPath = this.path;
-	this.parent.selectedRow = this.row;
-	
+	this.parent.selectedRow = this.row;	
 	cellSelected(this);
 }
 
-/*
-function hideLandsatGrid() {
-	"use strict";
-	for (var i = 0; i <landsat_overlays.length;i++ ) {
-		landsat_overlays[i].setVisible(false)
-	}
-}
-
-function showLandsatGrid() {
-	"use strict";
-	for (var i = 0; i <landsat_overlays.length;i++ ) {
-		landsat_overlays[i].setVisible(true)
-	}
-}
-
-function removeLandsatGrid() {
-	"use strict";
-
-	while (landsat_overlays.length > 0) {
-		var landsat_cell = landsat_overlays.pop();
-		landsat_cell.setVisible(false);
-		landsat_cell.setMap(null);
-	}
-}
-
-function setOpacityLandsatGrid() {
-	"use strict";
-
-	while (landsat_overlays.length > 0) {
-		var landsat_cell = landsat_overlays.pop();
-		landsat_cell.setVisible(false);
-		landsat_cell.setMap(null);
-	}
-}
-
-
-LandsatGridOverlay.prototype.setCellOpacity = function (obj) {
-	alert('not implemented')
-	console.log("object style: %s, %s, %s, %s.", obj.style.filter, obj.style.KHTMLOpacity, obj.style.MozOpacity, obj.style.opacity );
-	if (this.opacity > 0) {
-		if (typeof (obj.style.filter) == 'string') { obj.style.filter = 'alpha(opacity:' + this.opacity + ')'; }
-		if (typeof (obj.style.KHTMLOpacity) == 'string') { obj.style.KHTMLOpacity = this.opacity / 100; }
-		if (typeof (obj.style.MozOpacity) == 'string') { obj.style.MozOpacity = this.opacity / 100; }
-		if (typeof (obj.style.opacity) == 'string') { obj.style.opacity = this.opacity / 100; }
-	}
-}
-
-*/
 
 function landsatGrid_zoom(e) {
 	// needs work
