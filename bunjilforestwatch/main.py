@@ -885,16 +885,74 @@ class GetObservationHandler(BaseHandler):
     def get(self, username, obskey):
         user = cache.get_user(username) #not used.
         obs = cache.get_by_key(obskey) #FIXME make type safe for security.
-        logging.debug("GetObservationHandler() Fetching %s visualization of image %s from collection :%s", obs.algorithm, obs.image_id, obs.image_collection)
         if not obs :
             logging.error('GetObservationHandler() - bad task')
+            self.error(404)
+            return
+        
+        logging.debug("GetObservationHandler() Fetching visualization of image %s from collection :%s", obs.image_id, obs.image_collection)
+        
+        
+        eeservice.initEarthEngineService() # we need earth engine now.
+        algorithm = 'rgb'
+        
+        map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, algorithm)
+        if not map_id:
+            logging.error('Could not find Image') #needs a reload to display messages. 
+            self.populate_user_session()
+            self.response.write(json.dumps(map_id))
+            return
+      
+        #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
+        overlay = models.Overlay(parent   = obs, 
+                                 #image_id = map_id['id'], 
+                                 #captured = map_id['capture_datetime']
+                                 map_id   = map_id['mapid'], 
+                                 token    = map_id['token'],  
+                                 algorithm = algorithm)
+ 
+        #overlay.map_id = map_id['mapid'] 
+        #overlay.token  = map_id['token']  
+        #overlay.captured   = map_id['capture_datetime']
+        overlay.algorithm  = "rgb"
+        
+        db.put(overlay) #TODO make a safe transaction
+        
+        obs.map_id = map_id['mapid'] 
+        obs.token  = map_id['token']  
+        obs.captured   = map_id['capture_datetime']
+        obs.algorithm  = "rgb"
+        obs.overlays.append(overlay.key())
+        db.put(obs)
+
+        #cache.delete_item(obskey)
+        #cache.set  (  obskey, obs)
+        cache.set_keys([obs])
+        cache.set_keys([overlay])
+        
+        logging.debug("Added map_id and token to observation")
+        del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
+        del map_id['capture_datetime'] #can't serialise a memory object
+        #logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
+        self.populate_user_session()
+        self.response.write(json.dumps(map_id))
+
+class GetPriorObservationHandler(BaseHandler):
+    #This handler responds to Ajax request, hence it returns a response.write()
+
+    def get(self, username, obskey):
+        user = cache.get_user(username) #not used.
+        obs = cache.get_by_key(obskey) #FIXME make type safe for security.
+        logging.debug("GetPriorObservationHandler() Fetching %s visualization of image %s from collection :%s", obs.algorithm, obs.image_id, obs.image_collection)
+        if not obs :
+            logging.error('GetPriorObservationHandler() - bad task')
             self.error(404)
             return
             
         eeservice.initEarthEngineService() # we need earth engine now.
         algorithm = 'rgb'
         
-        map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, algorithm)
+        map_id = eeservice.getPriorLandsatOverlay(obs.image_collection,  obs.image_id, algorithm)
         if not map_id:
             logging.error('Could not find Image') #needs a reload to display messages. 
             self.populate_user_session()
@@ -917,7 +975,7 @@ class GetObservationHandler(BaseHandler):
         
         obs.map_id = map_id['mapid'] 
         obs.token  = map_id['token']  
-        obs.captured   = map_id['capture_datetime']
+        obs.captured   = map_id['capture_datetime'] # ?
         obs.algorithm  = "rgb"
         obs.overlays.append(overlay.key())
         db.put(obs)
@@ -2320,8 +2378,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
     # observation tasks
-    webapp2.Route(r'/obs/<username>/image/<obskey>', handler=GetObservationHandler, name='view-image'), #AJAX call
-    webapp2.Route(r'/obs/<username>/<taskname>', handler=ObservationTaskHandler, name='view-obs'),
+    webapp2.Route(r'/obs/<username>/image/<obskey>', handler=GetObservationHandler, name='view-obs'), #AJAX call
+    webapp2.Route(r'/obs/<username>/prior/<obskey>', handler=GetPriorObservationHandler, name='view-prior'), #AJAX call
+    webapp2.Route(r'/obs/<username>/<taskname>', handler=ObservationTaskHandler, name='view-task'),
     
     # taskqueue
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
@@ -2402,6 +2461,7 @@ RESERVED_NAMES = set([
     'oauth',
     'obs',
     'openid',
+    'prior',
     'privacy',
     'register',
     'save',
