@@ -23,14 +23,15 @@ function layerslider_callback(layer_id, val) {
     var id = findOverlayLayer(layer_id, overlayMaps);
     if (id != -1) {
         console.log("layerslider_callback:" + overlayMaps[id].name + ", " + val); //overlayMaps[id].name
-        overlayMaps[id].setOpacity(val);
+        
+        overlayMaps[id].setOpacity(Number(val)/100);
     }
 }
 
 
 function removeFromMap(map, overlay_id)
 {
-    //TODO hide slider
+    //TODO: hide slider
     //overlay = overlayMaps.pop(); //needs to be a splice not a pop.
     //overlay.hide();
 }

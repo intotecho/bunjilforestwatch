@@ -9,61 +9,6 @@ var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
 var initialOpacity = 100;
 
 /*
-function createOpacityControl(map, opacity, layerLabel, overlay) {
-	
-	if (typeof overlay === 'undefined')
-	{ 
-		return;
-	}
-	var sliderImageUrl = "/static/img/opacity-slider3d7.png";
-	
-	// Create main div to hold the control.
-	var mainDiv = document.createElement('DIV');	
-	mainDiv.setAttribute("style", "topmargin=0;margin:5px;width:71px;height:42px;");
-
-	var opacityDiv = document.createElement('DIV');
-	opacityDiv.setAttribute("style", "topmargin=0;margin:0px;overflow-x:hidden;overflow-y:hidden;background:url(" + sliderImageUrl + ") no-repeat;width:71px;height:21px;cursor:pointer;");
-
-	////Create Label (CG Mods) 
-	var opacityLabelDiv = document.createElement('DIV');
-	opacityLabelDiv.setAttribute("style", "text-align:center;position:relative;center:0px;top:0px;opacity:0.6;background-color:#cccccc;width:71px;height:21px;");
-	opacityLabelDiv.setAttribute('onselectstart', "return false");
-	opacityLabelDiv.appendChild(document.createTextNode(layerLabel));
-	
-	
-	// Create knob
-	var opacityKnobDiv = document.createElement('DIV');
-	opacityKnobDiv.setAttribute("style", "padding:0;margin:0;overflow-x:hidden;overflow-y:hidden;background:url(" + sliderImageUrl + ") no-repeat -71px 0;width:14px;height:21px;");
-	opacityDiv.appendChild(opacityKnobDiv);
-
-	var opacityCtrlKnob = new ExtDraggableObject(opacityKnobDiv, {
-		restrictY: true,
-		container: opacityDiv
-	});
-
-	mainDiv.appendChild(opacityDiv);
-	mainDiv.appendChild(opacityLabelDiv);
-
-	google.maps.event.addListener(opacityCtrlKnob, "dragend", function () {
-		setOpacity(opacityCtrlKnob.valueX());
-	});
- 
-	google.maps.event.addDomListener(opacityDiv, "click", function (e) {
-		var left = findPosLeft(this);
-		var x = e.pageX - left - 5; // - 5 as we're using a margin of 5px on the div
-		opacityCtrlKnob.setValueX(x);
-		setOpacity(x);
-	});
-
-	map.controls[google.maps.ControlPosition.RIGHT_TOP].push(mainDiv);
-	//map.controls[google.maps.ControlPosition.TOP_RIGHT].push(opacityLabelDiv);
-
-	// Set initial value
-	var initialValue = OPACITY_MAX_PIXELS / (100 / opacity);
-	opacityCtrlKnob.setValueX(initialValue);
-	setOpacity(initialValue, overlay);
-}
-*/
 
 function setOpacity(pixelX, overlay) {
 	// Range = 0 to OPACITY_MAX_PIXELS
@@ -292,3 +237,6 @@ CustomTileOverlay.prototype.setObjectOpacity = function (obj) {
 		if (typeof (obj.style.opacity) == 'string') { obj.style.opacity = this.opacity / 100; }
 	}
 }
+
+*/
+
