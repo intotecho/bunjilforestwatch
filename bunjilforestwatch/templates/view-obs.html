@@ -95,7 +95,7 @@ function getTaskImageOverlay(obs) {
         
         for (o = 0; o < obs.overlays.length; o++) {
             var overlay = obs.overlays[o];
-        	var overlayname = obs.captured + ":" + overlay.overlay_role + ":" + toString(o);          
+        	var overlayname = obs.captured + ":" + overlay.overlay_role + ":" + o.toString();          
             createImageOverlay(true, map_lhs, overlay.map_id,  overlay.token, overlayname, tooltip, "red");
         }
 	}
@@ -164,13 +164,14 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
             return
         }
         
-        
+       
         /**
-         * The Google Maps API calls getTileUrl when it tries to display a maps
+         * The Google Maps API calls getTileUrl when it tries to display a map's
          * tile.  This is a good place to swap in the mapid and token we got from
          * the Python script. The other values describe other properties of the
          * custom map type.
          */
+         
          var eeMapOptions = {
            getTileUrl: function(tile, zoom) {
              var url = ['https://earthengine.googleapis.com/map',
@@ -186,13 +187,20 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
         var overlay = new google.maps.ImageMapType(eeMapOptions);
         overlay.name = shortname;
         overlay.color = color;
+        overlay.map = google_map;
         
         //google.maps.event.addListener(google_map, 'tilesloaded', function () {
         //    overlay.deleteHiddenTiles(google_map.getZoom());
         //});
         
+        
+        google_map.overlayMapTypes.push(null); //  Placeholder for layer
+        z  = google_map.overlayMapTypes.length-1;
+        overlay.index = z;
+        google_map.overlayMapTypes.insertAt(z, overlay);
+        
         addLayer(shortname, overlay_name, color,  100, tooltip , layerslider_callback ); //create slider.
-        overlay.show();
+        //overlay.show();
         overlayMaps.push(overlay);
     }
     else 
@@ -213,7 +221,7 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
 	     addLayer( landsatGridOverlay.name,
 	    		   'Landsat Cell Border',
 	    		   'gray',  
-	    		   100, 
+	    		   100 * opacity, 
 	    		   "Each Landsat image covers one of these cells.", 
 	    		   layerslider_callback ); //create slider.
 	     
@@ -249,7 +257,7 @@ function initialize() {
     
     google.maps.event.addListener(map_lhs, 'bounds_changed', function() {
         
-    	createLandsatGridOverlay(map_lhs, 100, true, cellarray);
+    	createLandsatGridOverlay(map_lhs, 0.5, true, cellarray);
         
         $(landsatgrid_panel).empty();
         
@@ -296,7 +304,8 @@ function initialize() {
     {% for j in area.coordinates %}
         latlngs.push(new google.maps.LatLng({{j}}))
     {% endfor %}
-     
+    
+    //TODO: Note that Border of AOI does not adjust yet.
     areaBoundary_lhs = new google.maps.Polygon({
                 paths: latlngs,
                 strokeColor: '#FFFF00',
@@ -363,7 +372,7 @@ function initialize() {
             if (getCellsResult.result == 'success'){
                 $('#observations_panel').append("Area has " + cellarray.length + " cells. " );
    
-                createLandsatGridOverlay(map_lhs, 100, true, cellarray);
+                createLandsatGridOverlay(map_lhs, 0.5, true, cellarray);
                 
                 $('.layer').prop('checked',true);
             }
@@ -382,7 +391,7 @@ function initialize() {
     else
     {
         //server passed an existing cellarray - just display it.
-        createLandsatGridOverlay(map_lhs, 100, true, cellarray);
+        createLandsatGridOverlay(map_lhs, 0.5, true, cellarray);
     }
 
     observations = {{obslist}};

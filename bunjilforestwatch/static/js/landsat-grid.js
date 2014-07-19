@@ -106,7 +106,7 @@ LandsatGridOverlay.prototype.setOpacity = function (op) {
 	for (var i = 0; i < this.landsat_overlays.length; i++ ) {	
 		this.landsat_overlays[i].setOptions(
 			{
-			  strokeOpacity : op / 100,
+			  strokeOpacity : op,
 			  fillOpacity : 0 // clear unless mouseover.
 			});
 		this.landsat_overlays[i].setVisible(true);
@@ -226,7 +226,7 @@ function createLandsatGrid(data, landsatGridOverlay) {
 				paths : newCoordinates,
 				strokeColor : cell_colour,
 				strokeWeight : 1,
-				strokeOpacity : 1,
+				strokeOpacity : landsatGridOverlay.opacity,
 				fillOpacity : 0,
 				editable : false,
 				clickable : landsatGridOverlay.clickable,
@@ -329,11 +329,11 @@ function landsatGrid_mouseover(e) {
 
 	if (this.Monitored) {
 		this.setOptions({
-			fillOpacity : 0.3 * this.parent.opacity / 100
+			fillOpacity : 0.3 * this.parent.opacity
 		})
 	} else {
 		this.setOptions({
-			fillOpacity : 0.1 * this.parent.opacity / 100
+			fillOpacity : 0.1 * this.parent.opacity 
 		})
 	}
 	display_cell_info(this, false)
