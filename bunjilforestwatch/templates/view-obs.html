@@ -21,13 +21,16 @@ html {
 
 src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
 <script type="text/javascript" src="/static/js/draggable-object.js"></script>
-<script type="text/javascript" src="/static/js/custom-tile-overlay.js"></script>
 <script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>
 <script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>
 <script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>
 <script type="text/javascript" src="/static/js/landsat-grid.js"></script>
 <script type="text/javascript" src="/static/js/overlay-mgr.js"></script>
+<!--   
 <script type="text/javascript" src="/static/js/polygon-outliner.js"></script>
+<script type="text/javascript" src="/static/js/custom-tile-overlay.js"></script>
+-->
+
 <script type="text/javascript" src="/static/js/drawing-tools.js"></script>
 <script type="text/javascript" src="/static/js/bootbox.min.js"></script>
 <script type="text/javascript" src="/static/js/jquery.nouislider.min.js"></script>
@@ -38,7 +41,7 @@ src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9
 var instructions_str =  
     "Your Mission is ..... <br />" +
     "Check for forest changes in the latest image on the left<br />." +
-    "by comparing with the image on the right";
+    "by comparing with the earlier image on the right";
 
 var map_lhs;
 var map_rhs;
@@ -50,14 +53,106 @@ var algorithm = 'rgb'; // ndvi
 var latest = 0;  //latest - 0
 
 
-//get an observation from server.
+
+//find overlay mathching rolke and viz algorithm.
+function findOverlay(obs, role, algorithm) {
+    for (o = 0; o < obs.overlays.length; o++) {
+        var overlay = obs.overlays[o];
+        if ((overlay.overlay_role == role) && (overlay.algorithm == algorithm)) {
+        	return overlay;
+        }         
+    }
+    return null;
+}
+	
+
+function testOverlayAssets(ovl) {
+	//test for 404 on tiles -> https://earthengine.googleapis.com/map/742d6c67979e4b85ad80b74a53523adb/7/78/63?token=d09aa60a84402f000b7f52d7ba2bf363
+    return false;
+}
+
+function displayOverlay(obs, ovl) { //overlay is current so add it to the map.
+    
+    tooltip = "Overlay: " +  obs.captured  +  " Id: ";
+    var overlayname = obs.captured + ":" + ovl.overlay_role;          
+    var map = ((ovl.overlay_role == 'latest') ? map_lhs : map_rhs);    
+    
+    $('#observations_panel').empty();
+    $('#observations_panel').append(tooltip);
+	
+    createImageOverlay(true, map, ovl.map_id,  ovl.token, overlayname, tooltip, "red");
+}
+
+function fetchOverlay(obs, prompt, httpget_url) {
+	  //$("#observations_panel").collapse('show');
+      //$('#observations_panel').empty();
+      $('#observations_panel').append(prompt);
+      $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+      $.get(httpget_url).done(function(data) {
+	       $('#observations_panel').empty();
+	        
+	       var ovl = jQuery.parseJSON(data);
+	       if (ovl) {
+	             displayOverlay(obs,ovl);
+	             //getPriorOverlay(obs)
+	           }
+	       else {
+	                $('#observations_panel').append("No Sat Data");
+	           }
+	       }).error(function( jqxhr, textStatus, error ) {
+	           var err = textStatus + ', ' + error;
+	           console.log( "Request Failed: " + err);
+	           $('#observations_panel').empty();
+	           $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
+	           });
+}
+
+function updateOverlay(obs, ovl) {
+    
+	var httpget_url = 'overlay/update/' + ovl.key + '/' + ovl.algorithm; 
+    var prompt  = "Updating " + ovl.role + " "  + ovl.algorithm;
+    
+    console.log( "updateOverlay() %s as: %s", prompt, httpget_url);
+    fetchOverlay(obs,prompt, httpget_url );
+}
+
+function createOverlay(obs, role, algorithm) {
+	   
+	   var httpget_url = 'overlay/create/' + obs.key + '/' + algorithm; 
+       var prompt  = "Creating " + role + " "  + algorithm
+       
+       console.log( "createOverlay() %s as: %s", prompt, httpget_url);
+       fetchOverlay(obs,prompt, httpget_url );
+}
+
+function displayObsOverlay(obs, role, algorithm) {
+
+    var ovl = findOverlay(obs, role, algorithm);
+    
+    if (ovl != null)    {
+        if (testOverlayAssets(ovl) == true)
+        {
+            displayOverlay(obs, ovl);
+            return;
+        }
+        else {
+            updateOverlay(obs, ovl);
+            return;        	
+        }
+    }
+    else {
+        createOverlay(obs, role, algorithm);
+    }
+}    
+
+/*
 function getTaskImageOverlay(obs) {
-  
-	if ( obs.overlays.length == 0) {
+
+	if (obs.overlays.length == 0) {
 	   
 	   console.log( "no map_id in observation");
 	    
-	   var httpget_url = 'image/' + obs.key;    // httpgetActionUrl("image")
+	   var httpget_url = 'image/' + obs.key + '/rgb';    // httpgetActionUrl("image")
     
        console.log( "url:", httpget_url);
        
@@ -74,6 +169,7 @@ function getTaskImageOverlay(obs) {
                     var overlayname = mapobj.date_acquired;
                     //var shortname = overlayname.substr(0, overlayname.indexOf("@")); //@ is invalid tag id
                     createImageOverlay(true, map_lhs, mapobj.mapid,  mapobj.token, overlayname, tooltip, "blue");
+                    getPriorOverlay(obs)
                   }
               else {
             	       $('#observations_panel').append("No Sat Data");
@@ -100,54 +196,76 @@ function getTaskImageOverlay(obs) {
         }
 	}
 }
+*/
 
 
-//get an observation from server.
+//get overlay showing the view before this observation server.
 function getPriorOverlay(obs) {
   
-    if ( obs.map_id == null) {
-       
-       console.log( "no map_id in observation");
+	// obs may have more than one overlay. 
+	// if it has a prior overlay show it.
+	// if there is a RGB overlay, get prior RGB
+	// TODO: if there is an NDVI overlay, get priop NDVI
+	
+	var len = obs.overlays.length;
+	
+    for (o = 0; o < len; o++) {
         
-       var httpget_url = 'prior/' + obs.key;    // httpgetActionUrl("image")
-    
-       console.log( "url:", httpget_url);
-       
-       $("#observations_panel").collapse('show');
-             $('#observations_panel').empty();
-             $('#observations_panel').append("Getting Observation ...");
-             $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
-             $.get(httpget_url).done(function(data) {
-               $('#observations_panel').empty();
-              mapobj = jQuery.parseJSON(data);
-              if (mapobj) {
-                    tooltip = "Captured: " +  mapobj.date_acquired +  " Id: " + mapobj.id + " Path: " + mapobj.path + " Row: " +  mapobj.row;
-                    $('#observations_panel').append(tooltip);
-                    var overlayname = mapobj.date_acquired;
-                    //var shortname = overlayname.substr(0, overlayname.indexOf("@")); //@ is invalid tag id
-                    createImageOverlay(true, map_lhs, mapobj.mapid,  mapobj.token, overlayname, tooltip, "blue");
-                  }
-              else {
-                       $('#observations_panel').append("No Sat Data");
-                  }
-              }).error(function( jqxhr, textStatus, error ) {
-                  var err = textStatus + ', ' + error;
-                  console.log( "Request Failed: " + err);
-                  $('#observations_panel').empty();
-                  $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
-          });
-    }
-    else
-    {
-        console.log( "Displaying existing visualization Observation");
-        tooltip = "Collection: " +  obs.collection +  " Image Id: " + obs.image_id + "Visualisation: " + obs.algorithm;
-        $('#observations_panel').append(tooltip);
-        var overlayname=  obs.captured;
-        //var shortname = overlayname.substr(0, overlayname.indexOf("@")); //@ is invalid tag id.
-        createImageOverlay(true, map_rhs, obs.map_id,  obs.token, overlayname, tooltip, "red");
-    }
-}
+    	var a_overlay = obs.overlays[o];
 
+        if (a_overlay.overlay_role != 'prior'){
+            //have we already calculated a prior rgb overlay?
+            var found_prior = false;
+            for (p = 0; p < len; p++) {
+                var p_overlay = obs.overlays[p];
+                if ((p_overlay.overlay_role == 'prior') && (p_overlay.algorith == a_overlay.algorith)){
+                	//found prior overlay with same algorithm
+                    var overlayname = 'Before ' + obs.captured +"_" + o.toString(); 
+                    var tooltip = "View Before Image: " + obs.image_id + " was taken. Vis: " + o.algorithm + "_" + o.toString() + "_" + p.toString();
+                    
+                    console.log( "Displaying existing prior overlay" + overlayname + " " + tooltip);
+                    $('#observations_panel').append(tooltip);
+                    createImageOverlay(true, map_rhs, p_overlay.map_id,  p_overlay.token, overlayname, tooltip, "green");
+                    found_prior = true; 
+                    break;
+                }
+            }
+            
+            if (found_prior == false) {
+                console.log( "no prior overlay in observation"); //create one
+                
+                var httpget_url = 'prioroverlay/create' + obs.key;    // httpgetActionUrl("image")
+                
+                console.log( "url:", httpget_url);
+                   
+                $("#observations_panel").collapse('show');
+                      $('#observations_panel').empty();
+                      $('#observations_panel').append("Getting Prior Overlay ...");
+                      $('#observations_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+                      $.get(httpget_url).done(function(data) {
+                        $('#observations_panel').empty();
+                       mapobj = jQuery.parseJSON(data);
+                       if (mapobj) {
+                             tooltip = "Before : " +  mapobj.date_acquired +  " Id: " + mapobj.id;
+                             $('#observations_panel').append(tooltip);
+                             var overlayname = mapobj.date_acquired;
+                             //var shortname = overlayname.substr(0, overlayname.indexOf("@")); //@ is invalid tag id
+                             createImageOverlay(true, map_rhs, mapobj.mapid,  mapobj.token, overlayname, tooltip, "dark-green");
+                        }
+                        else {
+                                $('#observations_panel').append("No Prior Data Available now");
+                           }
+                       }).error(function( jqxhr, textStatus, error ) {
+                           var err = textStatus + ', ' + error;
+                           console.log( "Request Failed: " + err);
+                           $('#observations_panel').empty();
+                           $('#observations_panel').append("<p>Failed: " + err + "</p>"); 
+                   });
+             }//found-prior
+         } //!=prior
+     }//o in obs
+ }
+ 
 
 /*      
  * createImageOverlay(true, map_lhs, mapobj.mapid,  mapobj.token, mapobj.date_acquired, tooltip, "cyan");
@@ -161,7 +279,7 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
             
         if (findOverlayLayer(shortname, overlayMaps) != -1) {
             console.log("Server returned a duplicate overlay: " + overlay_name );
-            return
+            // return
         }
         
        
@@ -183,16 +301,13 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
          };
 
         // Create the map type.
-        //var overlay = new CustomTileOverlay(google_map, initialOpacity, map_id, token);
+      
         var overlay = new google.maps.ImageMapType(eeMapOptions);
         overlay.name = shortname;
         overlay.color = color;
         overlay.map = google_map;
         
-        //google.maps.event.addListener(google_map, 'tilesloaded', function () {
-        //    overlay.deleteHiddenTiles(google_map.getZoom());
-        //});
-        
+    
         
         google_map.overlayMapTypes.push(null); //  Placeholder for layer
         z  = google_map.overlayMapTypes.length-1;
@@ -200,7 +315,7 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
         google_map.overlayMapTypes.insertAt(z, overlay);
         
         addLayer(shortname, overlay_name, color,  100, tooltip , layerslider_callback ); //create slider.
-        //overlay.show();
+      
         overlayMaps.push(overlay);
     }
     else 
@@ -211,7 +326,7 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
 }
 
 
- function createLandsatGridOverlay(map, opacity, clickable, cellarray) { 
+function createLandsatGridOverlay(map, opacity, clickable, cellarray) { 
 	 if (map.landsatGridOverlay === undefined){
 	     var landsatGridOverlay = new LandsatGridOverlay(map_lhs, opacity, clickable, cellarray);
 	     landsatGridOverlay.name = "grid" ;
@@ -332,10 +447,6 @@ function initialize() {
       
     /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
      *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
-     *  Old method was a big rectangle. 
-     *         var latlng_bounds = {'max_lat': {{area.max_latlon.lat}}, 'min_lat': {{area.min_latlon.lat}}, 'max_lon': {{area.max_latlon.lon}}, 'min_lon': {{area.min_latlon.lon}}};
-     *         cellarray =         {'max_path':{{area.max_path}},       'min_path': {{area.min_path}},      'max_row': {{area.max_row}},        'min_row': {{area.min_row}}};
-     *  New method calculates intersections so returns only overlapping cells.
      */    
     cellarray = {{celllist}}    //cellarray = jQuery.parseJSON({{celllist}});
     
@@ -395,9 +506,17 @@ function initialize() {
     }
 
     observations = {{obslist}};
+
+    $("#observations_panel").collapse('show');
+    $('#observations_panel').empty();
+
     for (i=0; i < observations.length; i++) {
-        getTaskImageOverlay(observations[i])
-    }
+        //getTaskImageOverlay(observations[i]);
+        
+        displayObsOverlay(observations[i], 'latest', 'rgb');
+        
+        //getPriorOverlay(observations[i]);
+     }
     
     // View button will fetch Latest Overlay Image of selected (last clicked) cell on LHS.
     $('#get_overlay_btn').click(function(){
@@ -410,16 +529,14 @@ function initialize() {
            $.get(httpget_url).done(function(data) {
              $('#observations_panel').empty();
             mapobj = jQuery.parseJSON(data);
-            if (mapobj)
-                {
+            if (mapobj) {
                   tooltip = "Captured: " +  mapobj.date_acquired +  "Id: " + mapobj.id + "Path: " + mapobj.path + " Row: " +  mapobj.row;
                   $('#observations_panel').append(tooltip);
                   createImageOverlay(true, map_lhs, mapobj.map_id, mapobj.token, mapobj.date_acquired, tooltip, "cyan");
                 }
-            else
-                {
-                         $('#observations_panel').append("No Sat Data");
-                }
+            else {
+                    $('#observations_panel').append("No Sat Data");
+            }
             }).error(function( jqxhr, textStatus, error ) {
                 var err = textStatus + ', ' + error;
                 console.log( "Request Failed: " + err);
@@ -464,16 +581,7 @@ function initialize() {
                   //getFORMA(map, true); //map, showlayer,
                   
                     $("#layers_panel").collapse('show');
-                    $('#sliders_array').append("<div class=\"slider\" id=\"slider0\">.</div>");
-                    $('#slider0').noUiSlider({
-                        start: [ 100 ],
-                        range: {
-                            'min': 0,
-                            'max': 100
-                        },
-                        connect:"lower"
-                    });
-                    $('#slider0').show()
+                    alert("Sorry, Not implemented");  
                 }
                 else {
                   //getFORMA(map, false); //map, hide
