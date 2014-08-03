@@ -17,6 +17,7 @@
 '''
 
 import sys
+import math
 from google.appengine.ext import db # is it required?
 import cache
 import models # only required for Observations model.
@@ -26,8 +27,6 @@ from os import environ
 #logging.debug('PYTHONPATH: %s',os.environ['PYTHONPATH'])
 #logging.debug('HTTP_PROXY: %s',os.environ['HTTP_PROXY'])
 #logging.debug('HTTPS_PROXY: %s',os.environ['HTTPS_PROXY'])
-#if os.environ['EARTHENGINE_BYPASS'].startswith('T'): 
-#    logging.info('EARTHENGINE_BYPASS is %s. Earth Engine Calls are disabled..',os.environ['EARTHENGINE_BYPASS'])
 
 import oauth2client.client
 from oauth2client.appengine import AppAssertionCredentials
@@ -219,11 +218,100 @@ def getLandsatImageById(collection_name,image_id, algorithm):
 
     logging.info('getLandsatImageById id: %s, date:%s', image_id, date_str)
     # add some properties to Image object to make them easier to retrieve later.
-    image.name = id
+    image.name = image_id
     image.capture_date = date_str
     image.system_time_start = system_time_start
     
     return visualizeImage(collection_name, image, algorithm)
+
+
+'''
+getLandsatImageById(collection_name,image_id, algorithm )
+
+'''
+
+def getPriorLandsatOverlay(obs):
+
+    ref_image = ee.Image(obs.image_id)
+    props = ref_image.getInfo()['properties'] #logging.info('image properties: %s', props)
+    path = props['WRS_PATH']
+    row = props['WRS_ROW']
+    
+    system_time = datetime.datetime.fromtimestamp((props['system:time_start'] / 1000) -3600) #convert ms
+    date_str = system_time.strftime("%Y-%m-%d @ %H:%M")
+
+    before     = obs.captured - datetime.timedelta(days=1)
+    earliest   = obs.captured - datetime.timedelta(days=(3*365))
+    before_str   = before.strftime("%Y-%m-%d")
+    earliest_str = earliest.strftime("%Y-%m-%d")
+    
+    logging.info('getPriorLandsatOverlay id: %s, captured:%s from %s to :%s', obs.image_id, date_str, earliest_str, before_str)
+    
+    resultingCollection = ee.ImageCollection(obs.image_collection).filterDate(earliest, before).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row).filterMetadata('default:SUN_ELEVATION', 'GREATER_THAN', 0)
+
+    # Optional step that adds QA bits as separate bands to make it easier to debug.
+    collectionUnmasked = resultingCollection.map(add_date).map(L8AddQABands)
+   
+    collectionMasked = collectionUnmasked.map(maskL8)
+    
+    sky = collectionMasked.qualityMosaic('system:time_start')
+    #print sky
+    image_object = sky
+    [method for method in dir(image_object) if not method.startswith('_')]
+    print 'image methods' 
+    print method
+    print 'image methods - thats it!' 
+    #store a new overlay....
+    mapparams = {    'bands':  'B9', 
+                     'min': 0,
+                     'max': 30000,
+                     'gamma': 1.2,  #was 1.2
+                     'format': 'png'
+                }   
+
+    rgbVizParams = {'bands': 'B4,B3,B2', 'min':5000, 'max':30000, 'gamma': 1.6, 'format': 'png'}
+    return  ref_image.getMapId(rgbVizParams)
+#B9_THRESHOLD = 4200 #originally  5200
+
+
+def getQABits(image, start, end, newName):
+    # Compute the bits we need to extract.
+    pattern = 0
+    for i in range (start, end): 
+        #pattern += math.pow(2, i) 
+        pattern += 2**i
+    return image.select([0], [newName]).bitwise_and(pattern).right_shift(start)
+                  
+
+def L8AddQABands(image) :
+    # Landsat 8 QA Band ref: http:#landsat.usgs.gov/L8QualityAssessmentBand.php
+    # Select the Landsat 8 QA band.
+    QABand = image.select('BQA')
+    image = image.addBands(getQABits(QABand, 4, 5, "WaterConfidence")) 
+    image = image.addBands(getQABits(QABand, 10, 11, "SnowIceConfidence")) 
+    image = image.addBands(getQABits(QABand, 12, 13, "CirrusConfidence")) 
+    image = image.addBands(getQABits(QABand, 14, 15, "CloudConfidence"))
+    return image
+
+# cloud masking function
+def L8Cloudmask(image):
+    # Select the Landsat 8 QA band.
+    QABand = image.select('BQA')
+    # Create a binary mask based on the cloud quality bits (bits 14&15).
+    cirrusBits = getQABits(QABand, 12, 13, "CirrusConfidence")
+    cloudBits = getQABits(QABand, 14, 15, "CloudConfidence")
+    cloudMask = (cloudBits.eq(1)).And(cirrusBits.eq(1))
+    return cloudMask
+
+def maskL8(image):
+    mask = L8Cloudmask(image)
+    maskedImage = image.mask(mask)
+    return maskedImage
+
+def add_date(image):
+    timestamp = image.metadata('system:time_start')
+    return image.addBands(timestamp)
+
 
 
 '''
@@ -469,6 +557,7 @@ def visualizeImage(collection_name, image, algorithm):
         elif algorithm.lower() == 'ndvi':
            print "l7 ndvi not implemented"
            return None
+
 
 def getLandsatOverlay(coords, satellite, algorithm, depth, params):
     if satellite == 'l8':

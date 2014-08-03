@@ -283,6 +283,8 @@ class Overlay describes a visualisation of an image asset.
 It includes the map_id and token, an algorithm and information about the type. 
 Used for a (Landsat) satelite image that has been retrieved and converted to a usable (visible/NDVI) format.
 The image is based on an Observatioin Asset.
+Note that the Overlay is an asset in the earth engine that has a limited expiry date.
+If the tiles returned are 404 then it is necessary to recreate the overlay.
 '''
 class Overlay(db.Model):
 	map_id    = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
@@ -290,18 +292,18 @@ class Overlay(db.Model):
 	algorithm = db.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
 	overlay_role      = db.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
 	 
-	observation = db.ReferenceProperty(db.Model) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
+	#observation = db.ReferenceProperty(db.Model) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
 
 	def Overlay2Dictionary(self):		
 		obsdict = {
 			"map_id":self.map_id, 
 			"token":self.token, 
 			"algorithm":self.algorithm,
-			"overlay_role":self.overlay_role,
+			"overlay_role":self.overlay_role, 
+			"parent" : str(self.parent_key()),
 			"key": str(self.key())
 		}
 		return obsdict
-
 
 '''
 class Observation (could rename to ObservationAsset) describes a Landsat satellite image.
@@ -311,14 +313,16 @@ An Observation contains a list of zero or more Overlays, each Overlay is an visu
 The main use is the captured date. Once this observation has been actioned, it becomes the latest, against which future observations are base-lined.
 This allows the app to redraw the overlay computed by earth engine on a new browser session without recalculating it - providing the overlay token has not expired.
 In which case, app will need to regenerate the observation.    
+
+Some Observations have no image_id as they are composites of many images.
 '''
 
 class Observation(db.Model):
 	image_collection = db.StringProperty(required=False)			#identifies the ImageCollection name, not an EE object.
 	image_id  = db.StringProperty(required=False)           		# LANDSAT Image ID of Image - key to query EE.
 	captured  = db.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
-	obs_role      = db.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
-	overlays = db.ListProperty(db.Key, default=None) # list of keys to overlays (visualisations of this observation asset) 
+	obs_role  = db.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
+	overlays  = db.ListProperty(db.Key, default=None) # list of keys to overlays (visualisations of this observation asset) 
 	#landsatCell = db.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
 
 	def Observation2Dictionary(self):		
@@ -327,7 +331,7 @@ class Observation(db.Model):
 			"image_collection":self.image_collection, 
 			"image_id":self.image_id, 	
 			"captured": self.captured.strftime("%Y-%m-%d @ %H:%M"), 
-			"obs_role":self.obs_role, 	
+			"obs_role":self.obs_role, 	# ex 'latest'
 			"key": str(self.key()),		
 			"overlays": []
 		}

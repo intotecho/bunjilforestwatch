@@ -878,7 +878,8 @@ class LandsatOverlayRequestHandler(BaseHandler):
         self.response.write(json.dumps(map_id))
 
 
-# if Image is known.
+
+#THIS IS NOT CALLED IN view-obs.html anymore. SEE CreateOverlayHandler and UpdateOVerlayHandler
 class GetObservationHandler(BaseHandler):
     #This handler responds to Ajax request, hence it returns a response.write()
 
@@ -892,7 +893,6 @@ class GetObservationHandler(BaseHandler):
         
         logging.debug("GetObservationHandler() Fetching visualization of image %s from collection :%s", obs.image_id, obs.image_collection)
         
-        
         eeservice.initEarthEngineService() # we need earth engine now.
         algorithm = 'rgb'
         
@@ -904,24 +904,19 @@ class GetObservationHandler(BaseHandler):
             return
       
         #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-        overlay = models.Overlay(parent   = obs, 
-                                 #image_id = map_id['id'], 
-                                 #captured = map_id['capture_datetime']
+        overlay = models.Overlay(parent   = obs,
+                                 observation = obs,
                                  map_id   = map_id['mapid'], 
                                  token    = map_id['token'],  
                                  algorithm = algorithm)
- 
-        #overlay.map_id = map_id['mapid'] 
-        #overlay.token  = map_id['token']  
-        #overlay.captured   = map_id['capture_datetime']
-        overlay.algorithm  = "rgb"
         
         db.put(overlay) #TODO make a safe transaction
-        
-        obs.map_id = map_id['mapid'] 
-        obs.token  = map_id['token']  
         obs.captured   = map_id['capture_datetime']
-        obs.algorithm  = "rgb"
+        
+        #obs.map_id = map_id['mapid'] 
+        #obs.token  = map_id['token']  
+        #obs.algorithm  = "rgb"
+        
         obs.overlays.append(overlay.key())
         db.put(obs)
 
@@ -931,52 +926,167 @@ class GetObservationHandler(BaseHandler):
         cache.set_keys([overlay])
         
         logging.debug("Added map_id and token to observation")
-        del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
-        del map_id['capture_datetime'] #can't serialise a memory object
+        #del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
+        #del map_id['capture_datetime'] #can't serialise a memory object
         #logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
         self.populate_user_session()
-        self.response.write(json.dumps(map_id))
+        #self.response.write(json.dumps(map_id))
+        self.response.write(obs.Observation2Dictionary())
 
-class GetPriorObservationHandler(BaseHandler):
+'''
+CreateOverlayHandler() create a new overlay and appends it to the observation
+        parameters: 
+            observation key, 
+            algorithm, 
+            username is not used
+'''
+class CreateOverlayHandler(BaseHandler):
     #This handler responds to Ajax request, hence it returns a response.write()
+
+    def get(self, username, obskey, algorithm):
+        #user = cache.get_user(username) #not used.
+        obs = cache.get_by_key(obskey) #FIXME make type safe for security.
+        
+        if not obs:
+            returnval['result'] = "error"
+            returnval['reason'] = "GetObservationHandler() -  bad observation key in url"
+            logging.error(returnval['reason']) 
+            return self.response.write(json.dumps(returnval))
+        
+        logging.debug("CreateOverlayHandler() Fetching visualization of image %s from collection :%s", obs.image_id, obs.image_collection)
+        
+        eeservice.initEarthEngineService() # we need earth engine now.
+        if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
+            returnval['result'] = "error"
+            returnval['reason'] = "CreateOverlayHandler() - Cannot contact Google Earth Engine to generate overlay"
+            logging.error(returnval['reason']) 
+            return self.response.write(json.dumps(returnval))
+        
+        map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, algorithm)
+        if not map_id:
+            returnval['result'] = "error"
+            returnval['reason'] = "CreateOverlayHandler Could not find Image"
+            logging.error(returnval['reason']) 
+            self.populate_user_session()
+            self.response.write(json.dumps(returnval))
+            return
+      
+        #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
+        ovl = models.Overlay(parent   = obs,
+                                 map_id   = map_id['mapid'], 
+                                 token    = map_id['token'],
+                                 overlay_role = 'latest',  #is it safe to assume?
+                                 algorithm = algorithm)
+        
+        obs.captured = map_id['capture_datetime'] #we already  had this?
+        
+        db.put(ovl)  #Do first to create a key.TODO 
+        obs.overlays.append(ovl.key())
+        db.put(obs)  #TODO put inside a tx
+        cache.set_keys([obs, ovl])
+
+        returnval = ovl.Overlay2Dictionary()
+        returnval['result'] = "success"
+        returnval['reason'] = "CreateOverlayHandler() added " + algorithm + "overlay"
+        logging.debug(returnval['reason']) 
+        
+        self.populate_user_session()
+        self.response.write(json.dumps(returnval))
+
+
+# if Image is known.
+class UpdateOverlayHandler(BaseHandler):
+    #This handler responds to Ajax request, hence it returns a response.write()
+
+    def get(self, username, ovlkey, algorithm):
+        user = cache.get_user(username) #not used.
+        ovl = cache.get_by_key(ovlkey) #FIXME make type safe for security.
+        returnval = {}
+        
+        if not ovl :
+            returnval['result'] = "error"
+            returnval['reason'] = "UpdateOverlayHandler Could not find Image"
+            logging.error(returnval['reason']) 
+            return self.response.write(json.dumps(returnval))
+
+        obs = ovl.parent();
+        if not obs :
+            returnval['result'] = "error"
+            returnval['reason'] = "UpdateOverlayHandler() - overlay has not parent observation"
+            logging.error(returnval['reason']) 
+            return self.response.write(json.dumps(returnval))
+        
+        logging.debug("UpdateOverlayHandler() Fetching visualization of image %s from collection :%s", obs.image_id, obs.image_collection)
+        
+        eeservice.initEarthEngineService() # we need earth engine now.
+        if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
+            returnval['result'] = "error"
+            returnval['reason'] = "UpdateOverlayHandler() - Cannot contact Google Earth Engine to update overlay"
+            logging.error(returnval['reason']) 
+            return self.response.write(json.dumps(returnval))
+   
+      
+        ovl.algorithm = algorithm # shouldn't change?
+        
+        map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, ovl.algorithm)
+        if not map_id:
+            returnval['result'] = "error"
+            returnval['reason'] = "UpdateOverlayHandler Could not find Image"
+            logging.error(returnval['reason']) 
+            self.populate_user_session()
+            self.response.write(json.dumps(returnval))
+            return
+      
+        ovl.map_id = map_id['mapid']
+        ovl.token = map_id['token']
+        
+        db.put(ovl) 
+        cache.set_keys([ovl])
+        
+        returnval = ovl.Overlay2Dictionary()
+        returnval['result'] = "success"
+        returnval['reason'] = "UpdateOverlayHandler() updated " + algorithm + "overlay"
+        logging.debug(returnval['reason']) 
+        
+        self.populate_user_session()
+        self.response.write(json.dumps(returnval))
+        
+class GetPriorObservationHandler(BaseHandler):
+    #This handler responds to Ajax request, hence it returns a response.write() 
 
     def get(self, username, obskey):
         user = cache.get_user(username) #not used.
         obs = cache.get_by_key(obskey) #FIXME make type safe for security.
-        logging.debug("GetPriorObservationHandler() Fetching %s visualization of image %s from collection :%s", obs.algorithm, obs.image_id, obs.image_collection)
+        logging.debug("GetPriorObservationHandler() Fetching visualizations for image %s from collection :%s", obs.image_id, obs.image_collection)
         if not obs :
             logging.error('GetPriorObservationHandler() - bad task')
             self.error(404)
             return
             
         eeservice.initEarthEngineService() # we need earth engine now.
-        algorithm = 'rgb'
+        #algorithm =obs.algorightm #'rgb'
         
-        map_id = eeservice.getPriorLandsatOverlay(obs.image_collection,  obs.image_id, algorithm)
+        map_id = eeservice.getPriorLandsatOverlay(obs)
         if not map_id:
             logging.error('Could not find Image') #needs a reload to display messages. 
             self.populate_user_session()
             self.response.write(json.dumps(map_id))
             return
-      
+  
         #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
         overlay = models.Overlay(parent = obs, 
-                                 image_id = map_id['id'], 
+                                 image_id = obs.image_id, 
                                  rgb_map_id = map_id['mapid'], 
                                  rgb_token = map_id['token'],  
-                                 algorithm = algorithm)
+                                 overlay_role = 'prior',
+                                 algorithm = 'rgb') #TODO what is the algorithm
  
         overlay.map_id = map_id['mapid'] 
         overlay.token  = map_id['token']  
-        #overlay.captured   = map_id['capture_datetime']
-        overlay.algorithm  = "rgb"
+       
         
         db.put(overlay) #TODO make a safe transaction
         
-        obs.map_id = map_id['mapid'] 
-        obs.token  = map_id['token']  
-        obs.captured   = map_id['capture_datetime'] # ?
-        obs.algorithm  = "rgb"
         obs.overlays.append(overlay.key())
         db.put(obs)
 
@@ -985,12 +1095,11 @@ class GetPriorObservationHandler(BaseHandler):
         cache.set_keys([obs])
         cache.set_keys([overlay])
         
-        logging.debug("Added map_id and token to observation")
-        del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
-        del map_id['capture_datetime'] #can't serialise a memory object
-        #logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
+        logging.debug("Added prior overlay map_id and token to observation")
+        #del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
+    
         self.populate_user_session()
-        self.response.write(json.dumps(map_id))
+        self.response.write(obs.Observation2Dictionary())
 
 '''
 ObservationTaskHandler() when a user clicks on a link in an obstask email they come here to see the new image.
@@ -2378,8 +2487,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
     # observation tasks
-    webapp2.Route(r'/obs/<username>/image/<obskey>', handler=GetObservationHandler, name='view-obs'), #AJAX call
-    webapp2.Route(r'/obs/<username>/prior/<obskey>', handler=GetPriorObservationHandler, name='view-prior'), #AJAX call
+    webapp2.Route(r'/obs/<username>/overlay/create/<obskey>/<algorithm>', handler=CreateOverlayHandler, name='create-overlay'), #AJAX call
+    webapp2.Route(r'/obs/<username>/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayHandler, name='update-overlay'), #AJAX call
+    webapp2.Route(r'/obs/<username>/prioroverlay/create/<obskey>', handler=GetPriorObservationHandler, name='view-prior'), #AJAX call
     webapp2.Route(r'/obs/<username>/<taskname>', handler=ObservationTaskHandler, name='view-task'),
     
     # taskqueue
