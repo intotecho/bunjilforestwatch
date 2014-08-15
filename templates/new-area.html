@@ -10,10 +10,11 @@
       #map-canvas { height: 100% }
 </style>
     
-<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> </script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,places,visualization,drawing"> </script>
 <script src="/static/js/polygon-outliner.js"></script>
 <script src="/static/js/GeoJSON.js"></script>
 <script type="text/javascript" src="/static/js/landsat-grid.js"></script> 
+<script type="text/javascript" src="/static/js/overlay-mgr.js"></script>
 <script type="text/javascript" src="/static/js/bootbox.min.js"></script>
 <script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>  
 <script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>  
@@ -24,7 +25,7 @@
       function initialize() {
     	  //bootbox.alert("Modal Dialog!");
         var mapOptions = {
-          center: new google.maps.LatLng(0, 22.233), //africa lat: 8.204, lng: 28.562// australia -34.397, 150.644
+          center: new google.maps.LatLng({{latlng}}), //0, 22.233, africa lat: 8.204, lng: 28.562// australia -34.397, 150.644
           overviewMapControl: true,
           zoom: 3,
           mapTypeId: google.maps.MapTypeId.HYBRID
@@ -39,8 +40,9 @@
 		$(window).bind('submit',function(){
 			  //alert("submitting");
 			  if(null==creator.showData()){
-					alert('Please first mark out the new area');
-		 		}else{
+					alert('Please mark out your area first, then click Create Area');
+		 		}
+			  else{
 		 			
 		 			//convert (x,y)(x,y) to [x,y], [x,y]  > This coordstring is only printed briefly in the panel, so can be deleted.
 		 			var str="[" + creator.showData(); 
@@ -79,9 +81,9 @@
 		 					               ]
 		 					             }// End newArea
 		 			var toServer = JSON.stringify(newArea);
-		 			//alert(toServer);
+		 			
 		 			document.getElementById("coordinates_id").value = toServer
-		 		}
+		 		};
 		});
 
         //reset
@@ -96,38 +98,34 @@
 			     console.log("map-panel draw");
 		 		$('#map_panel').empty();
 		 		if(null==creator.showData()){
-		 			$('#map_panel').append('Please first create a polygon');
+		 			$('#map_panel').append('Please mark out your area first, then click Create Area');
 		 		}else{
 		 			$('#map_panel').append(creator.showData());
 		 		}
 		 });
 
-			//Checkbox to show/hide overlays  		
-	   		$('.layer').click(function(){
-	   			var layerID = parseInt($(this).attr('id'));
-	   			
-	    		if ($(this).is(':checked')){
-	    			if(layerID == 0)
-	    			{
-	    				requestLandsatGrid(map, true, false, null);                 
-					}
-					if(layerID == 1)
-	    			{
-					    
-	    			}
-	    		} 
-	    		else {
-		    		if(layerID == 0)
-	    			{
-	    				requestLandsatGrid(map, false, false, null);
-	           		 	removeLandsatGrid();
-	    			}
-	    			if(layerID == 1)
-	    			{
-	        		}
-	        	}
-			});
-
+		//Checkbox to show/hide overlays  		
+   		$('.layer').click(function(){
+   			var layerID = parseInt($(this).attr('id'));
+   			
+    		if ($(this).is(':checked')){
+    			if(layerID == 0)
+    			{
+    				  
+    				createLandsatGridOverlay(map, 0.5, false, null);
+                    
+				}
+    		} 
+    		else {
+	    		if(layerID == 0)
+    			{
+                    createLandsatGridOverlay(map, 0, true, null);
+    				
+           		 	removeLandsatGrid();
+    			}
+        	}
+		});
+	
 		 //<!--resize div tip from https://github.com/twitter/bootstrap/issues/2475 -->
 		  
 		  $(window).resize(function () {
@@ -135,14 +133,15 @@
 	    	        offsetTop = 60; // Calculate the top offset
 
 	    	    $('#map-canvas').css('height', (h - offsetTop));
-	    	}).resize();   
+	      }).resize();   
 
 		  var instructions_content = 
             "<p>" +
-            "<li>Drag (Left click and hold) to move the center of the map over your area.</li>" + 
-            "<li>Zoom till your area takes up most of the map.</li>" + 
-            "<li>Tick the <b>Landsat Grid</b> checkbox to see where images will be taken.</li>" + 
-            "<li>Create markers by clicking around the boundary in an <b><ul>anticlockwise</b></ul> direction.</li> " +
+            "<li>Drag (Left click and hold) to move the center of the map over your area. " + 
+            "Or type the name of your region into the Search Box and the map center on it.</li>" + 
+            "<li>Zoom the map till whole area takes up most of the view.</li>" + 
+            "<li>Tick the <b>Landsat Grid</b> checkbox to see where landsat images will overlap.</li>" + 
+            "<li>Create markers by clicking around the boundary in an <b>anticlockwise</b> direction.</li> " +
             "<li>When you get back to the starting point, click on the first marker to close the area.</li>" +
             "<li>Once the area is drawn, you can adjust it by dragging the small squares.</li>" +
             "<li>Click <i>Start Again</i> if you make a mistake.</li> " +
@@ -160,17 +159,76 @@
 			  });
           $('#instructions').popover();
           
-          google.maps.event.addListener(map, 'idle', function() {
-              //This is needed so the fusion tables query works
-              var map_center = map.getCenter()
-              if (map_center.lng() < -180) { 
-                  map.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()+360));
-              }
-              if (map_center.lng() > 180) { 
-                  map_center.lng() -= 360;
-                  map.setCenter(map_center);
-              }
-           });
+          // Create the search box and link it to the UI element.
+          var markers = [];
+          var input = /** @type {HTMLInputElement} */(
+              document.getElementById('pac-input'));
+          map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+          var searchBox = new google.maps.places.SearchBox(
+            /** @type {HTMLInputElement} */(input));
+
+          // Listen for the event fired when the user selects an item from the
+          // pick list. Retrieve the matching places for that item.
+          google.maps.event.addListener(searchBox, 'places_changed', function() {
+	          var places = searchBox.getPlaces();
+	          if (places.length == 0) {
+	            return;
+	          }
+	
+	          for (var i = 0, marker; marker = markers[i]; i++) {
+	            marker.setMap(null);
+	          }
+	
+	          // For each place, get the icon, place name, and location.
+	          markers = [];
+	          var bounds = new google.maps.LatLngBounds();
+	          for (var i = 0, place; place = places[i]; i++) {
+	            var image = {
+	              url: '/static/img/cross-hair-target-col.png', //place.icon
+	              size: new google.maps.Size(100, 100),
+	              origin: new google.maps.Point(0, 0),
+	              anchor: new google.maps.Point(17, 34),
+	              scaledSize: new google.maps.Size(50, 50)
+	            };
+	
+	            // Create a marker for each place.
+	            var marker = new google.maps.Marker({
+	              map: map,
+	              icon: image,
+	              draggable: true,
+	              title: place.name,
+	              position: place.geometry.location,
+	              animation: google.maps.Animation.DROP
+	            });
+	          	
+	          	markers.push(marker);
+	
+	            //setTimeout(function() {
+	            //  }, 800);
+	            
+	            //bounds.extend(place.geometry.location);
+	            map.setCenter(place.geometry.location);
+	            map.setZoom(9);
+	          }
+          
+        });
+        google.maps.event.addListener(map, 'bounds_changed', function() {
+      	    var bounds = map.getBounds();
+      	    searchBox.setBounds(bounds);
+      	  });
+        
+        google.maps.event.addListener(map, 'idle', function() {
+            //This is needed so the fusion tables query works
+            var map_center = map.getCenter();
+            if (map_center.lng() < -180) { 
+                map.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()+360));
+            }
+            if (map_center.lng() > 180) { 
+                map_center.lng() -= 360;
+                map.setCenter(map_center);
+            }
+         });
       };
     
       google.maps.event.addDomListener(window, 'load', initialize);
@@ -186,13 +244,15 @@
 <div class="container">
 	<div class="row">
    		<div class="col-md-3">
+   		  <input id="pac-input" class="controls" type="text" placeholder="Search Box">
+ 
      		<!--Sidebar content <div class="control-group"> -->
+     		<h4>Create a new Area</h4>
    			<form id="new_area_form" class="form-vertical" method="POST">
 				<fieldset>
-					
                     <div >
                         <input id="instructions"  type="button"  class="btn btn-lightblue map-panel-controls"  rel="popover" 
-                        value="Instructions...?">
+                        value="Help ?">
                         
                     </div>
 					
@@ -213,13 +273,13 @@
 					</div>
 					<div class="controls">
 						<input id="coordinates_id" name="coordinates" type="hidden" value="undefined"/>
-					</div>					
+					</div>	
 					<div class="control-group">
 						<input type="submit" class="btn btn-lightgreen map-panel-controls" value="Create Area">
 					</div>
 					<div></div>
                     <div class="control-group">
-                        <input id="reset" type="reset" class="btn btn-lightred map-panel-oops-button"  value="Oops! Restart" data-toggle="tooltip" title="Clear all the markers on the map">
+                        <input id="reset" type="reset" class="btn btn-small btn-lightred map-panel-oops-button"  value="Oops! Restart" data-toggle="tooltip" title="Clear all the markers on the map">
 					<div id="map_panel" class="control-group" name="panel" >
 						<p class="divider"></p>
 			      	</div>
