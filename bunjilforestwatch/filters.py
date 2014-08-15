@@ -34,8 +34,16 @@ def url(ob, name=''):
 def user_area_url(username, area_name):
 	return webapp2.uri_for('view-area', username=username, area_name=area_name)
 
+
 def area_url(area, page=1):
 	return area.url(page)
+
+def user_task_url(username, task_name):
+	return webapp2.uri_for('view-task', username=username, task_name=task_name)
+
+def task_url(task, page=1):
+	return task.url(page)
+
 
 def area_prev(ob, page):
 	return area_url(ob, str(page - 1))
@@ -158,7 +166,9 @@ filters = dict([(i, globals()[i]) for i in [
 	'pluralize',
 	'sdate',
 	'timesince',
+	'task_url',
 	'url',
 	'user_journal_url',
 	'user_area_url',
+	'user_task_url'
 ]])
