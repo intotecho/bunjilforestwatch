@@ -164,7 +164,7 @@ class AreaOfInterest(db.Model):
 	min_row  = db.IntegerProperty(required=False, default=-1)
 	
 	#Geometry of area boundary
-	coordinates = db.ListProperty(db.GeoPt, default=None) # get rid of this and replace with fc.
+	coordinates = db.ListProperty(db.GeoPt, default=None) # TODO: Replace with fc.
 	boundary_fc = db.TextProperty(required = True) # ee.FeatureCollection or park boundary in JSON string format
 	bound = db.ListProperty(float, default=None)
 	max_latlon = db.GeoPtProperty(required=True, default=None)
@@ -359,7 +359,12 @@ class ObservationTask(db.Model):
 	#timestsamps
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
-
+	
+	def url(self, page=1):
+		if page > 1:
+			return webapp2.uri_for('view-task',  username=self.assigned_owner.name, task_name= "test2", page=page)
+		else:
+			return webapp2.uri_for('view-task', username=self.assigned_owner.name, task_name= "test")
 '''
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
 Based on journalr.org 
