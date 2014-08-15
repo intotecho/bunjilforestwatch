@@ -492,8 +492,18 @@ class NewAreaHandler(BaseHandler):
             self.render('index.html', {
                         'show_navbar': False           
             }) # no user so not logged in -redirect to login page.
-              
+
+        #country = self.request.headers.get('X-AppEngine-Country')
+        #print self.request.headers.items()
+        latlng = self.request.headers.get("X-AppEngine-CountryLatLong") #user's location to center initial new map
+        if latlng == None:
+            logging.error('NewAreaHandler: No X-AppEngine-CountryLatLong in header')  
+            latlng = '-37.814107,144.963280'
+            
+            
         self.render('new-area.html', {
+                #'country': country,
+                'latlng': latlng,
                 'username': username
             })    
 
@@ -547,7 +557,7 @@ class NewAreaHandler(BaseHandler):
                 #be good to add a bounding box too.
         if     self.session['areas_list']:
             if len(self.session['areas_list']) >= models.AreaOfInterest.MAX_AREAS:
-                self.add_message('warning', 'There is a quota of only %i areas per user.' %models.AreaOfInterest.MAX_AREAS)
+                self.add_message('warning', 'Sorry, there is a quota of only %i areas per user.' %models.AreaOfInterest.MAX_AREAS)
         if not name:
             self.add_message('error', 'Your area of interest needs a short and unique name. Please try again') #FIXME - This check should be done in the browser.
         else:
@@ -598,19 +608,21 @@ class NewAreaHandler(BaseHandler):
                         return user, area
     
                     xg_on = db.create_transaction_options(xg=True)
-                    
-                    user, area = db.run_in_transaction_options(xg_on, txn, self.session['user']['key'], area)
-    
-                    models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
-                    self.add_message('success', 'Created your new area of interest: %s covering about %d sq.km'  %(area.name, total_area ) )
-    
-                    cache.clear_area_cache(user.key(), area.key())
-                    #clear_area_followers(area.key())
-                    cache.set(cache.pack(user), cache.C_KEY, user.key())
-    
-                    counters.increment(counters.COUNTER_AREAS)
-                    
-                    self.populate_user_session()
+                    try:
+                        user, area = db.run_in_transaction_options(xg_on, txn, self.session['user']['key'], area)
+                        models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
+                        self.add_message('success', 'Created your new area of interest: %s covering about %d sq.km'  %(area.name, total_area ) )
+        
+                        cache.clear_area_cache(user.key(), area.key())
+                        #clear_area_followers(area.key())
+                        cache.set(cache.pack(user), cache.C_KEY, user.key())
+        
+                        counters.increment(counters.COUNTER_AREAS)
+                        
+                        self.populate_user_session()
+
+                    except: 
+                        self.add_message('error', "Sorry, Only ASCII in area names (We're working on it)" %name)
                     
                     #self.redirect(webapp2.uri_for('view-area', username=self.session['user']['name'], area_name=area.name))
                     self.redirect(webapp2.uri_for('view-area', area_name=area.name))
@@ -688,7 +700,7 @@ class NewJournal(BaseHandler):
             self.add_message('error', 'Your journal needs a name.')
         else:
             journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
-            for journal_url, journal_name, jounral_type in self.session['journals']:
+            for journal_url, journal_name, journal_type in self.session['journals']:
                 if journal.name == journal_name:
                     self.add_message('error', 'You already have a journal called %s.' %name)
                     break
@@ -740,12 +752,15 @@ class ViewArea(BaseHandler):
             #     logging.debug('ViewArea area_name %s %s', area.name, cell_list)
             #===================================================================
             
-            cell_list = area.CellList()    
+            cell_list = area.CellList()
+            observations =    {} 
+            
             self.render('view-area.html', {
                 'username': self.session['user']['name'],
                 'area': area,
                 'show_navbar': True,
-                'celllist':json.dumps(cell_list)
+                'celllist':json.dumps(cell_list),
+                'obslist': json.dumps(observations)
             })
             
             
@@ -802,6 +817,9 @@ class GetLandsatCellsHandler(BaseHandler):
             reason = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
             self.add_message('error', reason)
             logging.error(reason)
+            getCellsResult = {'result': result, 'reason': reason}
+            self.response.write(json.dumps(getCellsResult))
+            return
         else:
             #area.max_path, area.min_path, area.max_row, area.min_row, cell_list = eeservice.getLandsatCells(area)
             eeservice.getLandsatCells(area)
@@ -810,10 +828,10 @@ class GetLandsatCellsHandler(BaseHandler):
             reason = 'Your area is covered by {0:d} Landsat Cells'.format(len(area.cells))
             self.add_message('success',reason)
             logging.debug(reason)
-        
-        getCellsResult = {'result': result, 'reason': reason, 'cell_list': cell_list }
-        self.response.write(json.dumps(getCellsResult))
-        return 
+            
+            getCellsResult = {'result': result, 'reason': reason, 'cell_list': cell_list }
+            self.response.write(json.dumps(getCellsResult))
+            return 
 
 class LandsatOverlayRequestHandler(BaseHandler):
     #This handler responds to Ajax request, hence it returns a response.write()
@@ -829,7 +847,7 @@ class LandsatOverlayRequestHandler(BaseHandler):
         if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             logging.error('LandsatOverlayRequestHandler(): Ajax request expected ')
         
-        logging.debug("LandsatOverlayRequestHandler area:%s, action:%s, satelite:%s, algorithm:%s, latest:%s", area_name, action, satelite, algorithm, latest) #, opt_params['path'], opt_params['row'])
+        logging.debug("LandsatOverlayRequestHandler area:%s, action:%s, satellite:%s, algorithm:%s, latest:%s", area_name, action, satelite, algorithm, latest) #, opt_params['path'], opt_params['row'])
         if not area:
             logging.info('LandsatOverlayRequestHandler - bad area returned %s, %s', area, area_name)
             self.error(404)
@@ -838,7 +856,7 @@ class LandsatOverlayRequestHandler(BaseHandler):
         poly = []
         for geopt in area.coordinates:
             poly.append([geopt.lon, geopt.lat])
-        #eeservice.initEarthEngineService() # we need earth engine now.
+       
         if not eeservice.initEarthEngineService(): # we need earth engine now.
             #result = 'error'
             reason = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
@@ -853,33 +871,47 @@ class LandsatOverlayRequestHandler(BaseHandler):
             self.response.write(json.dumps(map_id))
             return
         
-        #Save observation 
+        #Save observation - will it work if no path or row?
         if 'path' in opt_params and 'row' in opt_params:
             path = int(opt_params['path'])
             row =  int(opt_params['row'])
             
-            logging.debug("LandsatOverlayRequestHandler() path %s, row %s", path, row)
+            #logging.debug("LandsatOverlayRequestHandler() path %s, row %s", path, row)
             cell = cache.get_cell(path, row)
-            
             if cell is not None:
                 #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
                 obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], 
                                          rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
-                overlay = models.Overlay(parent = db.Key(obs), image_id = map_id['id'], 
+            else:
+                reason = 'LandsatOverlayRequestHandler - cache.get_cell error'
+                logging.error(reason)
+                self.response.write("")
+        else:
+            obs = models.Observation(parent = area, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], 
                                          rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
- 
-                db.put(obs)
-                db.put(overlay) #TODO: Add to a single transaction.
+            
+        db.put(obs)
+        ovl = models.Overlay(parent = obs, 
+                                 map_id = map_id['mapid'], 
+                                 token = map_id['token'],
+                                 overlay_role = 'special',
+                                 algorithm = algorithm)
+        
+        db.put(ovl)  #Do first to create a key.
+        obs.overlays.append(ovl.key())
+        db.put(obs)  #TODO put inside a tx
+        cache.set_keys([obs, ovl])
 
-        del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
-        del map_id['capture_datetime'] #can't serialise a memory object, and browser won't need it so remove
         #logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
+        returnval = ovl.Overlay2Dictionary()
+        returnval['result'] = "success"
+        returnval['reason'] = "LandsatOverlayRequestHandler() created " + ovl.overlay_role + " " + ovl.algorithm + " overlay"
+        logging.debug(returnval['reason']) 
         self.populate_user_session()
-        self.response.write(json.dumps(map_id))
-
-
-
-#THIS IS NOT CALLED IN view-obs.html anymore. SEE CreateOverlayHandler and UpdateOVerlayHandler
+        self.response.write(json.dumps(returnval))
+        
+        
+#THIS IS NOT CALLED IN view-obs.html anymore. SEE CreateOverlayHandler and UpdateOVerlayHandler. maybe still called by view-area until that is updated.
 class GetObservationHandler(BaseHandler):
     #This handler responds to Ajax request, hence it returns a response.write()
 
@@ -943,9 +975,10 @@ CreateOverlayHandler() create a new overlay and appends it to the observation
 class CreateOverlayHandler(BaseHandler):
     #This handler responds to Ajax request, hence it returns a response.write()
 
-    def get(self, username, obskey, algorithm):
+    def get(self, username, obskey, role, algorithm):
         #user = cache.get_user(username) #not used.
         obs = cache.get_by_key(obskey) #FIXME make type safe for security.
+        returnval = {}
         
         if not obs:
             returnval['result'] = "error"
@@ -953,7 +986,7 @@ class CreateOverlayHandler(BaseHandler):
             logging.error(returnval['reason']) 
             return self.response.write(json.dumps(returnval))
         
-        logging.debug("CreateOverlayHandler() Fetching visualization of image %s from collection :%s", obs.image_id, obs.image_collection)
+        logging.debug("CreateOverlayHandler() Creating %s %s visualization of image %s from collection :%s", role, algorithm, obs.image_id, obs.image_collection)
         
         eeservice.initEarthEngineService() # we need earth engine now.
         if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
@@ -961,11 +994,22 @@ class CreateOverlayHandler(BaseHandler):
             returnval['reason'] = "CreateOverlayHandler() - Cannot contact Google Earth Engine to generate overlay"
             logging.error(returnval['reason']) 
             return self.response.write(json.dumps(returnval))
-        
-        map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, algorithm)
+           
+        if   role == 'latest':
+           map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, algorithm)
+        elif   role == 'special':
+           map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, algorithm)
+        elif role == 'prior':
+            map_id = eeservice.getPriorLandsatOverlay(obs)
+        else:
+            returnval['result'] = "error"
+            returnval['reason'] = "CreateOverlayHandler() - Unknown role " + role + " (use 'latest' or 'prior'). "
+            logging.error(returnval['reason']) 
+            return self.response.write(json.dumps(returnval))
+
         if not map_id:
             returnval['result'] = "error"
-            returnval['reason'] = "CreateOverlayHandler Could not find Image"
+            returnval['reason'] = "CreateOverlayHandler() Earth Engine did not return Overlay"
             logging.error(returnval['reason']) 
             self.populate_user_session()
             self.response.write(json.dumps(returnval))
@@ -973,26 +1017,25 @@ class CreateOverlayHandler(BaseHandler):
       
         #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
         ovl = models.Overlay(parent   = obs,
-                                 map_id   = map_id['mapid'], 
-                                 token    = map_id['token'],
-                                 overlay_role = 'latest',  #is it safe to assume?
-                                 algorithm = algorithm)
+                             map_id   = map_id['mapid'], 
+                             token    = map_id['token'],
+                             overlay_role = role,  #is it safe to assume?
+                             algorithm = algorithm)
+
+        #obs.captured = map_id['capture_datetime'] #we already  had this?
         
-        obs.captured = map_id['capture_datetime'] #we already  had this?
-        
-        db.put(ovl)  #Do first to create a key.TODO 
+        db.put(ovl)  #Do first to create a key.
         obs.overlays.append(ovl.key())
         db.put(obs)  #TODO put inside a tx
         cache.set_keys([obs, ovl])
 
         returnval = ovl.Overlay2Dictionary()
         returnval['result'] = "success"
-        returnval['reason'] = "CreateOverlayHandler() added " + algorithm + "overlay"
+        returnval['reason'] = "CreateOverlayHandler() added " + role + " " + algorithm + " overlay"
         logging.debug(returnval['reason']) 
         
-        self.populate_user_session()
+        #self.populate_user_session()
         self.response.write(json.dumps(returnval))
-
 
 # if Image is known.
 class UpdateOverlayHandler(BaseHandler):
@@ -1003,20 +1046,20 @@ class UpdateOverlayHandler(BaseHandler):
         ovl = cache.get_by_key(ovlkey) #FIXME make type safe for security.
         returnval = {}
         
-        if not ovl :
+        if not ovl:
             returnval['result'] = "error"
             returnval['reason'] = "UpdateOverlayHandler Could not find Image"
             logging.error(returnval['reason']) 
             return self.response.write(json.dumps(returnval))
 
         obs = ovl.parent();
-        if not obs :
+        if not obs:
             returnval['result'] = "error"
             returnval['reason'] = "UpdateOverlayHandler() - overlay has not parent observation"
             logging.error(returnval['reason']) 
             return self.response.write(json.dumps(returnval))
         
-        logging.debug("UpdateOverlayHandler() Fetching visualization of image %s from collection :%s", obs.image_id, obs.image_collection)
+        logging.debug("UpdateOverlayHandler() visualization of image %s from collection :%s", obs.image_id, obs.image_collection)
         
         eeservice.initEarthEngineService() # we need earth engine now.
         if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
@@ -1028,12 +1071,23 @@ class UpdateOverlayHandler(BaseHandler):
       
         ovl.algorithm = algorithm # shouldn't change?
         
-        map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, ovl.algorithm)
+        if   ovl.overlay_role == 'latest':
+            map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, ovl.algorithm)
+        elif  obl.overlay_role == 'special':
+           map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, algorithm)    
+        elif ovl.overlay_role == 'prior':
+            map_id = eeservice.getPriorLandsatOverlay(obs)
+        else:
+            returnval['result'] = "error"
+            returnval['reason'] = "UpdateOverlayHandler() - Unknown role " + ovl.overlay_role + "(use 'latest' or 'prior')."
+            logging.error(returnval['reason']) 
+            return self.response.write(json.dumps(returnval))
+        
         if not map_id:
             returnval['result'] = "error"
             returnval['reason'] = "UpdateOverlayHandler Could not find Image"
             logging.error(returnval['reason']) 
-            self.populate_user_session()
+            #self.populate_user_session()
             self.response.write(json.dumps(returnval))
             return
       
@@ -1045,70 +1099,22 @@ class UpdateOverlayHandler(BaseHandler):
         
         returnval = ovl.Overlay2Dictionary()
         returnval['result'] = "success"
-        returnval['reason'] = "UpdateOverlayHandler() updated " + algorithm + "overlay"
+        returnval['reason'] = "UpdateOverlayHandler() updated " +covl.overlay_role + " " + ovl.algorithm + " overlay"
         logging.debug(returnval['reason']) 
         
         self.populate_user_session()
         self.response.write(json.dumps(returnval))
-        
-class GetPriorObservationHandler(BaseHandler):
-    #This handler responds to Ajax request, hence it returns a response.write() 
 
-    def get(self, username, obskey):
-        user = cache.get_user(username) #not used.
-        obs = cache.get_by_key(obskey) #FIXME make type safe for security.
-        logging.debug("GetPriorObservationHandler() Fetching visualizations for image %s from collection :%s", obs.image_id, obs.image_collection)
-        if not obs :
-            logging.error('GetPriorObservationHandler() - bad task')
-            self.error(404)
-            return
-            
-        eeservice.initEarthEngineService() # we need earth engine now.
-        #algorithm =obs.algorightm #'rgb'
-        
-        map_id = eeservice.getPriorLandsatOverlay(obs)
-        if not map_id:
-            logging.error('Could not find Image') #needs a reload to display messages. 
-            self.populate_user_session()
-            self.response.write(json.dumps(map_id))
-            return
-  
-        #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-        overlay = models.Overlay(parent = obs, 
-                                 image_id = obs.image_id, 
-                                 rgb_map_id = map_id['mapid'], 
-                                 rgb_token = map_id['token'],  
-                                 overlay_role = 'prior',
-                                 algorithm = 'rgb') #TODO what is the algorithm
- 
-        overlay.map_id = map_id['mapid'] 
-        overlay.token  = map_id['token']  
-       
-        
-        db.put(overlay) #TODO make a safe transaction
-        
-        obs.overlays.append(overlay.key())
-        db.put(obs)
 
-        #cache.delete_item(obskey)
-        #cache.set  (  obskey, obs)
-        cache.set_keys([obs])
-        cache.set_keys([overlay])
-        
-        logging.debug("Added prior overlay map_id and token to observation")
-        #del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
-    
-        self.populate_user_session()
-        self.response.write(obs.Observation2Dictionary())
 
 '''
 ObservationTaskHandler() when a user clicks on a link in an obstask email they come here to see the new image.
 '''
 
 class ObservationTaskHandler(BaseHandler):
-    def get(self, username, taskname):
+    def get(self, username, task_name):
         user = cache.get_user(username)
-        task = cache.get_task(taskname)  #FIXME Must be typesafe
+        task = cache.get_task(task_name)  #FIXME Must be typesafe
         if task is not None:
             area = task.aoi 
             cell_list = area.CellList()  
@@ -1119,13 +1125,7 @@ class ObservationTaskHandler(BaseHandler):
             for obs_key in task.observations:
                 obs = cache.get_by_key(obs_key) 
                 if obs is not None:
-                    obslist.append(obs.Observation2Dictionary())
-#                     for overlay_key in obs.observations:
-#                         overlay=cache.get_by_key(overlay_key)
-#                         if overlay is not None:
-#                             overlaylist.append(overlay.Overlay2Dictionary())
-#                         else:
-#                             logging.error("Missing Overlay from cache")
+                    obslist.append(obs.Observation2Dictionary()) # includes a list of precomputed overlays
                 else:
                     logging.error("Missing Observation from cache")
                     
@@ -1141,7 +1141,7 @@ class ObservationTaskHandler(BaseHandler):
             })
   
         else:
-            resultstr = "Sorry, Task not found. ObservationTaskHandler: key {0!s}".format(taskname)
+            resultstr = "Sorry, Task not found. ObservationTaskHandler: key {0!s}".format(task_name)
             self.add_message('error', resultstr)
             self.response.write(resultstr)
    
@@ -1198,6 +1198,8 @@ class CheckNewHandler(BaseHandler):
                     user = cache.get_user(area_followers.users[0]) # TODO - This always assigns tasks to the first follower. 
                     new_task.assigned_owner = user
                     new_task.original_owner = user
+                    new_task.name = user.name + "'s task for " + area.name
+                    
                     db.put(new_task)
                     mailer.new_image_email(new_task, self.request.headers.get('host', 'no host'))
                     linestr += "<p>Created task with " + str(len(new_observations)) +" observations.</p>"
@@ -2487,10 +2489,10 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
     # observation tasks
-    webapp2.Route(r'/obs/<username>/overlay/create/<obskey>/<algorithm>', handler=CreateOverlayHandler, name='create-overlay'), #AJAX call
+    webapp2.Route(r'/obs/<username>/overlay/create/<obskey>/<role>/<algorithm>', handler=CreateOverlayHandler, name='create-overlay'), #AJAX call
     webapp2.Route(r'/obs/<username>/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayHandler, name='update-overlay'), #AJAX call
-    webapp2.Route(r'/obs/<username>/prioroverlay/create/<obskey>', handler=GetPriorObservationHandler, name='view-prior'), #AJAX call
-    webapp2.Route(r'/obs/<username>/<taskname>', handler=ObservationTaskHandler, name='view-task'),
+    #webapp2.Route(r'/obs/<username>/prioroverlay/create/<obskey>/<algorithm>', handler=CreatePriorOverlayHandler, name='create-prioroverlay'), #AJAX call
+    webapp2.Route(r'/obs/<username>/<task_name>', handler=ObservationTaskHandler, name='view-task'),
     
     # taskqueue
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
@@ -2500,6 +2502,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/%s.html' %settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
     
     webapp2.Route(r'/myareas', handler=ViewAreas, name='view-areas'),
+    webapp2.Route(r'/<username>/myareas', handler=ViewAreas, name='view-areas'),
     webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),
     webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),
     webapp2.Route(r'/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'), #was new-obstask
