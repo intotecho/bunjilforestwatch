@@ -1,0 +1,26 @@
+        <div class="accordion" id="inner_accordion">            
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_panel"> Area Description </a>
+                    </div>
+                    <div id="#area_descr_panel" class="accordion-body collapse in">
+                        <div class="accordion-inner">
+                            <p>{{ area.description }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#boundary_panel"> Boundary Coordinates </a>
+                    </div>
+                    <div id="boundary_panel" class="accordion-body collapse">
+                        <div class="accordion-inner small">
+                            <!--  {% for j in area.coordinates %}
+                            <p class="divider">{{j}}</p>
+                            {% endfor %} -->
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p/>
