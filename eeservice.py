@@ -225,55 +225,6 @@ def getLandsatImageById(collection_name,image_id, algorithm):
     return visualizeImage(collection_name, image, algorithm)
 
 
-'''
-getLandsatImageById(collection_name,image_id, algorithm )
-
-'''
-
-def getPriorLandsatOverlay(obs):
-
-    ref_image = ee.Image(obs.image_id)
-    props = ref_image.getInfo()['properties'] #logging.info('image properties: %s', props)
-    path = props['WRS_PATH']
-    row = props['WRS_ROW']
-    
-    system_time = datetime.datetime.fromtimestamp((props['system:time_start'] / 1000) -3600) #convert ms
-    date_str = system_time.strftime("%Y-%m-%d @ %H:%M")
-
-    before     = obs.captured - datetime.timedelta(days=1)
-    earliest   = obs.captured - datetime.timedelta(days=(3*365))
-    before_str   = before.strftime("%Y-%m-%d")
-    earliest_str = earliest.strftime("%Y-%m-%d")
-    
-    logging.info('getPriorLandsatOverlay id: %s, captured:%s from %s to :%s', obs.image_id, date_str, earliest_str, before_str)
-    
-    resultingCollection = ee.ImageCollection(obs.image_collection).filterDate(earliest, before).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row).filterMetadata('default:SUN_ELEVATION', 'GREATER_THAN', 0)
-
-    # Optional step that adds QA bits as separate bands to make it easier to debug.
-    collectionUnmasked = resultingCollection.map(add_date).map(L8AddQABands)
-   
-    collectionMasked = collectionUnmasked.map(maskL8)
-    
-    sky = collectionMasked.qualityMosaic('system:time_start')
-    #print sky
-    image_object = sky
-    [method for method in dir(image_object) if not method.startswith('_')]
-    print 'image methods' 
-    print method
-    print 'image methods - thats it!' 
-    #store a new overlay....
-    mapparams = {    'bands':  'B9', 
-                     'min': 0,
-                     'max': 30000,
-                     'gamma': 1.2,  #was 1.2
-                     'format': 'png'
-                }   
-
-    rgbVizParams = {'bands': 'B4,B3,B2', 'min':5000, 'max':30000, 'gamma': 1.6, 'format': 'png'}
-    return  ref_image.getMapId(rgbVizParams)
-#B9_THRESHOLD = 4200 #originally  5200
-
-
 def getQABits(image, start, end, newName):
     # Compute the bits we need to extract.
     pattern = 0
@@ -311,6 +262,59 @@ def maskL8(image):
 def add_date(image):
     timestamp = image.metadata('system:time_start')
     return image.addBands(timestamp)
+
+
+
+'''
+getLandsatImageById(collection_name,image_id, algorithm )
+
+'''
+
+def getPriorLandsatOverlay(obs):
+
+    ref_image = ee.Image(obs.image_id)
+    props = ref_image.getInfo()['properties'] #logging.info('image properties: %s', props)
+    path = props['WRS_PATH']
+    row = props['WRS_ROW']
+    
+    system_time = datetime.datetime.fromtimestamp((props['system:time_start'] / 1000) -3600) #convert ms
+    date_str = system_time.strftime("%Y-%m-%d @ %H:%M")
+
+    before     = obs.captured - datetime.timedelta(days=1)
+    earliest   = obs.captured - datetime.timedelta(days=(3*365))
+    before_str   = before.strftime("%Y-%m-%d")
+    earliest_str = earliest.strftime("%Y-%m-%d")
+    
+    logging.info('getPriorLandsatOverlay() id: %s, captured:%s from %s to :%s %d/%d', obs.image_id, date_str, earliest_str, before_str, path, row)
+    
+    resultingCollection = ee.ImageCollection('LC8').filterDate(earliest, before).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row).filterMetadata('default:SUN_ELEVATION', 'GREATER_THAN', 0)
+    
+    # Optional step that adds QA bits as separate bands to make it easier to debug.
+    collectionUnmasked = resultingCollection.map(add_date).map(L8AddQABands)
+   
+    collectionMasked = collectionUnmasked.map(maskL8) #mask out cloud affected pixes
+    
+    image_object = collectionMasked.qualityMosaic('system:time_start') #extract latest pixel
+    
+    #[method for method in dir(image_object) if not method.startswith('_')] # print all methods in ee object.
+
+    crs = image_object.getInfo()['bands'][0]['crs']
+    pcdict = getPercentile(ref_image, [5,95], crs)
+    
+    min = str(100 * pcdict['B4_p5']) + ', '  + str(100 * pcdict['B3_p5'])  + ', ' + str(100 * pcdict['B2_p5'])
+    max = str(100 * pcdict['B4_p95']) + ', ' + str(100 * pcdict['B3_p95']) + ', ' + str(100 * pcdict['B2_p95'])
+    logging.debug('Prior Percentiles  5%% %s 95%% %s', min, max)
+    
+    #rgbVizParams = {'bands': 'B4,B3,B2', 'min':min, 'max':max, 'gamma': 1.6, 'format': 'png'}
+    rgbVizParams = {'bands': 'B4,B3,B2', 'min':min, 'max':max, 'gamma': 1.2, 'format': 'png'}
+    
+    
+    
+    
+    return  image_object.getMapId(rgbVizParams)
+
+#B9_THRESHOLD = 4200 #originally  5200
+
 
 
 
@@ -511,8 +515,8 @@ Returns an earth engine mapid that can be displayed on a google map with additio
 
 '''
 def visualizeImage(collection_name, image, algorithm):
-    if not algorithm:
-        algorithm= 'rgb'
+    if algorithm is None:
+        algorithm = 'rgb'
     if collection_name == 'LANDSAT/LC8_L1T_TOA' :
         if algorithm.lower() == 'rgb':
             sharpimage = SharpenLandsat8HSVUpres(image)
@@ -560,10 +564,13 @@ def visualizeImage(collection_name, image, algorithm):
 
 
 def getLandsatOverlay(coords, satellite, algorithm, depth, params):
-    if satellite == 'l8':
+    if satellite.lower() == 'l8':
         collection_name = 'LANDSAT/LC8_L1T_TOA'
-    elif satellite == 'l7':
+    elif satellite.lower() == 'l7':
         collection_name = 'LANDSAT/LE7_L1T'  #Old name was 'LANDSAT/L7_L1T' 
+    else:
+        logging.error('getLandsatOverlay() collection %s not recognised defaulting to L8', satellite.lower())  
+        collection_name = 'LANDSAT/LC8_L1T_TOA'
 
     image = getLatestLandsatImage(coords, collection_name, depth, params)
     
