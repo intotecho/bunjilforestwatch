@@ -1,0 +1,598 @@
+{% extends "base.html" %} 
+{% block head %}
+<!-- Example URL  http://localhost:8001/obs/bunjilfw/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgMymCQw  -->
+<!-- http://localhost:8001/obs/test2/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgLbNCAw -->
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<style type="text/css">
+html {
+    height: 100%
+}
+
+#map-canvas-left {
+    height: 100%
+}
+
+#map-canvas-right {
+    height: 100%
+}
+</style>
+
+<link href="/static/css/jquery.nouislider.css" rel="stylesheet">
+
+<script type="text/javascript"
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> 
+</script>
+<script type="text/javascript" src="/static/js/draggable-object.js"></script>
+<script type="text/javascript" src="/static/js/custom-tile-overlay.js"></script> <!-- can remove -->
+<script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>
+<script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>
+<script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>
+<script type="text/javascript" src="/static/js/landsat-grid.js"></script>
+<script type="text/javascript" src="/static/js/overlay-mgr.js"></script>
+<script type="text/javascript" src="/static/js/polygon-outliner.js"></script>
+<script type="text/javascript" src="/static/js/drawing-tools.js"></script>
+<script type="text/javascript" src="/static/js/bootbox.min.js"></script>
+<script type="text/javascript" src="/static/js/jquery.nouislider.min.js"></script>
+<script type="text/javascript" src="/static/js/layerslider.js"></script>
+<script type="text/javascript" src="/static/js/view-maps.js"></script>
+
+<script>
+
+function httpgetActionUrl(action)
+{
+   // action/<action> can be 'overlay' or 'download' or image.
+   //TODO: satellite is 'l8' or 'l7' but should change to collection name.
+   //TODO: latest is still a global var....
+   var satellite = $("#satellite:first-child").text().trim();
+   var algorithm = $("#algorithm:first-child").text().trim();
+   var path = map_lhs.landsatGridOverlay.selectedPath;
+   var row  = map_lhs.landsatGridOverlay.selectedRow;
+
+   var url = "{{ area|area_url }}"  + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest
+   if((path != -1) && (row != -1))
+   {
+       url  += "/" + path + "/" + row;
+   }
+   return url
+};
+
+function ajaxActionUrl(action)
+{
+   // action can be 'overlay' or 'download'.
+   url = "{{ area|area_url }}"  + '/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
+   return url
+};
+
+
+function initialize() {
+    var map_center = new google.maps.LatLng({{area.map_center}});
+    var mapOptions = {
+        zoom: {{ area.map_zoom }},
+        center: map_center,    
+        mapTypeId: google.maps.MapTypeId.HYBRID,
+        panControl:true,
+        zoomControl:true,
+        mapTypeControl:true,
+        scaleControl:true,
+        streetViewControl:false,
+        overviewMapControl:false,
+        rotateControl:false,
+        clickable: true
+    }
+ 
+    map_lhs = new google.maps.Map(document.getElementById("map-canvas-left"), mapOptions);
+    map_rhs = new google.maps.Map(document.getElementById("map-canvas-right"), mapOptions);
+    map_lhs['side']="left";
+    map_rhs['side']="right"
+    if (single_map == true){
+    	
+        $('#map-div-right').hide();
+        $('#map-div-left').removeClass('col-md-5');
+        $('#map-div-left').addClass('col-md-10');
+    }
+    //wait for map to load so bounds are known before setting up landsat grid.    
+    google.maps.event.addListener(map_lhs, 'bounds_changed', function() {
+        
+    	createLandsatGridOverlay(map_lhs, 0.5, true, cellarray);
+        addLayer( map_lhs.landsatGridOverlay.name,
+                'Landsat Cells',
+                'gray',  
+                50, 
+                "Each Landsat image covers one of these cells.", 
+                layerslider_callback ); //create slider.
+                
+        $(map_panel).empty();
+        htmlString = "<p class= divider small><strong>zoom:</strong>   " + map_lhs.getZoom() + " ";
+        htmlString += "<strong>center:</strong><br>";
+        htmlString += "lat: " + map_lhs.getCenter().lat().toFixed(3) + ", lng: " + map_lhs.getCenter().lng().toFixed(3) + "<br></p>";
+        $(map_panel).html(htmlString);
+        
+        map_rhs.setCenter(map_lhs.getCenter());
+        map_rhs.setZoom(map_lhs.getZoom());
+    });
+
+    google.maps.event.addListener(map_rhs, 'bounds_changed', function() {    
+          //createLandsatGridOverlay(map_rhs, 0.1, true, cellarray);
+    });
+    
+    google.maps.event.addListener(map_lhs, 'zoom', function() { 
+        console.log("zoom to:", map_lhs.zoom());
+        map_rhs.setZoom(map_lhs.map_rhs.zoom());    
+    });
+
+    google.maps.event.addListener(map_rhs, 'zoom', function() { 
+        console.log("zoom to:", map_rhs.zoom());
+    });
+
+    google.maps.event.addListener(map_lhs, 'idle', function() {
+        //This is needed so the fusion tables query works
+        var map_center = map_lhs.getCenter()
+        if (map_center.lng() < -180) { 
+            map_lhs.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()+360));
+        }
+        if (map_center.lng() > 180) { 
+            map_center.lng() -= 360;
+            map_lhs.setCenter(map_center);
+        }
+        map_rhs.setCenter(map_center);
+     });
+
+    //Collect the Boundary coordinates from the area and convert to a Google Maps object.
+    
+    
+    boundary_coords = '<p class="divider small">'
+    {% for j in area.coordinates %}
+        var latlng = new google.maps.LatLng({{j}})
+        latlngs.push(latlng)
+        boundary_coords += latlng.toUrlValue(3) + '<br>';
+    {% endfor %}
+    boundary_coords += '</p>'
+    console.log(boundary_coords);
+    $('#boundary_panel').empty();
+    $('#boundary_panel').append(boundary_coords);
+    
+    //TODO: Note that Border of AOI does not adjust opacity yet.
+    areaBoundary_lhs = new google.maps.Polygon({
+                paths: latlngs,
+                strokeColor: '#FFFF00',
+                strokeOpacity: 0.5,
+                strokeWeight: 2,
+                fillColor: '#000000',
+                fillOpacity: 0.05
+    });
+    
+    areaBoundary_rhs = new google.maps.Polygon({
+        paths: latlngs,
+        strokeColor: '#FF00FF',
+        strokeOpacity: 0.5,
+        strokeWeight: 1,
+        fillColor: '#000000',
+        fillOpacity: 0.05
+    });
+    
+    areaBoundary_lhs.setMap(map_lhs);
+    areaBoundary_rhs.setMap(map_rhs);
+    areaBoundary_lhs.name = "boundary" ;
+    overlayMaps.push(areaBoundary_lhs);
+    
+    addLayer(areaBoundary_lhs.name, "{{area.name}} Border", "yellow",  50, "Boundary of Area {{area.name}}", layerslider_callback);
+    //addLayer("rhs_border", "{{area.name}} Border", "purple",  0, "Boundary of Area {{area.name}}" /*, layerslider_callback*/);
+      
+    /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
+     *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
+     */    
+    cellarray = {{celllist}}    //cellarray = jQuery.parseJSON({{celllist}});
+    
+    //console.log('Init:Cellarray from view-area handler: ', cellarray);
+    var jobid =-1;
+    if(cellarray.length == 0) { // Then fetch the overlapping cells from server.
+        console.log("Init: Fetching Overlapping Cells for Area");
+        var url = "{{ area|area_url }}"  + '/' + 'getcells';
+        console.log( "url: ", url);
+        
+        //$("#ee_panel").collapse('show');
+        //$('#ee_panel').empty();
+        //$('#ee_panel').append("<p class = 'small'>Calculating Landsat Cells ...");
+        //$('#ee_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+        prompt = "<p><small>Calculating Cells</small></p><img src='/static/img/ajax-loader.gif' class='ajax-loader'/>";
+        jobid = addJob(prompt, 'green');
+        console.log("jobid", jobid);
+        bootbox.dialog({
+            message: instructions_str,
+            title: "Next Steps",
+            closeButton: true,
+            buttons: {
+              success: {
+              label: "Continue ...",
+              className: "btn-success",
+              callback: function() {
+                  bootbox.hideAll();
+              }
+            }
+          }
+        })
+            
+        $.get(url).done(function(data) {
+                        
+            var getCellsResult = jQuery.parseJSON(data);
+            cellarray = getCellsResult.cell_list;
+            console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
+            
+            if (getCellsResult.result == 'success'){
+                
+                updateJob(jobid, "<p class = 'small'>Area has " + cellarray.length + " cells. ", black);
+               
+                createLandsatGridOverlay(map_lhs, 0.5, true, cellarray);
+                //$('.layer').prop('checked',true);
+            }
+            else
+            {
+                updateJob(jobid,"<p class = 'small'>GetCells Failed:" + getCellsResult.reason + "</p>", 'red');
+                
+                //TODO: Redirect to home?
+            }
+        }).error(function( jqxhr, textStatus, error ) {
+            var err = textStatus + ', ' + error;
+            console.log( "GetCells Failed: " + err);
+            updateJob(jobid, "<p class = 'small'>GetCells Failed: " + err + "</p>",'red');
+        });
+    } //get cells    
+    else
+    {
+        //server passed an existing cellarray - just display it.
+        createLandsatGridOverlay(map_lhs, 0.5, true, cellarray);
+    }
+    
+    observations = {{obslist}};
+
+    for (i=0; i < observations.length; i++) {        
+        displayObsOverlay(observations[i], 'latest', 'rgb'); //LHS overlay(s)
+        displayObsOverlay(observations[i], 'prior', 'rgb'); //RHS overlays(s)        
+     }
+ 
+    // View button will fetch Latest Overlay Image of selected (last clicked) cell on LHS.
+    $('#get_overlay_btn').click(function(){
+        requestAdHocOverlay();
+    }); //get_overlay_btn.click
+
+    //Checkbox to show/hide overlays  - these checkboxes will soon move to the layersliders      
+    $('.layer').click(function(){
+            var layerID = parseInt($(this).attr('id'));
+            if(layerID === 0) //Was LANDSAT grid - re use? 
+            {
+  
+            }
+            
+            if(layerID === 1) //Drawing Tools
+            {
+                if($(this).is(':checked')){
+                    drawingManager = createDrawingManager(map_lhs);
+                    google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+                        //if (event.type == google.maps.drawing.OverlayType.CIRCLE) {
+                        //  var radius = event.overlay.getRadius();
+                        href = "{{ "user"|url(user.name) }}/journal/Observations for {{area.name}}/new/";
+                        if (mapobj != null)
+                        {
+                            window.location.href = href + mapobj.id;
+                        }
+                        else
+                        {
+                            window.location.href = href + "Observation"; // no overlay for this observation
+                        }
+                    });
+                }
+                else {
+                    // TODO: Hide Drawing Tools                 
+                }
+            }
+            if(layerID === 2) //FORMA grid 
+            {
+                if($(this).is(':checked')){
+                  //getFORMA(map, true); //map, showlayer,
+                  
+                    $("#layers_panel").collapse('show');
+                    alert("Sorry, Not implemented");  
+                }
+                else {
+                  //getFORMA(map, false); //map, hide
+                    //removeLandsatGrid();  //TODO put inside above funciton.
+                    //$("#layers_panel").collapse('hide');
+                }
+            }
+    
+    });
+        
+    //Change the text in the drop-down button when a selection is changed.
+    $('#algorithm-visual').click(function(e){
+           $("#algorithm:first-child").text("RGB");
+           algorithm = 'rgb';
+           e.preventDefault();
+        });
+        $('#algorithm-ndvi').click(function(e){
+           $("#algorithm:first-child").text("NDVI");
+           algorithm = 'ndvi';
+           e.preventDefault();
+        });
+        $('#algorithm-change').click(function(e){
+           $("#algorithm:first-child").text("Change");
+           algorithm = 'change';
+           e.preventDefault();
+        });
+        
+        $('#latest').click(function(e){
+            $("#latest:first-child").text("Latest  ");
+            latest = 0;
+            e.preventDefault();
+        });
+        $('#latest-1').click(function(e){
+            $("#latest:first-child").text("Latest-1");
+            latest = 1;
+            e.preventDefault();
+        });
+        $('#latest-2').click(function(e){
+            $("#latest:first-child").text("Latest-2");
+            latest = 2;
+            e.preventDefault();
+        });
+        $('#latest-3').click(function(e){
+            $("#latest:first-child").text("Latest-3");
+            latest = 3;
+            e.preventDefault();
+        });
+        
+        $('#satellite').click(function(e){
+            $("#satellite:first-child").text("L8");
+            satellite = 'l8';
+            e.preventDefault();
+        });
+        $('#satellite-l7').click(function(e){
+            $("#satellite:first-child").text("L7");
+            satellite = 'l7';
+            e.preventDefault();
+        });
+        $('#satellite-both').click(function(e){
+            $("#satellite:first-child").text("Both");
+            satellite = 'l78';
+            e.preventDefault();
+        });
+        
+        $(window).resize(function () {
+                //<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
+            var h = $(window).height(),
+                    offsetTop = 60; // Calculate the top offset
+                $('#map-canvas-left').css('height', (h - offsetTop));
+                $('#map-canvas-right').css('height', (h - offsetTop));
+            }).resize();
+        // now map is drawn is a good time to set up the Instructions Popover.
+      
+
+        $('#instructions').popover({ 
+            html : true, 
+            animation: true,
+            trigger: 'hover',
+            container: 'body',
+            title: 'Select and view Cells',  
+            placement: 'bottom',
+            content: instructions_str
+            });
+        $('#instructions').popover();
+        
+        $('#lock-map-rhs').click(function(e){
+            alert ("lock map - not implemented");
+            console.log("lock map");
+        });
+
+        $('#expand-map-rhs').click(function(e){
+           if(e.target.checked) {
+            $('#map-div-right').hide();
+            $('#map-div-left').removeClass('col-md-5');
+            $('#map-div-left').addClass('col-md-10');
+           }
+           else {
+                  $('#map-div-left').removeClass('col-md-10');
+                  $('#map-div-left').addClass('col-md-5');        
+                  $('#map-div-right').show();
+                  google.maps.event.trigger(map_rhs,'resize');
+           }
+           google.maps.event.trigger(map_lhs,'resize');
+        });
+
+};//initialize
+
+google.maps.event.addDomListener(window, 'load', initialize); 
+
+</script>
+{% block map_head %} {% endblock  map_head%} 
+
+{% endblock  head%} 
+
+{% block content %}
+{% block breadcrumbs %}{% endblock breadcrumbs %} 
+
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-xs-2" style="margin: 0;">
+            <h5>
+                <i>Your Observation Task</i>
+            </h5>
+            <div class="controls">
+                <input id="instructions" type="button" class="btn btn-sm btn-lightblue map-panel-controls" rel="popover"
+                    value="Help ?">
+            </div>
+                <div class="accordion" id="accordion2">
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#layer_table"> Layers </a>
+                    </div>
+                    <div class="accordion-body collapse in">
+                        <div class="accordion-inner">
+                            <div class="container-fluid">
+                                <div class="row">
+                                    <div id="layer_table" class=" panel-tight">
+                                        <!-- LayerTemplate rows dynamcially inserted here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#jobs_table"> Updating </a>
+                    </div>
+                    <div class="accordion-body collapse in">
+                        <div class="accordion-inner">
+                            <div class="container-fluid">
+                                <div class="row">
+                                    <div id="jobs_table" class=" panel-tight">
+                                        <!-- JobsTemplate rows dynamcially inserted here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#area_panel"> Area  </a>
+                    </div>
+                    <div id="area_panel" class="accordion-body collapse">
+                        <div class="accordion-inner">
+                            {% include "accordion.html" %}
+                        </div>
+                    </div>
+                </div>
+                
+  
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#reports_panel"> Reports </a>
+                    </div>
+                    <div id="reports_panel" class="accordion-body collapse">
+                        <div class="accordion-inner">
+                            <p>No reports
+                            <p>
+                        </div>
+                    </div>
+                </div>
+    
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#map_panel"> Map View </a>
+                    </div>
+                    <div id="map_panel" class="accordion-body collapse">
+                        <div class="accordion-inner">
+                            <p class="divider">"Map initial view (saved)"</p>
+                            <p class="divider">"Center: {{area.map_center}}"</p>
+                            <p class="divider">"Zoom: {{area.map_zoom}}"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            
+            <div class="btn-toolbar" role="toolbar">
+                <div class="btn-group">
+                    <button id='algorithm' type="button"  class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
+                        data-toggle="tooltip" title="Select RGB for true colour or NDVI to highlight vegetation change">
+                        RGB<span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="#" id='algorithm-visual'>RGB</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#" id='algorithm-ndvi'>NDVI</a></li>
+                        <li><a href="#" id='algorithm-change'>Change</a></li>
+                    </ul>
+                </div>
+                <div class="btn-group">
+                    <button id='latest' type="button" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
+                        data-toggle="tooltip" title="Select the latest image, the one before or the one before that)">
+                        Latest<span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="#" id='latest'>Latest</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#" id='latest-1'>Latest-1</a></li>
+                        <li><a href="#" id='latest-2'>Latest-2</a></li>
+                        <li><a href="#" id='latest-3'>Latest-3</a></li>
+                    </ul>
+                </div>
+                
+                <div class="btn-group">
+                    <button id='satellite' type="button" style="width: 40px" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
+                        data-toggle="tooltip" title="Select Landsat7, Landsat 8)">
+                        L8<span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="#" id='satellite-l7'>L7</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#" id='satellite-both'></a></li>
+                    </ul>
+                </div>
+            </div>
+        
+            
+        
+        
+            <div class="btn-toolbar" >
+                <div class="btn-group">
+                    <button id='get_overlay_btn' type="button" style="width: 43px" class="btn btn-xs btn-lightblue" data-toggle="tooltip"
+                        title="Fetch the image matching the above settings.">View</button>
+                </div>
+            </div>
+            <div>
+                <p>
+                        <input type="checkbox" id="1" class="layer" unchecked data-toggle="tooltip" title="Report a change or disturbance" /><label for=1">Make Report
+                    </label> <input type="checkbox" id="2" class="layer" unchecked data-toggle="tooltip"
+                        title="Show FORMA estimate of recent tree loss" /><label for=2">FORMA</label>
+            </div>
+    
+        </div>
+        <div id="map-div-left" class="col-md-5">
+            <!-- Left Hand Map Element -->
+            <div id="map-canvas-left"></div>
+        </div>
+        <div id="map-div-right" class="col-md-5">
+            <!--Right Hand Map Element -->
+            <div id="map-canvas-right"></div>
+        </div>
+    </div>
+</div>
+
+{% block map_content %}{% endblock %}
+
+{%block layer_template %}
+<!--TEMPLATE DIV  does not display till added by addLayer() call. See layerslider.js ?-->
+<div class="row" id='LayerTemplate' style='display: none'>
+    <div class="col-xs-1 col-sm-1 col-md-1">
+        <input id='tcheckbox_id' type="checkbox" class="panel-tight checklabel" name="layer_enable" value="On" checked="true" />
+    </div>
+
+    <div class="col-xs-3 col-sm-3 col-md-3">
+        <div id='tslider_id' class="slider"></div>
+    </div>
+    <div id='tlabel_id' class="panel-tight layerlabel col-xs-5 col-sm-5 col-md-5" data-toggle="tooltip" title="template tooltip">
+        <small>template label</small>
+    </div>
+</div>
+{% endblock layer_template %}
+
+{%block jobs_template %}
+
+<!--TEMPLATE DIV  does not display till added by addLayer() call. -->
+<div class="row addjobdiv" id='JobTemplate' >
+        <a id='tcross_id' class="close">&times;</a> 
+      <div id='tlabel_id'class="col-xs-11" style='margin: 0'>
+       <small>template message text to replace</small>
+    </div>
+</div>
+<!--END TEMPLATE DIV  ?-->
+{%endblock jobs_template %}
+
+{% endblock %}
+
