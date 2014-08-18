@@ -498,9 +498,7 @@ class NewAreaHandler(BaseHandler):
         latlng = self.request.headers.get("X-AppEngine-CountryLatLong") #user's location to center initial new map
         if latlng == None:
             logging.error('NewAreaHandler: No X-AppEngine-CountryLatLong in header')  
-            latlng = '-37.814107,144.963280'
-            
-            
+            latlng = '-37.814107,+144.963280'
         self.render('new-area.html', {
                 #'country': country,
                 'latlng': latlng,
@@ -620,15 +618,15 @@ class NewAreaHandler(BaseHandler):
                         counters.increment(counters.COUNTER_AREAS)
                         
                         self.populate_user_session()
-
+                        self.redirect(webapp2.uri_for('view-area', area_name=area.name))
+                        return
                     except: 
-                        self.add_message('error', "Sorry, Only ASCII in area names (We're working on it)" %name)
-                    
-                    #self.redirect(webapp2.uri_for('view-area', username=self.session['user']['name'], area_name=area.name))
-                    self.redirect(webapp2.uri_for('view-area', area_name=area.name))
-                    return
-        print 'NewAreaHandler - no user'
-        self.render('new-area.html')
+                        self.add_message('error', "Sorry, Only ASCII in area names: %s (We're working on it)") # FIXME:BPA-  
+                        self.redirect(webapp2.uri_for('new-area'))
+                        return
+        logging.error('NewAreaHandler - no user')
+        #self.render('new-area.html')
+
 
 
 '''
@@ -1092,14 +1090,14 @@ class UpdateOverlayHandler(BaseHandler):
             return
       
         ovl.map_id = map_id['mapid']
-        ovl.token = map_id['token']
+        ovl.token  = map_id['token']
         
         db.put(ovl) 
         cache.set_keys([ovl])
         
         returnval = ovl.Overlay2Dictionary()
         returnval['result'] = "success"
-        returnval['reason'] = "UpdateOverlayHandler() updated " +covl.overlay_role + " " + ovl.algorithm + " overlay"
+        returnval['reason'] = "UpdateOverlayHandler() updated " + ovl.overlay_role + " " + ovl.algorithm + " overlay"
         logging.debug(returnval['reason']) 
         
         self.populate_user_session()
@@ -1143,6 +1141,7 @@ class ObservationTaskHandler(BaseHandler):
         else:
             resultstr = "Sorry, Task not found. ObservationTaskHandler: key {0!s}".format(task_name)
             self.add_message('error', resultstr)
+            loggging.error(resultstr)
             self.response.write(resultstr)
    
 '''
