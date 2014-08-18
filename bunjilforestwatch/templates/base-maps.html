@@ -90,17 +90,9 @@ function initialize() {
         $('#map-div-left').removeClass('col-md-5');
         $('#map-div-left').addClass('col-md-10');
     }
-    //wait for map to load so bounds are known before setting up landsat grid.    
+  
     google.maps.event.addListener(map_lhs, 'bounds_changed', function() {
         
-    	createLandsatGridOverlay(map_lhs, 0.5, true, cellarray);
-        addLayer( map_lhs.landsatGridOverlay.name,
-                'Landsat Cells',
-                'gray',  
-                50, 
-                "Each Landsat image covers one of these cells.", 
-                layerslider_callback ); //create slider.
-                
         $(map_panel).empty();
         htmlString = "<p class= divider small><strong>zoom:</strong>   " + map_lhs.getZoom() + " ";
         htmlString += "<strong>center:</strong><br>";
@@ -131,8 +123,7 @@ function initialize() {
             map_lhs.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()+360));
         }
         if (map_center.lng() > 180) { 
-            map_center.lng() -= 360;
-            map_lhs.setCenter(map_center);
+            map_lhs.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()-360));
         }
         map_rhs.setCenter(map_center);
      });
@@ -183,20 +174,16 @@ function initialize() {
      */    
     cellarray = {{celllist}}    //cellarray = jQuery.parseJSON({{celllist}});
     
-    //console.log('Init:Cellarray from view-area handler: ', cellarray);
+  
     var jobid =-1;
     if(cellarray.length == 0) { // Then fetch the overlapping cells from server.
         console.log("Init: Fetching Overlapping Cells for Area");
         var url = "{{ area|area_url }}"  + '/' + 'getcells';
         console.log( "url: ", url);
-        
-        //$("#ee_panel").collapse('show');
-        //$('#ee_panel').empty();
-        //$('#ee_panel').append("<p class = 'small'>Calculating Landsat Cells ...");
-        //$('#ee_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
-        prompt = "<p><small>Calculating Cells</small></p><img src='/static/img/ajax-loader.gif' class='ajax-loader'/>";
-        jobid = addJob(prompt, 'green');
-        console.log("jobid", jobid);
+
+        prompt = "<h6><small>Calculating Cells</small></h6><img src='/static/img/ajax-loader.gif' class='ajax-loader'/>";
+        jobid = addJob(prompt, 'gray');
+       
         bootbox.dialog({
             message: instructions_str,
             title: "Next Steps",
@@ -219,12 +206,17 @@ function initialize() {
             console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
             
             if (getCellsResult.result == 'success'){
-                
-                updateJob(jobid, "<p class = 'small'>Area has " + cellarray.length + " cells. ", black);
+                var plurals = (cellarray.length == 1)? ' cell covers': ' cells cover';
+                updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area.</p> ", 'black');
                
-                createLandsatGridOverlay(map_lhs, 0.5, true, cellarray);
-                //$('.layer').prop('checked',true);
-            }
+                createLandsatGridOverlay(map_lhs, 0.75, true, cellarray);
+                addLayer( map_lhs.landsatGridOverlay.name,
+                        'Landsat Cells',
+                        'brown',  
+                        75, 
+                        "Cells show the outline of Landsat images.", 
+                        layerslider_callback ); //create slider.
+            }            
             else
             {
                 updateJob(jobid,"<p class = 'small'>GetCells Failed:" + getCellsResult.reason + "</p>", 'red');
@@ -232,15 +224,21 @@ function initialize() {
                 //TODO: Redirect to home?
             }
         }).error(function( jqxhr, textStatus, error ) {
-            var err = textStatus + ', ' + error;
+            var err = textStatus + ', ' + error; 
             console.log( "GetCells Failed: " + err);
             updateJob(jobid, "<p class = 'small'>GetCells Failed: " + err + "</p>",'red');
         });
-    } //get cells    
+    } //get cells     
     else
     {
         //server passed an existing cellarray - just display it.
         createLandsatGridOverlay(map_lhs, 0.5, true, cellarray);
+        addLayer( map_lhs.landsatGridOverlay.name,
+                'Landsat Cells',
+                'gray',  
+                50, 
+                "Each Landsat image covers one of these cells.", 
+                layerslider_callback ); //create slider.
     }
     
     observations = {{obslist}};
@@ -253,6 +251,7 @@ function initialize() {
     // View button will fetch Latest Overlay Image of selected (last clicked) cell on LHS.
     $('#get_overlay_btn').click(function(){
         requestAdHocOverlay();
+        
     }); //get_overlay_btn.click
 
     //Checkbox to show/hide overlays  - these checkboxes will soon move to the layersliders      
