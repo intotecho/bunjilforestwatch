@@ -305,8 +305,8 @@ def getPriorLandsatOverlay(obs):
     max = str(100 * pcdict['B4_p95']) + ', ' + str(100 * pcdict['B3_p95']) + ', ' + str(100 * pcdict['B2_p95'])
     logging.debug('Prior Percentiles  5%% %s 95%% %s', min, max)
     
-    #rgbVizParams = {'bands': 'B4,B3,B2', 'min':min, 'max':max, 'gamma': 1.6, 'format': 'png'}
-    rgbVizParams = {'bands': 'B4,B3,B2', 'min':min, 'max':max, 'gamma': 1.2, 'format': 'png'}
+    rgbVizParams = {'bands': 'B4,B3,B2', 'min':5000, 'max':30000, 'gamma': 1.6, 'format': 'png'}
+    #rgbVizParams = {'bands': 'B4,B3,B2', 'min':min, 'max':max, 'gamma': 1.2, 'format': 'png'}
     
     
     
