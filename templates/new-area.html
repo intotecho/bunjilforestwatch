@@ -24,8 +24,12 @@
     
       function initialize() {
     	  //bootbox.alert("Modal Dialog!");
+    	var center = "{{latlng}}";
+    	var  arr = center.split(',');
+    	
         var mapOptions = {
-          center: new google.maps.LatLng({{latlng}}), //0, 22.233, africa lat: 8.204, lng: 28.562// australia -34.397, 150.644
+          //center: new google.maps.LatLng({{latlng}}), //8.204, 22.233, africa lat: 8.204, lng: 28.562// australia -34.397, 150.644
+           center: new google.maps.LatLng(arr[0], arr[1]),
           overviewMapControl: true,
           zoom: 3,
           mapTypeId: google.maps.MapTypeId.HYBRID
@@ -37,57 +41,66 @@
         var creator = new PolygonCreator(map);       
 
         //function to add the polygon coordinates to the form data prior to submit. 
-		$(window).bind('submit',function(){
-			  //alert("submitting");
-			  if(null==creator.showData()){
-					alert('Please mark out your area first, then click Create Area');
-		 		}
-			  else{
-		 			
-		 			//convert (x,y)(x,y) to [x,y], [x,y]  > This coordstring is only printed briefly in the panel, so can be deleted.
-		 			var str="[" + creator.showData(); 
-		 			var n=str.replace(/\(/gi, "[");
-		 			var m=n.replace(/\)\[/gi,   "], [");
-		 			var coordstring=m.replace(/\)/gi, "]]");
-		 			$('#map_panel').append(coordstring);
-		 				 					 			
-					//format polygon string returned by showData into an array of mypoints
-		 			boundaryPoints = Array();
-		 			var x = creator.showData();
-					while(x.length > 1) {
-					     var n = x.slice(x.indexOf("(")+1, x.indexOf(")") );
-					     var m = n.split(",");
-					     x=x.slice(x.indexOf(")")+1);
-					     p= [parseFloat(m[0]), parseFloat(m[1])];
-					     boundaryPoints.push(p);
-					}
-					
-					// get and send the viewing parameters of the map
-					var unwrapped_mapcenter = map.getCenter(); // can exceed 90lat or 180 lon
-					var mapcenter = new google.maps.LatLng(unwrapped_mapcenter.lat(), unwrapped_mapcenter.lng()); //wrapped.
-					
-					var mapzoom = map.getZoom();
-		 					 			
-		 			var newArea = { "type": "FeatureCollection",
-		 					 			 "features": [
-											{ "type": "Feature",
-    											"geometry":   {"type": "Point", "coordinates": [mapcenter.lat(), mapcenter.lng()]},
-    											"properties": {"featureName": "mapview", "zoom": mapzoom }
-    										},
-		 					                { "type": "Feature",
-		 					                 	"geometry":   {"type": "Polygon","coordinates": boundaryPoints},
-		 					                    "properties": {"featureName": "boundary"}
-		 					                 }
-		 					               ]
-		 					             }// End newArea
-		 			var toServer = JSON.stringify(newArea);
-		 			
-		 			document.getElementById("coordinates_id").value = toServer
-		 		};
-		});
+
+        $('#createarea_id').click(function(){ 
+        	if(null == creator.showData()){
+                  alert('Please mark out your area first, then click Create Area');
+                  return;
+            }
+
+        	area_name =  $('#area_name').val();
+        	console.log("area name:" + area_name);
+        	
+        	if ((null == area_name) || (area_name === "")) {
+                  alert('Please give your area a name, then click Create Area');
+                  return;
+            }
+      
+            //convert (x,y)(x,y) to [x,y], [x,y]  > This coordstring is only printed briefly in the panel, so can be deleted.
+            var str="[" + creator.showData(); 
+            var n=str.replace(/\(/gi, "[");
+            var m=n.replace(/\)\[/gi,   "], [");
+            var coordstring=m.replace(/\)/gi, "]]");
+            $('#map_panel').append(coordstring);
+                                                
+            //format polygon string returned by showData into an array of mypoints
+            boundaryPoints = Array();
+            var x = creator.showData();
+            while(x.length > 1) {
+                 var n = x.slice(x.indexOf("(")+1, x.indexOf(")") );
+                 var m = n.split(",");
+                 x=x.slice(x.indexOf(")")+1);
+                 p= [parseFloat(m[0]), parseFloat(m[1])];
+                 boundaryPoints.push(p);
+            }
+            
+            // get and send the viewing parameters of the map
+            var unwrapped_mapcenter = map.getCenter(); // can exceed 90lat or 180 lon
+            var mapcenter = new google.maps.LatLng(unwrapped_mapcenter.lat(), unwrapped_mapcenter.lng()); //wrapped.
+            
+            var mapzoom = map.getZoom();
+                                
+            var newArea = { "type": "FeatureCollection",
+                                 "features": [
+                                    { "type": "Feature",
+                                        "geometry":   {"type": "Point", "coordinates": [mapcenter.lat(), mapcenter.lng()]},
+                                        "properties": {"featureName": "mapview", "zoom": mapzoom }
+                                    },
+                                    { "type": "Feature",
+                                        "geometry":   {"type": "Polygon","coordinates": boundaryPoints},
+                                        "properties": {"featureName": "boundary"}
+                                     }
+                                   ]
+                                 }// End newArea
+            var toServer = JSON.stringify(newArea);
+            document.getElementById("coordinates_id").value = toServer
+            $("#new_area_form").submit();
+            
+         });         
+
 
         //reset
-		$('#reset').click(function(){ 
+		$('#reset_id').click(function(){ 
 		 		creator.destroy();
 		 		creator=null;
 		 		creator=new PolygonCreator(map);
@@ -260,7 +273,7 @@
 						<label class="control-label map-panel-controls" for="name" data-toggle="tooltip"
 						title="Choose a short unique name that will identify the area to others">
 						Name: <span style="color: #ff0000">*</span></label>
-						<input class="map-panel-controls" id="name" name="name" type="text"/>
+						<input class="map-panel-controls" id="area_name" name="name" type="text"/>
 					</div>
                     <div  >
 						<label class="control-label" for="description"  data-toggle="tooltip" 
@@ -271,15 +284,15 @@
 						<input type="checkbox" id="0" class="layer" unchecked/>
 						<label for="0">Show Landsat Grid </label>
 					</div>
-					<div class="controls">
-						<input id="coordinates_id" name="coordinates" type="hidden" value="undefined"/>
-					</div>	
 					<div class="control-group">
-						<input type="submit" class="btn btn-lightgreen map-panel-controls" value="Create Area">
+						<input id = "createarea_id" type="button" class="btn btn-lightgreen map-panel-controls" value="Create Area">
 					</div>
-					<div></div>
                     <div class="control-group">
-                        <input id="reset" type="reset" class="btn btn-small btn-lightred map-panel-oops-button"  value="Oops! Restart" data-toggle="tooltip" title="Clear all the markers on the map">
+                        <input id="reset_id" type="button" class="btn btn-small btn-lightred map-panel-oops-button"  value="Oops! Restart" data-toggle="tooltip" title="Clear all the markers on the map">
+                    <div class="controls">
+                        <input id="coordinates_id" name="coordinates" type="hidden" value="undefined">
+                    </div>  
+
 					<div id="map_panel" class="control-group" name="panel" >
 						<p class="divider"></p>
 			      	</div>
