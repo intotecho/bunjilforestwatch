@@ -36,6 +36,11 @@ handlers:
 - url: /login/google
   script: main.app
   login: required
+  secure: always
+
+- url: /obs/*
+  script: main.app
+  login: required
 
 - url: /admin/.*
   script: main.app
@@ -44,6 +49,7 @@ handlers:
 - url: /tasks/.*
   script: main.app
   login: admin
+
 
 - url: /.*
   script: main.app
