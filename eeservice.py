@@ -40,6 +40,11 @@ import ee
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
+# from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
+PRODUCTION_MODE = not os.environ.get(
+    'SERVER_SOFTWARE', 'Development').startswith('Development')
+    
+
 '''
 initEarthEngineService()
 Call once per session to authenticate to EE
@@ -75,7 +80,8 @@ class EarthEngineService():
             logging.info("EarthEngineService Not Ready - Initialising ...")
             EarthEngineService.earthengine_intialised = reallyinitEarthEngineService()
         else:
-            logging.info("EarthEngineService is Ready")
+            if not PRODUCTION_MODE:
+                logging.debug("EarthEngineService is Ready")
                 
         return EarthEngineService.earthengine_intialised
    
