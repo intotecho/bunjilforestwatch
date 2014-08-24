@@ -291,7 +291,7 @@ class Overlay(db.Model):
 	token	  = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Token might have expired.
 	algorithm = db.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
 	overlay_role      = db.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
-	
+	 
 	#observation = db.ReferenceProperty(db.Model) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
 
 	def Overlay2Dictionary(self):		
