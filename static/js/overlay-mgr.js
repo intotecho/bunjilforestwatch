@@ -47,7 +47,7 @@ function fetchOverlay(overlayname, tooltip, prompt, httpget_url) {
       $.get(httpget_url).done(function(data) {
 	       var ovl = jQuery.parseJSON(data);
 	       if (ovl) {
-		       if (ovl.result =='error') {
+		       if (ovl.result == 'error') {
 	    	   		updateJob(jobid, "<p class = 'small'>" + ovl.reason +"</p><br>", 'red');
 		    	   }
 		       else {
@@ -119,7 +119,7 @@ function displayObsOverlay(obs, role, algorithm) {
 
 function displayOverlay(ovl, overlayname, tooltip) { //overlay is current so add it to the map.
     
-    var map =    ((ovl.overlay_role == 'latest') ?  map_lhs : map_rhs);    
+    var map =    ((ovl.overlay_role == 'prior') ?  map_rhs : map_lhs);    
     var colour; 
     
     if (ovl.overlay_role == 'latest') 
