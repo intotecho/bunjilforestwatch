@@ -38,15 +38,22 @@ import models
 import settings
 import twitter
 import utils
+from urlparse import urlparse
+
+from apiclient.discovery import build
+from oauth2client.appengine import OAuth2Decorator
 
 
-# from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
+from google.appengine.ext.webapp.util import login_required
+
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
+    
 if not PRODUCTION_MODE:
     from google.appengine.tools.devappserver2.python import sandbox
     sandbox._WHITE_LIST_C_MODULES += ['_ctypes', 'gestalt']
     disable_ssl_certificate_validation = True # bug in HTTPlib i think
+
     
 def rendert(s, p, d={}):
     session = s.session
@@ -116,7 +123,7 @@ class BaseHandler(webapp2.RequestHandler):
     #This function adds the below data to the data returned to the template. 
     def populate_user_session(self, user=None):
         if 'user' not in self.session and not user:
-            logging.error("populate_session() - no user!")
+            logging.error("populate_user_session() - no user!")
             return
         elif not user:
             user = cache.get_user(self.session['user']['name'])
@@ -131,7 +138,7 @@ class BaseHandler(webapp2.RequestHandler):
             'role' : user.role
         }
         self.session['journals'] = cache.get_journal_list(db.Key(self.session['user']['key']))
-        self.session['areas_list']    = cache.get_areas_list(db.Key(self.session['user']['key'])) #TOD This list can be long and expensive.
+        self.session['areas_list']    = cache.get_areas_list(db.Key(self.session['user']['key'])) #TODO This list can be long and expensive.
         self.session['following_areas_list'] = cache.get_following_areas_list(self.session['user']['name'])
         #self.session['areas']    = cache.get_areas(db.Key(self.session['user']['key']))
         #self.session['following_areas']    = cache.get_by_keys(cache.get_following_areas(self.session['user']['name']), 'AreaOfInterest')
@@ -269,16 +276,28 @@ class FacebookCallback(BaseHandler):
 
             
 class GoogleLogin(BaseHandler):
-    def get(self):
+    def get(self): 
         current_user = users.get_current_user()
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())
-        
-
         if not registered:
             self.redirect(webapp2.uri_for('register'))
         else:
             self.redirect(webapp2.uri_for('main'))
 
+              
+    def get2(self, protected_url): 
+        current_user = users.get_current_user()
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())
+        if not registered:
+            self.redirect(webapp2.uri_for('register'))
+        else:
+            #if protected_url == None:
+            #self.redirect(webapp2.uri_for('main'))
+            #else:
+            self.redirect(protected_url)
+            
+            
+            
 class FacebookLogin(BaseHandler):
     def get(self):
         if 'callback' in self.request.GET:
@@ -295,7 +314,6 @@ class FacebookLogin(BaseHandler):
             return
 
         self.redirect(webapp2.uri_for('main'))
-
 
             
 class Register(BaseHandler):
@@ -366,7 +384,7 @@ class Logout(BaseHandler):
 class GoogleSwitch(BaseHandler):
     def get(self):
         self.logout()
-        self.redirect(users.create_logout_url(webapp2.uri_for('login-google')))
+        self.redirect(users.create_logout_url(webapp2.uri_for('login-google', protected_url = '/')))
 
 class AccountHandler(BaseHandler):
     def get(self):
@@ -486,19 +504,32 @@ class AccountHandler(BaseHandler):
 
 class NewAreaHandler(BaseHandler):
     def get(self):
+        current_user = users.get_current_user()
+        if  not current_user:
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.error('No user logged in. Redirecting from protected url: ' + original_url)
+            self.add_message('error', 'You must log in to create a new area .')
+            return self.redirect(users.create_login_url(original_url))
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
+ 
+        if not registered:
+            return self.redirect(webapp2.uri_for('register'))
+
         try:
             username = self.session['user']['name']
-        except: 
-            self.render('index.html', {
-                        'show_navbar': False           
-            }) # no user so not logged in -redirect to login page.
+        except:
+            logging.error('Should never get this exception')
+            self.add_message('error', 'You must log in to create a new area.')
+            
+            if 'user' not in self.session:
+                self.redirect(webapp2.uri_for('main'))
+                return
 
-        #country = self.request.headers.get('X-AppEngine-Country')
-        #print self.request.headers.items()
-        latlng = self.request.headers.get("X-AppEngine-CountryLatLong") #user's location to center initial new map
+        latlng = self.request.headers.get("X-Appengine-Citylatlong") #user's location to center initial new map
         if latlng == None:
-            logging.error('NewAreaHandler: No X-AppEngine-CountryLatLong in header')  
-            latlng = '-37.814107,+144.963280'
+            logging.error('NewAreaHandler: No X-Appengine-Citylatlong in header')  
+            latlng = '8.2, 22.2'
         self.render('new-area.html', {
                 #'country': country,
                 'latlng': latlng,
@@ -838,12 +869,16 @@ class LandsatOverlayRequestHandler(BaseHandler):
         area = cache.get_area(None, area_name)
 
         if not area:
-            logging.info('LandsatOverlayRequestHandler: ViewArea is not an area') 
-            self.error(404)
+            returnval = {}
+            returnval['result'] = "error"
+            returnval['reason'] = 'LandsatOverlayRequestHandler: Invalid area ' + area_name
+            self.add_message('error', returnval['reason'] )
+            logging.error(returnval['reason'])
+            self.response.write(json.dumps(returnval))
             return
 
         if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            logging.error('LandsatOverlayRequestHandler(): Ajax request expected ')
+            logging.info('LandsatOverlayRequestHandler(): Ajax request expected ')
         
         logging.debug("LandsatOverlayRequestHandler area:%s, action:%s, satellite:%s, algorithm:%s, latest:%s", area_name, action, satelite, algorithm, latest) #, opt_params['path'], opt_params['row'])
         if not area:
@@ -856,17 +891,21 @@ class LandsatOverlayRequestHandler(BaseHandler):
             poly.append([geopt.lon, geopt.lat])
        
         if not eeservice.initEarthEngineService(): # we need earth engine now.
-            #result = 'error'
-            reason = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
-            #self.add_message('error', reason)
-            logging.error(reason)
-            self.response.write("")
+            returnval = {}
+            returnval['result'] = "error"
+            returnval['reason'] = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
+            self.add_message('error', returnval['reason'] )
+            logging.error(returnval['reason'])
+            self.response.write(json.dumps(returnval))
         
         map_id = eeservice.getLandsatOverlay(poly, satelite, algorithm, latest, opt_params)
         if not map_id:
-            #self.add_message('info','no overlapping image found for this cell') add_message needs a reload to display messages. 
-            self.populate_user_session()
-            self.response.write(json.dumps(map_id))
+            returnval = {}
+            returnval['result'] = "error"
+            returnval['reason'] = 'Sorry, Cannot creat overlay.  Google Earth Engine did not provide a map_id. Please come back later'
+            self.add_message('error', returnval['reason'] )
+            logging.error(returnval['reason'])
+            self.response.write(json.dumps(returnval))
             return
         
         #Save observation - will it work if no path or row?
@@ -881,9 +920,13 @@ class LandsatOverlayRequestHandler(BaseHandler):
                 obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], 
                                          rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
             else:
-                reason = 'LandsatOverlayRequestHandler - cache.get_cell error'
-                logging.error(reason)
-                self.response.write("")
+                returnval = {}
+                returnval['result'] = "error"
+                returnval['reason'] = 'LandsatOverlayRequestHandler - cache.get_cell error'
+                self.add_message('error', returnval['reason'] )
+                logging.error(returnval['reason'])
+                self.response.write(json.dumps(returnval))
+ 
         else:
             obs = models.Observation(parent = area, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], 
                                          rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
@@ -903,65 +946,12 @@ class LandsatOverlayRequestHandler(BaseHandler):
         #logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
         returnval = ovl.Overlay2Dictionary()
         returnval['result'] = "success"
-        returnval['reason'] = "LandsatOverlayRequestHandler() created " + ovl.overlay_role + " " + ovl.algorithm + " overlay"
+        returnval['reason'] = "LandsatOverlayRequestHandler() created " + ovl.overlay_role + " " + ovl.algorithm + " overlay."
         logging.debug(returnval['reason']) 
-        self.populate_user_session()
+        #self.populate_user_session() - no user in Ajax call.
         self.response.write(json.dumps(returnval))
         
         
-#THIS IS NOT CALLED IN view-obs.html anymore. SEE CreateOverlayHandler and UpdateOVerlayHandler. maybe still called by view-area until that is updated.
-class GetObservationHandler(BaseHandler):
-    #This handler responds to Ajax request, hence it returns a response.write()
-
-    def get(self, username, obskey):
-        user = cache.get_user(username) #not used.
-        obs = cache.get_by_key(obskey) #FIXME make type safe for security.
-        if not obs :
-            logging.error('GetObservationHandler() - bad task')
-            self.error(404)
-            return
-        
-        logging.debug("GetObservationHandler() Fetching visualization of image %s from collection :%s", obs.image_id, obs.image_collection)
-        
-        eeservice.initEarthEngineService() # we need earth engine now.
-        algorithm = 'rgb'
-        
-        map_id = eeservice.getLandsatImageById(obs.image_collection,  obs.image_id, algorithm)
-        if not map_id:
-            logging.error('Could not find Image') #needs a reload to display messages. 
-            self.populate_user_session()
-            self.response.write(json.dumps(map_id))
-            return
-      
-        #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-        overlay = models.Overlay(parent   = obs,
-                                 observation = obs,
-                                 map_id   = map_id['mapid'], 
-                                 token    = map_id['token'],  
-                                 algorithm = algorithm)
-        
-        db.put(overlay) #TODO make a safe transaction
-        obs.captured   = map_id['capture_datetime']
-        
-        #obs.map_id = map_id['mapid'] 
-        #obs.token  = map_id['token']  
-        #obs.algorithm  = "rgb"
-        
-        obs.overlays.append(overlay.key())
-        db.put(obs)
-
-        #cache.delete_item(obskey)
-        #cache.set  (  obskey, obs)
-        cache.set_keys([obs])
-        cache.set_keys([overlay])
-        
-        logging.debug("Added map_id and token to observation")
-        #del map_id['image'] #can't serialise a memory object, and browser won't need it so remove
-        #del map_id['capture_datetime'] #can't serialise a memory object
-        #logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
-        self.populate_user_session()
-        #self.response.write(json.dumps(map_id))
-        self.response.write(obs.Observation2Dictionary())
 
 '''
 CreateOverlayHandler() create a new overlay and appends it to the observation
@@ -1009,7 +999,7 @@ class CreateOverlayHandler(BaseHandler):
             returnval['result'] = "error"
             returnval['reason'] = "CreateOverlayHandler() Earth Engine did not return Overlay"
             logging.error(returnval['reason']) 
-            self.populate_user_session()
+            #self.populate_user_session()
             self.response.write(json.dumps(returnval))
             return
       
@@ -1040,7 +1030,8 @@ class UpdateOverlayHandler(BaseHandler):
     #This handler responds to Ajax request, hence it returns a response.write()
 
     def get(self, username, ovlkey, algorithm):
-        user = cache.get_user(username) #not used.
+        #user = cache.get_user(username) #not used.
+        
         ovl = cache.get_by_key(ovlkey) #FIXME make type safe for security.
         returnval = {}
         
@@ -1110,13 +1101,28 @@ ObservationTaskHandler() when a user clicks on a link in an obstask email they c
 '''
 
 class ObservationTaskHandler(BaseHandler):
+    
     def get(self, username, task_name):
-        user = cache.get_user(username)
+        current_user = users.get_current_user()
+        if  not current_user:
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.error('No user logged in. Cannot access protected url' + original_url)
+            return self.redirect(users.create_login_url(original_url))
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
+
+        task_owner = cache.get_user(username) #user who owns the task is passed in url.
+
+        if task_owner is None:
+            self.add_message('error', 'Sorry, invalid task owner: ' + username)
+            self.redirect(webapp2.uri_for('main'))
+            return
+         
         task = cache.get_task(task_name)  #FIXME Must be typesafe
         if task is not None:
             area = task.aoi 
             cell_list = area.CellList()  
-            resultstr = "New Task for {0!s} to check area {1!s}".format(user.name, area.name )
+            resultstr = "New Task for {0!s} to check area {1!s}".format(task_owner.name, area.name )
             #self.add_message('success', resultstr)
             debugstr = resultstr + " task: " + str(task.key()) + " has " + str(len(task.observations)) + "observations"
             obslist = []
@@ -1129,9 +1135,11 @@ class ObservationTaskHandler(BaseHandler):
                     
             #logging.debug( json.dumps(obslist))
             
+            self.populate_user_session(user)
             self.render('view-obs.html', {
-                'username': self.session['user']['name'],
+                'username':  self.session['user']['name'],
                 'area': area,
+                'owner': task_owner,
                 'task': task,
                 'show_navbar': True,
                 'obslist': json.dumps(obslist),
@@ -1141,7 +1149,7 @@ class ObservationTaskHandler(BaseHandler):
         else:
             resultstr = "Sorry, Task not found. ObservationTaskHandler: key {0!s}".format(task_name)
             self.add_message('error', resultstr)
-            loggging.error(resultstr)
+            logging.error(resultstr)
             self.response.write(resultstr)
    
 '''
@@ -2467,6 +2475,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/feeds/<feed>', handler=FeedsHandler, name='feeds'),
     webapp2.Route(r'/following/<username>', handler=FollowingHandler, name='following'),
     webapp2.Route(r'/login/facebook', handler=FacebookLogin, name='login-facebook'),
+    #webapp2.Route(r'/login/google/<protected_url>', handler=GoogleLogin, name='login-google'),
     webapp2.Route(r'/login/google', handler=GoogleLogin, name='login-google'),
     webapp2.Route(r'/logout', handler=Logout, name='logout'),
     webapp2.Route(r'/logout/google', handler=GoogleSwitch, name='logout-google'),
@@ -2520,8 +2529,8 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/<username>/journal/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
     webapp2.Route(r'/<username>/journal/<journal_name>/download', handler=DownloadJournalHandler, name='download-journal'),
     webapp2.Route(r'/<username>/journal/<journal_name>/new/<images:[^/]+>', handler=NewEntryHandler, name='new-entry'),
-    webapp2.Route(r'/<username>/journal/<journal_name>/new', handler=NewEntryHandler, name='new-entry'),
-
+    webapp2.Route(r'/<username>/journal/<journal_name>/new', handler=NewEntryHandler, name='new-entry')
+    
     ], debug=True, config=config)
 
 RESERVED_NAMES = set([
@@ -2587,7 +2596,7 @@ RESERVED_NAMES = set([
     'twitter',
     'upload',
     'user',
-    'users',
+    'users'
 ])
 
 
