@@ -195,9 +195,9 @@ def get_other_areas(username, user_key): # returns list of areas I created but i
         #print ("get_other_areas: ", udata, af)
         otherareas = [x for x in allareas if x.name not in af and  x.owner.name != username ] # remove areas user created and elements in af that user follows
         data = otherareas #[(x.url(), x.name, x.owner.name) for x in otherareas]
-        for y in data:
-            print "get_other_areas() returns: ",  y
-        print "get_other_areas() reloaded: ", username, user_key
+        #for y in data:
+        #    print "get_other_areas() returns: ",  y
+        #print "get_other_areas() reloaded: ", username, user_key
         memcache.add(n, pack(data))
         #memcache.add(n, data)
 
