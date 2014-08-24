@@ -411,9 +411,9 @@ google.maps.event.addDomListener(window, 'load', initialize);
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-xs-2" style="margin: 0;">
-            <h5>
-                <i>Your Observation Task</i>
+        <div class="col-xs-2 lesspadding" style="margin: 0;">
+            <h5 lesspadding>
+                <i>Manage Your Area</i>
             </h5>
             <div class="controls">
                 <input id="instructions" type="button" class="btn btn-sm btn-lightblue map-panel-controls" rel="popover"
@@ -490,75 +490,80 @@ google.maps.event.addDomListener(window, 'load', initialize);
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            
-            
-            
-            <div class="btn-toolbar" role="toolbar">
-                <div class="btn-group">
-                    <button id='algorithm' type="button"  class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
-                        data-toggle="tooltip" title="Select RGB for true colour or NDVI to highlight vegetation change">
-                        RGB<span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#" id='algorithm-visual'>RGB</a></li>
-                        <li class="divider"></li>
-                        <li><a href="#" id='algorithm-ndvi'>NDVI</a></li>
-                        <li><a href="#" id='algorithm-change'>Change</a></li>
-                    </ul>
-                </div>
-                <div class="btn-group">
-                    <button id='latest' type="button" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
-                        data-toggle="tooltip" title="Select the latest image, the one before or the one before that)">
-                        Latest<span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#" id='latest'>Latest</a></li>
-                        <li class="divider"></li>
-                        <li><a href="#" id='latest-1'>Latest-1</a></li>
-                        <li><a href="#" id='latest-2'>Latest-2</a></li>
-                        <li><a href="#" id='latest-3'>Latest-3</a></li>
-                    </ul>
+                
+               <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#ad_hoc_panel"> Create Overlay</a>
+                    </div>
+                    <div id="ad_hoc_panel" class="accordion-body collapse">
+                        <div class="accordion-inner">
+                              <div class="btn-toolbar" role="toolbar">
+				                <div class="btn-group">
+				                    <button id='algorithm' type="button"  class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
+				                        data-toggle="tooltip" title="Select RGB for true colour or NDVI to highlight vegetation change">
+				                        RGB<span class="caret"></span>
+				                    </button>
+				                    <ul class="dropdown-menu" role="menu">
+				                        <li><a href="#" id='algorithm-visual'>RGB</a></li>
+				                        <li class="divider"></li>
+				                        <li><a href="#" id='algorithm-ndvi'>NDVI</a></li>
+				                        <li><a href="#" id='algorithm-change'>Change</a></li>
+				                    </ul>
+				                </div>
+				                <div class="btn-group">
+				                    <button id='latest' type="button" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
+				                        data-toggle="tooltip" title="Select the latest image, the one before or the one before that)">
+				                        Latest<span class="caret"></span>
+				                    </button>
+				                    <ul class="dropdown-menu" role="menu">
+				                        <li><a href="#" id='latest'>Latest</a></li>
+				                        <li class="divider"></li>
+				                        <li><a href="#" id='latest-1'>Latest-1</a></li>
+				                        <li><a href="#" id='latest-2'>Latest-2</a></li>
+				                        <li><a href="#" id='latest-3'>Latest-3</a></li>
+				                    </ul>
+				                </div>
+				                
+				                <div class="btn-group" >
+				                    <button id='satellite' type="button" style="width: 40px" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
+				                        data-toggle="tooltip" title="Select Landsat7, Landsat 8)">
+				                        L8<span class="caret"></span>
+				                    </button>
+				                    <ul class="dropdown-menu" role="menu">
+				                        <li><a href="#" id='satellite-l7'>L7</a></li>
+				                        <li class="divider"></li>
+				                        <li><a href="#" id='satellite-both'></a></li>
+				                    </ul>
+				                </div>
+				                <p class="white-font"> `</p>
+				                <div class="btn-group">
+				                    <button id='get_overlay_btn' type="button"  style="padding:4px"  class="btn btn-xs btn-lightblue" data-toggle="tooltip"
+				                        title="Fetch the image matching the above settings.">Create Overlay</button>
+				                </div>
+				            </div>
+                         
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="btn-group">
-                    <button id='satellite' type="button" style="width: 40px" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
-                        data-toggle="tooltip" title="Select Landsat7, Landsat 8)">
-                        L8<span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#" id='satellite-l7'>L7</a></li>
-                        <li class="divider"></li>
-                        <li><a href="#" id='satellite-both'></a></li>
-                    </ul>
-                </div>
             </div>
-        
-            
-        
-        
-            <div class="btn-toolbar" >
-                <div class="btn-group">
-                    <button id='get_overlay_btn' type="button" style="width: 43px" class="btn btn-xs btn-lightblue" data-toggle="tooltip"
-                        title="Fetch the image matching the above settings.">View</button>
-                </div>
-            </div>
+                 
+
             <div>
                 <p>
-                        <input type="checkbox" id="1" class="layer" unchecked data-toggle="tooltip" title="Report a change or disturbance" /><label for=1">Make Report
-                    </label> <input type="checkbox" id="2" class="layer" unchecked data-toggle="tooltip"
-                        title="Show FORMA estimate of recent tree loss" /><label for=2">FORMA</label>
+                   <input type="checkbox" id="1" class="layer" unchecked data-toggle="tooltip" title="Report a change or disturbance" /><label for="1">Make Report</label> 
+                   <!--  <input type="checkbox" id="2" class="layer" unchecked data-toggle="tooltip"
+                   title="Show FORMA estimate of recent tree loss" /><label for="2">FORMA</label>  -->
             </div>
     
         </div>
-        <div id="map-div-left" class="col-md-5">
+        <div id="map-div-left" class="col-md-5 lesspadding">
             <!-- Left Hand Map Element -->
-            <div id="map-canvas-left"></div>
+            <div id="map-canvas-left" style="border:1px solid black"></div>
         </div>
-        <div id="map-div-right" class="col-md-5">
+        <div id="map-div-right" class="col-md-5 lesspadding">
             <!--Right Hand Map Element -->
-            <div id="map-canvas-right"></div>
+            <div id="map-canvas-right" style="border:1px solid black"></div>
         </div>
     </div>
 </div>
