@@ -2,7 +2,7 @@
 
 <!-- THIS IS THE HOME PAGE WHEN NOT LOGGED IN  -->
 {% block content %}
-<link rel='stylesheet' type='text/css' href='http://fonts.googleapis.com/css?family=Chewy'>
+<link rel='stylesheet' type='text/css' href='//fonts.googleapis.com/css?family=Chewy'>
 <link rel='stylesheet' type='text/css' href='/static/css/bootstrap-social.css'>
 <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
 
@@ -10,39 +10,42 @@
 	<div class="row" style='margin-bottom: 0'>
 		<div class="page-header chewy-font col-xs-8">
 			<h1>
-				Bunjil Community Forest Watch <br>
+				 Forest Watch Community<br>
 				<small> Communities protecting forests</small>
 			</h1>
+			<div id="watermark">
+                <p>Prototype!</p>
+            </div>
 		</div>
 		<div class="col-xs-4">
                     <a class="btn btn-block btn-social btn-google-plus" data-toggle="tooltip"
                         title="Only your email address will be shared with this app. Neither your password nor any other details are shared."
-                        href="/login/google"> <i class="fa fa-google-plus"></i>Sign in with Google</a>
+                        href="/login/google"> <i class="fa fa-google-plus"></i>Already Registered? Sign in</a>
 		</div>
 	   </div>
  	<div class="row">
 		<div class="col-xs-6">
 			<div class="row">
 				<div class="col-xs-6 well">
-					<h3>Register</h3>
+					<h3>Forest Locals</h3>
 					<p>How can Bunjil Forest Watch help you?</p>
-					<p>We look after our forest. Alert us when the forest changes.</p>
+					<p>We want to protect our forest. Tell us when the forest changes.</p>
 					<p>
 						<a class="btn btn-block btn-google-plus" data-toggle="tooltip"
 							title="Only your email address will be shared with this app. Neither your password nor any other details are shared."
-							href="/login/google"> <i class="fa"></i>Sign up with Google
+							href="/login/google"> <i class="fa"></i>Register your forest 
 						</a>
 					</p>
 				</div>
 				<div class="col-xs-6 well">
 					<!-- <legend class="the-legend">Volunteer</legend>  -->
-					<h3>Volunteer</h3>
+					<h3>City Volunteers</h3>
 					<p>I want to help locals protect their forest. </p>
-					<p>Sign up to become a Forest Watch Volunteer.</p>
+					<p>Get Involved  - become a Forest Watch Volunteer.</p>
 					<p>
 						<a class="btn btn-block btn-google-plus" data-toggle="tooltip"
 							title="Only your email address will be shared with this app. Neither your password nor any other details are shared."
-							href="/login/google"> <i class="fa "></i>Sign up with Google
+							href="/login/google"> <i class="fa "></i>Sign up !
 						</a>
 					</p>
 				</div>
@@ -61,7 +64,7 @@
 		</div>
 	<!-- Embed the Hansen Map -->
 	<iframe width="90%" height="400"
-		src="http://earthenginepartners.appspot.com/science-2013-global-forest?hl=en&llbox=62.208%2C55.679%2C44.273%2C23.267&t=ROADMAP&layers=2%2Clayer4%2Clayer0%2C11%2C12&embedded=true"
+		src="//earthenginepartners.appspot.com/science-2013-global-forest?hl=en&llbox=62.208%2C55.679%2C44.273%2C23.267&t=ROADMAP&layers=2%2Clayer4%2Clayer0%2C11%2C12&embedded=true"
 		style="border: 1px solid #ccc"></iframe>
 
 	<!--  Social Buttons
@@ -78,7 +81,7 @@
                            <i class="fa fa-facebook"></i></a> 
              <a class="btn btn-social-icon btn-xs btn-linkedin" onclick="_gaq.push(['_trackEvent', 'btn-social-icon', 'click', 'btn-linkedin']);"><i
                     class="fa fa-linkedin"></i></a>  -->
-	<!--   To get these and other buttons working see: http://docs.gae-init.appspot.com/ -->
+	<!--   To get these and other buttons working see: //docs.gae-init.appspot.com/ -->
 
 </div>
 

@@ -9,15 +9,15 @@
 
 <link rel="alternate" type="application/atom+xml" title="bunjil forest watch" href="{{ "feeds"|url("blog") }}">
 
-<link rel="stylesheet" href='http://fonts.googleapis.com/css?family=Montserrat:400,700' type='text/css'>
-<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+<link rel="stylesheet" href='//fonts.googleapis.com/css?family=Montserrat:400,700' type='text/css'>
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
 <link rel="stylesheet" href="/static/css/wbpreview-theme.css"> <!-- Theme for the messages -->
 
 <link rel="stylesheet" href="/static/css/site.css">
-<script type="text/javascript" src="http://code.jquery.com/jquery.min.js"></script>  <!-- v1.11.1 -->
-<script type="text/javascript" src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>  <!-- v1.11.1 -->
+<script type="text/javascript" src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script type="text/javascript" src="/static/js/site.js"></script>
 
 
@@ -44,7 +44,7 @@
 					   <a href="{{ "main"|url }}">home</a>
 					</li>
 					<li {% if active== "index" or active== "index-user" %} class="active"{% endif %}> 
-					   <a href="http://bunjilforestwatch.wordpress.com/">blog</a>
+					   <a href="//bunjilforestwatch.wordpress.com/">blog</a>
 					</li> 
 					<li {% if active== "about" %} class="active"{% endif %}>
 					   <a href="{{ "about"|url }}">about</a>
@@ -100,7 +100,7 @@
                         <ul class="dropdown-menu">
                             <li><a href="{{ "flush-memcache"|url }}">flush memcache</a></li>
                             <li><a href="{{ "update-users"|url }}">update users</a></li>
-                            <li><a href="{{ "check-new-images"|url }}">check for new images</a></li>
+                            <li><a href="{{ "check-new-all-images"|url }}">check for new images</a></li>
                         </ul>
                     </li>
                     {% endif %}

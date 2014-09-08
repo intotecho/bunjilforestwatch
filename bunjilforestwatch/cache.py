@@ -547,7 +547,7 @@ def get_area_key(username, area_name):
         n = C_AREA_KEY %("users", area_name)  #users a reserved name so never a username. Fetch areas for all users.
         data = memcache.get(n)
         if data is None:
-            data = models.AreaOfInterest.all(keys_only=True).filter('name', area_name).get()
+            data = models.AreaOfInterest.all(keys_only=True).filter('name', area_name.decode('utf-8')).get()
             memcache.add(n, data)
     else:
         n = C_AREA_KEY %(username, area_name)

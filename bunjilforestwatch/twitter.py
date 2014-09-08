@@ -6,7 +6,7 @@ import settings
 import utils
 import webapp2
 
-URL = 'https://api.twitter.com'
+URL = '//api.twitter.com'
 
 OAUTH_APP_SETTINGS = {
 	'consumer_key': settings.TWITTER_KEY,

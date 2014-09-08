@@ -1,7 +1,7 @@
 {% extends "base.html" %} 
 {% block head %}
-<!-- Example URL  http://localhost:8001/obs/bunjilfw/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgMymCQw  -->
-<!-- http://localhost:8001/obs/test2/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgLbNCAw -->
+<!-- Example URL  //localhost:8001/obs/bunjilfw/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgMymCQw  -->
+<!-- //localhost:8001/obs/test2/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgLbNCAw -->
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 <style type="text/css">
 html {
@@ -20,7 +20,7 @@ html {
 <link href="/static/css/jquery.nouislider.css" rel="stylesheet">
 
 <script type="text/javascript"
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> 
+    src="//maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> 
 </script>
 <script type="text/javascript" src="/static/js/draggable-object.js"></script>
 <script type="text/javascript" src="/static/js/custom-tile-overlay.js"></script> <!-- can remove -->
@@ -356,7 +356,7 @@ function initialize() {
         });
         
         $(window).resize(function () {
-                //<!--resize tip from https://github.com/twitter/bootstrap/issues/2475 -->
+                //<!--resize tip from //github.com/twitter/bootstrap/issues/2475 -->
             var h = $(window).height(),
                     offsetTop = 60; // Calculate the top offset
                 $('#map-canvas-left').css('height', (h - offsetTop));

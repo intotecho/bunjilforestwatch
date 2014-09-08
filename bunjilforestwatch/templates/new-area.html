@@ -10,7 +10,7 @@
       #map-canvas { height: 100% }
 </style>
     
-<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,places,visualization,drawing"> </script>
+<script type="text/javascript" src="//maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,places,visualization,drawing"> </script>
 <script src="/static/js/polygon-outliner.js"></script>
 <script src="/static/js/GeoJSON.js"></script>
 <script type="text/javascript" src="/static/js/landsat-grid.js"></script> 
@@ -58,10 +58,10 @@
         	console.log("area name:" + area_name);
         	
         	if ((null == area_name) || (area_name === "")) {
-                  problems += 'Please give your area a simple name\n\n';
+                  problems += 'Please give your area a short name\n\n';
             }
         	else 	if(!/^[a-zA-Z 0-9]+$/.test(area_name)){ 
-                 problems += 'Sorry, Please use only the characters A-Z, a-z and 0-9 in the area name. A full name can be entered into the description\n\n';
+                 //problems += 'Sorry, Please use only the characters A-Z, a-z and 0-9 in the area name. A full name can be entered into the description\n\n';
         	}
         	
         	if ((null == area_descr) || (area_descr=== "")) {
@@ -70,8 +70,18 @@
         	    	   problems += 'Giving  your area an optional description helps others know why it should be monitored.\n\n';
         	    	}   
             }
-        	else 	if(!/^[a-zA-Z 0-9]+$/.test(area_descr)){ 
-                   problems += 'Sorry, Please use only the characters A-Z, a-z and 0-9 in the area description. We are working on a solution!\n\n';
+        	else  {
+        		/*
+        		   var lines = area_descr.split('\n');
+
+        		   for(var n = 0; n < lines.length; n++) {
+                       console.log (lines[n])
+                       if(!/^[a-zA-Z \n\t\r\<\>\/\:0-9.]+$/.test(lines[n])){ 
+                            problems += 'On Description line ' + (n+1).toString() +  '. Please use only the ASCII characters A-Z, a-z and 0-9 in the area description. Line. Sorry we are still working on a multibyte solution!\n\n';
+                            console.log (lines[n], n)
+                       }
+                    }
+        		  */ 
             }
         	if (problems.length > 0) {
         		alert ('Please fix these problems and then click Create Area:\n\n' + problems);
@@ -160,7 +170,7 @@
         	}
 		});
 	
-		 //<!--resize div tip from https://github.com/twitter/bootstrap/issues/2475 -->
+		 //<!--resize div tip from //github.com/twitter/bootstrap/issues/2475 -->
 		  
 		  $(window).resize(function () {
 	    	    var h = $(window).height(),

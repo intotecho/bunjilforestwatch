@@ -92,7 +92,7 @@ def feed(feed, token):
 
 def mk_link(link):
 	if link:
-		return 'http://' + os.environ['HTTP_HOST'] + link
+		return '//' + os.environ['HTTP_HOST'] + link
 	else:
 		return ''
 
