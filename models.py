@@ -115,7 +115,7 @@ class User(db.Model):
 		else:
 			email = self.email.lower()
 
-		return 'http://www.gravatar.com/avatar/' + hashlib.md5(email).hexdigest() + '?d=mm%s' %size
+		return '//www.gravatar.com/avatar/' + hashlib.md5(email).hexdigest() + '?d=mm%s' %size
 
 	def can_upload(self):
 		return self.bytes_remaining > 0
@@ -150,7 +150,9 @@ class AreaOfInterest(db.Model):
 
 	# Area Description
 	name = db.StringProperty(required=True)
-	description = db.StringProperty(multiline=True) # text might be better type as it is not indexed.
+	#description = db.StringProperty(multiline=True) # text might be better type as it is not indexed.
+	description = db.TextProperty() # text might be better type as it is not indexed.
+
 	type = db.StringProperty()
 	wiki = db.LinkProperty() # link to s a story about this area.
 	#tags = db.ListProperty(unicode,default=None) #TODO: Caused a unicode not callable error. Not yet implemented.
@@ -219,7 +221,7 @@ class AreaOfInterest(db.Model):
 			else:
 				logging.error ("AreaofInterest::CellList() no cell returned from key %s ", cell_key)
 			
-			returnstr = 'AreaofInterest::CellList() area {0!s} has cells {1!s}'.format(self.name, cell_list)
+			returnstr = 'AreaofInterest::CellList() area {0!s} has cells {1!s}'.format(self.name.encode('utf-8'), cell_list)
 			#logging.debug(returnstr)
 			
 		return cell_list

@@ -77,7 +77,7 @@ class EarthEngineService():
     @staticmethod
     def isReady():
         if not EarthEngineService.earthengine_intialised:
-            logging.info("EarthEngineService Not Ready - Initialising ...")
+            #logging.info("Initialising EarthEngineService ...")
             EarthEngineService.earthengine_intialised = reallyinitEarthEngineService()
         else:
             if not PRODUCTION_MODE:
@@ -183,9 +183,9 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
             return 0
 
     
-    id = feature['id']   
-    #logging.info('getLatestLandsatImage found scene: %s', id)
-    latest_image = ee.Image(id)
+    iid = feature['id']   
+    #logging.info('getLatestLandsatImage found scene: %s', iid)
+    latest_image = ee.Image(iid)
     props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
     #test = latest_image.getInfo()['bands']
 
@@ -196,12 +196,12 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
     if ('path' in params) and ('row' in params): 
-        logging.info('getLatestLandsatImage id: %s, date:%s latest for [%d,%d] :%s, ', id, date_str, path, row, latest_depth, )
+        logging.info('getLatestLandsatImage id: %s, date:%s latest for [%d,%d] :%s, ', iid, date_str, path, row, latest_depth, )
     else:
-        logging.info('getLatestLandsatImage id: %s, date:%s latest:%s', id, date_str, latest_depth )
+        logging.info('getLatestLandsatImage id: %s, date:%s latest:%s', iid, date_str, latest_depth )
     
     # add some properties to Image object to make them easier to retrieve later.
-    latest_image.name = id
+    latest_image.name = iid
     latest_image.capture_date = date_str
     latest_image.system_time_start = system_time_start
     
@@ -378,7 +378,7 @@ def getPercentile(image, percentile, crs):
     return image.reduceRegion(                                    
         ee.Reducer.percentile(percentile), # reducer
         None, # geometry (Defaults to the footprint of the image's first band)
-        None, # scale (Set automatically because bestEffort == true)
+        1000, # scale (Set automatically because bestEffort == true)
         crs,
         None, # crsTransform,
         True  # bestEffort
@@ -413,7 +413,9 @@ def getL8LatestNDVIImage(image):
 def getVisualMapId(image, red, green, blue):
     #original image is used for original metadata lost in image so caller must keep a reference to the image
     crs = image.getInfo()['bands'][0]['crs']
-  
+    
+    #print 'crs: ' + crs
+    
     pcdict = getPercentile(image, [5,95], crs)
   
     min = str(pcdict['red_p5']) + ', '  + str(pcdict['green_p5'])  + ', ' + str(pcdict['blue_p5'])
@@ -565,8 +567,8 @@ def visualizeImage(collection_name, image, algorithm):
             return mapid
         
         elif algorithm.lower() == 'ndvi':
-           print "l7 ndvi not implemented"
-           return None
+            print "l7 ndvi not implemented"
+            return None
 
 
 def getLandsatOverlay(coords, satellite, algorithm, depth, params):

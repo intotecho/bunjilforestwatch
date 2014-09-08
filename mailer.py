@@ -88,7 +88,7 @@ You are receiving this email because you have registered as a Bunjil Forest Watc
 To stop receiving emails you can unfollow the area or send an email to {5!s} with "UNSUBSCRIBE" in the subject.
 From  Bunjil Forest Watch 
 {4!s}
-""".format(user.name, captured_date, task_url, task.aoi.name, hosturl, thesender,completion_date )
+""".format(user.name, captured_date, task_url, task.aoi.name.encode('utf-8'), hosturl, thesender,completion_date )
 
         message.html = """
 Dear  <b>{0!s}:</b><br><b>
@@ -105,7 +105,7 @@ You are receiving this email because you have registered as a Bunjil Forest Watc
 To stop receiving emails you can unfollow the area or send an email to {5!s} with "UNSUBSCRIBE" in the subject.<br>
 <a href="mailto:{5!s}u'?'subject=UNSUBSCRIBE" target="_top"></a><br>
 <br>From <b><i><a href="{4!s}">Bunjil Forest Watch</a></b></i><br>
-""".format(user.name, captured_date, task_url, task.aoi.name, hosturl, thesender,completion_date )
+""".format(user.name, captured_date, task_url, task.aoi.name.encode('utf-8'), hosturl, thesender,completion_date )
 
         message.send()
         

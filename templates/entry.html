@@ -26,8 +26,7 @@
 			        <input class="form-control" id="subject" name="subject" type="text" value="{{ content.subject|default('', True) }}" />
                     <span class="help-block">Title of this report. Summarise the contents</span>
 			  </div>
-
-                			  
+		  
               <div class="form-group">
                       <label class="control-label" for="date">Date and Time</label>
                       <div class="controls">
@@ -89,7 +88,7 @@
             
             <div class="form-actions post-attach">
                 <button id="save" class="btn btn-lightgreen"><i class="icon-pencil icon-white"></i> Save</button>
-                <a href="javascript:(function(){document.body.appendChild(document.createElement('script')).src='https://encipher.it/javascripts/inject.v2.js';})();" class="btn  btn-lightblue" rel="tooltip" title="Click on the security link at the top to learn more about this."><i class="icon-lock icon-white"></i> Encipher It</a>
+                <a href="javascript:(function(){document.body.appendChild(document.createElement('script')).src='//encipher.it/javascripts/inject.v2.js';})();" class="btn  btn-lightblue" rel="tooltip" title="Click on the security link at the top to learn more about this."><i class="icon-lock icon-white"></i> Encipher It</a>
                 <button id="delete" class="btn btn-danger disabled show-tooltip" disabled="disabled" title="This will delete all files attached to this entry, too."><i class="icon-trash icon-white"></i> Delete entry</button>
                 <input id="sure" type="checkbox" name="sure">
                 <span>I'm sure</span>
@@ -224,3 +223,4 @@
 	</script>
 </div>
 {% endblock %}
+

@@ -146,7 +146,7 @@ def convert_html(f, title, entries, output_type='application/pdf'):
 		return str(e)
 
 def absolute_uri(*args, **kwargs):
-	return 'http://' + os.environ['HTTP_HOST'] + webapp2.uri_for(*args, **kwargs)
+	return '//' + os.environ['HTTP_HOST'] + webapp2.uri_for(*args, **kwargs)
 
 def dropbox_session():
 	return dropbox.session.DropboxSession(settings.DROPBOX_KEY, settings.DROPBOX_SECRET, 'app_folder')
@@ -168,7 +168,7 @@ def dropbox_put(access_token, path, content, rev=None):
 	client = dropbox.client.DropboxClient(sess)
 	return client.put_file(path, content, parent_rev=rev)
 
-GOOGLE_DATA_SCOPES = ['https://docs.google.com/feeds/']
+GOOGLE_DATA_SCOPES = ['//docs.google.com/feeds/']
 def google_url():
 	next = absolute_uri('google')
 	return gdata.gauth.generate_auth_sub_url(next, GOOGLE_DATA_SCOPES, session=True)
