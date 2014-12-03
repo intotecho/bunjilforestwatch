@@ -3,97 +3,27 @@
 <link href='//fonts.googleapis.com/css?family=Chewy' rel='stylesheet' type='text/css'>
 
 {% block content %}
+
+<div class="container">
+    <ul class="breadcrumb">
+        <li><a href="/">home</a></li>
+        <li><a href="/about">about</a> </li>
+    </ul>
+</div>
 <div class="container">
 	<div class="page-header">
-    	<h1>About Bunjil Community Forest Watch</h1>
-    	<h1><a href="/">home</a></h1>
+    	<h1>About Community Forest Watch</h1>
+        <p>User guides, support and background information can be found on the</p><h3> <a href="http://bunjilforestwatch.wordpress.com/about/">Forest Watch Blog</a></h3>
     </div>
+    <h3 class="danger" style="color:FireBrick">Warning!</h3>
+       <p>This is a just a prototype for research and not yet ready for general use.</p>
 
-    <div class="row">
-        <div class="col-xs-12">
-            <p class="lead" >For Local Conservation Groups in Remote Forest Areas..</p>
-            
-            <p><i>We wish to protect our land from illegal clearing. So we want to know about any disturbances as soon as possible so that we can respond effectively.</i></p>
-            <p><i>We don’t know how to find or read satellite images and can’t afford to pay someone. If a service could just email or text us when our land is disturbed, we could better protect our land.</i></p>
-        </div>
-    </div>
-
-    <div class="row" class="text-danger">
-        <div class="span12">
-            <h3 class="danger">This is a prototype </h3>
-            <p class="test-warning "><em>...Warning...</em></p>
-            <p>This is a research prototype and not yet ready for general use.</p>
-        </div>
-    </div>
-    
-    <div class="row">
-        <div class="col-xs-12">
-            <h3>Who is creating Bunjil Forest Watch?</h3>
-            <p>This app was created by <a href="chris.goodman@objectconsulting.com.au/">Chris Goodman</a> with help from students at Swinburne.</p>
-            <p>The app runs on Google App Engine and relies on <a href=//earthengine.google.org/">Google Earth Engine</a> and Landsat images from <a href="//www.usgs.gov">USGS</a></p>
-            <p>This app was supported by <a href="//www.objectconsulting.com.au/">Object Consulting Pty. Ltd.</a></p>
+    <h3>Basic Info</h3>
+            <p>Created by <a href="http://bunjilforestwatch.wordpress.com/about/author/">Chris Goodman</a></p>
+            <p>The app runs on Google App Engine and relies on <a href=//earthengine.google.org>Google Earth Engine</a> and Landsat images from <a href="//www.usgs.gov">USGS</a></p>
+            <p>Supported by <a href="//www.objectconsulting.com.au/">Object Consulting Pty. Ltd.</a></p>
             <p>More info on the blog <a href="//bunjilforestwatch.wordpress.com/">Bunjil Forest Watch Blog</a></p>
-        </div>
-    </div>
+            <p>Open source code hosted on GitHub: <a href="//github.com/intotecho/bunjilforestwatch">//github.com/intotecho/bunjilforestwatch</a>.</p>
+    <h3><a href="/">home</a></h3>return to app
 
-    <div class="row">
-        <div class="col-xs-12">
-            <h3>Want to help?</h3>
-            <p>Contributions are welcome!</p>
-            <p>The opensource code is hosted on GitHub: <a href="//github.com/intotecho/bunjil">//github.com/intotecho/bunjil</a>.</p>
-            <p>Development is coordinated with a <a href="//bunjilforestwatch.atlassian.net">Jira project</a> provided by Atlassian.</p>
-        </div>
-    </div>
-   <div class="row">
-        <div class="col-xs-4">
-            <h3>Why?</h3>
-                <div class="aspect-video">
-                    <iframe src="//www.youtube.com/embed/hllU9NEcJyg" frameborder="0" allowfullscreen></iframe>
-                </div>
-        </div>
-        <div class="col-xs-8"></div>
-    </div>
-
-    <div class="row">
-        <div class="col-xs-12">
-            <h3>Report an issue</h3>
-            <p>You may <a href="//github.com/intoecho/bunjil/issues">submit issues here</a> or email  <a href="mailto:bunjilforestwatch@gmail.com">bunjilforestwatch@gmail.com</a>.</p>
-        </div>
-    </div>
-
-<div class="row">
-</div>
-      <!-- Example row of columns -->
-      <div class="row">
-        <div class="col-xs-6">
-          <h2>Volunteers</h2>
-           <p>Volunteers sign up to monitor satellite images on behalf of local conservation groups. Volunteers need not be associated with the local hero or the forest they are protecting. They will be asked to check new satelite images as soon as they are published and report any disturbances. To be a volunteer you must be prepared to complete regular observation tasks when requested. You will need internet access.</p>
-          <p><a class="btn" href="/about">Volunteers &raquo;</a></p>
-        </div>
-        <div class="col-xs-6">
-          <h2>Local Conservation Group</h2>
-           <p>Local Groups look after a particular forest of conservation area. They can subscribe to this service to receive free updates by email when their forest changes.</p>
-          <p><a class="btn" href="/about">Local Heros &raquo;</a></p>
-       </div>
-       </div>
-    
-     <div class="row">
-        <div class="col-xs-4">
-          <h2>Non-Government Organisations</h2>
-          <p>Environmental Non-Government Organisations help link small conservation groups in remote areas to this service.</p>
-          <p><a class="btn" href="/about">NGO Details &raquo;</a></p>
-        </div>
-        <div class="col-xs-4">
-          <h2>Developers</h2>
-          <p>Help develop this open source application.</p>
-          <p><a class="btn" href="/support">Support Us&raquo;</a></p>
-        </div>
-        <div class="col-xs-4">
-          <h2>Donate</h2>
-          <p>Support the small running costs </p>
-          <p><a class="btn" href="/donate">Support Us&raquo;</a></p>
-        </div>
-
-      </div>
-</div>
 {% endblock %}
