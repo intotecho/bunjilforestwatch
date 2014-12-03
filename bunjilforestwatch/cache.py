@@ -416,8 +416,9 @@ def get_obstask_render(task_key):
             area = obstask.aoi 
             cell_list = area.CellList()  
             
-            resultstr = "Task for {0!s} to check area {1!s}".format(obstask.original_owner, area.name.encode('utf-8') )
-            debugstr = resultstr + " task: " + str(obstask.key()) + " has " + str(len(obstask.observations)) + "observations"
+            resultstr = "Observation Task for {0!s} to check area {1!s}".format(obstask.original_owner, area.name.encode('utf-8') )
+            #debugstr = resultstr + " task: " + str(obstask.key()) + " has " + str(len(obstask.observations)) + " observations"
+            debugstr = resultstr + ". Task has " + str(len(obstask.observations)) + " observations"
             for obs_key in obstask.observations:
                 obs = get_by_key(obs_key) 
                 if obs is not None:
@@ -430,6 +431,8 @@ def get_obstask_render(task_key):
             'obslist': obslist,
             'obstask': obstask,
             'resultstr': debugstr,
+            'area' :  area.name.encode('utf-8'),
+            'created_date' : obstask.created_date.strftime("%Y-%m-%d"),
             'obstask_url': webapp2.uri_for('view-obstask', username=obstask.original_owner, task_name=obstask.key()),
         })
         memcache.add(n, data)

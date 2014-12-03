@@ -1,11 +1,11 @@
 <div class="row">
 	<div class="span12">
-		<p><a href=" {{ obstask_url }}"> {{obstask.name}}</a></p>
-		<p>listing observations in task</p>	
+		<h4>Task:  <a href="{{ obstask_url }}"> {{obstask.name}}</a> <small>Created {{created_date}}</small> </h4>
 		<p>{{resultstr}}</p>
+		<ul>
         {% for o in obslist %}
-             <p>{{ o.image_id }}</p>
+             <li>{{ o.image_id }} </li>
         {% endfor %}
-		
+        </ul>
 	</div>
 </div>
