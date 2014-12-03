@@ -90,6 +90,20 @@
 							</li>
 						</ul>
 					</li>
+					
+					
+					
+					
+					
+                    <li class="dropdown{% if active  == "view-obstasks" %} active{% endif %}">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">tasks<b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                 <a href="{{ "view-obstasks"|url }}"><span class="glyphicon glyphicon-tasks"></span>Observation tasks</a>
+                            </li>
+                        </ul>
+                    </li>
+
 			{% endif %} <!-- { % if user% } -->
     		</ul>
   			<ul class="nav navbar-nav navbar-right">
