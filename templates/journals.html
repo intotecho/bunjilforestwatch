@@ -3,15 +3,10 @@
             <table class="table table-condensed">
             <tbody>
 		{% if thisuser %}
-			<tr><h4><a href="{{ j|journal_url }}">{{ j }}</a></h4><td><a href="{{ "new-entry"|url(j) }}" class="btn btn-small btn-primary">new entry</a></td></tr>
+			<tr><h4><a href="{{ j|journal_url }}">{{ j }}</a></h4><td><a href="{{ "new-entry"|url(j) }}" class="btn btn-small btn-primary">Add Entry</a></td></tr>
 		{% else %}
 		 <tr><h5>{{ j }}</h5></tr>
 		{% endif %}
-		<tr><td>entries</td><td>{{ j.entry_count }}</td></tr>
-		<tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
         <tr><td>type</td><td>{{ j.journal_type }}</td></tr>
-		{% if j.last_entry %}<tr><td>last entry</td><td>{{ j.last_entry|sdate }}</td></tr>{% endif %}
-		{% if j.first_entry %}<tr><td>first entry</td><td>{{ j.first_entry|sdate }}</td></tr>{% endif %}
-		{% if j.entry_days %}<tr><td>entries spanning</td><td>{{ j.entry_days }} day{{ j.entry_days|pluralize }}</td></tr>{% endif %}
         </tbody></table></pre> 
 {% endfor %}

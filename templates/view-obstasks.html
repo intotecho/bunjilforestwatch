@@ -2,20 +2,26 @@
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 {% block content %}
 <div class="container">
-    <div><p>
+    <div>
+        <p>
             <ul class="breadcrumb">
-            </ul></p>
-    </div>
+                <li><a href="{{ "user"|url(username) }}">{{ username }}</a> </li>
+                <li class="active">observation tasks</li>
+            </ul>
+    </p>
+    
+     </div>
     <h3>Recent Observation Tasks</h3>
-    
-    {% if obstasks %}
-        
+
+    {% if obstasks %}        
     {% for e in obstasks %}
-    {{ e|safe }}
+       <div class="well"">
+      {{ e|safe }}
+       </div>
     {% endfor %}
+    <div>
     
-    <div class="pagination">
-        <ul>
+     <ul class="pagination">
             <li class="prev"><a href="{{ obstask | obstasks_url }}">first</a></li>
             {% if page == 1 %}
                 <li class="disabled"><a href="#">&larr; previous</a></li>

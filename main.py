@@ -1486,7 +1486,8 @@ class UserHandler(BaseHandler):
             'followers': followers,
             'is_following': is_following,
             'thisuser': thisuser, # True if user being shown is thisuser
-            'areas': areas
+            'areas': areas,
+             'show_navbar': True,
             })
 """
         self.render('user.html', {
