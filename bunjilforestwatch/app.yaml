@@ -48,7 +48,7 @@ handlers:
 
 - url: /tasks/.*
   script: main.app
-  login: admin
+  login: required
 
 
 - url: /.*
