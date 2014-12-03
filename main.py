@@ -18,7 +18,6 @@ import re
 import os
 import geojson
 
-
 from google.appengine.api import files
 from google.appengine.api import taskqueue
 from google.appengine.api import users
@@ -505,7 +504,7 @@ class AccountHandler(BaseHandler):
 class NewAreaHandler(BaseHandler):
     def get(self):
 
-       # content=self.request.get('content')
+        # content=self.request.get('content')
         #print 'content: ' + content
         
         current_user = users.get_current_user()
@@ -562,7 +561,7 @@ class NewAreaHandler(BaseHandler):
         tmin_lat = +90
         tmax_lon = -180
         tmin_lon = +180
-        print "geojsonBoundary: ", geojsonBoundary
+        #logging.debug("geojsonBoundary: " +  geojsonBoundary)
         for item in geojsonBoundary['features']:
             if item['properties']['featureName']=="boundary":
                 pts=item['geometry']['coordinates']
@@ -631,7 +630,8 @@ class NewAreaHandler(BaseHandler):
                 for area_url, area_name in self.session['areas_list']:
                     if area.name == area_name:
                         self.add_message('error', 'Sorry, there is already a protected area called %s. Please choose a different name and try again ' %name)
-                        break
+                        self.redirect(webapp2.uri_for('new-area'))
+                        return
                 else: #for loop did not break.
     
                     def txn(user_key, area):
@@ -866,7 +866,7 @@ class GetLandsatCellsHandler(BaseHandler):
             self.response.write(json.dumps(getCellsResult))
             return 
 
-class LandsatOverlayRequestHandler(BaseHandler):
+class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
     #This handler responds to Ajax request, hence it returns a response.write()
 
     def get(self, area_name, action, satelite, algorithm, latest, **opt_params):
@@ -1140,7 +1140,7 @@ class ObservationTaskHandler(BaseHandler):
             #logging.debug( json.dumps(obslist))
             
             self.populate_user_session(user)
-            self.render('view-obs.html', {
+            self.render('view-obstask.html', {
                 'username':  self.session['user']['name'],
                 'area': area,
                 'owner': task_owner,
@@ -1161,7 +1161,7 @@ class ObservationTaskHandler(BaseHandler):
 functon to check if any new images for the specified area. Called by CheckNewAreaHandler and CheckNewAllHandler
 returns a HTML formatted string
 '''
-def checkAreaForNew(area):
+def checkAreaForNew(area, hosturl):
     area_followers  = models.AreaFollowersIndex.get_by_key_name(area.name, area) 
     linestr = u'<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
     if area_followers:
@@ -1191,7 +1191,7 @@ def checkAreaForNew(area):
             new_task.original_owner = user
             new_task.name = user.name + u"'s task for " + area.name
             db.put(new_task)
-            mailer.new_image_email(new_task, self.request.headers.get('host', 'no host'))
+            mailer.new_image_email(new_task, hosturl) 
             linestr += "<p>Created task with " + str(len(new_observations)) +" observations.</p>"
             
             taskurl = "/obs/" + user.name + "/" + str(new_task.key())
@@ -1231,7 +1231,7 @@ class CheckNewAllAreasHandler(BaseHandler):
         returnstr = initstr
 
         for area in all_areas:
-            returnstr += checkAreaForNew(area)
+            returnstr += checkAreaForNew(area,  self.request.headers.get('host', 'no host'))
 
         self.response.write(returnstr.encode('utf-8')) 
 
@@ -1389,9 +1389,34 @@ class ViewJournal(BaseHandler):
                 'pagelist': utils.page_list(page, journal.pages),
             })
 
+class ViewAllObservationTasksHandler(BaseHandler):
+
+    def get(self):
+        page = int(self.request.get('page', 1))
+        user = cache.get_user(self.session['user']['name'])
+        alltasks = cache.get_obstasks_keys() # list of all task keys
+        obstask = cache.get_task(alltasks[0])
+        obstasks = cache.get_obstasks_page(page) # rendered page of tasks #TODO is it needed? 
+        
+        logging.info('ViewAllObservationTasksHandler %s %d', obstasks, len(alltasks)) 
+        #logging.debug('obstasks %s', obstasks) 
+        #logging.debug('obslist  %s', obslist) 
+        
+        self.render('view-obstasks.html', {
+           'username': user,
+            'obstask': obstask,
+            'obstasks': obstasks,
+            'pages' : len(alltasks),
+            'page': page,
+            'show_navbar': True,
+            'pagelist': utils.page_list(page, len(alltasks))
+        })
+        
 class AboutHandler(BaseHandler):
     def get(self):
-        self.render('about.html')
+        self.render('about.html' , {
+                'show_navbar': True
+            })
 
 class DonateHandler(BaseHandler):
     def get(self):
@@ -1626,7 +1651,7 @@ class FollowAreaHandler(BaseHandler):
 
         ########### create a journal for each followed area - should be in above txn and a function call as duplicated ##############
 
-        name = "Observations for " + area_name.decode('utf-8') # name is used by view-task.html to make reports.
+        name = "Observations for " + area_name.decode('utf-8') # name is used by view-obstask.html to make reports.
         journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
         for journal_url, journal_name, journal_type in self.session['journals']:
             if journal.name == journal_name:
@@ -2578,6 +2603,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/admin/new/blog', handler=NewBlogHandler, name='new-blog'),
     webapp2.Route(r'/admin/update/users', handler=UpdateUsersHandler, name='update-users'),
     webapp2.Route(r'/admin/checknew', handler=CheckNewAllAreasHandler, name='check-new-all-images'),
+    webapp2.Route(r'/admin/obs/list', handler=ViewAllObservationTasksHandler, name='view-obstasks'),
     webapp2.Route(r'/admin/checknew/<area_name>', handler=CheckNewAreaHandler, name='check-new-area-images'),
     webapp2.Route(r'/blob/<key>', handler=BlobHandler, name='blob'),
     webapp2.Route(r'/blog', handler=BlogHandler, name='blog'),
@@ -2614,7 +2640,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/obs/<username>/overlay/create/<obskey>/<role>/<algorithm>', handler=CreateOverlayHandler, name='create-overlay'), #AJAX call
     webapp2.Route(r'/obs/<username>/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayHandler, name='update-overlay'), #AJAX call
     #webapp2.Route(r'/obs/<username>/prioroverlay/create/<obskey>/<algorithm>', handler=CreatePriorOverlayHandler, name='create-prioroverlay'), #AJAX call
-    webapp2.Route(r'/obs/<username>/<task_name>', handler=ObservationTaskHandler, name='view-task'),
+    webapp2.Route(r'/obs/<username>/<task_name>', handler=ObservationTaskHandler, name='view-obstask'),
     
     # taskqueue
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
@@ -2628,13 +2654,13 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),
     webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),
     webapp2.Route(r'/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'), #was new-obstask
-    webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #was new-obstask
-    webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
-    #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
-    webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
+    webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #ajax
+    webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
+    #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
+    webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
         
-    #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='view-obstask'),
-    #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-obstask'),
+    #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
+    #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
     #webapp2.Route(r'/<username>/<area_name><param:.*>', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
         
     # this section must be last, since the regexes below will match one and two -level URLs
