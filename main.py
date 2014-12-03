@@ -2604,7 +2604,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/admin/new/blog', handler=NewBlogHandler, name='new-blog'),
     webapp2.Route(r'/admin/update/users', handler=UpdateUsersHandler, name='update-users'),
     webapp2.Route(r'/admin/checknew', handler=CheckNewAllAreasHandler, name='check-new-all-images'),
-    webapp2.Route(r'/admin/obs/list', handler=ViewAllObservationTasksHandler, name='view-obstasks'),
+    webapp2.Route(r'/admin/obs/list', handler=ViewAllObservationTasksHandler, name='admin-view-obstasks'),
     webapp2.Route(r'/admin/checknew/<area_name>', handler=CheckNewAreaHandler, name='check-new-area-images'),
     webapp2.Route(r'/blob/<key>', handler=BlobHandler, name='blob'),
     webapp2.Route(r'/blog', handler=BlogHandler, name='blog'),
@@ -2638,6 +2638,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
     # observation tasks
+    webapp2.Route(r'/obs/list', handler=ViewAllObservationTasksHandler, name='view-obstasks'),
     webapp2.Route(r'/obs/<username>/overlay/create/<obskey>/<role>/<algorithm>', handler=CreateOverlayHandler, name='create-overlay'), #AJAX call
     webapp2.Route(r'/obs/<username>/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayHandler, name='update-overlay'), #AJAX call
     #webapp2.Route(r'/obs/<username>/prioroverlay/create/<obskey>/<algorithm>', handler=CreatePriorOverlayHandler, name='create-prioroverlay'), #AJAX call
@@ -2715,6 +2716,7 @@ RESERVED_NAMES = set([
     'journals',
     'login',
     'logout',
+    'list',
     'markup',
     'mailtest',
     'new',
