@@ -57,7 +57,16 @@ def reallyinitEarthEngineService():
     try:
         if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
             logging.info("Initialising Earth Engine authenticated connection from devserver")
-            EE_CREDENTIALS = ee.ServiceAccountCredentials(settings.MY_LOCAL_SERVICE_ACCOUNT, settings.MY_LOCAL_PRIVATE_KEY_FILE)
+            try:  
+                acct = os.environ['MY_SERVICE_ACCOUNT']
+                key = os.environ['MY_PRIVATE_KEY_FILE']
+            except KeyError: 
+                logging.error("Please set the environment variable MY_SERVICE_ACCOUNT and MY_PRIVATE_KEY_FILE")
+                logging.debug (os.environ)
+                acct = settings.MY_LOCAL_SERVICE_ACCOUNT
+                key = settings.MY_LOCAL_PRIVATE_KEY_FILE
+            
+            EE_CREDENTIALS = ee.ServiceAccountCredentials(acct, key)
         else:
             logging.info("Initialising Earth Engine authenticated connection from App Engine")
             EE_CREDENTIALS = AppAssertionCredentials(ee.OAUTH2_SCOPE)
@@ -269,14 +278,120 @@ def add_date(image):
     timestamp = image.metadata('system:time_start')
     return image.addBands(timestamp)
 
+'''
+ SimpleCloudScore, an example of computing a cloud-free composite with L8
+ by selecting the least-cloudy pixel from the collection.
+'''
 
+# A mapping from a common name to the sensor-specific bands.
+
+LC8_BANDS = ['B2',   'B3',    'B4',  'B5',  'B6',    'B7',    'B10']
+STD_NAMES = ['blue', 'green', 'red', 'nir', 'swir1', 'swir2', 'temp']
+
+#Compute a cloud score.  This expects the input image to have the common
+# band names: ["red", "blue", etc], so it can work across sensors.
+
+def rescale(img, exp, thresholds): 
+    return img.expression(exp, {'img': img}).subtract(thresholds[0]).divide(thresholds[1] - thresholds[0])
+
+def cloudScore (img): 
+    # A helper to apply an expression and linearly rescale the output.
+    #Compute several indicators of cloudyness and take the minimum of them.
+    score = ee.Image(1.0)
+
+    #Clouds are reasonably bright in the blue band.
+    score = score.min(rescale(img, 'img.blue', [0.1, 0.3]))
+
+    #Clouds are reasonably bright in all visible bands.
+    score = score.min(rescale(img, 'img.red + img.green + img.blue', [0.2, 0.8]))
+
+    #Clouds are reasonably bright in all infrared bands.
+    score = score.min( rescale(img, 'img.nir + img.swir1 + img.swir2', [0.3, 0.8]))
+
+    #Clouds are reasonably cool in temperature.
+    score = score.min(rescale(img, 'img.temp', [300, 290]))
+
+    #However, clouds are not snow.
+    ndsi = img.normalizedDifference(['green', 'swir1'])
+    
+    #return score.min(rescale(ndsi, 'img', [0.8, 0.6]))
+    return score.min(rescale(ndsi, 'img', [0.8, 0.6]))
+
+#cloud_invert_lambda = lambda img :  (img.addBands(ee.Image(1).subtract(cloudScore(img.select(LC8_BANDS, STD_NAMES))).select([0], ['cloudscore'])))
+
+def cloud_invert(img):
+    score1 = cloudScore(img.select(LC8_BANDS, STD_NAMES))
+    score = ee.Image(1).subtract(score1).select([0], ['cloudscore'])
+    return img.addBands(score)
+
+def test(a):
+    print ("algorithm")
+    #print a
+    
+def simpleCloudScoreOverlay():
+
+    # TEST HARNESS
+    collection = ee.ImageCollection('LC8_L1T_TOA').filterDate('2013-05-01', '2013-07-01').map(cloud_invert)
+    #print (collection)
+    
+    cloudfree =  collection.qualityMosaic('cloudscore') #extract latest pixel
+    
+    #vizParams = {'bands': ['B4', 'B3', 'B2'], 'max': 0.4, 'gamma': 1.6}
+    vizParams = {'bands': 'B4,B3,B2', 'max': 0.4, 'gamma': 1.6}
+    
+    display(mymap)
+    
+    mymap.center(-120.24487, 37.52280, 8);
+    
+    mymap.addLayer(
+        image = cloudfree,
+        vis_params = vizParams,           
+        name = "SimpleCloudFree"
+    )    
+    return 
+
+#simpleCloudScoreOverlay()
 
 '''
-getLandsatImageById(collection_name,image_id, algorithm )
-
+getPriorLandsatOverlay(obs)
+#Based on https://ee-api.appspot.com/ ->Scripts -> Simple Cloud Score
 '''
 
 def getPriorLandsatOverlay(obs):
+
+    ref_image = ee.Image(obs.image_id)
+    props = ref_image.getInfo()['properties'] #logging.info('image properties: %s', props)
+    path = props['WRS_PATH']
+    row = props['WRS_ROW']
+    
+    system_time = datetime.datetime.fromtimestamp((props['system:time_start'] / 1000) -3600) #convert ms
+    date_str = system_time.strftime("%Y-%m-%d @ %H:%M")
+
+    before     = obs.captured - datetime.timedelta(days=1)
+    earliest   = obs.captured - datetime.timedelta(days=(3*365))
+    before_str   = before.strftime("%Y-%m-%d")
+    earliest_str = earliest.strftime("%Y-%m-%d")
+    
+    logging.info('getPriorLandsatOverlay() id: %s, captured:%s from %s to :%s %d/%d', obs.image_id, date_str, earliest_str, before_str, path, row)
+    
+    collection = ee.ImageCollection('LC8').filterDate(earliest, before).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row).filterMetadata('default:SUN_ELEVATION', 'GREATER_THAN', 0).map(cloud_invert)
+                                             
+    image_object =  collection.qualityMosaic('cloudscore') #extract latest pixel
+    
+    #crs = image_object.getInfo()['bands'][0]['crs']
+    
+    #pcdict = getPercentile(image_object, [5,95], crs)
+    #imin = str(100 * pcdict['B4_p5']) + ', '  + str(100 * pcdict['B3_p5'])  + ', ' + str(100 * pcdict['B2_p5'])
+    #imax = str(100 * pcdict['B4_p95']) + ', ' + str(100 * pcdict['B3_p95']) + ', ' + str(100 * pcdict['B2_p95'])
+    #logging.debug('Prior Percentiles  5%% %s 95%% %s', imin, imax)
+    
+
+    rgbVizParams = {'bands': 'B4,B3,B2', 'min':5000, 'max':30000, 'gamma': 1.2, 'format': 'png'}
+    #rgbVizParams = {'bands': 'B4,B3,B2', 'max':0.4, 'gamma': 1.2, 'format': 'png'}
+    
+    return  image_object.getMapId(rgbVizParams)
+
+def getPriorLandsatOverlay_oldalgorithm(obs):
 
     ref_image = ee.Image(obs.image_id)
     props = ref_image.getInfo()['properties'] #logging.info('image properties: %s', props)
@@ -307,22 +422,18 @@ def getPriorLandsatOverlay(obs):
     crs = image_object.getInfo()['bands'][0]['crs']
     pcdict = getPercentile(ref_image, [5,95], crs)
     
-    min = str(100 * pcdict['B4_p5']) + ', '  + str(100 * pcdict['B3_p5'])  + ', ' + str(100 * pcdict['B2_p5'])
-    max = str(100 * pcdict['B4_p95']) + ', ' + str(100 * pcdict['B3_p95']) + ', ' + str(100 * pcdict['B2_p95'])
-    logging.debug('Prior Percentiles  5%% %s 95%% %s', min, max)
+    imin  = str(100 * pcdict['B4_p5']) + ', '  + str(100 * pcdict['B3_p5'])  + ', ' + str(100 * pcdict['B2_p5'])
+    imax = str(100 * pcdict['B4_p95']) + ', ' + str(100 * pcdict['B3_p95']) + ', ' + str(100 * pcdict['B2_p95'])
+    logging.debug('Prior Percentiles  5%% %s 95%% %s', imin, imax)
     
-    rgbVizParams = {'bands': 'B4,B3,B2', 'min':5000, 'max':30000, 'gamma': 1.6, 'format': 'png'}
-    #rgbVizParams = {'bands': 'B4,B3,B2', 'min':min, 'max':max, 'gamma': 1.2, 'format': 'png'}
+    #rgbVizParams = {'bands': 'B4,B3,B2', 'min':5000, 'max':30000, 'gamma': 1.6, 'format': 'png'}
+    rgbVizParams = {'bands': 'B4,B3,B2', 'min':imin, 'max':imax, 'gamma': 1.6, 'format': 'png'}
     
-    
-    
+   
     
     return  image_object.getMapId(rgbVizParams)
 
 #B9_THRESHOLD = 4200 #originally  5200
-
-
-
 
 '''
     SharpenLandsat7HSVUpres()
