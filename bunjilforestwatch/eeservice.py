@@ -36,6 +36,7 @@ import datetime
 import json
 import settings #You have to import your own private keys. 
 import ee
+from ee.oauthinfo import OAuthInfo
     
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -69,7 +70,7 @@ def reallyinitEarthEngineService():
             EE_CREDENTIALS = ee.ServiceAccountCredentials(acct, key)
         else:
             logging.info("Initialising Earth Engine authenticated connection from App Engine")
-            EE_CREDENTIALS = AppAssertionCredentials(ee.OAUTH2_SCOPE)
+            EE_CREDENTIALS = AppAssertionCredentials(OAuthInfo.SCOPE)
         ee.Initialize(EE_CREDENTIALS) 
         return True
     except Exception, e:
