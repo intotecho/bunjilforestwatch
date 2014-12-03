@@ -63,6 +63,20 @@ def journal_prev(ob, page):
 def journal_next(ob, page):
 	return journal_url(ob, str(page + 1))
 
+
+def obstask_url(obstask):
+	return obstask.taskurl()
+
+def obstasks_url(obstask, page=1):
+	return obstask.listurl(page)
+
+def obstasks_prev(ob, page):
+	return obstasks_url(ob, str(page - 1))
+
+def obstasks_next(ob, page):
+	return obstasks_url(ob, str(page + 1))
+
+
 def blog_url(page=1):
 	return webapp2.uri_for('blog', page=page)
 
@@ -160,6 +174,9 @@ filters = dict([(i, globals()[i]) for i in [
 	'journal_next',
 	'journal_prev',
 	'journal_url',
+	'obstasks_next',
+	'obstasks_prev',
+	'obstasks_url',
 	'area_next',
 	'area_prev',
 	'area_url',

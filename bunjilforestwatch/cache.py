@@ -49,6 +49,7 @@ C_BLOG_ENTRIES_KEYS_PAGE = 'blog_entries_keys_page_%s'
 C_BLOG_ENTRIES_PAGE = 'blog_entries_page_%s'
 C_BLOG_TOP = 'blog_top'
 
+
 C_CELL      = 'cell_%s_%s'
 C_CELL_KEY = 'cellkey_%s'
 C_CELLS     = 'cells_%s'
@@ -61,6 +62,16 @@ C_ENTRIES_PAGE = 'entries_page_%s_%s_%s'
 C_ENTRY = 'entry_%s_%s_%s'
 C_ENTRY_KEY = 'entry_key_%s_%s_%s'
 C_ENTRY_RENDER = 'entry_render_%s_%s_%s'
+
+C_OBSTASKS_KEYS = 'obstasks_keys'
+C_OBSTASKS_KEYS_PAGE = 'obstasks_keys_page_%s'
+C_OBSTASKS_PAGE = 'obstasks_page_%s'
+
+C_OBSTASK = 'obstask_%s'
+C_OBSTASK_KEY = 'obstask_key_%s'
+C_OBSTASK_RENDER = 'obstask_render_%s'
+
+
 C_FEED = 'feed_%s_%s'
 C_FOLLOWERS = 'followers_%s'
 C_FOLLOWING = 'following_%s'
@@ -319,6 +330,127 @@ def clear_entries_cache(journal_key):
 
     memcache.delete_multi(keys)
 
+
+
+##### OBSTASK LIST #####
+''' get a single ObserevationTask by its key.
+'''
+def get_task(task_key_name):
+   
+    n = C_OBS_TASK %(task_key_name)
+    data = unpack(memcache.get(n))
+    if data is None:
+        data= get_by_key(task_key_name)
+        if data is None:
+            logging.error("get_task(): Not an object") 
+            return None
+        else:
+            if data.kind() != "ObservationTask":
+                logging.error("get_task(): Not a task object") 
+                return None
+        memcache.add(n, pack(data))
+    return data
+
+#### New functions
+
+def get_obstask_key(entry_id):
+    n = C_OBSTASK_KEY %(entry_id)
+    data = memcache.get(n)
+    if data is None:
+        data = db.get(db.Key.from_path('ObservationTask', long(entry_id) ))
+
+        if data:
+            data = data.key()
+
+        memcache.add(n, data)
+
+    return data
+
+
+# returns all entry keys sorted by descending date
+def get_obstasks_keys():
+    n = C_OBSTASKS_KEYS
+    data = memcache.get(n)
+    if data is None:
+        # todo: fix limit to 1000 most recent journal obstasks
+        data = models.ObservationTask.all(keys_only=True).order('-created_date').fetch(200)
+        memcache.add(n, data)
+
+    return data
+
+# returns entry keys of given page
+def get_obstasks_keys_page(page):
+    n = C_OBSTASKS_KEYS_PAGE %(page)
+    data = memcache.get(n)
+    if data is None:
+        obstasks = get_obstasks_keys()
+        data = obstasks[(page  - 1) * models.ObservationTask.OBSTASKS_PER_PAGE:page * models.ObservationTask.OBSTASKS_PER_PAGE]
+        memcache.add(n, data)
+
+        if not data:
+            logging.warning('Page %i requested but only %i obstasks, %i pages.', page, len(obstasks), len(obstasks) / models.ObservationTask.OBSTASKS_PER_PAGE + 1)
+
+    return data
+
+# returns obstasks of given page
+def get_obstasks_page(page):
+    n = C_OBSTASKS_PAGE %(page)
+    data = memcache.get(n)
+    if data is None:
+        if page < 1:
+            page = 1
+
+        obstasks = get_obstasks_keys_page(page)
+        data = [unicode(get_obstask_render(i)) for i in obstasks]
+        memcache.add(n, data)
+
+    return data
+
+def get_obstask_render(task_key):
+    n = C_OBSTASK_RENDER %(task_key)
+    data = memcache.get(n)
+    if data is None:
+        task = obstask = get_task(task_key)  #FIXME Must be typesafe
+        obslist = []  #FIXME obslist won't be loaded if task is in the cache.
+        if obstask is not None:
+            area = obstask.aoi 
+            cell_list = area.CellList()  
+            
+            resultstr = "Task for {0!s} to check area {1!s}".format(obstask.original_owner, area.name.encode('utf-8') )
+            debugstr = resultstr + " task: " + str(obstask.key()) + " has " + str(len(obstask.observations)) + "observations"
+            for obs_key in obstask.observations:
+                obs = get_by_key(obs_key) 
+                if obs is not None:
+                    obslist.append(obs.Observation2Dictionary()) # includes a list of precomputed overlays
+                else:
+                    logging.error("Missing Observation from cache")        
+        
+        data = utils.render('obstask-render.html', {
+          #  'obstask': obstask,
+            'obslist': obslist,
+            'obstask': obstask,
+            'resultstr': debugstr,
+            'obstask_url': webapp2.uri_for('view-obstask', username=obstask.original_owner, task_name=obstask.key()),
+        })
+        memcache.add(n, data)
+
+    return data
+
+
+# called when a new entry is posted, and we must clear all the entry and page cache
+def clear_obstasks_cache(journal_key):
+    journal = get_by_key(journal_key)
+    keys = [C_OBSTASKS_KEYS]
+
+    # add one key per page for get_obstasks_page and get_obstasks_keys_page
+    for p in range(1, journal.entry_count / models.Journal.OBSTASKS_PER_PAGE + 2):
+        keys.extend([C_OBSTASKS_PAGE %(journal.key().parent().name(), journal.name, p), C_OBSTASKS_KEYS_PAGE %(journal_key, p)])
+
+    memcache.delete_multi(keys)
+
+
+###########
+6
 def get_stats():
     n = C_STATS
     data = memcache.get(n)
@@ -328,6 +460,7 @@ def get_stats():
             counters.COUNTER_JOURNALS,
             counters.COUNTER_AREAS,
             counters.COUNTER_ENTRIES,
+            counters.COUNTER_OBSTASKS,
             counters.COUNTER_CHARS,
             counters.COUNTER_WORDS,
             counters.COUNTER_SENTENCES,
@@ -625,21 +758,7 @@ def get_all_cells(): #FIXME - Doesn't work - too much data returned.
         #following = models.UserFollowingAreasIndex.get_by_key_name(user_key, None)
 #        following = models.UserFollowingAreasIndex.get(following_key)
 
-def get_task(task_key_name):
-   
-    n = C_OBS_TASK %(task_key_name)
-    data = unpack(memcache.get(n))
-    if data is None:
-        data= get_by_key(task_key_name)
-        if data is None:
-            logging.error("get_task(): Not an object") 
-            return None
-        else:
-            if data.kind() != "ObservationTask":
-                logging.error("get_task(): Not a task object") 
-                return None
-        memcache.add(n, pack(data))
-    return data
+
 
 def get_journal(username, journal_name):
     n = C_JOURNAL %(username, journal_name)

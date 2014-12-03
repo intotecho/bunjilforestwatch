@@ -310,9 +310,9 @@ class Overlay(db.Model):
 '''
 class Observation (could rename to ObservationAsset) describes a Landsat satellite image.
 
-An Observation contains a list of zero or more Overlays, each Overlay is an visualizations of the ObservationAsset.
+An Observation contains a list of zero or more Overlays, each Overlay is a visualization of the ObservationAsset.
 
-The main use is the captured date. Once this observation has been actioned, it becomes the latest, against which future observations are base-lined.
+The main use is the captured date. Once this observation has been actioned, it becomes the latest, against which future observations are base-lined for change detection.
 This allows the app to redraw the overlay computed by earth engine on a new browser session without recalculating it - providing the overlay token has not expired.
 In which case, app will need to regenerate the observation.    
 
@@ -320,6 +320,8 @@ Some Observations have no image_id as they are composites of many images.
 '''
 
 class Observation(db.Model):
+	
+
 	image_collection = db.StringProperty(required=False)			#identifies the ImageCollection name, not an EE object.
 	image_id  = db.StringProperty(required=False)           		# LANDSAT Image ID of Image - key to query EE.
 	captured  = db.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
@@ -349,6 +351,7 @@ class Task is an observation task, based on a landsat image in an AOI. The task 
 Each task has a unique ID.
 '''    
 class ObservationTask(db.Model):
+	OBSTASKS_PER_PAGE = 20
 	# Observation
 	name = db.StringProperty()
 	aoi = db.ReferenceProperty(AreaOfInterest) #key to area that includes this cell
@@ -361,12 +364,27 @@ class ObservationTask(db.Model):
 	#timestsamps
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
+
+	@property
+	def pages(self, obstask_count):
+		if obstask_count == 0:
+			return 1
+		return (obstask_count + self.OBSTASK_PER_PAGE - 1) / self.OBSTASKS_PER_PAGE
+
+
+	def taskurl(self):
+			return webapp2.uri_for('view-obstask',  username=self.assigned_owner.name, task_name= self.key())
+			#taskurl = "/obs/" + user.name + "/" + str(new_task.key())
+			#linestr += u'<a href=' + taskurl + ' target="_blank">' + taskurl.encode('utf-8') + '</a>'
+
 	
-	def url(self, page=1):
+	def listurl(self, page=1): #show a list of recent tasks
 		if page > 1:
-			return webapp2.uri_for('view-task',  username=self.assigned_owner.name, task_name= "test2", page=page)
+			return webapp2.uri_for('view-obstasks',  username=self.assigned_owner.name, task_name= self.key(), page=page)
 		else:
-			return webapp2.uri_for('view-task', username=self.assigned_owner.name, task_name= "test")
+			return webapp2.uri_for('view-obstasks', username=self.assigned_owner.name, task_name= self.key())
+
+	
 '''
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
 Based on journalr.org 
