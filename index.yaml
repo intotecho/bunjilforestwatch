@@ -50,3 +50,27 @@ indexes:
   - name: image_collection
   - name: captured
     direction: desc
+
+- kind: ObservationTask
+  properties:
+  - name: assigned_owner
+  - name: created_date
+    direction: desc
+
+- kind: ObservationTask
+  properties:
+  - name: assigned_owner=
+  - name: created_date
+    direction: desc
+
+- kind: ObservationTask
+  properties:
+  - name: original_owner
+  - name: created_date
+    direction: desc
+
+- kind: ObservationTask
+  properties:
+  - name: original_owner=
+  - name: created_date
+    direction: desc

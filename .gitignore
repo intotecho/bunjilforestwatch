@@ -21,3 +21,5 @@ geodatastore/.svn/*
 appcfg.py
 OpenSSL*
 crypt.py
+photothumb.db
+*.bak

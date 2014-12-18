@@ -15,6 +15,10 @@ def url(ob, name=''):
 		return webapp2.uri_for(ob, feed=name)
 	elif ob == 'user':
 		return webapp2.uri_for(ob, username=name)
+	
+	elif ob == 'view-obstasks':
+		return webapp2.uri_for(ob, user2view=name)
+
 	elif ob == 'user-feeds':
 		return webapp2.uri_for('feeds', feed='user-%s' %name)
 	elif ob == 'follow':
@@ -67,15 +71,23 @@ def journal_next(ob, page):
 def obstask_url(obstask):
 	return obstask.taskurl()
 
-def obstasks_url(obstask, page=1):
-	return obstask.listurl(page)
+def obstasks_url(obstask, page=1,username=None):
+	return obstask.listurl(page, username)
 
-def obstasks_prev(ob, page):
-	return obstasks_url(ob, str(page - 1))
+def obstasks_prev(ob, page, username):
+	return obstasks_url(ob, str(page - 1), username)
 
-def obstasks_next(ob, page):
-	return obstasks_url(ob, str(page + 1))
+def obstasks_next(ob, page, username=None):
+	return obstasks_url(ob, str(page + 1), username)
 
+def allobstasks_url(obstask, page=1):
+	return obstask.listurl(page, username=None)
+
+def allobstasks_prev(ob, page, username=None):
+	return allobstasks_url(ob, str(page - 1))
+
+def allobstasks_next(ob, page, username=None):
+	return allobstasks_url(ob, str(page + 1))
 
 def blog_url(page=1):
 	return webapp2.uri_for('blog', page=page)
@@ -177,6 +189,9 @@ filters = dict([(i, globals()[i]) for i in [
 	'obstasks_next',
 	'obstasks_prev',
 	'obstasks_url',
+	'allobstasks_next',
+	'allobstasks_prev',
+	'allobstasks_url',
 	'area_next',
 	'area_prev',
 	'area_url',
