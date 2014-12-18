@@ -17,8 +17,8 @@ def url(ob, name=''):
 		return webapp2.uri_for(ob, username=name)
 	
 	elif ob == 'view-obstasks':
-		return webapp2.uri_for(ob, user2view=name)
-
+			return webapp2.uri_for(ob)
+		
 	elif ob == 'user-feeds':
 		return webapp2.uri_for('feeds', feed='user-%s' %name)
 	elif ob == 'follow':

@@ -383,9 +383,9 @@ class ObservationTask(db.Model):
 		if username is None:
 			#username = user.name
 			if page > 1:
-				return webapp2.uri_for('view-allobstasks',  username = username , task_name= self.key(), page=page)
+				return webapp2.uri_for('view-obstasks',  username = username , task_name= self.key(), page=page)
 			else:
-				return webapp2.uri_for('view-allobstasks', username = username , task_name= self.key())
+				return webapp2.uri_for('view-obstasks', username = username , task_name= self.key())
 
 		else:
 			if page > 1:

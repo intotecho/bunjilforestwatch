@@ -9,10 +9,14 @@
                 <li class="active">observation tasks</li>
             </ul>
     </p>
- 
+    
      </div>
-    <h3>My Recent Observation Tasks</h3>
-    <p>Tasks for you to complete</h3>
+    {% if filter == 'mytasks' %}        
+        <h3>My Recent Observation Tasks</h3>
+        <p>Tasks for you to complete</h3>
+    {% else %}
+        <h3>All Recent Observation Tasks</h3>
+    {% endif %}
 
     {% if obstasks %}        
     {% for e in obstasks %}
@@ -23,24 +27,24 @@
     <div>
     
      <ul class="pagination">
-            <li class="prev"><a href="{{ obstask | obstasks_url(user2view) }}">first</a></li>
+            <li class="prev"><a href="{{ obstask| allobstasks_url(user2view) }}">first</a></li>
             {% if page == 1 %}
                 <li class="disabled"><a href="#">&larr; previous</a></li>
             {% else %}
-                <li><a href="{{ obstask |obstasks_prev(page, user2view) }}">&larr; previous</a></li>
+                <li><a href="{{ obstask |allobstasks_prev(page, user2view) }}">&larr; previous</a></li>
             {% endif %}
 
             {% for p in pagelist %}
-                <li{% if p  == page %} class="active"{% endif %}><a href="{{  obstask|obstasks_url(p, user2view) }}">{{ p }}</a></li>
+                <li{% if p  == page %} class="active"{% endif %}><a href="{{  obstask|obstasks_url(p) }}">{{ p }}</a></li>
             {% endfor %}
 
             {% if page == pages %}
                 <li class="disabled"><a href="#">next &rarr;</a></li>
             {% else %}
-                <li><a href="{{ obstask|obstasks_next(page, user2view) }}">next &rarr;</a></li>
+                <li><a href="{{ obstask|obstasks_next(page) }}">next &rarr;</a></li>
             {% endif %}
 
-            <li class="next"><a href="{{ obstask |obstasks_url(pages, user2view) }}">last</a></li>
+            <li class="next"><a href="{{ obstask |obstasks_url(pages) }}">last</a></li>
         </ul>
     </div>  
  
