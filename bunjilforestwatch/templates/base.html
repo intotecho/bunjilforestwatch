@@ -43,7 +43,7 @@
 					<li {% if active== "index" or active== "index-user" %} class="active" {% endif %}>
 					   <a href="{{ "main"|url }}">home</a>
 					</li>
-					<li {% if active== "index" or active== "index-user" %} class="active"{% endif %}> 
+					<li {% if active== "blog" %} class="active"{% endif %}> 
 					   <a href="//bunjilforestwatch.wordpress.com/">blog</a>
 					</li> 
 					<li {% if active== "about" %} class="active"{% endif %}>
@@ -91,15 +91,14 @@
 						</ul>
 					</li>
 					
-					
-					
-					
-					
-                    <li class="dropdown{% if active  == "view-obstasks" %} active{% endif %}">
+                    <li class="dropdown {% if active  == "view-obstasks" %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">tasks<b class="caret"></b></a>
                         <ul class="dropdown-menu">
                             <li>
-                                 <a href="{{ "view-obstasks"|url }}"><span class="glyphicon glyphicon-tasks"></span>Observation tasks</a>
+                                 <a href="{{ 'view-obstasks'|url(user.name) }}"><span class="glyphicon glyphicon-tasks"></span>My tasks</a>
+                            </li>
+                            <li>
+                                 <a href="{{ 'view-allobstasks'|url }}"><span class="glyphicon glyphicon-tasks"></span>All tasks</a>
                             </li>
                         </ul>
                     </li>

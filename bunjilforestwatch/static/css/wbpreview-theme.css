@@ -179,7 +179,7 @@ input[type="color"]:focus,
 	box-shadow: none;
 	-moz-box-shadow: none;
 	background: none;
-	color: #fff;
+	color: #ddd;
 }
 .btn-dropnav {
     float: right;
@@ -204,7 +204,7 @@ input[type="color"]:focus,
 .navbar .nav li.dropdown.active > .dropdown-toggle, 
 .navbar .nav li.dropdown.open.active > .dropdown-toggle {
 	background: none;
-	color: #fff;
+	color: #ddd;
 }
 .dropdown-menu li > a:hover,
 .dropdown-menu li > a:focus,

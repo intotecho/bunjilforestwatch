@@ -378,13 +378,21 @@ class ObservationTask(db.Model):
 			#linestr += u'<a href=' + taskurl + ' target="_blank">' + taskurl.encode('utf-8') + '</a>'
 
 	
-	def listurl(self, page=1): #show a list of recent tasks
-		if page > 1:
-			return webapp2.uri_for('view-obstasks',  username=self.assigned_owner.name, task_name= self.key(), page=page)
-		else:
-			return webapp2.uri_for('view-obstasks', username=self.assigned_owner.name, task_name= self.key())
+	def listurl(self, page=1, username=None): #show a list of recent tasks
+		#logging.debug("listurl %s ", username )
+		if username is None:
+			#username = user.name
+			if page > 1:
+				return webapp2.uri_for('view-allobstasks',  username = username , task_name= self.key(), page=page)
+			else:
+				return webapp2.uri_for('view-allobstasks', username = username , task_name= self.key())
 
-	
+		else:
+			if page > 1:
+				return webapp2.uri_for('view-obstasks',  username = username, user2view= self.assigned_owner.name, task_name= self.key(), page=page)
+			else:
+				return webapp2.uri_for('view-obstasks', username = username, user2view= self.assigned_owner.name,  task_name= self.key())
+			
 '''
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
 Based on journalr.org 

@@ -63,9 +63,9 @@ C_ENTRY = 'entry_%s_%s_%s'
 C_ENTRY_KEY = 'entry_key_%s_%s_%s'
 C_ENTRY_RENDER = 'entry_render_%s_%s_%s'
 
-C_OBSTASKS_KEYS = 'obstasks_keys'
-C_OBSTASKS_KEYS_PAGE = 'obstasks_keys_page_%s'
-C_OBSTASKS_PAGE = 'obstasks_page_%s'
+C_OBSTASKS_KEYS = 'obstasks_keys_%s'
+C_OBSTASKS_KEYS_PAGE = 'obstasks_keys_page_%s_%s'
+C_OBSTASKS_PAGE = 'obstasks_page_%s_%s'
 
 C_OBSTASK = 'obstask_%s'
 C_OBSTASK_KEY = 'obstask_key_%s'
@@ -358,32 +358,37 @@ def get_obstask_key(entry_id):
     data = memcache.get(n)
     if data is None:
         data = db.get(db.Key.from_path('ObservationTask', long(entry_id) ))
-
         if data:
             data = data.key()
-
         memcache.add(n, data)
-
     return data
 
-
 # returns all entry keys sorted by descending date
-def get_obstasks_keys():
-    n = C_OBSTASKS_KEYS
+def get_obstasks_keys(username=None):
+    n = C_OBSTASKS_KEYS%(username)
     data = memcache.get(n)
     if data is None:
         # todo: fix limit to 1000 most recent journal obstasks
-        data = models.ObservationTask.all(keys_only=True).order('-created_date').fetch(200)
+        if username is None:
+            data = models.ObservationTask.all(keys_only=True).order('-created_date').fetch(200)
+            logging.debug("get_obstasks_keys() for all users")
+        else:
+            user_key = db.Key.from_path('User', username)
+            data = models.ObservationTask.all(keys_only=True).filter('original_owner =', user_key).order('-created_date').fetch(200)
+            logging.debug("get_obstasks_keys for user %s %s", username, user_key)
+            if len(data) == 0 :
+                logging.info("get_obstasks_keys() user %s has no tasks", username)
+            #.ancestor(user_key)
         memcache.add(n, data)
 
     return data
 
 # returns entry keys of given page
-def get_obstasks_keys_page(page):
-    n = C_OBSTASKS_KEYS_PAGE %(page)
+def get_obstasks_keys_page(page, username=None):
+    n = C_OBSTASKS_KEYS_PAGE %(page, username)
     data = memcache.get(n)
     if data is None:
-        obstasks = get_obstasks_keys()
+        obstasks = get_obstasks_keys(username)
         data = obstasks[(page  - 1) * models.ObservationTask.OBSTASKS_PER_PAGE:page * models.ObservationTask.OBSTASKS_PER_PAGE]
         memcache.add(n, data)
 
@@ -393,14 +398,14 @@ def get_obstasks_keys_page(page):
     return data
 
 # returns obstasks of given page
-def get_obstasks_page(page):
-    n = C_OBSTASKS_PAGE %(page)
+def get_obstasks_page(page, username=None):
+    n = C_OBSTASKS_PAGE %(page, username)
     data = memcache.get(n)
     if data is None:
         if page < 1:
             page = 1
 
-        obstasks = get_obstasks_keys_page(page)
+        obstasks = get_obstasks_keys_page(page, username)
         data = [unicode(get_obstask_render(i)) for i in obstasks]
         memcache.add(n, data)
 
@@ -416,9 +421,12 @@ def get_obstask_render(task_key):
             area = obstask.aoi 
             cell_list = area.CellList()  
             
-            resultstr = "Observation Task for {0!s} to check area {1!s}".format(obstask.original_owner, area.name.encode('utf-8') )
+            resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.original_owner, area.name.encode('utf-8') )
+            resultstr += "Task assigned to: {0!s}<br>".format(obstask.assigned_owner)
+            resultstr += "Task Status <em>{0!s}. </em> ".format("Created")
+            
             #debugstr = resultstr + " task: " + str(obstask.key()) + " has " + str(len(obstask.observations)) + " observations"
-            debugstr = resultstr + ". Task has " + str(len(obstask.observations)) + " observations"
+            debugstr = resultstr + "Task has " + str(len(obstask.observations)) + " observations"
             for obs_key in obstask.observations:
                 obs = get_by_key(obs_key) 
                 if obs is not None:
@@ -427,7 +435,7 @@ def get_obstask_render(task_key):
                     logging.error("Missing Observation from cache")        
         
         data = utils.render('obstask-render.html', {
-          #  'obstask': obstask,
+            'obstask': obstask,
             'obslist': obslist,
             'obstask': obstask,
             'resultstr': debugstr,
@@ -445,15 +453,14 @@ def clear_obstasks_cache(journal_key):
     journal = get_by_key(journal_key)
     keys = [C_OBSTASKS_KEYS]
 
-    # add one key per page for get_obstasks_page and get_obstasks_keys_page
+    # add one key per page for get_obstasks_page and get_obstasks_keys_page #TODO: Change from Journal to ObsTasks
     for p in range(1, journal.entry_count / models.Journal.OBSTASKS_PER_PAGE + 2):
         keys.extend([C_OBSTASKS_PAGE %(journal.key().parent().name(), journal.name, p), C_OBSTASKS_KEYS_PAGE %(journal_key, p)])
 
     memcache.delete_multi(keys)
 
-
 ###########
-6
+
 def get_stats():
     n = C_STATS
     data = memcache.get(n)
@@ -717,7 +724,7 @@ def get_cell_from_keyname(cell_name, area): #TODO - Does not really add anything
         #data = models.LandsatCell.get()
         data = models.LandsatCell.get_by_key_name( u'key_name', cell_name)
         if data is None:
-            logging.error("get_cell_from_key() Missing Cell Object %s", cell_name)
+            logging.error("cache:get_cell_from_keyname() Missing Cell Object %s", cell_name)
         else:
             memcache.add(n, pack(data))
     return data
@@ -732,7 +739,7 @@ def get_cell_from_key(cell_key): #TODO - Does not really add anything different 
         #data = models.LandsatCell.get()
         data = models.LandsatCell.get(cell_key)
         if data is None:
-            logging.error("get_cell_from_key() Missing Cell Object")
+            logging.error("cache: get_cell_from_key() No Cell for key %s", cell_key)
         else:
             memcache.add(n, pack(data))
     return data
