@@ -476,10 +476,14 @@ def get_obstask_render(task_key):
 
 
 # called when a new entry is posted, and we must clear all the entry and page cache
-def clear_obstasks_cache():
+def clear_obstasks_cache(ok):
     #FIXME: Change from Journal to ObsTasks
-    journal = get_by_key()
-    keys = [C_OBSTASKS_KEYS]
+
+    obstask = get_by_key(key)
+    if obstask is not None:
+        userkey= C_OBSTASKS_KEYS_%s_obstask.original_owner
+        areakey = obstask.aoi
+        keys = [C_OBSTASKS_KEYS, C_OBSTASKS_KEY_]
 
     # add one key per page for get_obstasks_page and get_obstasks_keys_page 
     #for p in range(1, ObservationTasks.entry_count / models.ObservationTasks.OBSTASKS_PER_PAGE + 2):

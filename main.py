@@ -1164,6 +1164,8 @@ returns a HTML formatted string
 def checkAreaForNew(area, hosturl):
     area_followers  = models.AreaFollowersIndex.get_by_key_name(area.name, area) 
     linestr = u'<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
+    obstask_cachekeys = []
+ 
     if area_followers:
         linestr += u'<p>Monitored cells ['
         new_observations = []
@@ -1180,6 +1182,7 @@ def checkAreaForNew(area, hosturl):
                         new_observations.append(obs.key())
                         # find followers of this area
                         # send them an email
+        
             else:
                 logging.error (u"CheckNewAreaHandler no cell returned from key %s ", cell_key)
         linestr += u']</p>'
@@ -1197,8 +1200,12 @@ def checkAreaForNew(area, hosturl):
             taskurl = "/obs/" + user.name + "/" + str(new_task.key())
             linestr += u'<a href=' + taskurl + ' target="_blank">' + taskurl.encode('utf-8') + '</a>'
             linestr += u'<ul>'
+            
+            cache.flush() # TODO To scale, will need a better strategy to just flush applicable items.
+            
             for ok in new_observations:
                 o = cache.get_by_key(ok)
+                #clear_obstasks_cache(o)
                 linestr += u'<li>image_id: ' + o.image_id + u'</li>' 
             linestr += u'</ul>'
         else:
