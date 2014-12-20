@@ -363,32 +363,51 @@ def get_obstask_key(entry_id):
         memcache.add(n, data)
     return data
 
-# returns all entry keys sorted by descending date
-def get_obstasks_keys(username=None):
-    n = C_OBSTASKS_KEYS%(username)
+# returns all ObservationTask keys sorted by descending date, filtered by username OR areaname but not both.
+def get_obstasks_keys(username=None, areaname=None):
+    
+    if areaname is not None:
+        n = C_OBSTASKS_KEYS%(areaname)
+    else:
+        n = C_OBSTASKS_KEYS%(username)
     data = memcache.get(n)
     if data is None:
         # todo: fix limit to 1000 most recent journal obstasks
-        if username is None:
-            data = models.ObservationTask.all(keys_only=True).order('-created_date').fetch(200)
-            logging.debug("get_obstasks_keys() for all users")
-        else:
+        if username is not None:
             user_key = db.Key.from_path('User', username)
             data = models.ObservationTask.all(keys_only=True).filter('original_owner =', user_key).order('-created_date').fetch(200)
             logging.debug("get_obstasks_keys for user %s %s", username, user_key)
             if len(data) == 0 :
                 logging.info("get_obstasks_keys() user %s has no tasks", username)
-            #.ancestor(user_key)
+        elif areaname is not None:
+            area_key = db.Key.from_path('AreaOfInterest', areaname)
+            print ("area_key ", area_key)
+            data = models.ObservationTask.all(keys_only=True).filter('aoi =', area_key).order('-created_date').fetch(200)
+            logging.debug("get_obstasks_keys for area %s %s", areaname, area_key)
+            if len(data) == 0 :
+                logging.info("get_obstasks_keys() area %s has no tasks", areaname)
+        else:
+            data = models.ObservationTask.all(keys_only=True).order('-created_date').fetch(200)
+            logging.debug("get_obstasks_keys() for all tasks")
         memcache.add(n, data)
 
     return data
 
-# returns entry keys of given page
-def get_obstasks_keys_page(page, username=None):
-    n = C_OBSTASKS_KEYS_PAGE %(page, username)
+# returns ObsTasks keys of given page
+def get_obstasks_keys_page(page, username=None, areaname=None):
+    if areaname is not None:    
+        n = C_OBSTASKS_KEYS_PAGE %(page,areaname)
+        #filter = areaname
+    elif username is not None:    
+        n = C_OBSTASKS_KEYS_PAGE %(page,username)
+        #filter=areaname
+    else:    
+        n = C_OBSTASKS_KEYS_PAGE %(page, None)
+        #filter=None
+        
     data = memcache.get(n)
     if data is None:
-        obstasks = get_obstasks_keys(username)
+        obstasks = get_obstasks_keys(username, areaname)
         data = obstasks[(page  - 1) * models.ObservationTask.OBSTASKS_PER_PAGE:page * models.ObservationTask.OBSTASKS_PER_PAGE]
         memcache.add(n, data)
 
@@ -397,20 +416,31 @@ def get_obstasks_keys_page(page, username=None):
 
     return data
 
-# returns obstasks of given page
-def get_obstasks_page(page, username=None):
-    n = C_OBSTASKS_PAGE %(page, username)
+# returns rendered list of ObservationTasks of given page
+def get_obstasks_page(page, username=None, areaname=None):
+    if areaname is not None:    
+        n = C_OBSTASKS_PAGE %(page, areaname)
+        filter = areaname
+    elif username is not None:    
+        n = C_OBSTASKS_PAGE %(page, username)
+        filter=areaname
+    else:    
+        n = C_OBSTASKS_PAGE %(page, None)
+        filter=None
+ 
+    
     data = memcache.get(n)
     if data is None:
         if page < 1:
             page = 1
 
-        obstasks = get_obstasks_keys_page(page, username)
+        obstasks = get_obstasks_keys_page(page, username, areaname)
         data = [unicode(get_obstask_render(i)) for i in obstasks]
         memcache.add(n, data)
 
     return data
 
+#Renders an ObservationTask into an HTML row.
 def get_obstask_render(task_key):
     n = C_OBSTASK_RENDER %(task_key)
     data = memcache.get(n)
@@ -449,15 +479,16 @@ def get_obstask_render(task_key):
 
 
 # called when a new entry is posted, and we must clear all the entry and page cache
-def clear_obstasks_cache(journal_key):
-    journal = get_by_key(journal_key)
+def clear_obstasks_cache():
+    #FIXME: Change from Journal to ObsTasks
+    journal = get_by_key()
     keys = [C_OBSTASKS_KEYS]
 
-    # add one key per page for get_obstasks_page and get_obstasks_keys_page #TODO: Change from Journal to ObsTasks
-    for p in range(1, journal.entry_count / models.Journal.OBSTASKS_PER_PAGE + 2):
-        keys.extend([C_OBSTASKS_PAGE %(journal.key().parent().name(), journal.name, p), C_OBSTASKS_KEYS_PAGE %(journal_key, p)])
+    # add one key per page for get_obstasks_page and get_obstasks_keys_page 
+    #for p in range(1, ObservationTasks.entry_count / models.ObservationTasks.OBSTASKS_PER_PAGE + 2):
+        #keys.extend([C_OBSTASKS_PAGE %(journal.key().parent().name(), journal.name, p), C_OBSTASKS_KEYS_PAGE %(journal_key, p)])
 
-    memcache.delete_multi(keys)
+    #memcache.delete_multi(keys)
 
 ###########
 
@@ -473,6 +504,8 @@ def get_stats():
             counters.COUNTER_OBSTASKS,
             counters.COUNTER_CHARS,
             counters.COUNTER_WORDS,
+            counters.COUNTER_OBSTASKS,
+            counters.COUNTER_SENTENCES,
             counters.COUNTER_SENTENCES,
         ]]
 

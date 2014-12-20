@@ -12,6 +12,7 @@ COUNTER_AREAS = 'areass'
 COUNTER_SENTENCES = 'sentences'
 COUNTER_USERS = 'users'
 COUNTER_WORDS = 'words'
+COUNTER_OBSTASKS= 'obstasks'
 
 class GeneralCounterShardConfig(db.Model):
 	"""Tracks the number of shards for each named counter."""
