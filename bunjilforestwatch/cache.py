@@ -397,13 +397,10 @@ def get_obstasks_keys(username=None, areaname=None):
 def get_obstasks_keys_page(page, username=None, areaname=None):
     if areaname is not None:    
         n = C_OBSTASKS_KEYS_PAGE %(page,areaname)
-        #filter = areaname
     elif username is not None:    
         n = C_OBSTASKS_KEYS_PAGE %(page,username)
-        #filter=areaname
     else:    
         n = C_OBSTASKS_KEYS_PAGE %(page, None)
-        #filter=None
         
     data = memcache.get(n)
     if data is None:
