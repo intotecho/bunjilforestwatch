@@ -363,7 +363,9 @@ class ObservationTask(db.Model):
 	#timestsamps
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
-
+	
+	status = db.StringProperty() #Task's workflow
+	
 	@property
 	def pages(self, obstask_count):
 		if obstask_count == 0:
