@@ -1364,8 +1364,6 @@ class MailTestHandler(BaseHandler):
     
     self.response.write( resultstr)        
 
-         
-
 class ViewJournal(BaseHandler):
     def get(self, username, journal_name):
         page = int(self.request.get('page', 1))
@@ -1389,67 +1387,53 @@ class ViewJournal(BaseHandler):
                 'pagelist': utils.page_list(page, journal.pages),
             })
 
-
-class ViewAllObservationTasksHandler(BaseHandler):
-
-    def get(self):
-        page = int(self.request.get('page', 1))
-        user = cache.get_user(self.session['user']['name'])
-        alltasks = cache.get_obstasks_keys() # list of all task keys
-        obstask = cache.get_task(alltasks[0])
-        obstasks = cache.get_obstasks_page(page) # rendered page of tasks #TODO is it needed? 
-        
-        logging.info('ViewObservationTasksHandler found %d tasks', obstasks, len(alltasks)) 
-        #logging.debug('obstasks %s', obstasks) 
-        #logging.debug('obslist  %s', obslist) 
-        
-        self.render('view-obstasks.html', {
-           'username': user,
-           'user2view': None,
-           'obstask': obstask,
-            'obstasks': obstasks,
-            'pages' : len(alltasks),
-            'page': page,
-            'show_navbar': True,
-            'filter' : 'all',
-            'pagelist': utils.page_list(page, len(alltasks))
-        })
-        
-class ViewMyObservationTasksHandler(BaseHandler):
+class ViewObservationTasksHandler(BaseHandler):
 
     def get(self):
+        
         user = cache.get_user(self.session['user']['name']) #user from current session
         page = int(self.request.get('page', 1))
 
         if 'user2view' in self.request.GET:
             user2view = self.request.get('user2view')
-            print ("user2view is ", user2view)
+            #print ("user2view is ", user2view)
             user2 = cache.get_user(user2view) # could be another user
+            areaname=None
             filter = 'mytasks'
+        elif 'areaname' in self.request.GET:
+            areaname = self.request.get('areaname')
+            #print ("areaname is ", user2view)
+            areakey = cache.get_area_key(None, areaname)
+            user2view = None
+            user2 = None
+            filter = 'areatasks'
         else:
             user2view = None
             user2 = None
-            filter = "all"
-            print ("user2view is  Not found")
+            areaname=None
+            filter = None
 
-        obstasks = cache.get_obstasks_page(page, user2view) # rendered page of tasks #TODO is it needed? 
+        obstasks = cache.get_obstasks_page(page, user2view, areaname) # rendered page of tasks #TODO is it needed? 
         
         if len(obstasks)  == 0 :
-            logging.info('ViewMyObservationTasksHandler %s with key %s has no tasks', user2view, user2.key()) 
+            logging.info('ViewObservationTasksHandler user %s has no tasks', user2view) 
             obstask = None
             obstasks = None
             pages =  0
+            tasks = None
         else:
             pages = len(obstasks)
-            tasks = cache.get_obstasks_keys(user2view) # list of all task keys
+            tasks = cache.get_obstasks_keys(user2view,areaname) # list of all task keys
             obstask = cache.get_task(tasks[0]) # template needs this to get listurl to work?
-            logging.info('ViewMyObservationTasksHandler showing %d tasks for user %s', len(obstasks), user2view) 
+            logging.info('ViewObservationTasksHandler showing %d tasks for user %s', len(obstasks), user2view) 
         
         self.render('view-obstasks.html', {
            'username': user,
             'user2view': user2,
+            'areaname': areaname,
             'obstask': obstask,
             'obstasks': obstasks,
+            'tasks' :  tasks,
             'pages' : pages,
             'page': page,
             'show_navbar': True,
@@ -1457,16 +1441,6 @@ class ViewMyObservationTasksHandler(BaseHandler):
             'pagelist': utils.page_list(page, pages)
         })
  
-'''      
-        self.render('view-obstasks.html', {
-            'username': user,
-            'pages' : pages,
-            'page': page,
-            'show_navbar': True,
-            'filter' : 'user',
-            'pagelist': utils.page_list(page,pages)
-        })
-'''
 class AboutHandler(BaseHandler):
     def get(self):
         self.render('about.html' , {
@@ -2659,7 +2633,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/admin/new/blog', handler=NewBlogHandler, name='new-blog'),
     webapp2.Route(r'/admin/update/users', handler=UpdateUsersHandler, name='update-users'),
     webapp2.Route(r'/admin/checknew', handler=CheckNewAllAreasHandler, name='check-new-all-images'),
-   # webapp2.Route(r'/admin/obs/list', handler=ViewAllObservationTasksHandler, name='admin-view-obstasks'),
+    webapp2.Route(r'/admin/obs/list', handler=ViewObservationTasksHandler, name='view-obstasks'),
     webapp2.Route(r'/admin/checknew/<area_name>', handler=CheckNewAreaHandler, name='check-new-area-images'),
     webapp2.Route(r'/blob/<key>', handler=BlobHandler, name='blob'),
     webapp2.Route(r'/blog', handler=BlogHandler, name='blog'),
@@ -2693,8 +2667,8 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
     # observation tasks
-    webapp2.Route(r'/obs/list', handler=ViewMyObservationTasksHandler, name='view-obstasks'),
-    #webapp2.Route(r'/obs/list/<user2view>', handler=ViewMyObservationTasksHandler, name='view-obstasks'),
+    webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, name='view-obstasks'),
+    #webapp2.Route(r'/obs/list/<user2view>', handler=ViewObservationTasksHandler, name='view-obstasks'),
     webapp2.Route(r'/obs/<username>/overlay/create/<obskey>/<role>/<algorithm>', handler=CreateOverlayHandler, name='create-overlay'), #AJAX call
     webapp2.Route(r'/obs/<username>/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayHandler, name='update-overlay'), #AJAX call
     #webapp2.Route(r'/obs/<username>/prioroverlay/create/<obskey>/<algorithm>', handler=CreatePriorOverlayHandler, name='create-prioroverlay'), #AJAX call

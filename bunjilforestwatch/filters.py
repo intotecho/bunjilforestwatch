@@ -71,15 +71,29 @@ def journal_next(ob, page):
 def obstask_url(obstask):
 	return obstask.taskurl()
 
-def obstasks_url(obstask, page=1,username=None):
-	return obstask.listurl(page, username)
+#def listurl(self, page=1, username=None): #show a list of recent tasks
+	#logging.debug("listurl %s ", username )
 
+def obstasks_url(obstask, page=1,user2view=None):
+	#return obstask.listurl(page, username)
+	if user2view == 'None' or user2view == None:
+		if page > 1:
+			return webapp2.uri_for('view-obstasks', page=page)
+		else:
+			return webapp2.uri_for('view-obstasks')
+	else:
+		if page > 1:
+			return webapp2.uri_for('view-obstasks',   user2view= user2view, page=page)
+		else:
+			return webapp2.uri_for('view-obstasks',  user2view= user2view  )
+		
 def obstasks_prev(ob, page, username):
 	return obstasks_url(ob, str(page - 1), username)
 
 def obstasks_next(ob, page, username=None):
 	return obstasks_url(ob, str(page + 1), username)
 
+'''
 def allobstasks_url(obstask, page=1):
 	return obstask.listurl(page, username=None)
 
@@ -88,6 +102,7 @@ def allobstasks_prev(ob, page, username=None):
 
 def allobstasks_next(ob, page, username=None):
 	return allobstasks_url(ob, str(page + 1))
+'''
 
 def blog_url(page=1):
 	return webapp2.uri_for('blog', page=page)
@@ -189,9 +204,6 @@ filters = dict([(i, globals()[i]) for i in [
 	'obstasks_next',
 	'obstasks_prev',
 	'obstasks_url',
-	'allobstasks_next',
-	'allobstasks_prev',
-	'allobstasks_url',
 	'area_next',
 	'area_prev',
 	'area_url',

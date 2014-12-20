@@ -1,4 +1,3 @@
-
 from __future__ import with_statement
 
 import datetime
@@ -380,18 +379,10 @@ class ObservationTask(db.Model):
 	
 	def listurl(self, page=1, username=None): #show a list of recent tasks
 		#logging.debug("listurl %s ", username )
-		if username is None:
-			#username = user.name
-			if page > 1:
-				return webapp2.uri_for('view-obstasks',  username = username , task_name= self.key(), page=page)
-			else:
-				return webapp2.uri_for('view-obstasks', username = username , task_name= self.key())
-
+		if page > 1:
+			return webapp2.uri_for('view-obstasks',  username = username, user2view= self.assigned_owner.name, task_name= self.key(), page=page)
 		else:
-			if page > 1:
-				return webapp2.uri_for('view-obstasks',  username = username, user2view= self.assigned_owner.name, task_name= self.key(), page=page)
-			else:
-				return webapp2.uri_for('view-obstasks', username = username, user2view= self.assigned_owner.name,  task_name= self.key())
+			return webapp2.uri_for('view-obstasks', username = username, user2view= self.assigned_owner.name,  task_name= self.key())
 			
 '''
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
