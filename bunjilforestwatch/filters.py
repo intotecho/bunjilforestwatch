@@ -38,6 +38,8 @@ def url(ob, name=''):
 def user_area_url(username, area_name):
 	return webapp2.uri_for('view-area', username=username, area_name=area_name)
 
+def area_tasks_url(area):
+	return webapp2.uri_for('view-obstasks', username=None, areaname=area.name)
 
 def area_url(area, page=1):
 	return area.url(page)
@@ -92,17 +94,6 @@ def obstasks_prev(ob, page, username):
 
 def obstasks_next(ob, page, username=None):
 	return obstasks_url(ob, str(page + 1), username)
-
-'''
-def allobstasks_url(obstask, page=1):
-	return obstask.listurl(page, username=None)
-
-def allobstasks_prev(ob, page, username=None):
-	return allobstasks_url(ob, str(page - 1))
-
-def allobstasks_next(ob, page, username=None):
-	return allobstasks_url(ob, str(page + 1))
-'''
 
 def blog_url(page=1):
 	return webapp2.uri_for('blog', page=page)
@@ -207,6 +198,7 @@ filters = dict([(i, globals()[i]) for i in [
 	'area_next',
 	'area_prev',
 	'area_url',
+	'area_tasks_url',
 	'pluralize',
 	'sdate',
 	'timesince',
