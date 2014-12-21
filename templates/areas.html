@@ -10,7 +10,8 @@
         {% endif %}
         <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
         <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
-        <tr><td>observers </td><td>{{ j.subscriber }}</td></tr>
+        <tr><td>observers </td><td>{{ j.observers }}</td></tr>
+        <tr><td><a href="{{ j|area_tasks_url}}"><h4>tasks</h4></a></td><td></td></tr>
         </tbody>        
        </table></pre> 
     {% endfor %}
