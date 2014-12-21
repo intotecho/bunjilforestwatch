@@ -233,7 +233,8 @@ An AOI makes overlaps a set of one or more cells - and creates a constant list o
 Each cell has a different schedule when new images arrive.
 
 Note that multiple LandsatCell objects for the same Landsat Cell(p,r) can be created, one for each parent area to which it belongs.
-                
+
+The normal name for a Cell is a Swath.                
 '''
 class LandsatCell(db.Model):
 	#constants - not changed once created. Created when AOI is created. 
