@@ -2,12 +2,10 @@
 <!-- This is index page or localhost:8001 when user is logged in -->
 <!-- See also localhost:8001/username - my areas from the menu -->
 {% block content %}
-
-
 <div class="container">
     <ul class="breadcrumb">
-        <li><a href="{{ "user"|url(user.name) }}">{{ user.name }}</a>  <span class="divider">/</span></li>
-  <!-- <li class="active">home (role: {{user.role}})</li> -->
+        <li><a href="{{ 'user'|url(user.name)}}">{{ user.name }}</a>
+        <li class="active">{{user.role}} dashboard</li>
     </ul>
 </div>
 
