@@ -388,7 +388,7 @@ class GoogleSwitch(BaseHandler):
 class AccountHandler(BaseHandler):
     def get(self):
         if 'user' not in self.session:
-            self.add_message('error', 'You must log in to access your account.')
+            self.add_message('danger', 'You must log in to access your account.')
             self.redirect(webapp2.uri_for('main'))
             return
 
@@ -400,7 +400,7 @@ class AccountHandler(BaseHandler):
                 user_data = facebook.graph_request(self.session['access_token'])
 
                 if u.facebook_id and user_data['id'] != u.facebook_id:
-                    self.add_message('error', 'This account has already been attached to a facebook account.')
+                    self.add_message('danger', 'This account has already been attached to a facebook account.')
                 else:
                     u.facebook_id = user_data['id']
                     u.facebook_enable = True
@@ -512,7 +512,7 @@ class NewAreaHandler(BaseHandler):
             abs_url  = urlparse(self.request.uri)
             original_url = abs_url.path
             logging.info('No user logged in. Redirecting from protected url: ' + original_url)
-            self.add_message('error', 'You must log in to create a new area .')
+            self.add_message('danger', 'You must log in to create a new area .')
             return self.redirect(users.create_login_url(original_url))
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
  
@@ -523,7 +523,7 @@ class NewAreaHandler(BaseHandler):
             username = self.session['user']['name']
         except:
             logging.error('Should never get this exception')
-            self.add_message('error', 'You must log in to create a new area.')
+            self.add_message('danger', 'You must log in to create a new area.')
             
             if 'user' not in self.session:
                 self.redirect(webapp2.uri_for('main'))
@@ -591,13 +591,13 @@ class NewAreaHandler(BaseHandler):
             if len(self.session['areas_list']) >= models.AreaOfInterest.MAX_AREAS:
                 self.add_message('warning', 'Sorry, there is a quota of only %i areas per user.' %models.AreaOfInterest.MAX_AREAS)
         if not name:
-            self.add_message('error', 'Your area of interest needs a short and unique name. Please try again') #FIXME - This check should be done in the browser.
+            self.add_message('danger', 'Your area of interest needs a short and unique name. Please try again') #FIXME - This check should be done in the browser.
         else:
             maxlatlon = db.GeoPt(float(tmax_lat), float(tmax_lon))
             minlatlon = db.GeoPt(float(tmin_lat), float(tmin_lon))
 
             if not eeservice.initEarthEngineService(): # we need earth engine now.
-                self.add_message('error', 'Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later')
+                self.add_message('danger', 'Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later')
                 self.redirect(webapp2.uri_for('main'))
                 return
 
@@ -613,7 +613,7 @@ class NewAreaHandler(BaseHandler):
             total_area = ccw_geom.area().getInfo()/1e6 #area in sq km
             area_in_cells = total_area/LANSAT_CELL_AREA
             if total_area > (LANSAT_CELL_AREA * 8): # limit area to an arbitrary maximum size where the system breaks down.
-                self.add_message('error', 'Sorry, your area is too big (%d sq km = %d Landsat images). Try a smaller area.' %(total_area, area_in_cells))
+                self.add_message('danger', 'Sorry, your area is too big (%d sq km = %d Landsat images). Try a smaller area.' %(total_area, area_in_cells))
             else:
                 park_boundary_fc = ee.FeatureCollection(feat)
                 #print "park_boundary_fc: ", park_boundary_fc
@@ -629,7 +629,7 @@ class NewAreaHandler(BaseHandler):
                 
                 for area_url, area_name in self.session['areas_list']:
                     if area.name == area_name:
-                        self.add_message('error', 'Sorry, there is already a protected area called %s. Please choose a different name and try again ' %name)
+                        self.add_message('danger', 'Sorry, there is already a protected area called %s. Please choose a different name and try again ' %name)
                         self.redirect(webapp2.uri_for('new-area'))
                         return
                 else: #for loop did not break.
@@ -656,7 +656,7 @@ class NewAreaHandler(BaseHandler):
                         self.redirect(webapp2.uri_for('view-area', area_name=area.name))
                         return
                     except: 
-                        self.add_message('error', "Sorry, Only ASCII in area names: %s (We're working on it)") # FIXME:BPA-  
+                        self.add_message('danger', "Sorry, Only ASCII in area names: %s (We're working on it)") # FIXME:BPA-  
                         self.redirect(webapp2.uri_for('new-area'))
                         return
         logging.error('NewAreaHandler - no user')
@@ -699,7 +699,7 @@ class SelectCellHandler(BaseHandler):
             self.response.write(json.dumps(cell_dict))
         else:
             logging.error('Selected Cell does not exist %d %d', path, row)
-            self.response.write( {'error':'Not a cell'})
+            self.response.write( {'danger':'Not a cell'})
         return
     
     def post(self):
@@ -728,14 +728,14 @@ class NewJournal(BaseHandler):
         name = self.request.get('name')
 
         if len(self.session['journals']) >= models.Journal.MAX_JOURNALS:
-            self.add_message('error', 'Only %i journals allowed.' %models.Journal.MAX_JOURNALS)
+            self.add_message('danger', 'Only %i journals allowed.' %models.Journal.MAX_JOURNALS)
         elif not name:
-            self.add_message('error', 'Your journal needs a name.')
+            self.add_message('danger', 'Your journal needs a name.')
         else:
             journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
             for journal_url, journal_name, journal_type in self.session['journals']:
                 if journal.name == journal_name:
-                    self.add_message('error', 'You already have a journal called %s.' %name)
+                    self.add_message('danger', 'You already have a journal called %s.' %name)
                     break
             else:
                 def txn(user_key, journal):
@@ -846,9 +846,9 @@ class GetLandsatCellsHandler(BaseHandler):
         #logging.debug('GetLandsatCellsHandler area.name: %s type: %d area.key(): %s', area.name, type(area), area.key())
     
         if not eeservice.initEarthEngineService(): # we need earth engine now.
-            result = 'error'
+            result = 'danger'
             reason = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
-            self.add_message('error', reason)
+            self.add_message('danger', reason)
             logging.error(reason)
             getCellsResult = {'result': result, 'reason': reason}
             self.response.write(json.dumps(getCellsResult))
@@ -876,7 +876,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
             returnval = {}
             returnval['result'] = "error"
             returnval['reason'] = 'LandsatOverlayRequestHandler: Invalid area ' + area_name
-            self.add_message('error', returnval['reason'] )
+            self.add_message('danger', returnval['reason'] )
             logging.error(returnval['reason'])
             self.response.write(json.dumps(returnval))
             return
@@ -898,7 +898,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
             returnval = {}
             returnval['result'] = "error"
             returnval['reason'] = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
-            self.add_message('error', returnval['reason'] )
+            self.add_message('danger', returnval['reason'] )
             logging.error(returnval['reason'])
             self.response.write(json.dumps(returnval))
         
@@ -907,7 +907,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
             returnval = {}
             returnval['result'] = "error"
             returnval['reason'] = 'Sorry, Cannot creat overlay.  Google Earth Engine did not provide a map_id. Please come back later'
-            self.add_message('error', returnval['reason'] )
+            self.add_message('danger', returnval['reason'] )
             logging.error(returnval['reason'])
             self.response.write(json.dumps(returnval))
             return
@@ -927,7 +927,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
                 returnval = {}
                 returnval['result'] = "error"
                 returnval['reason'] = 'LandsatOverlayRequestHandler - cache.get_cell error'
-                self.add_message('error', returnval['reason'] )
+                self.add_message('danger', returnval['reason'] )
                 logging.error(returnval['reason'])
                 self.response.write(json.dumps(returnval))
  
@@ -1118,7 +1118,7 @@ class ObservationTaskHandler(BaseHandler):
         task_owner = cache.get_user(username) #user who owns the task is passed in url.
 
         if task_owner is None:
-            self.add_message('error', 'Sorry, invalid task owner: ' + username)
+            self.add_message('danger', 'Sorry, invalid task owner: ' + username)
             self.redirect(webapp2.uri_for('main'))
             return
          
@@ -1152,7 +1152,7 @@ class ObservationTaskHandler(BaseHandler):
   
         else:
             resultstr = "Sorry, Task not found. ObservationTaskHandler: key {0!s}".format(task_name)
-            self.add_message('error', resultstr)
+            self.add_message('danger', resultstr)
             logging.error(resultstr)
             self.response.write(resultstr)
    
@@ -1263,7 +1263,7 @@ class CheckNewAreaHandler(BaseHandler):
         
         if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
             initstr =u'CheckNewAreaHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
-            #self.add_message('error', initstr)
+            #self.add_message('danger', initstr)
             self.response.write(initstr) 
             return
 
@@ -1286,7 +1286,7 @@ class CheckNewHandler(BaseHandler):
         
         if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
             initstr =u'CheckNewHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
-            #self.add_message('error', initstr)
+            #self.add_message('danger', initstr)
             self.response.write(initstr) 
             return
 
@@ -1559,7 +1559,7 @@ class FollowHandler(BaseHandler):
         else:
             op = 'add'
             unop = 'del'
-
+  
         xg_on = db.create_transaction_options(xg=True)
 
         def txn(thisuser, area, op):
@@ -1611,9 +1611,7 @@ class FollowAreaHandler(BaseHandler):
         area = cache.get_area(None, area_name)
         if not area :
             self.error(404)
-            return
-        
-
+            return 
         thisuser = username  #self.session['user']['name']
    
         if 'user' not in self.session:
@@ -1629,9 +1627,11 @@ class FollowAreaHandler(BaseHandler):
         if 'unfollow' in self.request.GET:
             op = 'del'
             unop = 'add'
+            #print 'unfollowing'
         else:
             op = 'add'
             unop = 'del'
+            #print 'following'
 
         xg_on = db.create_transaction_options(xg=True)
 
@@ -1672,11 +1672,33 @@ class FollowAreaHandler(BaseHandler):
         areas_following, followers,  = db.run_in_transaction_options(xg_on, txn, following_key, followers_key, op)
 
         if op == 'add':
-            self.add_message('success', 'You are now following area %s.' %area_name.decode('utf-8'))
+            self.add_message('success', 'You are now following area <em>%s</em>.' %area_name.decode('utf-8'))
             models.Activity.create(cache.get_by_key(self.session['user']['key']), models.ACTIVITY_FOLLOWING, area)
-        elif op == 'del':
-            self.add_message('success', 'You are no longer following area %s.' %area_name.decode('utf-8'))
 
+            ########### create a journal for each followed area - should be in above txn and a function call as duplicated ##############
+            name = "Observations for " + area_name.decode('utf-8') # name is used by view-obstask.html to make reports.
+            journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
+            for journal_url, journal_name, journal_type in self.session['journals']:
+                if journal.name == journal_name:
+                    self.add_message('info', 'You already have a journal called <em>%s</em>.' %name.decode('utf-8'))
+                    break
+            else:
+                journal.journal_type = "observations"
+                def txn2(user_key, journal):
+                    user = db.get(user_key)
+                    user.journal_count += 1
+                    db.put([user, journal])
+                    return user, journal
+
+                user, journal = db.run_in_transaction(txn2, self.session['user']['key'], journal)
+                cache.clear_journal_cache(db.Key(self.session['user']['key']))
+                models.Activity.create(user, models.ACTIVITY_NEW_JOURNAL, journal.key())
+                cache.set(cache.pack(user), cache.C_KEY, user.key())
+                self.add_message('success', 'Created journal <em>%s</em>.' %name.decode('utf-8'))
+
+        elif op == 'del':
+            self.add_message('success', 'You are no longer following area <em>%s</em>.' %area_name.decode('utf-8'))
+            
         cache.flush() # FIXME: Better fix by setting data into the cache as this will be expensive!!!
         #cache.set_multi({
         #    cache.C_AREA_FOLLOWERS %area.name: followers.users,  #doesn't look right.
@@ -1686,38 +1708,18 @@ class FollowAreaHandler(BaseHandler):
         # cache.C_FOLLOWERS %username: followers.users,
         # cache.C_FOLLOWING %thisuser: following.users,
 
-        ########### create a journal for each followed area - should be in above txn and a function call as duplicated ##############
-
-        name = "Observations for " + area_name.decode('utf-8') # name is used by view-obstask.html to make reports.
-        journal = models.Journal(parent=db.Key(self.session['user']['key']), name=name)
-        for journal_url, journal_name, journal_type in self.session['journals']:
-            if journal.name == journal_name:
-                self.add_message('error', 'You already have a journal called %s.' %name.decode('utf-8'))
-                break
-        else:
-            journal.journal_type = "observations"
-            def txn(user_key, journal):
-                user = db.get(user_key)
-                user.journal_count += 1
-                db.put([user, journal])
-                return user, journal
-
-            user, journal = db.run_in_transaction(txn, self.session['user']['key'], journal)
-            cache.clear_journal_cache(db.Key(self.session['user']['key']))
-            models.Activity.create(user, models.ACTIVITY_NEW_JOURNAL, journal.key())
-            cache.set(cache.pack(user), cache.C_KEY, user.key())
-        
         cache.clear_area_cache(self.session['user']['key'], area.key() )
         #cache.clear_area_followers(area.key())
     
-            #counters.increment(counters.COUNTER_AREAS) # should be FOLLOW_AREAS
-        self.add_message('success', 'Created journal %s.' %name.decode('utf-8'))
+        #counters.increment(counters.COUNTER_AREAS) # should be FOLLOW_AREAS
 
         self.populate_user_session()
         #self.redirect(webapp2.uri_for('view-area', area))
         #self.redirect(webapp2.uri_for('view-area', username=thisuser, area_name=area.name))
-        self.redirect(webapp2.uri_for('view-area', area_name=area.name))
-
+        if op == 'add':
+            self.redirect(webapp2.uri_for('view-area', area_name=area.name))
+        else:
+            self.redirect(webapp2.uri_for('main'))
         return
 
 
@@ -1819,7 +1821,7 @@ class ViewEntryHandler(BaseHandler):
 
                 if error:
                     pdf_blob.blob.delete()
-                    self.add_message('error', 'Error while converting to PDF: %s' %error)
+                    self.add_message('danger', 'Error while converting to PDF: %s' %error)
                 else:
                     pdf_blob.put()
 
@@ -1968,7 +1970,7 @@ class SaveEntryHandler(BaseHandler):
                     #Bootstrap3's date-control format 2014-12-31 23:59 
                     newdate = datetime.datetime.strptime('{0!s} {1!s}'.format(date, time),'%Y-%m-%d %H:%M')
                 except:
-                    self.add_message('error', 'Couldn\'t understand that date: {0!s} {1!s}'.format(date, time))
+                    self.add_message('danger', 'Couldn\'t understand that date: {0!s} {1!s}'.format(date, time))
                     newdate = entry.date
 
             if tags:
@@ -2216,7 +2218,7 @@ class EditBlogHandler(BaseHandler):  #Admin Only Function
 
         title = self.request.get('title').strip()
         if not title:
-            self.add_message('error', 'Must specify a title.')
+            self.add_message('danger', 'Must specify a title.')
         else:
             b.title = title
 
@@ -2253,7 +2255,7 @@ class EditBlogHandler(BaseHandler):  #Admin Only Function
         try:
             b.date = datetime.datetime.strptime('%s %s' %(date, time), '%m/%d/%Y %I:%M %p')
         except:
-            self.add_message('error', 'Couldn\'t understand that date: %s %s' %(date, time))
+            self.add_message('danger', 'Couldn\'t understand that date: %s %s' %(date, time))
 
         b.rendered = utils.markup(b.text, b.markup)
 
@@ -2492,7 +2494,7 @@ class DownloadJournalHandler(BaseHandler):
 
                 if error:
                     pdf_blob.blob.delete()
-                    self.add_message('error', 'Error while converting to PDF: %s' %error)
+                    self.add_message('danger', 'Error while converting to PDF: %s' %error)
                 else:
                     pdf_blob.put()
 
@@ -2536,7 +2538,7 @@ class DropboxCallback(BaseHandler):
             cache.set_keys([u])
             self.add_message('success', 'Dropbox authorized.')
         except Exception, e:
-            self.add_message('error', 'An error occurred with Dropbox. Try again.')
+            self.add_message('danger', 'An error occurred with Dropbox. Try again.')
             logging.error('Dropbox error: %s', e)
 
         self.redirect(webapp2.uri_for('account'))
@@ -2613,7 +2615,7 @@ class GoogleCallback(BaseHandler):
                 cache.set_keys([user])
                 self.add_message('success', 'Google Docs authorized.')
             except Exception, e:
-                self.add_message('error', 'An error occurred with Google Docs. Try again.')
+                self.add_message('danger', 'An error occurred with Google Docs. Try again.')
                 logging.error('Google Docs error: %s', e)
 
             self.redirect(webapp2.uri_for('account'))
@@ -2691,6 +2693,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/myareas', handler=ViewAreas, name='view-areas'),
     webapp2.Route(r'/<username>/myareas', handler=ViewAreas, name='view-areas'),
     webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),
+    webapp2.Route(r'/<username>/unfollow/<area_name>', handler=FollowAreaHandler, name='follow-area'),
     webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),
     webapp2.Route(r'/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'), #was new-obstask
     webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #ajax
