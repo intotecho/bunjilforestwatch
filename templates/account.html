@@ -3,40 +3,48 @@
 
 {% block content %}
 <div class="container">
+<ul class="breadcrumb">
+        <li class="active">User Account for <a href="{{ "user"|url(user.name) }}">{{ user.name }}</a></li>
+ </ul>
+    
 	<div class="page-header">
-		<h1>account</h1>
+		<h1>User Account</h1>
 	</div>
 
 	<div class="row">
-		<div class="span12">
+		<div class="col-xs-6">
 			<table class="table">
-				<tr><td>name</td><td>{{ u.name }}</td></tr>
-				<tr><td>role</td><td>{{ u.role }}</td></tr>
-				<tr><td>login with</td><td>{{ u.sources|join(", ") }}</td></tr>
-				<tr><td>user since</td><td>{{ u.register_date|sdate }}</td></tr>
+				<tr><td>Username</td><td>{{ u.name }}</td></tr>
+				<tr><td>Role</td><td>{{ u.role }}</td></tr>
+				<tr><td>Login with</td><td>{{ u.sources|join(", ") }}</td></tr>
+				<tr><td>Email address</td><td>{{ u.email }}</td></tr>
+                <tr><td>Registered</td><td>{{ u.register_date|sdate }}</td></tr>
 			</table>
 		</div>
 	</div>
-
 	<div class="row">
-		<div class="span12">
-			<h3>settings</h3>
+        <div class="col-xs-6">
+
+            <h3>Settings</h3>
 			<form class="form-horizontal" method="POST">
 				<fieldset>
 					<div class="control-group">
-						<label class="control-label" for="email">email</label>
+						<label class="control-label" for="email">Alternative email address (for receiving notifications)</label>
 						<div class="controls">
-							<input id="email" name="email" type="text" value="{{ u.email|default("", true) }}" />
+							<input id="email" name="email" type="text" disabled value="{{ u.email|default("", true) }}" />
 						</div>
 					</div>
-					<div class="form-actions">
+	               <p></p>
+    				<div class="form-actions">
+    				
 						<input type="submit" class="btn btn-primary" name="settings" value="Save">
 					</div>
 				</fieldset>
 			</form>
+            </div>
 		</div>
 	</div>
-
+<!-- 
 	<div class="row">
 		<div class="span12">
 			<h3>social media <small>When you create a report, automatically publish to</small></h3>
@@ -58,5 +66,6 @@
 			{% endfor %}
 		</div>
 	</div>
+ -->	
 </div>
 {% endblock %}

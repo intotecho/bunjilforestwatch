@@ -40,6 +40,14 @@ textarea {
     margin: 20px;
 }
 
+.index-panel {
+  height: 120px;
+}      
+
+.index-panel-button {
+  float: bottom;
+}      
+
 .map-panel-controls {
 	width: 100%; 
 	padding=0%;
@@ -341,7 +349,7 @@ iframe { /* retain video aspect ratio */
       
  #watermark {
   color: #d00000;
-  font-size: 30pt;
+  font-size: 29pt;
   -webkit-transform: rotate(-30deg);
   -moz-transform: rotate(-30deg);
   position: absolute;
@@ -349,9 +357,7 @@ iframe { /* retain video aspect ratio */
   height: 100%;
   opacity: 0.1;
   margin: 0;
-  z-index: -1;
-  left:320px;
-  top:-130px;
+  left:-410px;
+  top:10px;   
 }
-      
-      
+

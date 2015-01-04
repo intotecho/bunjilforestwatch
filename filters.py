@@ -31,6 +31,8 @@ def url(ob, name=''):
 		return webapp2.uri_for(ob, blog_id=name)
 	elif ob == 'following':
 		return webapp2.uri_for(ob, username=name)
+	elif ob == 'register':
+		return webapp2.uri_for(ob, role=name)
 	else:
 		return webapp2.uri_for(ob)
 
