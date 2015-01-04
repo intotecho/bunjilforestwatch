@@ -279,7 +279,12 @@ class GoogleLogin(BaseHandler):
         current_user = users.get_current_user()
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())
         if not registered:
-            self.redirect(webapp2.uri_for('register'))
+            if 'role' in self.request.GET:
+                role = self.request.get('role')
+            else:
+                role ="unknown"
+            self.redirect(webapp2.uri_for('register', role=role))
+                          
         else:
             self.redirect(webapp2.uri_for('main'))
 
@@ -294,9 +299,7 @@ class GoogleLogin(BaseHandler):
             #self.redirect(webapp2.uri_for('main'))
             #else:
             self.redirect(protected_url)
-            
-            
-            
+                        
 class FacebookLogin(BaseHandler):
     def get(self):
         if 'callback' in self.request.GET:
@@ -316,10 +319,89 @@ class FacebookLogin(BaseHandler):
 
             
 class Register(BaseHandler):
-    USERNAME_RE = re.compile("^[a-z0-9][a-z0-9-]+$")
+    USERNAME_RE = re.compile("^[a-z0-9][a-z0-9_]+$")
 
     def get(self):
         return self.post()
+
+    def post(self):
+        
+        if 'register' in self.session:
+            errors = {}
+            if 'role' in self.request.POST:
+                role = self.request.get('role')
+                print 'post'
+            elif 'role' in self.request.GET:
+                role = self.request.get('role')
+                print 'get '  + role
+            if not role or role=='unknown':
+                role = self.request.get('roleoptionsRadios')
+                print 'options ' + role
+            if not role:
+                role = "unknown"
+            if 'submit' in self.request.POST:
+                username = self.request.get('username')
+                lusername = username.lower()
+                email = self.request.get('email')
+                lusers = models.User.all(keys_only=True).filter('lname', lusername).get()
+                if not Register.USERNAME_RE.match(lusername):
+                    if username and username[0] == '_':
+                        errors['username'] = 'Username cannot begin with a dash.'
+                    else:    
+                        errors['username'] = 'Username may only contain alphanumeric characters or dashes.'
+                elif lusername in RESERVED_NAMES or lusers:
+                    errors['username'] = 'Username is already taken.'
+                else:
+                    source = self.session['register']['source']
+                    uid = self.session['register']['uid']
+
+                    if not email:
+                        errors['email'] = 'You must have an email to use this service.'
+                        email = None
+
+                    user = models.User.get_or_insert(username,
+                        role=role,
+                        name=username,
+                        lname=lusername,
+                        email=email,
+                        facebook_id=uid if source == models.USER_SOURCE_FACEBOOK else None,
+                        google_id=uid if source == models.USER_SOURCE_GOOGLE else None,
+                        token=base64.urlsafe_b64encode(os.urandom(30))[:32],
+                    )
+                    
+                    if getattr(user, '%s_id' %source) != uid:
+                        errors['username'] = 'Username is already taken.'
+                    else:
+                        del self.session['register']
+                        self.populate_user_session(user)
+                        counters.increment(counters.COUNTER_USERS)
+                        if role == 'local':
+                            self.add_message('Success', '%s, Welcome to Bunjil Forest Watch. Now create a new area that you want monitored.' %user)
+                            self.redirect(webapp2.uri_for('new-area'))
+                        else:
+                            self.add_message('Success', '%s, Welcome new volunteer. Choose an area to follow.' %user)
+                            self.redirect(webapp2.uri_for('main'))
+                        return
+            else:
+                email = self.session['register']['email']
+                username = email.split('@')[0] # use first part of email as suggested username
+
+            self.render('register.html', {'username': username, 'email': email, 'errors': errors, 'role': role})
+        else:
+            self.redirect(webapp2.uri_for('main'))
+
+class NewUserHandler(BaseHandler):
+  
+    def get(self):
+  
+        if 'role' in self.request.GET:
+            role = self.request.get('role')
+        else:
+            role = "unknown"
+        self.render('new-user.html', {
+                        'show_navbar': False,
+                        'role': role           
+        }) 
 
     def post(self):
         if 'register' in self.session:
@@ -329,7 +411,6 @@ class Register(BaseHandler):
                 username = self.request.get('username')
                 lusername = username.lower()
                 email = self.request.get('email')
-                rolechoice  = self.request.get('roleoptionsRadios')
                 lusers = models.User.all(keys_only=True).filter('lname', lusername).get()
 
                 if not Register.USERNAME_RE.match(lusername):
@@ -360,7 +441,7 @@ class Register(BaseHandler):
                         del self.session['register']
                         self.populate_user_session(user)
                         counters.increment(counters.COUNTER_USERS)
-                        if rolechoice == 'local':
+                        if role == 'local':
                             self.add_message('Success', '%s, Welcome to Bunjil Forest Watch. Now create a new area that you want monitored.' %user)
                             self.redirect(webapp2.uri_for('new-area'))
                         else:
@@ -374,6 +455,7 @@ class Register(BaseHandler):
             self.render('register.html', {'username': username, 'email': email, 'errors': errors})
         else:
             self.redirect(webapp2.uri_for('main'))
+
 
 class Logout(BaseHandler):
     def get(self):
@@ -447,6 +529,7 @@ class AccountHandler(BaseHandler):
 
         self.render('account.html', {
             'u': u,
+            'show_navbar': True,
             #'backup':
                     'social': {
                 'facebook': {
@@ -2653,16 +2736,18 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/google', handler=GoogleCallback, name='google'),
     webapp2.Route(r'/feeds/<feed>', handler=FeedsHandler, name='feeds'),
     webapp2.Route(r'/following/<username>', handler=FollowingHandler, name='following'),
-    webapp2.Route(r'/login/facebook', handler=FacebookLogin, name='login-facebook'),
+
+    webapp2.Route(r'/register', handler=Register, name='register'),
+    webapp2.Route(r'/new/user', handler=NewUserHandler, name='new-user'),
     #webapp2.Route(r'/login/google/<protected_url>', handler=GoogleLogin, name='login-google'),
     webapp2.Route(r'/login/google', handler=GoogleLogin, name='login-google'),
+    webapp2.Route(r'/login/facebook', handler=FacebookLogin, name='login-facebook'),
     webapp2.Route(r'/logout', handler=Logout, name='logout'),
     webapp2.Route(r'/logout/google', handler=GoogleSwitch, name='logout-google'),
     webapp2.Route(r'/markup', handler=MarkupHandler, name='markup'),
 
     webapp2.Route(r'/new/area', handler=NewAreaHandler, name='new-area'),
     webapp2.Route(r'/new/journal', handler=NewJournal, name='new-journal'),
-    webapp2.Route(r'/register', handler=Register, name='register'),
     webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
     webapp2.Route(r'/mailtest', handler=MailTestHandler, name='mail-test'),
     webapp2.Route(r'/selectcell/<celldata>', handler=SelectCellHandler, name='select-cell'),
