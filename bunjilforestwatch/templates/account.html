@@ -4,24 +4,34 @@
 {% block content %}
 <div class="container">
 <ul class="breadcrumb">
-        <li class="active">User Account for <a href="{{ "user"|url(user.name) }}">{{ user.name }}</a></li>
+        <li class="active">/account for <a href="{{ "user"|url(user.name) }}">{{ user.name }}</a></li>
  </ul>
     
 	<div class="page-header">
-		<h1>User Account</h1>
+		<h1><img src="{{ u.gravatar(50) }}" alt="{{ u }}">{{ u }} user account</h1>
 	</div>
+    <div class="row">
+        <div class="col-xs-6 well">
+            <table class="table">
+                <tr><td>Username</td><td>{{ u.name }}</td></tr>
+                <tr><td>Role</td><td>{{ u.role}}</td></tr>
+                <tr><td>Login with</td><td>{{ u.sources|join(", ") }}</td></tr>
+                <tr><td>Email address</td><td>{{ u.email }}</td></tr>
+                <tr><td>Account Created</td><td>{{ u.register_date|sdate }}</td></tr>
+            </table>
+         </div>
+    <div class="row">
+        <div class="col-xs-6 well">
+            <table class="table">
+                <tr><td>Created Areas</td><td>{{ u.areas_count }}</td></tr>
+                <tr><td>Watching Areas</td><td>{{ u.journal_count }}</td></tr>
+                <tr><td>Disturbance Reports</td><td>{{ u.entry_count }}</td></tr>
+                {% if u.last_entry %}<tr><td>Last observation task</td><td>{{ u.last_entry|sdate }}</td></tr>{% endif %}
+                {% if u.first_entry %}<tr><td>Last report</td><td>{{ u.first_entry|sdate }}</td></tr>{% endif %}
+                <tr><td>History</td><td><a href="{{ 'activity'|url }}">activity</a></td></tr>
+            </table>
+         </div>
 
-	<div class="row">
-		<div class="col-xs-6">
-			<table class="table">
-				<tr><td>Username</td><td>{{ u.name }}</td></tr>
-				<tr><td>Role</td><td>{{ u.role }}</td></tr>
-				<tr><td>Login with</td><td>{{ u.sources|join(", ") }}</td></tr>
-				<tr><td>Email address</td><td>{{ u.email }}</td></tr>
-                <tr><td>Registered</td><td>{{ u.register_date|sdate }}</td></tr>
-			</table>
-		</div>
-	</div>
 	<div class="row">
         <div class="col-xs-6">
 

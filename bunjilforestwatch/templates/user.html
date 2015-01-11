@@ -7,34 +7,33 @@
     </ul>
     </p>
  	<div class="row">
-		<div class="col-xs-6">
-			<table class="table well well-sm">
-                <tr><td>User Type </td><td>{{ u.role}}</td></tr>
+		<div class="col-xs-6 well">
+			<table class="table">
+                <tr><td>Username</td><td>{{ u.name }}</td></tr>
+                <tr><td>Role</td><td>{{ u.role}}</td></tr>
+                <tr><td>Login with</td><td>{{ u.sources|join(", ") }}</td></tr>
+                <tr><td>Email address</td><td>{{ u.email }}</td></tr>
 				<tr><td>Member since</td><td>{{ u.register_date|sdate }}</td></tr>
 				<tr><td>Reports</td><td>{{ u.entry_count }}</td></tr>
+                <tr><td>Registered</td><td>{{ u.register_date|sdate }}</td></tr>
 				{% if u.last_entry %}<tr><td>Last observation task</td><td>{{ u.last_entry|sdate }}</td></tr>{% endif %}
 				{% if u.first_entry %}<tr><td>Last report</td><td>{{ u.first_entry|sdate }}</td></tr>{% endif %}
 			</table>
-		</div>
-		<div class="col-xs-6 well">
+		 </div>
+	 <div class="col-xs-6 well">
 			<div class="row">
 				<div class="col-xs-2">
 					<img src="{{ u.gravatar(50) }}" alt="{{ u }}">
 				</div>
 				<div class="col-xs-2 offset2">
 					{% if user and not thisuser %}
-						{% if not is_following %}
-							<a href="{{ "follow"|url(u.name) }}" class="btn">follow</a>
-						{% else %}
-							<a href="{{ "follow"|url(u.name) }}?unfollow" class="btn">unfollow</a>
-						{% endif %}
 					{% endif %}
 					{% if thisuser %}
 						<h2> Stats </h2>
 					{% endif %}
 				</div>
-			</div>
-			<div class="row">
+		  </div>
+		  <div class="row">
 				<div class="col-xs-6">
 					<h1></h1>
 				</div>
@@ -45,12 +44,8 @@
 					<span>journal{{ u.journal_count|pluralize }}</span>
 				</div>
 				<div class="col-xs-2">
-					<h2>{{ u.area_count }}</h2>
-					<span>journal{{ u.area_count|pluralize }}</span>
-				</div>
-				<div class="col-xs-2">
-					<h2>{{ followers|length }}</h2>
-					<span>follower{{ followers|length|pluralize }}</span>
+					<h2>{{ u.areas_count }}</h2>
+					<span>area{{ u.areas_count|pluralize }}</span>
 				</div>
 				<div class="col-xs-2">
 					<h2>{{ following|length }}</h2>
@@ -62,24 +57,9 @@
 					<h1></h1>
 				</div>
 			</div>
-			<div class="row">
-				<div class="col-xs-6">
-					<h3><a href="{{ "following"|url(u.name) }}">{{ u.name }}'s following</a></h3>
-				</div>
-			</div>
 		</div>
 	</div>
 	<div class="row">
-		<div class="col-xs-6">
-			<h3>{{ u }}'s areas</h3>
-			{% include "areas.html" %}
-		</div>
-	</div>
-	<div class="row">
-		<div class="col-xs-6">
-			<h3>{{ u }}'s journals</h3>
-			{% include "journals.html" %}
-		</div>
 		<div class="col-xs-6">
 			<h3>activity <small><a href="{{ "user-feeds"|url(u.name) }}"><img src="/static/images/feed.png" class="feed-img" alt="feed">rss feed</a></small></h3>
 			{% for a in activities %}

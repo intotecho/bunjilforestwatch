@@ -467,7 +467,7 @@ class GoogleSwitch(BaseHandler):
         self.logout()
         self.redirect(users.create_logout_url(webapp2.uri_for('login-google', protected_url = '/')))
 
-class AccountHandler(BaseHandler):
+class AccountHandler(BaseHandler): #superseded for now by user.html. no menu path to this.
     def get(self):
         if 'user' not in self.session:
             self.add_message('danger', 'You must log in to access your account.')
@@ -2826,7 +2826,6 @@ RESERVED_NAMES = set([
     'features',
     'feeds',
     'file',
-    'follow',
     'follow',
     'followers',
     'following',
