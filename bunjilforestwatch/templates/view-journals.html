@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <p>
+    <ul class="breadcrumb">
+        <li class="active">Journals for <a href="{{ "user"|url(user.name) }}">{{ user.name }}</a></li>
+    </ul>
+   </p>
+<div class="row">
+  <div class="col-xs-6  body">
+    <h2>Your Journals</h3>
+         {% if not journals %}
+             No Journals.
+         {% else %}
+             {% include "journals.html" %}
+         {% endif %}
+   </div>
+  <div class="col-xs-6 ">
+    <h2>What is a Journal?</h3>
+    <div class="well">
+    <p>Each Observation Journal is a collection of Reports. Each Report is stored in an entry. </p>
+    <p>When you follow an area, a journal is created, of type <em>observations</em></p>
+    <p>Click on a Journal to see the reports it contains </p>
+    </div>
+   </div>
+
+</div>   
+</div>
+
+{% endblock %}

@@ -61,7 +61,6 @@ class User(db.Model):
 	uid = db.StringProperty()
 
 	google_id = db.StringProperty()
-
 	allowed_data = db.IntegerProperty(required=True, default=50 * 2 ** 20) # 50 MB default
 	used_data = db.IntegerProperty(required=True, default=0)
 

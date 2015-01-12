@@ -1620,6 +1620,49 @@ class UserHandler(BaseHandler):
             #'areas': areas
         })
 """
+
+
+class ViewJournalsHandler(BaseHandler):
+    def get(self, username):
+        u = cache.get_user(username)
+
+        if not u:
+            self.error(404)
+            return
+
+        journals = cache.get_journals(u.key())
+        #logging.info ("journals %s", journals)
+        areas= cache.get_areas(u.key())
+        #logging.info ("areas %s", areas)
+        activities = cache.get_activities(username=username)
+        following = cache.get_following(username)
+        followers = cache.get_followers(username)
+        #following_areas= cache.get_following_areas(username)
+        
+        #logging.info ("following %s, followers %s", following, followers)
+        
+        if 'user' in self.session:
+            is_following = username in cache.get_following(self.session['user']['name'])
+            thisuser = self.session['user']['name'] == u.name
+        else:
+            print "no followers"
+            is_following = False
+            thisuser = False 
+
+        #logging.info ("u is %s", u)
+        
+        self.render('view-journals.html', {
+            'u': u,
+            'journals': journals,
+            'activities': activities,
+            'following': following,
+            'followers': followers,
+            'is_following': is_following,
+            'thisuser': thisuser, # True if user being shown is thisuser
+            'areas': areas,
+             'show_navbar': True,
+            })
+
 class FollowHandler(BaseHandler):
     
     def get(self, username, area):
@@ -2791,6 +2834,7 @@ app = webapp2.WSGIApplication([
     #webapp2.Route(r'/<username>/<area_name><param:.*>', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
         
     # this section must be last, since the regexes below will match one and two -level URLs
+    webapp2.Route(r'/<username>/journals',  handler=ViewJournalsHandler, name='view-journals'),
     webapp2.Route(r'/<username>', handler=UserHandler, name='user'),
     webapp2.Route(r'/<username>/journal/<journal_name>', handler=ViewJournal, name='view-journal'),
     webapp2.Route(r'/<username>/journal/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
@@ -2835,8 +2879,6 @@ RESERVED_NAMES = set([
     'help',
     'image',
     'journal',
-    'journaler',
-    'journalr',
     'journals',
     'login',
     'logout',
