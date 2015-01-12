@@ -53,20 +53,24 @@
 					<li class="dropdown{% if active  == " view-journal" or active== "entry" or active=="new-journal" %} active{% endif %}">
 						<a href="#" class="dropdown-toggle" data-toggle="dropdown">journals<b class="caret"></b></a>
 						<ul class="dropdown-menu">
+                            <li><a href="{{ "user"|url(user.name) }}/journals"><span class="glyphicon glyphicon-home"></span> my journals</a></li>
+                            <li {% if active== "new-journal" %} class="active"{% endif %}>
+                                 <a href="{{ "new-journal"|url }}"><span class="glyphicon glyphicon-plus"></span>  new journal</a>
+                            </li>
+                            <li class="divider"></li>
+
 							{% for j in session.journals %}
 							<li {% if active== "view-journal" and j.1== journal.name %} class="active"{% endif %}>
 							     <a href="{{ j.0 }}">
-							     {% if j.2 == "observations" %}<span class="glyphicon glyphicon-eye-open"></span> {% endif %}
+							     {% if j.2 == "observations" %}
+							     <span class="glyphicon glyphicon-eye-open"></span> 
+							     {% else %}
+							     <span class="glyphicon glyphicon-book"></span> 
+							     {% endif %}
 							     {{ j.1 }}
 							     </a>
 							</li> 
 							{% endfor %}
-					        <li class="divider"></li>
-					        <li><a href="{{ "user"|url(user.name) }}"><span class="glyphicon glyphicon-home"></span> my journals</a></li>
-			                <li {% if active== "new-journal" %} class="active"{% endif %}>
-			                     <a href="{{ "new-journal"|url }}">new journal
-		                          </a>
-                            </li>
 				    	</ul>
 					</li>
 					<li class="dropdown{% if active  == " view-area" or active== "entry" or active=="new-area" %} active{% endif %}">
