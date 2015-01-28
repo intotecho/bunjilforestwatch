@@ -5,10 +5,23 @@
 
 		<div class="page-header">
 			<h1>Sign Up</h1>
-	        <p>To create a user account with Bunjil, sign up {% if role=='volunteer' %} as a new <em>volunteer</em> {% endif %} {% if role=='local' %} as a new <em>local ranger</em> {% endif %}</p>
-	        <p><em>Its Free!</em></p>	        
+	        <p>To create a user account with Bunjil, sign up {% if role=='volunteer' %} as a new <em>volunteer</em> {% endif %} {% if role=='local' %} as a new <em>local ranger</em>{% endif %}.
+	        <em>Its Free!</em></p>	        
 	    </div>
+         <div class='row'>
+             <div class='col-xs-4'>
+                 <a class="btn btn-block btn-social btn-dropbox " data-toggle="tooltip"
+                 title="Only your email address will be shared with this app. Neither your password nor any other details are shared."
+                  {% if role=='volunteer' %}
+                         href="/login/google?role=volunteer"> <i class="fa fa-google-plus"></i>Sign Up as a Volunteer</a>
+                   {% endif %} 
+                   {% if role=='local' %} 
+                             href="/login/google?role=local"> <i class="fa fa-google-plus"></i>Sign Up</a>
+                  {% endif %} 
+             </div>
+        </div>  
 	    <div>
+	    </br>
 	        <p>To use Bunjil Forest Watch you must have a gmail account to receive alerts. <em>(Other account types will be supported in future</em>)</p>
 	        <p>When you click <em>'Sign-up' </em> below, Bunjil Forest Watch will ask Google for your gmail address.<p> 
 	        <p>Google will ask you to sign in (unless you are signed in already). </p>
