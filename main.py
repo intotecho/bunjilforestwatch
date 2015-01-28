@@ -937,7 +937,7 @@ class GetLandsatCellsHandler(BaseHandler):
             self.response.write(json.dumps(getCellsResult))
             return
         else:
-            #area.max_path, area.min_path, area.max_row, area.min_row, cell_list = eeservice.getLandsatCells(area)
+           
             eeservice.getLandsatCells(area)
             area = cache.get_area(None, area_name) # refresh the cache as it has been updated by getLandsatCells(). #TODO test this works
             cell_list = area.CellList()

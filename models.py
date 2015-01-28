@@ -149,7 +149,9 @@ class AreaOfInterest(db.Model):
 	# Area Description
 	name = db.StringProperty(required=True)
 	#description = db.StringProperty(multiline=True) # text might be better type as it is not indexed.
-	description = db.TextProperty() # text might be better type as it is not indexed.
+	description = db.TextProperty() # text type is longer but is not indexed.
+	threats = db.TextProperty()      # text type is longer but is not indexed.
+	protectedby = db.TextProperty() #who looks after this area?
 
 	type = db.StringProperty()
 	wiki = db.LinkProperty() # link to s a story about this area.
@@ -158,18 +160,17 @@ class AreaOfInterest(db.Model):
 	cells = db.ListProperty(db.Key, default=None) # list of Landsat cells overlapping this area - calculated on new.
 	entry_count = db.IntegerProperty(required=True, default=0) # reports related to this area - not used yet
 	
-	max_path = db.IntegerProperty(required=False, default=-1) # these are not importantand will not be set correctly.
-	min_path = db.IntegerProperty(required=False, default=-1)
-	max_row  = db.IntegerProperty(required=False, default=-1)
-	min_row  = db.IntegerProperty(required=False, default=-1)
-	
+	#max_path = db.IntegerProperty(required=False, default=-1) # these are not important and will not be set correctly.
+	#min_path = db.IntegerProperty(required=False, default=-1)
+	#max_row  = db.IntegerProperty(required=False, default=-1)
+	#min_row  = db.IntegerProperty(required=False, default=-1)
+	max_latlon = db.GeoPtProperty(required=True, default=None)
+	min_latlon = db.GeoPtProperty(required=True, default=None)
+
 	#Geometry of area boundary
 	coordinates = db.ListProperty(db.GeoPt, default=None) # TODO: Replace with fc.
 	boundary_fc = db.TextProperty(required = True) # ee.FeatureCollection or park boundary in JSON string format
 	bound = db.ListProperty(float, default=None)
-	max_latlon = db.GeoPtProperty(required=True, default=None)
-	min_latlon = db.GeoPtProperty(required=True, default=None)
-
 	
 	# Parameters for viewing Area
 	map_center = db.GeoPtProperty(required=True, default=None)
