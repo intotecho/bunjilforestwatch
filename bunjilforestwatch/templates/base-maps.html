@@ -3,6 +3,8 @@
 <!-- Example URL  //localhost:8001/obs/bunjilfw/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgMymCQw  -->
 <!-- //localhost:8001/obs/test2/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgLbNCAw -->
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+
+
 <style type="text/css">
 html {
     height: 100%
@@ -15,7 +17,25 @@ html {
 #map-canvas-right {
     height: 100%
 }
+
+body {
+    overflow: hidden; 
+  }
+
+#dragger {
+    height: 100%;
+    width: 8px;
+    position: absolute;
+    background: #000;
+    left: 4%;
+    top: 0;
+    cursor: move;
+    z-index: 3;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.75);
+}
 </style>
+
+
 
 <link href="/static/css/jquery.nouislider.css" rel="stylesheet">
 
@@ -23,7 +43,6 @@ html {
     src="//maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> 
 </script>
 <script type="text/javascript" src="/static/js/draggable-object.js"></script>
-<script type="text/javascript" src="/static/js/custom-tile-overlay.js"></script> <!-- can remove -->
 <script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>
 <script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>
 <script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>
@@ -35,9 +54,9 @@ html {
 <script type="text/javascript" src="/static/js/jquery.nouislider.min.js"></script>
 <script type="text/javascript" src="/static/js/layerslider.js"></script>
 <script type="text/javascript" src="/static/js/view-maps.js"></script>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js" ></script>
 
 <script>
-
 function httpgetActionUrl(action)
 {
    // action/<action> can be 'overlay' or 'download' or image.
@@ -69,7 +88,7 @@ function initialize() {
     var mapOptions = {
         zoom: {{ area.map_zoom }},
         center: map_center,    
-        mapTypeId: google.maps.MapTypeId.HYBRID,
+        mapTypeId: google.maps.MapTypeId.TERRAIN,
         panControl:true,
         zoomControl:true,
         mapTypeControl:true,
@@ -91,29 +110,25 @@ function initialize() {
         $('#map-div-left').addClass('col-md-10');
     }
   
-    google.maps.event.addListener(map_lhs, 'bounds_changed', function() {
-        
+    map_rhs.bindTo('center', map_lhs);
+    map_rhs.bindTo('zoom', map_lhs);
+    
+    google.maps.event.addListener(map_lhs, 'bounds_changed', function() {        
         $(map_panel).empty();
         htmlString = "<p class= divider small><strong>zoom:</strong>   " + map_lhs.getZoom() + " ";
         htmlString += "<strong>center:</strong><br>";
         htmlString += "lat: " + map_lhs.getCenter().lat().toFixed(3) + ", lng: " + map_lhs.getCenter().lng().toFixed(3) + "<br></p>";
-        $(map_panel).html(htmlString);
-        
-        map_rhs.setCenter(map_lhs.getCenter());
-        map_rhs.setZoom(map_lhs.getZoom());
+        $(map_panel).html(htmlString); 
     });
 
     google.maps.event.addListener(map_rhs, 'bounds_changed', function() {    
-          //createLandsatGridOverlay(map_rhs, 0.1, true, cellarray);
+
     });
     
     google.maps.event.addListener(map_lhs, 'zoom', function() { 
-        console.log("zoom to:", map_lhs.zoom());
-        map_rhs.setZoom(map_lhs.map_rhs.zoom());    
     });
 
     google.maps.event.addListener(map_rhs, 'zoom', function() { 
-        console.log("zoom to:", map_rhs.zoom());
     });
 
     google.maps.event.addListener(map_lhs, 'idle', function() {
@@ -125,7 +140,7 @@ function initialize() {
         if (map_center.lng() > 180) { 
             map_lhs.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()-360));
         }
-        map_rhs.setCenter(map_center);
+        //map_rhs.setCenter(map_center);
      });
 
     //Collect the Boundary coordinates from the area and convert to a Google Maps object.
@@ -154,9 +169,9 @@ function initialize() {
     
     areaBoundary_rhs = new google.maps.Polygon({
         paths: latlngs,
-        strokeColor: '#FF00FF',
+        strokeColor: '#FFFF00',
         strokeOpacity: 0.5,
-        strokeWeight: 1,
+        strokeWeight: 2,
         fillColor: '#000000',
         fillOpacity: 0.05
     });
@@ -357,11 +372,17 @@ function initialize() {
         
         $(window).resize(function () {
                 //<!--resize tip from //github.com/twitter/bootstrap/issues/2475 -->
-            var h = $(window).height(),
-                    offsetTop = 60; // Calculate the top offset
+                var h = $(window).height(),
+                 offsetTop = 60; // Calculate the top offset
                 $('#map-canvas-left').css('height', (h - offsetTop));
                 $('#map-canvas-right').css('height', (h - offsetTop));
+
+                //$('#map-canvas-left').width($(window).width());
+                //google.maps.event.trigger(mapStyled, 'resize');
             }).resize();
+        
+            //$('#map-canvas-left').width($(window).width());
+        
         // now map is drawn is a good time to set up the Instructions Popover.
       
 
@@ -395,7 +416,16 @@ function initialize() {
            }
            google.maps.event.trigger(map_lhs,'resize');
         });
-
+        
+        $('#dragger').draggable({
+            axis: 'x',
+            containment: 'parent',
+            drag: function(e, u) {
+              var left = u.position.left;
+              $(map_lhs).width(left);
+            }
+        });
+        
 };//initialize
 
 google.maps.event.addDomListener(window, 'load', initialize); 
@@ -545,19 +575,17 @@ google.maps.event.addDomListener(window, 'load', initialize);
                         </div>
                     </div>
                 </div>
-                
-            </div>
-                 
-
-            <div>
+           </div>
+           <div>
                 <p>
                    <input type="checkbox" id="1" class="layer" unchecked data-toggle="tooltip" title="Report a change or disturbance" /><label for="1">Make Report</label> 
                    <!--  <input type="checkbox" id="2" class="layer" unchecked data-toggle="tooltip"
                    title="Show FORMA estimate of recent tree loss" /><label for="2">FORMA</label>  -->
-            </div>
+           </div>
     
         </div>
         <div id="map-div-left" class="col-md-5 lesspadding">
+            <div id="dragger" ></div>
             <!-- Left Hand Map Element -->
             <div id="map-canvas-left" style="border:1px solid black"></div>
         </div>

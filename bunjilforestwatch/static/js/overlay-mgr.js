@@ -91,7 +91,7 @@ function createObsOverlay(obs, role, algorithm) {
 }
 
 
-function displayObsOverlay(obs, role, algorithm) {
+function displayObsOverlay(obs, role, algorithm) { //called from base-maps.html
 
     var ovl = findOverlay(obs, role, algorithm);
     
@@ -115,33 +115,31 @@ function displayObsOverlay(obs, role, algorithm) {
     else {
         createObsOverlay(obs, role, algorithm);
     }
-}    
+};
 
 function displayOverlay(ovl, overlayname, tooltip) { //overlay is current so add it to the map.
     
-    var map =    ((ovl.overlay_role == 'prior') ?  map_rhs : map_lhs);    
-    var colour; 
-    
     if (ovl.overlay_role == 'latest') 
-    	colour = 'red';
-    else if (ovl.overlay_role == 'prior') 
-    	colour = 'green'  
+    	createImageOverlay("show", map_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'red');
+    else if (ovl.overlay_role == 'prior') {
+      	createImageOverlay("show",  map_rhs, ovl.map_id,  ovl.token, overlayname, tooltip,  'green'  );
+    	createImageOverlay("wipe",   map_lhs, ovl.map_id,  ovl.token, overlayname, tooltip,  'brown'  );
+    }
     else 
-    	colour = 'blue';
-
-    createImageOverlay(true, map, ovl.map_id,  ovl.token, overlayname, tooltip, colour);
+    	createImageOverlay("show", map_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'blue');
 }
-
  
 /*      
- * createImageOverlay(true, map_lhs, mapobj.mapid,  mapobj.token, mapobj.date_acquired, tooltip, "cyan");
- * 
+ * createImageOverlay(operation, map_lhs, mapobj.mapid,  mapobj.token, mapobj.date_acquired, tooltip, "cyan");
+ * operation= { "show", "delete", "wipe"}
  */
-function createImageOverlay(show, google_map, map_id,  token, overlay_name, tooltip, color)
+
+function createImageOverlay(operation, google_map, map_id,  token, overlay_name, tooltip, color)
 {
-    if(show == true)
+    if((operation == 'show')||(operation == 'wipe'))
     {
-        var idx = overlay_name.indexOf("@");
+    	//truncate string to chars before the '@', or max 30 if no '@'
+    	var idx = overlay_name.indexOf("@"); 
         
     	if (idx == -1) {
     		idx = 30; // maxlen
@@ -151,7 +149,7 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
     	var count = 0;
         while(findOverlayLayer(shortname + count.toString(), overlayMaps) != -1) {
         	count++;
-            console.log("createImageOverlay incrementing index: " + overlay_name );
+            //console.log("createImageOverlay incrementing index: " + overlay_name );
             // return
         }
         shortname = shortname + count.toString();
@@ -179,12 +177,37 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
         overlay.color = color;
         overlay.map = google_map;
 
-        
-        google_map.overlayMapTypes.push(null); //  Placeholder for layer
-        var z  = google_map.overlayMapTypes.length-1;
-        overlay.index = z;
-        google_map.overlayMapTypes.insertAt(z, overlay);
-        
+        if(operation == 'show')
+        {
+	        google_map.overlayMapTypes.push(null); //  Placeholder for layer
+	        var z  = google_map.overlayMapTypes.length-1;
+	        overlay.index = z;
+	        google_map.overlayMapTypes.insertAt(z, overlay);
+        }
+        else //wipe
+        {
+	        google_map.overlayMapTypes.push(null); //  Placeholder for layer
+	        var z  = google_map.overlayMapTypes.length-1;
+	        overlay.index = z;
+	        google_map.overlayMapTypes.insertAt(z, overlay);
+
+        	$(window).resize(function() {
+        		google_map.width($(window).width());
+        		     google.maps.event.trigger(google_map, 'resize');
+        	});
+        	
+        	google_map.width($(window).width());
+
+        	$('#dragger').draggable({
+        		    axis: 'x',
+        		    containment: 'parent',
+        		    drag: function(e, u) {
+        		    	var left = u.position.left;
+        		    	google_map.width(left);
+        		    }
+        	});
+        	google_map.width($('#dragger').offset().left);
+        }
         addLayer(shortname, overlay_name, color,  100, tooltip , layerslider_callback ); //create slider.
       
         overlayMaps.push(overlay);
@@ -193,7 +216,7 @@ function createImageOverlay(show, google_map, map_id,  token, overlay_name, tool
     {
         removeFromMap(google_map, slider_name.substring(5) );
     }
-    return overlay
+    return overlay;
 }
 
 
