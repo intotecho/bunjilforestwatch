@@ -221,7 +221,7 @@ class AreaOfInterest(db.Model):
 				logging.error ("AreaofInterest::CellList() no cell returned from key %s ", cell_key)
 			
 			returnstr = 'AreaofInterest::CellList() area {0!s} has cells {1!s}'.format(self.name.encode('utf-8'), cell_list)
-			#logging.debug(returnstr)
+			logging.debug(returnstr)
 			
 		return cell_list
 	

@@ -2334,13 +2334,13 @@ jQuery.fn.extend({
 			}
 
 			// Treat null/undefined as ""; convert numbers to string
-			if ( val == null ) {
+			if ( val === null ) {
 				val = "";
 			} else if ( typeof val === "number" ) {
 				val += "";
 			} else if ( jQuery.isArray( val ) ) {
 				val = jQuery.map(val, function ( value ) {
-					return value == null ? "" : value + "";
+					return value === null ? "" : value + "";
 				});
 			}
 
@@ -3266,7 +3266,7 @@ jQuery.event = {
 		filter: function( event, original ) {
 
 			// Add which for key events
-			if ( event.which == null ) {
+			if ( event.which === null ) {
 				event.which = original.charCode != null ? original.charCode : original.keyCode;
 			}
 
@@ -3282,7 +3282,7 @@ jQuery.event = {
 				fromElement = original.fromElement;
 
 			// Calculate pageX/Y if missing and clientX/Y available
-			if ( event.pageX == null && original.clientX != null ) {
+			if ( event.pageX === null && original.clientX != null ) {
 				eventDoc = event.target.ownerDocument || document;
 				doc = eventDoc.documentElement;
 				body = eventDoc.body;
@@ -3668,11 +3668,11 @@ jQuery.fn.extend({
 			return this;
 		}
 
-		if ( data == null && fn == null ) {
+		if ( data === null && fn === null ) {
 			// ( types, fn )
 			fn = selector;
 			data = selector = undefined;
-		} else if ( fn == null ) {
+		} else if ( fn === null ) {
 			if ( typeof selector === "string" ) {
 				// ( types, selector, fn )
 				fn = data;
@@ -3810,7 +3810,7 @@ jQuery.each( ("blur focus focusin focusout load resize scroll unload click dblcl
 
 	// Handle event binding
 	jQuery.fn[ name ] = function( data, fn ) {
-		if ( fn == null ) {
+		if ( fn === null ) {
 			fn = data;
 			data = null;
 		}
@@ -3958,7 +3958,7 @@ var Sizzle = function( selector, context, results, seed ) {
 					pop = parts.pop();
 				}
 
-				if ( pop == null ) {
+				if ( pop === null ) {
 					pop = context;
 				}
 
@@ -4147,7 +4147,7 @@ Sizzle.filter = function( expr, set, inplace, not ) {
 
 		// Improper expression
 		if ( expr === old ) {
-			if ( anyFound == null ) {
+			if ( anyFound === null ) {
 				Sizzle.error( expr );
 
 			} else {
@@ -4700,7 +4700,7 @@ var Expr = Sizzle.selectors = {
 				type = match[2],
 				check = match[4];
 
-			return result == null ?
+			return result === null ?
 				type === "!=" :
 				!type && Sizzle.attr ?
 				result != null :

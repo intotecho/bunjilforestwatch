@@ -1390,7 +1390,7 @@ QUnit.diff = (function() {
 		var os = {};
 
 		for (var i = 0; i < n.length; i++) {
-			if (ns[n[i]] == null)
+			if (ns[n[i]] === null)
 				ns[n[i]] = {
 					rows: [],
 					o: null
@@ -1399,7 +1399,7 @@ QUnit.diff = (function() {
 		}
 
 		for (var i = 0; i < o.length; i++) {
-			if (os[o[i]] == null)
+			if (os[o[i]] === null)
 				os[o[i]] = {
 					rows: [],
 					n: null
@@ -1421,7 +1421,7 @@ QUnit.diff = (function() {
 		}
 
 		for (var i = 0; i < n.length - 1; i++) {
-			if (n[i].text != null && n[i + 1].text == null && n[i].row + 1 < o.length && o[n[i].row + 1].text == null &&
+			if (n[i].text != null && n[i + 1].text === null && n[i].row + 1 < o.length && o[n[i].row + 1].text === null &&
 			n[i + 1] == o[n[i].row + 1]) {
 				n[i + 1] = {
 					text: n[i + 1],
@@ -1435,7 +1435,7 @@ QUnit.diff = (function() {
 		}
 
 		for (var i = n.length - 1; i > 0; i--) {
-			if (n[i].text != null && n[i - 1].text == null && n[i].row > 0 && o[n[i].row - 1].text == null &&
+			if (n[i].text != null && n[i - 1].text === null && n[i].row > 0 && o[n[i].row - 1].text === null &&
 			n[i - 1] == o[n[i].row - 1]) {
 				n[i - 1] = {
 					text: n[i - 1],
