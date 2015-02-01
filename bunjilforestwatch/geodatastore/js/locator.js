@@ -37,7 +37,7 @@ geodatastore.mapDisplay.prototype.createMap_ = function(id) {
     
     var search_box = document.getElementById('search_box');
     me.geocoder_.getLatLng(search_box.value, function(location) {
-      if (location == null) {
+      if (location === null) {
         alert('Unable to find location');
       } else {
         var src = '/locate?lat=' + location.lat();

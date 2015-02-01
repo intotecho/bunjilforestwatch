@@ -59,7 +59,7 @@ LandsatGridOverlay.prototype.initialize = function () {
 	var url;
 	//if server sent a cellarray use that to query fusion table.
 	//else query a radius around the current map bounds.
-	if (this.cellarray == null) {
+	if (this.cellarray === null) {
 		url = queryLandsatFusionTableRadius(this.map);
 	} else {
 		url = queryLandsatFusionTableCellArray(this.map, cellarray);
