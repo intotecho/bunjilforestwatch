@@ -1,6 +1,7 @@
 
 
-var map_lhs; //side by side maps
+var map_under_lhs; //side by side maps
+var map_over_lhs; //side by side maps
 var map_rhs;
 
 var satellite = 'l8'

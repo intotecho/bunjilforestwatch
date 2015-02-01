@@ -1,10 +1,16 @@
+
 /*******************************************************************************
  * Copyright (c) 2014 Chris Goodman GPLv2 Creative Commons License to share
  * See also https://developers.google.com/maps/documentation/javascript/examples/overlay-hideshow
  ******************************************************************************/
+
 var overlayMaps = [];
 var jobs = [];
 var numjobs = 0;
+
+// Keep track of pending tile requests - after http://stackoverflow.com/questions/7341769/google-maps-v3-how-to-tell-when-an-imagemaptype-overlays-tiles-are-finished-lo?rq=1
+var pendingUrls = [];
+var maxPendingUrls = 0;
 
 function createLandsatGridOverlay(map, opacity, clickable, cellarray) { 
     if (map.landsatGridOverlay === undefined){
@@ -19,7 +25,7 @@ function createLandsatGridOverlay(map, opacity, clickable, cellarray) {
    
 //find overlay mathching role and viz algorithm.
 function findOverlay(obs, role, algorithm) {
-    for (o = 0; o < obs.overlays.length; o++) {
+    for (var o = 0; o < obs.overlays.length; o++) {
         var overlay = obs.overlays[o];
         if ((overlay.overlay_role == role) && (overlay.algorithm == algorithm)) {
         	return overlay;
@@ -29,7 +35,7 @@ function findOverlay(obs, role, algorithm) {
 }
 
 function requestAdHocOverlay() { //not assoc with a task...
- 	var httpget_url = httpgetActionUrl("overlay")
+ 	var httpget_url = httpgetActionUrl("overlay");
     console.log( "urls", httpget_url);
  	var overlayname = "AdHoc overlay";
     var tooltip = "AdHoc overlay - " + httpget_url;
@@ -95,44 +101,56 @@ function displayObsOverlay(obs, role, algorithm) { //called from base-maps.html
 
     var ovl = findOverlay(obs, role, algorithm);
     
-    if (ovl != null) {
+    if (ovl !== null) {
     	
     	var test_tile_url = ['https://earthengine.googleapis.com/map', ovl.map_id, 1, 0, 0].join("/");
-    	test_tile_url += '?token=' + ovl.token
+    	test_tile_url += '?token=' + ovl.token;
 
     	var tooltip = "Overlay: " +  obs.captured  +  " Id: " + obs.image_id + " " + ovl.overlay_role + " " + ovl.algorithm;
         var overlayname = obs.captured + ":" + ovl.overlay_role;          
 
     	$.get(test_tile_url).done(function(data) {
-    	       console.log("Overlay tiles are OK ")
+    	       console.log("Map overlay already generated");
                displayOverlay(ovl, overlayname, tooltip);
     	      
         }).error(function( jqxhr, textStatus, error ) {
-                console.log("Overlay needs refreshing");
+                console.log("Map overlay expired - regenerating");
                 updateOverlay(ovl, overlayname, tooltip);
         });
     }
     else {
         createObsOverlay(obs, role, algorithm);
     }
-};
+}
 
 function displayOverlay(ovl, overlayname, tooltip) { //overlay is current so add it to the map.
     
     if (ovl.overlay_role == 'latest') 
-    	createImageOverlay("show", map_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'red');
-    else if (ovl.overlay_role == 'prior') {
-      	createImageOverlay("show",  map_rhs, ovl.map_id,  ovl.token, overlayname, tooltip,  'green'  );
-    	createImageOverlay("wipe",   map_lhs, ovl.map_id,  ovl.token, overlayname, tooltip,  'brown'  );
+    	createImageOverlay("show", map_under_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'red');
+    else if (ovl.overlay_role == 'prior') {	
+      	createImageOverlay("show",  map_rhs,        ovl.map_id,  ovl.token, overlayname, tooltip,  'green'  );
+    	createImageOverlay("wipe",   map_over_lhs, ovl.map_id,  ovl.token, overlayname, tooltip,  'brown'  );
     }
     else 
-    	createImageOverlay("show", map_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'blue');
-}
+    	createImageOverlay("show", map_under_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'blue');
+};
  
-/*      
- * createImageOverlay(operation, map_lhs, mapobj.mapid,  mapobj.token, mapobj.date_acquired, tooltip, "cyan");
- * operation= { "show", "delete", "wipe"}
- */
+
+function layerslider_callback(layer_id, val) {
+    console.log("layerslider_callback : " + layer_id + ", " + val);
+    
+    var id = findOverlayLayer(layer_id, overlayMaps);
+    if (id !== -1) {
+        console.log("layerslider_callback:" + overlayMaps[id].name + ", " + val); //overlayMaps[id].name
+        //console.log(typeof overlayMaps[id]); 
+        if(overlayMaps[id].name == 'boundary') { //TODO: Too brittle. Need better way to determine objct type.
+        	 overlayMaps[id].setOptions({strokeOpacity :val/100} );	 
+        }
+        else {
+        	overlayMaps[id].setOpacity(Number(val)/100);
+        }
+    }
+}
 
 function createImageOverlay(operation, google_map, map_id,  token, overlay_name, tooltip, color)
 {
@@ -164,7 +182,13 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
            getTileUrl: function(tile, zoom) {
              var url = ['https://earthengine.googleapis.com/map',
                         map_id, zoom, tile.x, tile.y].join("/");
-             url += '?token=' + token
+             url += '?token=' + token;
+             pendingUrls.push(url);
+             maxPendingUrls++;
+             
+             if (pendingUrls.length === 1) {   
+                  $(overlay).trigger("overlay-busy");   
+             };
              return url;
            },
            tileSize: new google.maps.Size(256, 256)
@@ -177,40 +201,85 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
         overlay.color = color;
         overlay.map = google_map;
 
+        // Listen for our custom events
+        $(overlay).bind("overlay-idle", function() {
+            //console.log("Finished loading overlay tiles"); 
+            
+            var progress = $('#tile-progress-c');
+            progress.fadeOut(1200);
+            maxPendingUrls = 0;
+            progress.attr('max', 0);
+            progress.attr('value', 0);
+            //progress.width(0);
+        });
+
+        $(overlay).bind("overlay-busy", function() {
+            //console.log("Loading overlay tiles"); 
+            var progress = $('#tile-progress-c');
+            progress.stop(); //stop any fadeOut 
+            progress.show();
+            
+        });
+
+
+        // Copy the original getTile function so we can override it, 
+        // but still make use of the original function
+        overlay.baseGetTile = overlay.getTile;
+
+        // Override getTile so we may add event listeners to know when the images load
+        overlay.getTile = function(tileCoord, zoom, ownerDocument) {
+
+            // Get the DOM node generated by the out-of-the-box ImageMapType
+            var node = overlay.baseGetTile(tileCoord, zoom, ownerDocument);
+
+            // Listen for any images within the node to finish loading
+            $("img", node).one("load", function() {
+
+                // Remove the image from our list of pending urls
+                var index = $.inArray(this.__src__, pendingUrls);
+                pendingUrls.splice(index, 1);
+
+                // If the pending url list is empty, emit an event to 
+                // indicate that the tiles are finished loading
+                //console.log("waiting for urls:"  + pendingUrls.length);
+                if (pendingUrls.length === 0) {
+                    $(overlay).trigger("overlay-idle");
+                }
+                else 	{
+	                var progress = $('#tile-progress');
+	                progress.attr('max', maxPendingUrls);
+	                progress.width(maxPendingUrls);
+	                var waiting = maxPendingUrls-pendingUrls.length
+	                progress.attr('value', waiting);
+	                $('#tile-progress-label').html("Loaded " + waiting.toString() + " of " + maxPendingUrls.toString() + " tiles");
+                }
+            });
+
+            return node;
+        };
+        var z;
         if(operation == 'show')
         {
 	        google_map.overlayMapTypes.push(null); //  Placeholder for layer
-	        var z  = google_map.overlayMapTypes.length-1;
+	        z  = google_map.overlayMapTypes.length-1;
 	        overlay.index = z;
 	        google_map.overlayMapTypes.insertAt(z, overlay);
         }
         else //wipe
         {
 	        google_map.overlayMapTypes.push(null); //  Placeholder for layer
-	        var z  = google_map.overlayMapTypes.length-1;
+	        z  = google_map.overlayMapTypes.length-1;
 	        overlay.index = z;
 	        google_map.overlayMapTypes.insertAt(z, overlay);
-
-        	$(window).resize(function() {
-        		google_map.width($(window).width());
-        		     google.maps.event.trigger(google_map, 'resize');
-        	});
-        	
-        	google_map.width($(window).width());
-
-        	$('#dragger').draggable({
-        		    axis: 'x',
-        		    containment: 'parent',
-        		    drag: function(e, u) {
-        		    	var left = u.position.left;
-        		    	google_map.width(left);
-        		    }
-        	});
-        	google_map.width($('#dragger').offset().left);
         }
         addLayer(shortname, overlay_name, color,  100, tooltip , layerslider_callback ); //create slider.
-      
+             
         overlayMaps.push(overlay);
+        
+        google.maps.event.addListenerOnce(google_map, 'idle', function(){
+            console.log("map is idle");
+        });
+        
     }
     else 
     {
@@ -229,22 +298,6 @@ function findOverlayLayer(layer_id, overlayMaps){
 }
 
 
-function layerslider_callback(layer_id, val) {
-    console.log("layerslider_callback : " + layer_id + ", " + val);
-    
-    var id = findOverlayLayer(layer_id, overlayMaps);
-    if (id != -1) {
-        console.log("layerslider_callback:" + overlayMaps[id].name + ", " + val); //overlayMaps[id].name
-        //console.log(typeof overlayMaps[id]); 
-        if(overlayMaps[id].name == 'boundary') { //TODO: Too brittle. Need better way to determine objct type.
-        	 overlayMaps[id].setOptions({strokeOpacity :val/100} );
-        	 
-        }
-        else {
-        	overlayMaps[id].setOpacity(Number(val)/100);
-        }
-    }
-}
 
 
 function removeFromMap(map, overlay_id)
