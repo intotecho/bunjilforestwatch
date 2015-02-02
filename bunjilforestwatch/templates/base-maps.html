@@ -13,12 +13,15 @@ body {
     overflow: hidden; 
  }
 
+
+
 #map-left-latest, #map-left-prior, #map-left-c, #map-right-c {
     height: 100%,
     overflow: hidden; //if content is wider than div, truncate it.
 }
 
 #map-left-latest, map-left-c{
+    position: absolute;
     width: 100%,
 }
 
@@ -63,6 +66,23 @@ body {
 	border:2px solid gray;
 }
 
+#rhs_cursor /* cursor or rhs map follows lhs cursor*/
+{
+    height:10px;
+    width:10px;
+    position:relative;
+    font-size:10px;
+    z-index:99;
+    color:yellow;
+    overflow:display;
+}
+
+#rhs_cursor-c /* cursor or rhs map follows lhs cursor*/
+{
+    height:0px;
+    width:0px;
+}
+
 </style>
 
 <link href="/static/css/jquery.nouislider.css" rel="stylesheet">
@@ -85,6 +105,10 @@ body {
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js" ></script>
 
 <script>
+
+var lhs_offset_top =0;
+var lhs_offset_left =0;
+
 function httpgetActionUrl(action)
 {
    // action/<action> can be 'overlay' or 'download' or image.
@@ -233,8 +257,8 @@ function initialize() {
     
     areaBoundary_over_lhs.setMap(map_over_lhs);
     areaBoundary_under_lhs.setMap(map_under_lhs);
-
     areaBoundary_rhs.setMap(map_rhs);
+
     areaBoundary_over_lhs.name = "boundary" ;
     overlayMaps.push(areaBoundary_over_lhs);
     
@@ -440,6 +464,10 @@ function initialize() {
                 //$('#map-left-prior').width($(window).width());
                 $('#dragger').css('height', (h - offsetTop));
                 
+                //get offset of rhs map cursor (and offset for half size of cursor)
+                lhs_offset_top = $('#map-left-c-prior').offset().top+10;
+                lhs_offset_left  = $('#map-left-c-prior').offset().left+1;
+                
                 //google.maps.event.trigger(mapStyled, 'resize');
             }).resize();
 
@@ -483,12 +511,35 @@ function initialize() {
               //$('#draghandle')
             }
         });
-        //$('#map-left-c-prior').width($('#dragger').offset().left);
-        $('#map-left-c-prior').width(0);
-        //$('#dragger').attr('left', '80%');
-        //$('#dragger').drag('left', '80%');            
         $('#map-left-c-prior').width('90%'); // must be same value as dragger:left to init correctl
+        
+        $("#map-left-c-prior").on({
+            mousemove: function(e){
+            	x = e.pageX - lhs_offset_left;
+            	y = e.pageY - lhs_offset_top;
+                $("#rhs_cursor").css({left: x, top: y})
+            }
+        });
+        
+        $("#map-left-c-latest").on({
+            mousemove: function(e){
+                x = e.pageX - lhs_offset_left;
+                y = e.pageY - lhs_offset_top;
+                $("#rhs_cursor").css({left: x, top: y});
+             }
+        })
 
+        $("#map-left-c").on({
+            mouseleave: function(){
+                $("#rhs_cursor").hide(); 
+                console.log('hide');
+            },
+            
+            mouseenter: function(){
+                $("#rhs_cursor").show(); 
+                console.log('show');
+            }
+        })
     };//initialize
 
 google.maps.event.addDomListener(window, 'load', initialize); 
@@ -666,6 +717,9 @@ google.maps.event.addDomListener(window, 'load', initialize);
             </div>
         </div>
         <div id="map-right-c" class="col-md-5 lesspadding map-canvas">
+            <div id="rhs_cursor-c">
+                <span id="rhs_cursor" style='display:none'>x</span>
+            </div>
             <div id="map-right"></div>
         </div>
     </div>
