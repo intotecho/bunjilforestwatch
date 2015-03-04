@@ -20,42 +20,45 @@
 <script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>  
 <script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>  
 <script>
-	var map;
-    
-      function initialize() {
-    	  //bootbox.alert("Modal Dialog!");
-    	var center = "{{latlng}}";
-    	var  arr = center.split(',');
+var map;
+function initialize() {
+
+	var center = "{{latlng}}";
+    var  arr = center.split(',');
     	
-        var mapOptions = {
-          //center: new google.maps.LatLng({{latlng}}), //8.204, 22.233, africa lat: 8.204, lng: 28.562// australia -34.397, 150.644
-           center: new google.maps.LatLng(arr[0], arr[1]),
-          overviewMapControl: true,
-          zoom: 3,
-          mapTypeId: google.maps.MapTypeId.HYBRID
-        };
+     var mapOptions = {
+       	    center: new google.maps.LatLng(arr[0], arr[1]),
+       	    overviewMapControl: true,
+       	    zoom: 3,
+       	    mapTypeId: google.maps.MapTypeId.HYBRID
+      };
+      
+      map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
        
-        map = new google.maps.Map(document.getElementById("map-canvas"),
-            mapOptions);
-        
-        var creator = new PolygonCreator(map);       
+      var creator = new PolygonCreator(map);       
 
-        //function to add the polygon coordinates to the form data prior to submit. 
-        
-        
-        $('#createarea_id').click(function(){ 
-        	var problems = "";
-            
-        	if(null == creator.showData()){
-                  //alert('Please mark out your area first, then click Create Area');
-                  problems += 'Please mark out the boundary of your area.\n\n';
-                  //return;
+      //function to add the polygon coordinates to the form data prior to submit. 
+
+      $('#fusion-check').change(function () {
+    	    if ($('#fusion-check').is(':checked')) {
+    	        $('#boundary_ft').show();
+    	    } else {
+                    $('#boundary_ft').show();
             }
-
+         });
+      
+      
+      $('#createarea_id').click(function(){ 
+        	var problems = "";
         	var area_name =  $('#area_name').val();
-        	var area_descr =  $('#area_descr').val();
+            var area_descr =  $('#area_descr').val();
+            var area_boundary_ft =  $('#boundary_ft').val();
             
-        	console.log("area name:" + area_name);
+            if ((area_boundary_ft === "") &&(null === creator.showData())) {
+                    problems += 'Please mark out the boundary of your area or provide a fusion table id.\n\n';
+            }     
+            
+         	console.log("area name:" + area_name);
         	
         	if ((null == area_name) || (area_name === "")) {
                   problems += 'Please give your area a short name\n\n';
@@ -70,59 +73,58 @@
         	    	   problems += 'Giving  your area an optional description helps others know why it should be monitored.\n\n';
         	    	}   
             }
-        	else  {
-        		/*
-        		   var lines = area_descr.split('\n');
-
-        		   for(var n = 0; n < lines.length; n++) {
-                       console.log (lines[n])
-                       if(!/^[a-zA-Z \n\t\r\<\>\/\:0-9.]+$/.test(lines[n])){ 
-                            problems += 'On Description line ' + (n+1).toString() +  '. Please use only the ASCII characters A-Z, a-z and 0-9 in the area description. Line. Sorry we are still working on a multibyte solution!\n\n';
-                            console.log (lines[n], n)
-                       }
-                    }
-        		  */ 
-            }
+        	
         	if (problems.length > 0) {
+        		
         		alert ('Please fix these problems and then click Create Area:\n\n' + problems);
         		return;
         	}
-            //convert (x,y)(x,y) to [x,y], [x,y]  > This coordstring is only printed briefly in the panel, so can be deleted.
-            var str="[" + creator.showData(); 
-            var n=str.replace(/\(/gi, "[");
-            var m=n.replace(/\)\[/gi,   "], [");
-            var coordstring=m.replace(/\)/gi, "]]");
-            $('#map_panel').append(coordstring);
-                                                
-            //format polygon string returned by showData into an array of mypoints
-            boundaryPoints = Array();
-            var x = creator.showData();
-            while(x.length > 1) {
-                 var n = x.slice(x.indexOf("(")+1, x.indexOf(")") );
-                 var m = n.split(",");
-                 x=x.slice(x.indexOf(")")+1);
-                 p= [parseFloat(m[0]), parseFloat(m[1])];
-                 boundaryPoints.push(p);
-            }
-            
+
             // get and send the viewing parameters of the map
-            var unwrapped_mapcenter = map.getCenter(); // can exceed 90lat or 180 lon
+        	var unwrapped_mapcenter = map.getCenter(); // can exceed 90lat or 180 lon
             var mapcenter = new google.maps.LatLng(unwrapped_mapcenter.lat(), unwrapped_mapcenter.lng()); //wrapped.
-            
             var mapzoom = map.getZoom();
+            var newArea;
+            
+            if (area_boundary_ft == "" ) { 
+		           //convert (x,y)(x,y) to [x,y], [x,y]  > This coordstring is only printed briefly in the panel, so can be deleted.
+		           var str="[" + creator.showData(); 
+		           var n=str.replace(/\(/gi, "[");
+		           var m=n.replace(/\)\[/gi,   "], [");
+		           var coordstring=m.replace(/\)/gi, "]]");
+		           $('#map_panel').append(coordstring);
+		                                               
+		           //format polygon string returned by showData into an array of mypoints
+		           boundaryPoints = Array();
+		           var x = creator.showData();
+		           while(x.length > 1) {
+		                var n = x.slice(x.indexOf("(")+1, x.indexOf(")") );
+		                var m = n.split(",");
+		                x=x.slice(x.indexOf(")")+1);
+		                p= [parseFloat(m[0]), parseFloat(m[1])];
+		                boundaryPoints.push(p);
+		            }
+		            newArea = { "type": "FeatureCollection",
+                            "features": [
+                               { "type": "Feature",
+                                   "geometry":   {"type": "Point", "coordinates": [mapcenter.lat(), mapcenter.lng()]},
+                                   "properties": {"featureName": "mapview", "zoom": mapzoom }
+                               },
+                               { "type": "Feature",
+                                   "geometry":   {"type": "Polygon","coordinates": boundaryPoints},
+                                   "properties": {"featureName": "boundary"}
+                                }
+                              ],
+                              "boundary_ft": area_boundary_ft
+                            }// End newArea
+
+            }  
+            else {
+            	newArea = { "boundary_ft": area_boundary_ft
+                        }// End newArea
+
+            }
                                 
-            var newArea = { "type": "FeatureCollection",
-                                 "features": [
-                                    { "type": "Feature",
-                                        "geometry":   {"type": "Point", "coordinates": [mapcenter.lat(), mapcenter.lng()]},
-                                        "properties": {"featureName": "mapview", "zoom": mapzoom }
-                                    },
-                                    { "type": "Feature",
-                                        "geometry":   {"type": "Polygon","coordinates": boundaryPoints},
-                                        "properties": {"featureName": "boundary"}
-                                     }
-                                   ]
-                                 }// End newArea
             var toServer = JSON.stringify(newArea);
             document.getElementById("coordinates_id").value = toServer
             $("#new_area_form").submit();
@@ -277,7 +279,7 @@
     
     google.maps.event.addDomListener(window, 'load', initialize);
   
-    </script>    
+</script>    
     
 {% endblock %}
 {% block content %}
@@ -306,11 +308,21 @@
 						Name: <span style="color: #ff0000">*</span></label>
 						<input class="map-panel-controls" id="area_name" name="name" type="text"/>
 					</div>
-                    <div  >
+					  <div class="checkbox">
+                        <label><input type="checkbox" id="fusion-check" value="">My area's boundary is stored in a fusion table</label>
+                    </div>
+                    <div class="map-panel-fusiontable">
+                        <label class="control-label map-panel-controls" for="boundary_ft" data-toggle="tooltip"
+                        title="If your area is already described in a fusion table, link to it here">
+                        Fusion Table Id: <span style="color: #ff0000">*</span></label>
+                        <input class="map-panel-controls" id="boundary_ft" name="boundary_ft" type="text"/>
+                    </div>
+                    <div>
 						<label class="control-label" for="description"  data-toggle="tooltip" 
 						title="Why is this area important ?">Description:</label>
 						<textarea rows="5" class="map-panel-controls" id="area_descr" name="description" form="new_area_form">...</textarea>
 					</div>
+
 					<div>
 						<input type="checkbox" id="0" class="layer" unchecked/>
 						<label for="0">Show Landsat Grid </label>

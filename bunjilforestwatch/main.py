@@ -9,7 +9,12 @@ logging.basicConfig(level=logging.DEBUG)
 
 from django.utils import html # used for entry.html markup
 
+
+#import sqlbuilder
 import eeservice
+#from eeservice import EE_CREDENTIALS
+import oauth2client.client  # pylint: disable=g-bad-import-order
+
 import ee
 import mailer
 import base64
@@ -26,6 +31,26 @@ from google.appengine.ext import db
 from google.appengine.ext.webapp import blobstore_handlers
 from webapp2_extras import sessions
 
+from google.appengine.api import memcache
+from apiclient.discovery import build
+from oauth2client.appengine import OAuth2Decorator
+
+import settings
+
+
+'''
+decorator = OAuth2Decorator(
+    client_id=settings.MY_LOCAL_SERVICE_ACCOUNT,
+    client_secret=settings.MY_LOCAL_PRIVATE_KEY_FILE,
+    scope="https://www.googleapis.com/auth/fusiontables",
+    user_agent='bunjilfw')
+'''
+import httplib2
+from google.appengine.api import memcache
+from oauth2client.appengine import AppAssertionCredentials
+
+#import ftclient
+
 import json
 import webapp2
 
@@ -34,16 +59,12 @@ import counters
 import facebook
 import filters
 import models
-import settings
 import twitter
 import utils
 from urlparse import urlparse
 
-from apiclient.discovery import build
-from oauth2client.appengine import OAuth2Decorator
 
-
-from google.appengine.ext.webapp.util import login_required
+#from google.appengine.ext.webapp.util import login_required
 
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
@@ -586,9 +607,6 @@ class AccountHandler(BaseHandler): #superseded for now by user.html. no menu pat
 
 class NewAreaHandler(BaseHandler):
     def get(self):
-
-        # content=self.request.get('content')
-        #print 'content: ' + content
         
         current_user = users.get_current_user()
         if  not current_user:
@@ -622,129 +640,200 @@ class NewAreaHandler(BaseHandler):
                 'username': username,
             })    
 
+    #@decorator.oauth_aware
     def post(self):
         name = self.request.get('name')
         descr = self.request.get('description')
-        #logging.debug('NewAreaHandler name: %s description:%s', name, descr)
-        
-        try:
-            coordinate_geojson_str = self.request.get('coordinates').decode('utf-8')
-            #logging.debug("NewAreaHandler() coordinate_geojson_str: ", coordinate_geojson_str)
-            geojsonBoundary = geojson.loads(coordinate_geojson_str)
-    
-        except:
-            return self.render('new-area.html', {
-                'username': name
-            })    
-
+        boundary_ft = self.request.get('boundary_ft')
         coords = []
-        pts = []
-        center_pt = []
-        tmax_lat = -90
-        tmin_lat = +90
-        tmax_lon = -180
-        tmin_lon = +180
-        #logging.debug("geojsonBoundary: " +  geojsonBoundary)
-        for item in geojsonBoundary['features']:
-            if item['properties']['featureName']=="boundary":
-                pts=item['geometry']['coordinates']
-                #logging.info("pts: ", pts)
+        logging.debug('NewAreaHandler name: %s fusion:%s, description:%s', name, boundary_ft, descr)
         
-                for lat,lon in pts:
-                    gp = db.GeoPt(float(lat), float(lon))
-                    coords.append(gp)
+        if not eeservice.initEarthEngineService(): # we need earth engine now.
+            self.add_message('danger', 'Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later')
+            self.redirect(webapp2.uri_for('main'))
+            return
 
-                    #get bounds of area.
-                    if lat > tmax_lat: 
-                        tmax_lat = lat
-                    if lat < tmin_lat: 
-                        tmin_lat = lat
-                    if lon > tmax_lon:
-                        tmax_lon = lon
-                    if lon < tmin_lon: 
-                        tmin_lon = lon
-                     
-            if item['properties']['featureName']=="mapview": # get the view settings to display the area.
-                zoom=item['properties']['zoom']
-                center_pt=item['geometry']['coordinates']
-                #logging.debug("zoom: %s, center_pt: %s, type(center_pt) %s", zoom, center_pt, type(center_pt) )
-                center = db.GeoPt(float(center_pt[0]), float(center_pt[1]))
-                #be good to add a bounding box too.
-        if     self.session['areas_list']:
+        if not name:
+            self.add_message('danger', 'Your area of interest needs a short and unique name. Please try again') #REDUNDANT This check now done in the browser.
+            self.redirect(webapp2.uri_for('new-area'))      
+
+        if self.session['areas_list']:
             if len(self.session['areas_list']) >= models.AreaOfInterest.MAX_AREAS:
                 self.add_message('warning', 'Sorry, there is a quota of only %i areas per user.' %models.AreaOfInterest.MAX_AREAS)
-        if not name:
-            self.add_message('danger', 'Your area of interest needs a short and unique name. Please try again') #FIXME - This check should be done in the browser.
-        else:
+                self.redirect(webapp2.uri_for('new-area'))
+                return
+        
+        #check if area name is taken 
+        for area_name in self.session['areas_list']:
+            if name == area_name:
+                self.add_message('danger', 'Sorry, there is already a protected area called %s. Please choose a different name and try again ' %name)
+                self.redirect(webapp2.uri_for('new-area'))
+                return
+    
+        if boundary_ft is None or boundary_ft is "":
+            #logging.info("no fusion provided - load polygon drawn by user")
+            try:
+                coordinate_geojson_str = self.request.get('coordinates').decode('utf-8')
+                logging.debug("NewAreaHandler() coordinate_geojson_str: %s ", coordinate_geojson_str)
+                geojsonBoundary = geojson.loads(coordinate_geojson_str)
+        
+            except:
+                return self.render('new-area.html', {
+                    'username': name
+                })    
+           
+            pts = []
+            center_pt = []
+            tmax_lat = -90
+            tmin_lat = +90
+            tmax_lon = -180
+            tmin_lon = +180
+            #logging.debug("geojsonBoundary: " +  geojsonBoundary)
+            for item in geojsonBoundary['features']:
+                if item['properties']['featureName']=="boundary":
+                    pts=item['geometry']['coordinates']
+                    #logging.info("pts: ", pts)
+            
+                    for lat,lon in pts:
+                        gp = db.GeoPt(float(lat), float(lon))
+                        coords.append(gp)
+    
+                        #get bounds of area.
+                        if lat > tmax_lat: 
+                            tmax_lat = lat
+                        if lat < tmin_lat: 
+                            tmin_lat = lat
+                        if lon > tmax_lon:
+                            tmax_lon = lon
+                        if lon < tmin_lon: 
+                            tmin_lon = lon
+            for item in geojsonBoundary['features']:
+                if item['properties']['featureName']=="mapview": # get the view settings to display the area.
+                    zoom=item['properties']['zoom']
+                    center_pt=item['geometry']['coordinates']
+                    #logging.debug("zoom: %s, center_pt: %s, type(center_pt) %s", zoom, center_pt, type(center_pt) )
+                    center = db.GeoPt(float(center_pt[0]), float(center_pt[1]))
+                    #be good to add a bounding box too.
+
             maxlatlon = db.GeoPt(float(tmax_lat), float(tmax_lon))
             minlatlon = db.GeoPt(float(tmin_lat), float(tmin_lon))
-
-            if not eeservice.initEarthEngineService(): # we need earth engine now.
-                self.add_message('danger', 'Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later')
-                self.redirect(webapp2.uri_for('main'))
-                return
-
             polypoints = []
             for geopt in coords:
                 polypoints.append([geopt.lon, geopt.lat])
-            
             cw_geom = ee.Geometry.Polygon(polypoints)
             ccw_geom = cw_geom.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
-            #logging.info('feat %s', feat)
             feat = ee.Feature(ccw_geom, {'name': name, 'fill': 1})
-            
-            total_area = ccw_geom.area().getInfo()/1e6 #area in sq km
-            area_in_cells = total_area/LANSAT_CELL_AREA
-            if total_area > (LANSAT_CELL_AREA * 8): # limit area to an arbitrary maximum size where the system breaks down.
-                self.add_message('danger', 'Sorry, your area is too big (%d sq km = %d Landsat images). Try a smaller area.' %(total_area, area_in_cells))
-            else:
-                park_boundary_fc = ee.FeatureCollection(feat)
-                #print "park_boundary_fc: ", park_boundary_fc
-                fc_info= json.dumps(park_boundary_fc.getInfo())
-                decoded_name = name.decode('utf-8')
-                area = models.AreaOfInterest(key_name=decoded_name, name=decoded_name, description=descr.decode('utf-8'), 
-                                            coordinates=coords, boundary_fc= fc_info, map_center = center, map_zoom = zoom, 
-                                            max_latlon = maxlatlon,min_latlon = minlatlon, 
-                                            owner=db.Key(self.session['user']['key']) )
-                
-                #new_fc = ee.FeatureCollection(json.loads(fc_info)) 
-                #print "new_fc: ", new_fc # how do you create a FC from json?
-                
-                for area_url, area_name in self.session['areas_list']:
-                    if area.name == area_name:
-                        self.add_message('danger', 'Sorry, there is already a protected area called %s. Please choose a different name and try again ' %name)
-                        self.redirect(webapp2.uri_for('new-area'))
-                        return
-                else: #for loop did not break.
-    
-                    def txn(user_key, area):
-                        user = db.get(user_key)
-                        user.areas_count += 1
-                        db.put([user, area])
-                        return user, area
-    
-                    xg_on = db.create_transaction_options(xg=True)
-                    try:
-                        user, area = db.run_in_transaction_options(xg_on, txn, self.session['user']['key'], area)
-                        models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
-                        self.add_message('success', 'Created your new area of interest: %s covering about %d sq.km'  %(area.name, total_area ) )
-        
-                        cache.clear_area_cache(user.key(), area.key())
-                        #clear_area_followers(area.key())
-                        cache.set(cache.pack(user), cache.C_KEY, user.key())
-        
-                        counters.increment(counters.COUNTER_AREAS)
-                        
-                        self.populate_user_session()
-                        self.redirect(webapp2.uri_for('view-area', area_name=area.name))
-                        return
-                    except: 
-                        self.add_message('danger', "Sorry, Only ASCII in area names: %s (We're working on it)") # FIXME:BPA-  
-                        self.redirect(webapp2.uri_for('new-area'))
-                        return
-        logging.error('NewAreaHandler - no user')
-        #self.render('new-area.html')
 
+            total_area = ccw_geom.area().getInfo()/1e6 #area in sq km
+
+            park_boundary_fc = ee.FeatureCollection(feat)
+          
+        else:
+            #authenticate to fusion table API
+            http = eeservice.EarthEngineService.credentials.authorize(httplib2.Http(memcache))
+            
+            #open the fusion table
+            service = build('fusiontables', 'v2', http=http)
+            result = service.column().list(tableId=boundary_ft).execute(http)
+            message = "Columns: "
+            cols = result.get('items', [])
+            geo_col_name= ""
+            for c in cols:
+                message += c['name']
+                if c['type'] == 'LOCATION':
+                    message += '[LOCATION]'
+                    geo_col_name = c['name']
+                message +=  "; "
+
+            
+            logging.debug("results=%s, column names=%s", result, message)
+            #results = oauth_client.query(sqlbuilder.SQL().select(boundary_ft, None, None))
+            
+            #query = service.query()
+            #sql = "SELECT * from " + boundary_ft
+            #request = query.sql(sql=sql)
+            #response = request.execute()
+            #x=0
+            #for row in response['rows']:
+            #    if x> 25:
+            #        print row
+            #    x= x+1
+            #print "All Rows Done"
+            #sqlstr = "SELECT " + geo_col_name + " FROM " + boundary_ft
+            #geom = service.query(sqlstr).execute(http)
+            #logging.debug(geom)
+            self.add_message('danger', "Sorry, Fusion Tables under construction, " + message) 
+            
+            fc = ee.FeatureCollection(u'ft:' + boundary_ft, 'geometry')
+
+            hull = fc.geometry().convexHull(10);
+            coord_list = hull.coordinates().getInfo() #.buffer(0, 1e-10)  #(0, ee.ErrorMargin(10, 'units'), 'EPSG:3786')
+            print coord_list
+            for lat,lng in coord_list[0]:
+                print lat,lng
+                gp = db.GeoPt(float(lng), float(lat))
+                coords.append(gp)
+        
+            print coords
+            
+            bounds = fc.geometry().bounds(10)
+            #centroid = bounds.centroid(10).getInfo()
+            
+            rectangle = bounds.coordinates().getInfo()
+            print rectangle[0]
+            
+            maxlatlon = db.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][1]))
+            minlatlon =  db.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][1]))
+                 
+            centroid = bounds.centroid(10).coordinates().getInfo() #  thecentroid = ee.Feature(adjustedFc.geometry().centroid()).getInfo().geometry.coordinates
+            print centroid
+            
+            center = db.GeoPt(float(centroid[1]), float(centroid[0]))
+            total_area = hull.area(10).getInfo()/1e6#area in sq km
+            park_boundary_fc = fc
+            zoom = 12
+ 
+        area_in_cells = total_area/LANSAT_CELL_AREA
+        if total_area > (LANSAT_CELL_AREA * 6): # limit area to an arbitrary maximum size where the system breaks down.
+            self.add_message('danger', 'Sorry, your area is too big (%d sq km = %d Landsat images). Try a smaller area.' %(total_area, area_in_cells))
+            self.redirect(webapp2.uri_for('new-area'))
+        else:
+            #print "park_boundary_fc: ", park_boundary_fc
+            fc_info= json.dumps(park_boundary_fc.getInfo())
+            decoded_name = name.decode('utf-8')
+            area = models.AreaOfInterest(key_name=decoded_name, name=decoded_name, description=descr.decode('utf-8'), 
+                                        coordinates=coords, boundary_fc= fc_info, map_center = center, map_zoom = zoom, 
+                                        max_latlon = maxlatlon,min_latlon = minlatlon, 
+                                        owner=db.Key(self.session['user']['key']) )
+ 
+            def txn(user_key, area):
+                user = db.get(user_key)
+                user.areas_count += 1
+                db.put([user, area])
+                return user, area
+
+            xg_on = db.create_transaction_options(xg=True)
+ 
+            try:
+                user, area = db.run_in_transaction_options(xg_on, txn, self.session['user']['key'], area)
+                models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
+                self.add_message('success', 'Created your new area of interest: %s covering about %d sq.km'  %(area.name, total_area ) )
+
+                cache.clear_area_cache(user.key(), area.key())
+                #clear_area_followers(area.key())
+                cache.set(cache.pack(user), cache.C_KEY, user.key())
+
+                counters.increment(counters.COUNTER_AREAS)
+                
+                self.populate_user_session()
+                self.redirect(webapp2.uri_for('view-area', area_name=area.name))
+                return
+            except: 
+                self.add_message('danger', "Sorry, Only ASCII in area names:(We're working on it)") # FIXME:BPA-  
+                self.redirect(webapp2.uri_for('new-area'))
+                return
+
+        self.redirect(webapp2.uri_for('new-area'))
 
 
 '''
@@ -2763,6 +2852,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/account', handler=AccountHandler, name='account'),
     webapp2.Route(r'/activity', handler=ActivityHandler, name='activity'),
     webapp2.Route(r'/admin/blog/<blog_id>', handler=EditBlogHandler, name='edit-blog'),
+ 
     webapp2.Route(r'/admin/drafts', handler=BlogDraftsHandler, name='blog-drafts'),
     webapp2.Route(r'/admin/flush', handler=FlushMemcache, name='flush-memcache'),
     webapp2.Route(r'/admin/new/blog', handler=NewBlogHandler, name='new-blog'),
@@ -2841,6 +2931,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/<username>/journal/<journal_name>/download', handler=DownloadJournalHandler, name='download-journal'),
     webapp2.Route(r'/<username>/journal/<journal_name>/new/<images:[^/]+>', handler=NewEntryHandler, name='new-entry'),
     webapp2.Route(r'/<username>/journal/<journal_name>/new', handler=NewEntryHandler, name='new-entry')
+   #(decorator.callback_path, decorator.callback_handler())
     
     ], debug=True, config=config)
 

@@ -55,6 +55,8 @@ When running on App Engine, this value is "Google App Engine/X.Y.Z".
 '''
 def reallyinitEarthEngineService():
     util.positional_parameters_enforcement = util.POSITIONAL_IGNORE   # avoid the WARNING [util.py:129] new_request() takes at most 1 positional argument (4 given)
+    OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/fusiontables.readonly'
+    print  OAuthInfo.SCOPE
     try:
         if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
             logging.info("Initialising Earth Engine authenticated connection from devserver")
@@ -62,7 +64,7 @@ def reallyinitEarthEngineService():
                 acct = os.environ['MY_SERVICE_ACCOUNT']
                 key = os.environ['MY_PRIVATE_KEY_FILE']
             except KeyError: 
-                logging.error("Please set the environment variable MY_SERVICE_ACCOUNT and MY_PRIVATE_KEY_FILE")
+                logging.warning("Environment variable MY_SERVICE_ACCOUNT and MY_PRIVATE_KEY_FILE not set. Using settings.py")
                 logging.debug (os.environ)
                 acct = settings.MY_LOCAL_SERVICE_ACCOUNT
                 key = settings.MY_LOCAL_PRIVATE_KEY_FILE
@@ -72,26 +74,29 @@ def reallyinitEarthEngineService():
             logging.info("Initialising Earth Engine authenticated connection from App Engine")
             EE_CREDENTIALS = AppAssertionCredentials(OAuthInfo.SCOPE)
         ee.Initialize(EE_CREDENTIALS) 
-        return True
+        print EE_CREDENTIALS
+        return EE_CREDENTIALS
     except Exception, e:
         #self.add_message('error', 'An error occurred with Earth Engine. Try again.')
-        logging.error("Failed to connect to Earth Engine. Exception: %s", e)
+        logging.error("Failed to connect to Earth Engine Google API. Exception: %s", e)
         return False
 
 class EarthEngineService():
 
     #this will call reallyinitEarthEngineService() when module is imported.  
     #logging.info("Init class EarthEngineService")
-    earthengine_intialised = False   
+    earthengine_intialised = False
+    credentials = None
     
     @staticmethod
     def isReady():
         if not EarthEngineService.earthengine_intialised:
             #logging.info("Initialising EarthEngineService ...")
-            EarthEngineService.earthengine_intialised = reallyinitEarthEngineService()
+            EarthEngineService.earthengine_intialised = True
+            EarthEngineService.credentials = reallyinitEarthEngineService()
         else:
             if not PRODUCTION_MODE:
-                logging.debug("EarthEngineService is Ready")
+                logging.debug("Dev: EarthEngineService is Ready")
                 
         return EarthEngineService.earthengine_intialised
    
