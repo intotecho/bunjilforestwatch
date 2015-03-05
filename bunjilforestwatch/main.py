@@ -788,8 +788,8 @@ class NewAreaHandler(BaseHandler):
             minlon = 360
             for p in rectangle[0]:
                 print 'rectangle point', p
-            maxlatlon = db.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][0]))
-            minlatlon =  db.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
+            maxlatlon = db.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
+            minlatlon =  db.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][0]))
             print 'maxlatlon', maxlatlon          
             print 'minlatlon', minlatlon          
             
