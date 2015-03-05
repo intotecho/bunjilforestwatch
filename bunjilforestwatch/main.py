@@ -269,8 +269,7 @@ class ViewAreas(BaseHandler):
             all_areas = cache.get_all_areas()
             #logging.info( "areas = %s", areas)
     
-            self.render('view-areas.html', {
-#                
+            self.render('view-areas.html', {             
                 'thisuser': True,
                 'token': self.session['user']['token'],
                 'areas': areas,
@@ -671,7 +670,7 @@ class NewAreaHandler(BaseHandler):
                 return
     
         if boundary_ft is None or boundary_ft is "":
-            #logging.info("no fusion provided - load polygon drawn by user")
+            ### User Drew a Polygon ###
             try:
                 coordinate_geojson_str = self.request.get('coordinates').decode('utf-8')
                 logging.debug("NewAreaHandler() coordinate_geojson_str: %s ", coordinate_geojson_str)
@@ -729,13 +728,14 @@ class NewAreaHandler(BaseHandler):
             park_boundary_fc = ee.FeatureCollection(feat)
           
         else:
+            ### User Provided a Fusion Table ###
+            
+            #Test the fusion table
             #authenticate to fusion table API
             http = eeservice.EarthEngineService.credentials.authorize(httplib2.Http(memcache))
-            
-            #open the fusion table
             service = build('fusiontables', 'v2', http=http)
             result = service.column().list(tableId=boundary_ft).execute(http)
-            message = "Columns: "
+            message = "Fusion Table Columns: "
             cols = result.get('items', [])
             geo_col_name= ""
             for c in cols:
@@ -744,11 +744,10 @@ class NewAreaHandler(BaseHandler):
                     message += '[LOCATION]'
                     geo_col_name = c['name']
                 message +=  "; "
-
-            
             logging.debug("results=%s, column names=%s", result, message)
-            #results = oauth_client.query(sqlbuilder.SQL().select(boundary_ft, None, None))
+            self.add_message('warning', "Fusion Tables are still experimental: " + message) 
             
+            #results = oauth_client.query(sqlbuilder.SQL().select(boundary_ft, None, None))
             #query = service.query()
             #sql = "SELECT * from " + boundary_ft
             #request = query.sql(sql=sql)
@@ -762,47 +761,58 @@ class NewAreaHandler(BaseHandler):
             #sqlstr = "SELECT " + geo_col_name + " FROM " + boundary_ft
             #geom = service.query(sqlstr).execute(http)
             #logging.debug(geom)
-            self.add_message('danger', "Sorry, Fusion Tables under construction, " + message) 
             
-            fc = ee.FeatureCollection(u'ft:' + boundary_ft, 'geometry')
+            
+            # Fusion table EE operations tested at https://ee-api.appspot.com/b8dec39252c0eced49bb085f2b6fcdd4
+            #make a convex hull and store the coordinates in db.model.AreoOfInterest.coords
 
-            hull = fc.geometry().convexHull(10);
+            park_boundary_fc = ee.FeatureCollection(u'ft:' + boundary_ft, 'geometry')
+            hull = park_boundary_fc.geometry().convexHull(10);
             coord_list = hull.coordinates().getInfo() #.buffer(0, 1e-10)  #(0, ee.ErrorMargin(10, 'units'), 'EPSG:3786')
-            print coord_list
+            #print coord_list
             for lat,lng in coord_list[0]:
-                print lat,lng
+                #print lat,lng
                 gp = db.GeoPt(float(lng), float(lat))
                 coords.append(gp)
         
-            print coords
+            #print coords
             
-            bounds = fc.geometry().bounds(10)
+            bounds = park_boundary_fc.geometry().bounds(10)
             #centroid = bounds.centroid(10).getInfo()
             
             rectangle = bounds.coordinates().getInfo()
-            print rectangle[0]
+            print 'rectangle', rectangle[0]
+            maxlat = -360
+            maxlon = -360
+            minlat  = 360
+            minlon = 360
+            for p in rectangle[0]:
+                print 'rectangle point', p
+            maxlatlon = db.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][0]))
+            minlatlon =  db.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
+            print 'maxlatlon', maxlatlon          
+            print 'minlatlon', minlatlon          
             
-            maxlatlon = db.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][1]))
-            minlatlon =  db.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][1]))
-                 
-            centroid = bounds.centroid(10).coordinates().getInfo() #  thecentroid = ee.Feature(adjustedFc.geometry().centroid()).getInfo().geometry.coordinates
-            print centroid
+            centroid = bounds.centroid(10).coordinates().getInfo()
+            print 'centroid', centroid
             
             center = db.GeoPt(float(centroid[1]), float(centroid[0]))
             total_area = hull.area(10).getInfo()/1e6#area in sq km
-            park_boundary_fc = fc
-            zoom = 12
- 
+            zoom = 12 # zoom will be calculated when the map is displayed.
+        
+        ### CHECK AREA ###
         area_in_cells = total_area/LANSAT_CELL_AREA
         if total_area > (LANSAT_CELL_AREA * 6): # limit area to an arbitrary maximum size where the system breaks down.
             self.add_message('danger', 'Sorry, your area is too big (%d sq km = %d Landsat images). Try a smaller area.' %(total_area, area_in_cells))
             self.redirect(webapp2.uri_for('new-area'))
         else:
-            #print "park_boundary_fc: ", park_boundary_fc
             fc_info= json.dumps(park_boundary_fc.getInfo())
-            decoded_name = name.decode('utf-8')
-            area = models.AreaOfInterest(key_name=decoded_name, name=decoded_name, description=descr.decode('utf-8'), 
-                                        coordinates=coords, boundary_fc= fc_info, map_center = center, map_zoom = zoom, 
+            ftlink = 'https://www.google.com/fusiontables/DataSource?docid=' + boundary_ft
+            decoded_name = name.decode('utf-8') #allow non-english area names.
+            area = models.AreaOfInterest(
+                                        key_name=decoded_name, name=decoded_name, description=descr.decode('utf-8'), 
+                                        coordinates=coords, boundary_fc= fc_info, ft_link=ftlink, ft_docid = boundary_ft,
+                                        map_center = center, map_zoom = zoom, 
                                         max_latlon = maxlatlon,min_latlon = minlatlon, 
                                         owner=db.Key(self.session['user']['key']) )
  
@@ -959,23 +969,42 @@ class ViewArea(BaseHandler):
             
             cell_list = area.CellList()
             observations =    {} 
-            
+            #print 'area.boundary_fc', area.boundary_fc
+            #boundary_ft = json.loads(area.boundary_fc)
+            '''                
+            try:
+                boundary_ft = boundary_ft['properties']['DocID']
+                print 'fusion table DocId', boundary_ft
+                area.isfusion = True
+            except:
+                boundary_ft = None
+                print 'no fusion table in boundary_fc', area.boundary_fc
+                area.isfusion = False
+            '''              
+            if len(area.ft_docid) <> 0:
+                print 'fusion table DocId', area.ft_docid
+                area.isfusion = True
+            else:
+                print 'no fusion table in area', area.ft_docid, area.boundary_fc
+                area.isfusion = False
+    
             self.render('view-area.html', {
                 'username': self.session['user']['name'],
                 'area': area,
+                #'boundary_ft' : area.boundary_ft,
                 'show_navbar': True,
                 'celllist':json.dumps(cell_list),
                 'obslist': json.dumps(observations)
             })
             
             
-#FIXME:ViewAreaAction not called?
-class ViewAreaAction(BaseHandler):
+#FIXME:ViewActionForArea not called?
+class ViewActionForArea(BaseHandler):
     
     def get(self, area_name, action, satelite, algorithm, latest):
         
         area = cache.get_area(None, area_name)
-        logging.debug('ViewAreaAction area_name %s %s', area_name, area)
+        logging.debug('ViewActionForArea area_name %s %s', area_name, area)
         if not area:
             area = cache.get_area(None, area_name)
             logging.error('ViewArea: Area not found! %s', area_name)
