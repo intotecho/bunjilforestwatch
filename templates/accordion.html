@@ -3,12 +3,25 @@
                     <div class="accordion-heading">
                         <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_panel"> Area Description </a>
                     </div>
-                    <div id="#area_descr_panel" class="accordion-body collapse in">
+                    <div id="area_descr_panel" class="accordion-body collapse in">
                         <div class="accordion-inner">
                             <p>{{ area.description }}</p>
                         </div>
                     </div>
                 </div>
+                {% if area.isfusion %}
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#area_fusion_panel"> Fusion Table</a>
+                    </div>
+                    <div id="area_fusion_panel" class="accordion-body collapse in">
+                        <div class="accordion-inner small">
+                            <a href='{{ area.ft_link}}' target="_blank">{{area.ft_docid}}</a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="accordion-group">
                     <div class="accordion-heading">
                         <a class="accordion-toggle" data-toggle="collapse" href="#boundary_panel"> Boundary Coordinates </a>

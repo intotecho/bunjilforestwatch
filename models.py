@@ -168,8 +168,10 @@ class AreaOfInterest(db.Model):
 	min_latlon = db.GeoPtProperty(required=True, default=None)
 
 	#Geometry of area boundary
-	boundary_ft =  db.LinkProperty() #link to a fusion table.
-	coordinates = db.ListProperty(db.GeoPt, default=None) # TODO: Replace with fc.
+	ft_link =  db.LinkProperty() #link to a fusion table.
+	ft_docid =  db.StringProperty() #link to a fusion table.
+
+	coordinates = db.ListProperty(db.GeoPt, default=None) # When a fusion table is provided in boundary_ft, this is the convexHull of the FT.
 	boundary_fc = db.TextProperty(required = True) # ee.FeatureCollection or park boundary in JSON string format
 	bound = db.ListProperty(float, default=None)
 	
