@@ -16,12 +16,42 @@
                     </div>
                     <div id="area_fusion_panel" class="accordion-body collapse in">
                         <div class="accordion-inner small">
-                            <a href='{{ area.ft_link}}' target="_blank">{{area.ft_docid}}</a>
+                            <a href='{{area.ft_link}}' target="_blank">{{area.ft_docid}}</a>
                         </div>
                     </div>
                 </div>
                 {% endif %}
-
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#area_description_why"> Why protect this area</a>
+                    </div>
+                    <div id="area_description_why" class="accordion-body collapse">
+                        <div class="accordion-inner small">
+                            <p>{{area.description_why }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#area_description_who"> Who protects this area</a>
+                    </div>
+                    <div id="area_description_who" class="accordion-body collapse">
+                        <div class="accordion-inner small">
+                            <p>{{area.description_who }}</p>
+                        </div>
+                    </div>
+                </div>
+                 <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#area_description_how"> How is this area protected</a>
+                    </div>
+                    <div id="area_description_how" class="accordion-body collapse">
+                        <div class="accordion-inner small">
+                            <p>{{area.description_how }}</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="accordion-group">
                     <div class="accordion-heading">
                         <a class="accordion-toggle" data-toggle="collapse" href="#boundary_panel"> Boundary Coordinates </a>
