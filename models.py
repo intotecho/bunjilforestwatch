@@ -149,10 +149,13 @@ class AreaOfInterest(db.Model):
 	# Area Description
 	name = db.StringProperty(required=True)
 	#description = db.StringProperty(multiline=True) # text might be better type as it is not indexed.
-	description = db.TextProperty() # text type is longer but is not indexed.
+	description = db.TextProperty()        # What? text type is longer but is not indexed.
+	description_why = db.TextProperty() # text type is longer but is not indexed.
+	description_who = db.TextProperty() # #who looks after this area?
+	description_how = db.TextProperty() # text type is longer but is not indexed.
+	
 	threats = db.TextProperty()      # text type is longer but is not indexed.
-	protectedby = db.TextProperty() #who looks after this area?
-
+	
 	type = db.StringProperty()
 	wiki = db.LinkProperty() # link to s a story about this area.
 	#tags = db.ListProperty(unicode,default=None) #TODO: Caused a unicode not callable error. Not yet implemented.

@@ -647,6 +647,12 @@ class NewAreaHandler(BaseHandler):
         coords = []
         logging.debug('NewAreaHandler name: %s fusion:%s, description:%s', name, boundary_ft, descr)
         
+        print (self.request.get('description'))
+        print (self.request.get('description-what'))
+        print (self.request.get('description-why'))
+        print (self.request.get('description-who'))
+        print (self.request.get('description-how'))
+        
         if not eeservice.initEarthEngineService(): # we need earth engine now.
             self.add_message('danger', 'Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later')
             self.redirect(webapp2.uri_for('main'))
@@ -687,7 +693,7 @@ class NewAreaHandler(BaseHandler):
             tmin_lat = +90
             tmax_lon = -180
             tmin_lon = +180
-            #logging.debug("geojsonBoundary: " +  geojsonBoundary)
+            logging.debug("geojsonBoundary: %s",  geojsonBoundary)
             for item in geojsonBoundary['features']:
                 if item['properties']['featureName']=="boundary":
                     pts=item['geometry']['coordinates']
@@ -782,10 +788,7 @@ class NewAreaHandler(BaseHandler):
             
             rectangle = bounds.coordinates().getInfo()
             print 'rectangle', rectangle[0]
-            maxlat = -360
-            maxlon = -360
-            minlat  = 360
-            minlon = 360
+        
             for p in rectangle[0]:
                 print 'rectangle point', p
             maxlatlon = db.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
@@ -810,7 +813,11 @@ class NewAreaHandler(BaseHandler):
             ftlink = 'https://www.google.com/fusiontables/DataSource?docid=' + boundary_ft
             decoded_name = name.decode('utf-8') #allow non-english area names.
             area = models.AreaOfInterest(
-                                        key_name=decoded_name, name=decoded_name, description=descr.decode('utf-8'), 
+                                        key_name=decoded_name, name=decoded_name, 
+                                        description=self.request.get('description-what').decode('utf-8'), 
+                                        description_why=self.request.get('description-why').decode('utf-8'), 
+                                        description_who=self.request.get('description-who').decode('utf-8'), 
+                                        description_how=self.request.get('description-how').decode('utf-8'), 
                                         coordinates=coords, boundary_fc= fc_info, ft_link=ftlink, ft_docid = boundary_ft,
                                         map_center = center, map_zoom = zoom, 
                                         max_latlon = maxlatlon,min_latlon = minlatlon, 
@@ -981,7 +988,7 @@ class ViewArea(BaseHandler):
                 print 'no fusion table in boundary_fc', area.boundary_fc
                 area.isfusion = False
             '''              
-            if len(area.ft_docid) <> 0:
+            if area.ft_docid is not None and len(area.ft_docid) <> 0:
                 print 'fusion table DocId', area.ft_docid
                 area.isfusion = True
             else:

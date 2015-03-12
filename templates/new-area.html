@@ -4,10 +4,12 @@
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 
 <style type="text/css"> 
-/*TODO what if anything does this do? */
-      html { height: 100% }
+      html { 
+         height: 100%;
+         overflow-y:scroll /* show scroll bar */
+      }
       body { height: 100%; margin: 0; padding: 0 }
-      #map-canvas { height: 100% }
+      #map-canvas { height: 100%; }
 </style>
     
 <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,places,visualization,drawing"> </script>
@@ -19,9 +21,66 @@
 <script type="text/javascript" src="/static/js/yaml/YamlInline.js"></script>  
 <script type="text/javascript" src="/static/js/yaml/YamlParser.js"></script>  
 <script type="text/javascript" src="/static/js/yaml/Yaml.js"></script>  
+
 <script>
 var map;
+var map_initialised = false
+
+
+var draw_boundary_instructions= 
+    "<li><b>How to draw a boundary</b></li>" + 
+    "<li>Drag  the map so that its center is roughly over your area. " + 
+   "Or type the name of your region into the Search Box and the map center on it.</li>" + 
+   "<li>Zoom the map till whole area takes up most of the view.</li>" + 
+   "<li>Tick the <b>Landsat Grid</b> checkbox to see where landsat images will overlap.</li>" + 
+   "<li>Create markers by clicking around the boundary in an <b>anticlockwise</b> direction.</li> " +
+   "<li>When you have gone right around, click on the first marker to close the area.</li>" +
+   "<li>Check the shape of your area, you can adjust it by dragging the small circles.</li>" + 
+   "<li>Click _Oops! Restart_ if you made a mistake.</li>" +  
+   "<li>When you are done, Recheck your zoom and map center to best show your area..</li>"  
+    "<li>FInally click <b>Create Area</b>.</li>" ;
+
+    
+  var fusion_table_instructions= 
+        "<li><b>How to import a fusion table</b></li>" + 
+        "<li>The fusion table must either be public or shared with this bunjil's service account. </li>";
+        
+     
 function initialize() {
+	   //Radio Button Handler - Select Fusion or Draw Map 
+    
+	$('#new_area_form input').on('change', function() {
+     
+    
+        var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
+        console.log("selected: ", selection);
+     
+        if((selection == 'is-fusion') ||(selection == 'is-drawmap')) {
+            if (map_initialised == false) {
+                initialize_map();
+                $('#searchbox_id').fadeIn(); 
+                map_initialised = true;
+            }
+        
+            $('#createarea_id').fadeIn();
+        
+            if (selection == 'is-fusion') {
+	        	$('#drawmap-form-c').fadeOut();
+	            $('#fusiontable-form-c').fadeIn();
+	            $('#boundary-instructions').html(fusion_table_instructions).fadeIn();
+	            $('#reset_id').fadeOut(); // Oops button
+	        } 
+	        else {
+	            $('#drawmap-form-c').fadeIn();
+	            $('#fusiontable-form-c').fadeOut();
+	            $('#boundary-instructions').html(draw_boundary_instructions).fadeIn();
+	            $('#reset_id').fadeIn(); // Oops button
+	        }   
+        }	
+    });
+}
+
+function initialize_map() {
 
 	var center = "{{latlng}}";
     var  arr = center.split(',');
@@ -38,16 +97,8 @@ function initialize() {
       var creator = new PolygonCreator(map);       
 
       //function to add the polygon coordinates to the form data prior to submit. 
-
-      $('#fusion-check').change(function () {
-    	    if ($('#fusion-check').is(':checked')) {
-    	        $('#boundary_ft').show();
-    	    } else {
-                    $('#boundary_ft').show();
-            }
-         });
-      
-      
+    
+    
       $('#createarea_id').click(function(){ 
         	var problems = "";
         	var area_name =  $('#area_name').val();
@@ -86,7 +137,7 @@ function initialize() {
             var mapzoom = map.getZoom();
             var newArea;
             
-            if (area_boundary_ft == "" ) { 
+            if ((!area_boundary_ft  )|| (area_boundary_ft == "" )) { 
 		           //convert (x,y)(x,y) to [x,y], [x,y]  > This coordstring is only printed briefly in the panel, so can be deleted.
 		           var str="[" + creator.showData(); 
 		           var n=str.replace(/\(/gi, "[");
@@ -132,7 +183,7 @@ function initialize() {
          });         
 
 
-        //reset
+        //Oops! Redraw
 		$('#reset_id').click(function(){ 
 		 		creator.destroy();
 		 		creator=null;
@@ -157,58 +208,33 @@ function initialize() {
     		if ($(this).is(':checked')){
     			if(layerID == 0)
     			{
-    				  
     				createLandsatGridOverlay(map, 0.5, false, null);
-                    
 				}
     		} 
     		else {
 	    		if(layerID == 0)
     			{
                     createLandsatGridOverlay(map, 0, true, null);
-    				
-           		 	removeLandsatGrid();
+           		 	//removeLandsatGrid();
     			}
         	}
 		});
 	
-		 //<!--resize div tip from //github.com/twitter/bootstrap/issues/2475 -->
-		  
-		  $(window).resize(function () {
+   	  
+	 //<!--resize div tip from //github.com/twitter/bootstrap/issues/2475 -->
+	 $(window).resize(function () {
 	    	    var h = $(window).height(),
 	    	        offsetTop = 60; // Calculate the top offset
 
 	    	    $('#map-canvas').css('height', (h - offsetTop));
-	      }).resize();   
+                //$('#map-canvas-c').hide();
+	    	        
+	  }).resize();   
 
-		  var instructions_content = 
-            "<p>" +
-            "<li>Drag (Left click and hold) to move the center of the map over your area. " + 
-            "Or type the name of your region into the Search Box and the map center on it.</li>" + 
-            "<li>Zoom the map till whole area takes up most of the view.</li>" + 
-            "<li>Tick the <b>Landsat Grid</b> checkbox to see where landsat images will overlap.</li>" + 
-            "<li>Create markers by clicking around the boundary in an <b>anticlockwise</b> direction.</li> " +
-            "<li>When you get back to the starting point, click on the first marker to close the area.</li>" +
-            "<li>Once the area is drawn, you can adjust it by dragging the small squares.</li>" +
-            "<li>Click <i>Start Again</i> if you make a mistake.</li> " +
-            "<li>Give your area a short <b>name</b> and enter a <b>description</b></li> " + 
-            "<li>When you are done, Recheck your zoom and center shows the area, then click <b>Creatre Area</b>.</li>" 
-        
-		  $('#instructions').popover({ 
-			  html : true, 
-			  animation: true,
-			  trigger: 'hover',
-			  container: 'body',
-			  title: '<b>Instructions</b> to define the boundary of a new Area of Interest:',  
-			  placement: 'bottom',
-			  content: instructions_content
-			  });
-          $('#instructions').popover();
-          
           // Create the search box and link it to the UI element.
           var markers = [];
           var input = /** @type {HTMLInputElement} */(
-              document.getElementById('pac-input'));
+              document.getElementById('searchbox_id'));
           map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
 
           var searchBox = new google.maps.places.SearchBox(
@@ -259,10 +285,19 @@ function initialize() {
 	          }
           
         });
+    
         google.maps.event.addListener(map, 'bounds_changed', function() {
       	    var bounds = map.getBounds();
       	    searchBox.setBounds(bounds);
-      	  });
+      	    if (map.getZoom() > 6) {
+        	   console.log ("Show Landsat Grid");
+               createLandsatGridOverlay(map, 0.5, false, null);
+            }
+      	   else {
+                //createLandsatGridOverlay(map, 0, true, null);
+                //removeLandsatGrid();
+      	   } 
+      	});
         
         google.maps.event.addListener(map, 'idle', function() {
             //This is needed so the fusion tables query works
@@ -290,52 +325,110 @@ function initialize() {
 <div class="container">
 	<div class="row">
    		<div class="col-md-3 lesspadding" >
-   		  <input id="pac-input" class="controls" type="text" placeholder="Search Box">
+   		  <input id="searchbox_id" class="controls" type="text" placeholder="Search by place name"  style='display:none''>
  
      		<!--Sidebar content <div class="control-group"> -->
      		<h4>Create a new Area</h4>
    			<form id="new_area_form" class="form-vertical" method="POST">
 				<fieldset>
-                    <div >
-                        <input id="instructions"  type="button"  class="btn btn-lightblue map-panel-controls"  rel="popover" 
-                        value="Help ?">
-                        
-                    </div>
-					
+                    
+					   <!--  NAME -->
 					<div class="map-panel-controls">
 						<label class="control-label map-panel-controls" for="name" data-toggle="tooltip"
 						title="Choose a short unique name that will identify the area to others">
 						Name: <span style="color: #ff0000">*</span></label>
-						<input class="map-panel-controls" id="area_name" name="name" type="text"/>
+						<input class="map-panel-controls" id="area_name" name="name" placeholder="Give your area a short name" type="text"/>
 					</div>
-					  <div class="checkbox">
-                        <label><input type="checkbox" id="fusion-check" value="">My area's boundary is stored in a fusion table</label>
+                    <!--  DESCRIPTION  -->
+	               <div class="accordion-group">
+	                    <div class="accordion-heading">
+	                        <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_panel">Area Description</a>
+	                    </div>
+	                    <div id="area_descr_panel" class="accordion-body collapse in" data-toggle="collapse">
+	                        <div class="accordion-inner">
+						        <div class="accordion" id="inner_accordion">            
+						                <div class="accordion-group">
+						                    <div class="accordion-heading">
+						                        <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_what">Area Description</a>
+						                    </div>
+						                    <div id="area_descr_what" class="accordion-body collapse in" >
+						                        <div class="accordion-inner small" >
+                                                        <textarea rows="3" class="map-panel-controls" id="area_descr_what" name="description-what" placeholder="Tell volunteers  a little about the area or park are you protecting. You can enter a link to a wiki page" form="new_area_form"></textarea>
+						                        </div>
+						                    </div>
+						                </div>
+						                <div class="accordion-group">
+						                    <div class="accordion-heading">
+						                        <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_why"> Why's this area important?</a>
+						                    </div>
+						                    <div id="area_descr_why" class="accordion-body collapse ">
+						                        <div class="accordion-inner small">
+								                        <textarea rows="3" class="map-panel-controls" id="area_descr_why" name="description-why" placeholder="Explain why it's important to monitor this area" form="new_area_form"></textarea>
+						                        </div>
+						                    </div>
+						                </div>
+						                 <div class="accordion-group">
+                                            <div class="accordion-heading">
+                                                <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_who"> Who's monitoring it?</a>
+                                            </div>
+                                            <div id="area_descr_who" class="accordion-body collapse ">
+                                                <div class="accordion-inner small">
+                                                        <textarea rows="3" class="map-panel-controls" id="area_descr_who" name="description-who" placeholder="Who is going to act on reports of disturbances in this area" form="new_area_form"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+						            </div>
+	                                <div class="accordion-group">
+                                            <div class="accordion-heading">
+                                                <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_how"> How' it protected?</a>
+                                            </div>
+                                            <div id="area_descr_how" class="accordion-body collapse ">
+                                                <div class="accordion-inner small">
+                                                        <textarea rows="3" class="map-panel-controls" id="area_descr_how" name="description-how" placeholder="How is this area protected? For example, Is it a national park or a native area? " form="new_area_form"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                            </div>
+	                </div>
+	                    
+    				   <!--  BOUNDARY SELECTION  -->
+    				   <div>
+						<fieldset class='control-label map-panel-controls'>
+	                    <legend class='control-label'>How will you enter your area's boundary? <span style="color: #ff0000">*</span></legend>
+	                     <div class="radio">
+	                        <label><input type="radio" name="opt-fusion" value="is-drawmap">I'll draw my area on a map</label>
+	                    </div>
+	                     <div class="radio" >
+	                        <label><input type="radio" name="opt-fusion" value="is-fusion">My area's boundary is in a fusion table</label>
+	                    </div>
+	                    </fieldset>
                     </div>
-                    <div class="map-panel-fusiontable">
+                    
+                    <div class="map-panel-fusiontable" id="fusiontable-form-c" style='display:none'>
                         <label class="control-label map-panel-controls" for="boundary_ft" data-toggle="tooltip"
                         title="If your area is already described in a fusion table, link to it here">
                         Fusion Table Id: <span style="color: #ff0000">*</span></label>
-                        <input class="map-panel-controls" id="boundary_ft" name="boundary_ft" type="text"/>
+                        <input class="map-panel-controls"  name="boundary_ft" type="text"/>
                     </div>
-                    <div>
-						<label class="control-label" for="description"  data-toggle="tooltip" 
-						title="Why is this area important ?">Description:</label>
-						<textarea rows="5" class="map-panel-controls" id="area_descr" name="description" form="new_area_form">...</textarea>
-					</div>
-
+                    <div id="boundary-instructions" style='display:none'>
+                                <placeholder>
+                    </div>
+                    <!--  LANDSAT GRID -->
 					<div>
 						<input type="checkbox" id="0" class="layer" unchecked/>
 						<label for="0">Show Landsat Grid </label>
 					</div>
+					<!--  CREATE BUTTON  -->
 					<div class="control-group">
-						<input id = "createarea_id" type="button" class="btn btn-lightgreen map-panel-controls" value="Create Area">
+						<input id = "createarea_id" type="button" class="btn btn-lightgreen map-panel-controls" value="Create Area"  style='display:none'>
 					</div>
                     <div class="control-group">
-                        <input id="reset_id" type="button" class="btn btn-small btn-lightred map-panel-oops-button"  value="Oops! Restart" data-toggle="tooltip" title="Clear all the markers on the map">
+                        <input id="reset_id" type="button" class="btn btn-small btn-lightred map-panel-oops-button"  value="Oops! Restart" data-toggle="tooltip" title="Clear all the markers on the map"  style='display:none'>
                     <div class="controls">
                         <input id="coordinates_id" name="coordinates" type="hidden" value="undefined">
                     </div>  
-
+                    <!--  MAP DIVIDER ?-->
 					<div id="map_panel" class="control-group" name="panel" >
 						<p class="divider"></p>
 			      	</div>
@@ -343,10 +436,10 @@ function initialize() {
 				</fieldset>
 			</form>	
 		</div>
- 			<div class="col-md-9 lesspadding">
-     			<!--Map content-->
-	  			<div id="map-canvas"> </div>
- 			</div>
+	    <!--  MAP  -->
+		<div class="col-md-9 lesspadding" id="map-canvas-c" >
+   			   <div id="map-canvas" > </div>
+		</div>
 	</div>
 </div>
 {% endblock %}
