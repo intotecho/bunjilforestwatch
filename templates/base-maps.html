@@ -47,10 +47,10 @@ body {
 
 #dragger { // inspired by storage.googleapis.com/jlivni/presentations/lightning/styled.html
     height: 100%;
-    width: 6px;
+    width: 4px;
     position: absolute;
     background: #444;
-    left: 90%;
+    left: initial_dragger;
     top: 0;
     cursor: move;
     z-index: 3;
@@ -135,13 +135,33 @@ function ajaxActionUrl(action)
 };
 
 
+
+function drawLandsatCells(cellarray) {
+    createLandsatGridOverlay(map_over_lhs, 0.5, true, cellarray);
+    addLayer( map_over_lhs.landsatGridOverlay.name,
+            'Landsat Cells',
+            'gray',  
+            75, 
+            "Each Landsat image covers one of these cells.", 
+            layerslider_callback ); //create slider.
+    /*
+    createLandsatGridOverlay(map_under_lhs, 0.75, true, cellarray);
+    addLayer( map_under_lhs.landsatGridOverlay.name,
+             'Landsat Cell Overlay',
+             'brown',  
+             75, 
+             "Cells show the outline of Landsat images on overlay.", 
+             layerslider_callback ); //create slider.
+  */
+}
+
 function initialize() {
     var map_center = new google.maps.LatLng({{area.map_center}});
 
     var mapOptions_latest = {
         zoom: {{ area.map_zoom }},
         center: map_center,    
-        mapTypeId: google.maps.MapTypeId.TERRAIN,
+        mapTypeId: google.maps.MapTypeId.HYBRID,
         panControl:true,
         zoomControl:true,
         mapTypeControl:true,
@@ -155,7 +175,7 @@ function initialize() {
     var mapOptions_prior = {
             zoom: {{ area.map_zoom }},
             center: map_center,    
-            mapTypeId: google.maps.MapTypeId.HYBRID,
+            mapTypeId: google.maps.MapTypeId.TERRAIN,
             panControl:true,
             zoomControl:true,
             mapTypeControl:true,
@@ -171,12 +191,16 @@ function initialize() {
     map_rhs               = new google.maps.Map(document.getElementById("map-right"), mapOptions_prior);
     
     if (single_map == true){
-    	
+        initial_dragger = "10%";
         $('#map-right-c').hide();
         $('#map-left-c').removeClass('col-md-5');
         $('#map-left-c').addClass('col-md-10');
     }
-  
+    else {
+        initial_dragger = "90%";
+    }
+    $('#dragger').css('left', initial_dragger );
+    
     map_rhs.bindTo('center', map_under_lhs);
     map_rhs.bindTo('zoom', map_under_lhs);
     
@@ -184,11 +208,11 @@ function initialize() {
     map_over_lhs.bindTo('zoom', map_under_lhs);
     
     google.maps.event.addListener(map_under_lhs, 'bounds_changed', function() {        
-        $(map_panel).empty();
+        //$(map_panel).empty();
         htmlString = "<p class= divider small><strong>zoom:</strong>   " + map_under_lhs.getZoom() + " ";
         htmlString += "<strong>center:</strong><br>";
         htmlString += "lat: " + map_under_lhs.getCenter().lat().toFixed(3) + ", lng: " + map_under_lhs.getCenter().lng().toFixed(3) + "<br></p>";
-        $(map_panel).html(htmlString); 
+        $(map_panel).empty().html(htmlString); 
     });
 
     google.maps.event.addListener(map_rhs, 'bounds_changed', function() {    
@@ -227,7 +251,7 @@ function initialize() {
     $('#boundary_panel').empty();
     $('#boundary_panel').append(boundary_coords);
     
-    //TODO: Note that Border of AOI does not adjust opacity yet.
+    //TODO: Note that Border of AOI does not adjust opacity on both overlays yet.
     areaBoundary_over_lhs = new google.maps.Polygon({
                 paths: latlngs,
                 strokeColor: '#FFFF00',
@@ -272,6 +296,7 @@ function initialize() {
     
   
     var jobid =-1;
+    
     if(cellarray.length == 0) { // Then fetch the overlapping cells from server.
         console.log("Init: Fetching Overlapping Cells for Area");
         var url = "{{ area|area_url }}"  + '/' + 'getcells';
@@ -298,25 +323,19 @@ function initialize() {
         $.get(url).done(function(data) {
                         
             var getCellsResult = jQuery.parseJSON(data);
-            cellarray = getCellsResult.cell_list;
-            console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
             
             if (getCellsResult.result == 'success'){
-                var plurals = (cellarray.length == 1)? ' cell covers': ' cells cover';
+                cellarray = getCellsResult.cell_list;
+                console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
+         
+            	var plurals = (cellarray.length == 1)? ' cell covers': ' cells cover';
                 updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area.</p> ", 'black');
                
-                createLandsatGridOverlay(map_over_lhs, 0.75, true, cellarray);
-                addLayer( map_over_lhs.landsatGridOverlay.name,
-                        'Landsat Cells',
-                        'brown',  
-                        75, 
-                        "Cells show the outline of Landsat images.", 
-                        layerslider_callback ); //create slider.
+                drawLandsatCells(cellarray);
             }            
             else
             {
                 updateJob(jobid,"<p class = 'small'>GetCells Failed:" + getCellsResult.reason + "</p>", 'red');
-                
                 //TODO: Redirect to home?
             }
         }).error(function( jqxhr, textStatus, error ) {
@@ -327,14 +346,8 @@ function initialize() {
     } //get cells     
     else
     {
-        //server passed an existing cellarray - just display it.
-        createLandsatGridOverlay(map_over_lhs, 0.5, true, cellarray);
-        addLayer( map_over_lhs.landsatGridOverlay.name,
-                'Landsat Cells',
-                'gray',  
-                50, 
-                "Each Landsat image covers one of these cells.", 
-                layerslider_callback ); //create slider.
+        //server passed an existing cellarray -  don't wait for ajax - just display it.
+        drawLandsatCells(cellarray);
     }
     
     observations = {{obslist}};
@@ -502,6 +515,8 @@ function initialize() {
 		   // google.maps.event.trigger(map_rhs,'resize');
         });
         
+        $('#map-left-c-prior').width(initial_dragger); // must be same value as {dragger:left} to init correctl
+        
         $('#dragger').draggable({
             axis: 'x',
             containment: 'parent',
@@ -511,7 +526,6 @@ function initialize() {
               //$('#draghandle')
             }
         });
-        $('#map-left-c-prior').width('90%'); // must be same value as dragger:left to init correctl
         
         $("#map-left-c-prior").on({
             mousemove: function(e){
@@ -639,7 +653,7 @@ google.maps.event.addDomListener(window, 'load', initialize);
                 
                <div class="accordion-group">
                     <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#ad_hoc_panel"> Create Overlay</a>
+                        <a class="accordion-toggle" data-toggle="collapse" href="#ad_hoc_panel"> New Image Overlay</a>
                     </div>
                     <div id="ad_hoc_panel" class="accordion-body collapse">
                         <div class="accordion-inner">

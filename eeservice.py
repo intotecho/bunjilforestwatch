@@ -725,12 +725,23 @@ def getPathRow(collection, sort_property, ascending):
 
 #determine the overlapping cells from the image collection returned and store them in area.cells.
 '''
-getLandsatCells() takes an area and extracts is boundary. 
-  Then is calls earth engine to generate a collection of L8 images from the last 2 years.
+getLandsatCells() is given an AreaOfInterest and returns a list of overlapping cells (Landsat Swathes).
+
+  From an area, the function first extracts its boundary. 
+  Then it calls earth engine to generate a collection of L7 images from the last 2 years.
   It queries the collection for the images with the min and max paths and min and max row. This includes cells that don't overlap the area.
   It then loops through each path and row within these bounds to check for an image with that path row combination.
   If found, then the path/row cell overlaps the area and is added to the cells list.
   It returns the cell list as well as setting the max and min coordinates.
+  If there has never been an image collected in 2 years, then that cell will be missing.
+  
+  Once the intersecting path/rows are collected, the function loops through each overlapping given path/row
+      it gets an image. 
+       then calculate the intersection of the cell with the area's boundary.
+       if percentage is min threshold (say 50% of image area) then default-select the cell.
+       if percentage is below then deselect cell from auto-monitoring.
+       Lastly find any area that is not intersected by any selected cell and find a cell that intersects it.
+       
 '''
 #TODO: There is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query.
 def getLandsatCells(area):
@@ -740,11 +751,10 @@ def getLandsatCells(area):
         boundary_polygon.append([geopt.lon, geopt.lat])
         
     cw_feat = ee.Geometry.Polygon(boundary_polygon)
-    feat = cw_feat.buffer(0, 1e-10)
+    feat = cw_feat.buffer(0, 1e-10)   
+    boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1}) 
+    park_boundary = ee.FeatureCollection(boundary_feature)
     
-    boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-    boundary_feature_buffered = boundary_feature 
-    park_boundary = ee.FeatureCollection(boundary_feature_buffered)
     end_date   = datetime.datetime.today()
     start_date = end_date - datetime.timedelta(weeks = 52) # last 52 weeks.
 
@@ -752,28 +762,71 @@ def getLandsatCells(area):
     
     features = boundCollection.getInfo()['features']
 
-    def txn(keyname, area, p, r):
+    def txn(keyname, area, p, r, overlap, monitored):
         #cell = models.LandsatCell.get_by_key_name(keyname, parent=area) #Expensive to read for each cell. if cell is None:
         logging.debug('getLandsatCells(): creating cell(%d, %d)', p, r)
         cell = models.LandsatCell(parent=area.key(), key_name = keyname )
         cell.path = p
         cell.row = r
-        cell.Monitored = False
+        cell.monitored = monitored
+        cell.overlap = overlap
         cell.put()
         area.cells.append(cell.key()) #This is added even though the owner has not selected this cell for monitoring.
         area.put() #TODO expensive to write for each cell.
         return cell
+    
     if area.cells is not None:
         logging.error("getLandsatCells assumes area has no cells, but it does!") #TODO - turn into an assert.
+        print area.cells
     cellnames = []  #temporary array to detect duplicates without calling db.  
-    for image in features:
-        p = int(image['properties']['WRS_PATH'])
-        r = int(image['properties']['WRS_ROW'])
-        #TODO (NICE TO HAVE) Could add the latest observation here. First sort in reverse date order.#obs = image['properties']['system_date']
+    newarea_geom = park_boundary.geometry()
+    for image_info in features:
+        p = int(image_info['properties']['WRS_PATH'])
+        r = int(image_info['properties']['WRS_ROW'])
+        
+        #TODO (NICE TO HAVE) Could add the latest observation here. First sort in reverse date order.#obs = image_info['properties']['system_date']
         cell_name=str(p*1000+r)
+        
+   
         if not cell_name in cellnames:
             cellnames.append(cell_name)
-            cell = db.run_in_transaction(txn, cell_name, area, p, r)
+            
+            image_id= image_info['properties']['system:index']
+            #image = ee.Image(image_id)
+
+            #cellarea = image.geometry().area(10).getInfo() # should be relatively constant
+            
+            cell_geometry = ee.Image(image_id).geometry()
+            
+            remaining_area = newarea_geom.area(10).getInfo() # should be relatively constant
+            print remaining_area, remaining_area
+            
+            #intersect = newarea_geom.intersect(cell_geometry)
+            monitored = False
+            if newarea_geom.contains(cell_geometry) or newarea_geom.intersects(cell_geometry):
+                monitored = True
+                overlap = 1.0
+  
+                newarea_geom = newarea_geom.difference(cell_geometry) # remove cell from area
+                
+                #if newarea_geom is None: #test this
+                #    break
+            else:
+                pass
+                #skip cell - do not monitor
+
+            cell = db.run_in_transaction(txn, cell_name, area, p, r, overlap, monitored)
+                    
+            #test_overlap = park_boundary.filterBounds(image.geometry()).geometry().area(10).getInfo()
+            #overlap = test_overlap/cellarea # park_boundary.filterBounds(image.geometry()).geometry().area(10).divide(cellarea).getInfo()
+            #print cellarea
+            #print overlap
+            #logging.debug("Cell Area: Overlap: %f, %d %d", overlap, cellarea, test_overlap)
+            #overlap = float(overlap_area) / float(cellarea)
+            #if overlap > 0.8: # If above threshold default is to monitor cell, user can chnge later.
+            #    monitored = True
+            #else:
+            #    monitored = False
         else:
             pass  # found a duplicate, skipping
    

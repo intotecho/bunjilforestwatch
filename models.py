@@ -213,7 +213,8 @@ class AreaOfInterest(db.Model):
 		else:
 			#return webapp2.uri_for('view-area', username=self.key().parent().name(),  area_name= self.name)
 			return webapp2.uri_for('view-area', area_name= self.name)
-
+		
+	#CellList() returns a cached list of the area's cells as a json dictionary
 	def CellList(self):
 		cell_list = []
 		for cell_key in self.cells:
@@ -226,8 +227,8 @@ class AreaOfInterest(db.Model):
 			else:
 				logging.error ("AreaofInterest::CellList() no cell returned from key %s ", cell_key)
 			
-			returnstr = 'AreaofInterest::CellList() area {0!s} has cells {1!s}'.format(self.name.encode('utf-8'), cell_list)
-			logging.debug(returnstr)
+		returnstr = 'AreaofInterest::CellList() area {0!s} has cells {1!s}'.format(self.name.encode('utf-8'), cell_list)
+		logging.debug(returnstr)
 			
 		return cell_list
 	
@@ -253,6 +254,8 @@ class LandsatCell(db.Model):
 	#created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
 	
 	aoi = db.ReferenceProperty(AreaOfInterest) #key to area that includes this cell
+	
+	overlap = db.FloatProperty(required = False) #What proportion of this cell overlaps the AOI (>0, <=1). 
 	
 	#FIXME: Multiple AOI could reference the same cell so change to a list...
 	
