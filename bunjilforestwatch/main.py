@@ -855,25 +855,24 @@ class NewAreaHandler(BaseHandler):
 
 '''
 SelectCellHandler is called by Ajax when a user clicks on a Landsat Cell in the browser.
-This toggles the 'follwed' flag in the cell object in the datastore and flushes the cell and area cache.
-#TODO - Improve the information returned as a json dictionary of the cell rather than a string. Browser can format it into text.
-Also add the latest observation date to the return.
+This toggles the 'monitored' flag in the cell object in the datastore and flushes the cell and area cache.
+TODO: Add the latest observation date (if known) to the return.
 '''
 class SelectCellHandler(BaseHandler):
-    def get(self, celldata):
+    def get(self, area_name, celldata):
         # get cell info in request.
         self.populate_user_session()
         #print 'SelectCellHandler get ', celldata
         #username = self.session['user']['name']
         cell_feature = json.loads(celldata)
-        #print 'cell_feature ', cell_feature
+        print 'cell_feature ', cell_feature
         path = cell_feature['properties']['path']
         row = cell_feature['properties']['row']
         displayAjaxResponse = 'Cell {0:d} {1:d}'.format(path, row)
         
         #build cell info in response.
-        cell = cache.get_cell(path, row)
-        
+        cell = cache.get_cell(path, row, area_name)
+        print "cell", cell 
         if cell is not None:
             #Update the followed flag.
             if cell.monitored == True:
@@ -883,7 +882,7 @@ class SelectCellHandler(BaseHandler):
             db.put(cell)
             cell_dict = cell.Cell2Dictionary()
             cache.delete([cache.C_CELL_KEY %cell.key(),
-                          cache.C_CELL %(path, row), 
+                          cache.C_CELL %(path, row, area_name), 
                           cache.C_CELLS %(cell.aoi)])
             self.response.write(json.dumps(cell_dict))
         else:
@@ -1366,7 +1365,7 @@ class ObservationTaskHandler(BaseHandler):
    
 
 '''
-functon to check if any new images for the specified area. Called by CheckNewAreaHandler and CheckNewAllHandler
+function to check if any new images for the specified area. Called by CheckNewAreaHandler and CheckNewAllHandler
 returns a HTML formatted string
 '''
 def checkAreaForNew(area, hosturl):
@@ -2919,7 +2918,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/new/journal', handler=NewJournal, name='new-journal'),
     webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
     webapp2.Route(r'/mailtest', handler=MailTestHandler, name='mail-test'),
-    webapp2.Route(r'/selectcell/<celldata>', handler=SelectCellHandler, name='select-cell'),
+    webapp2.Route(r'/selectcell/<area_name>/<celldata>', handler=SelectCellHandler, name='select-cell'),
 
     webapp2.Route(r'/stats', handler=StatsHandler, name='stats'),
     webapp2.Route(r'/observatory', handler=ObservatoryHandler, name='observatory'),

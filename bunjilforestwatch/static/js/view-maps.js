@@ -12,6 +12,8 @@ var overlayMaps = [];
 var latlngs = [];
 var boundary_coords= "";
 
+var area_url = '{{ area.name }}';
+
 function setActionUrl(action)
 {
    // action can be 'overlay' or 'download' strip the old action and append the new action.
@@ -58,7 +60,7 @@ function cellSelected(landsat_cell)
 {
 // Fetch Outline and status of this Landsat Cell
 
-  var httpget_url = "/selectcell/" + jsonStringifySelectedCell(landsat_cell)
+  var httpget_url = "/selectcell/" + area_url + "/" + jsonStringifySelectedCell(landsat_cell)
   console.log( "cellSelected() %d %d %s", landsat_cell.path, landsat_cell.row, httpget_url);
    
   $("#ee_panel").collapse('show');

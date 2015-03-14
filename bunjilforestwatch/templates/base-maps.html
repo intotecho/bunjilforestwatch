@@ -109,6 +109,7 @@ body {
 var lhs_offset_top =0;
 var lhs_offset_left =0;
 
+
 function httpgetActionUrl(action)
 {
    // action/<action> can be 'overlay' or 'download' or image.
@@ -119,7 +120,8 @@ function httpgetActionUrl(action)
    var path = map_over_lhs.landsatGridOverlay.selectedPath;
    var row  = map_over_lhs.landsatGridOverlay.selectedRow;
 
-   var url = "{{ area|area_url }}"  + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest
+   var url = area_url  + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
+  
    if((path != -1) && (row != -1))
    {
        url  += "/" + path + "/" + row;
@@ -130,7 +132,7 @@ function httpgetActionUrl(action)
 function ajaxActionUrl(action)
 {
    // action can be 'overlay' or 'download'.
-   url = "{{ area|area_url }}"  + '/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
+   url = area_url  + '/action/' + satellite + '/' + algorithm + '/' + latest;
    return url
 };
 
@@ -299,8 +301,9 @@ function initialize() {
     
     if(cellarray.length == 0) { // Then fetch the overlapping cells from server.
         console.log("Init: Fetching Overlapping Cells for Area");
-        var url = "{{ area|area_url }}"  + '/' + 'getcells';
-        console.log( "url: ", url);
+        var url = area_url   + '/getcells';
+        
+        //console.log( "url: ", url);
 
         prompt = "<h6><small>Calculating Cells</small></h6><img src='/static/img/ajax-loader.gif' class='ajax-loader'/>";
         jobid = addJob(prompt, 'gray');
@@ -516,14 +519,17 @@ function initialize() {
         });
         
         $('#map-left-c-prior').width(initial_dragger); // must be same value as {dragger:left} to init correctl
-        
+        $('#draghandle-c').width('12px').height('12px');
+        $('#draghandle').width('11px').height('11px');
+  
         $('#dragger').draggable({
             axis: 'x',
             containment: 'parent',
             drag: function(e, u) {
               var left = u.position.left;
               $('#map-left-c-prior').width(left);
-              //$('#draghandle')
+              $('#draghandle-c').width('12px').height('12px');
+              $('#draghandle').width('11px').height('11px');
             }
         });
         
@@ -717,8 +723,8 @@ google.maps.event.addDomListener(window, 'load', initialize);
         
         <div id="map-left-c" class="col-md-5 lesspadding map-canvas">
             <!-- Left Hand Map Element -->
-            <div id="dragger" >
-                <div id="draghandle"><span class="ui-icon ui-icon-grip-dotted-horizontal"></span></div>
+            <div id="dragger" class="ui-icon ui-icon-grip-dotted-horizontal" >
+                <div id="draghandle-c"><span id="draghandle" class="ui-icon ui-icon-grip-dotted-horizontal"></span></div>
             </div>
             <div id="map-left-c-latest" >
                 <div id="map-left-latest" ></div>
