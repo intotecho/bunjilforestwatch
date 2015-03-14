@@ -50,7 +50,7 @@ C_BLOG_ENTRIES_PAGE = 'blog_entries_page_%s'
 C_BLOG_TOP = 'blog_top'
 
 
-C_CELL      = 'cell_%s_%s'
+C_CELL      = 'cell_%s_%s_%s'
 C_CELL_KEY = 'cellkey_%s'
 C_CELLS     = 'cells_%s'
 C_CELLS_ALL     = 'allcells'
@@ -737,14 +737,21 @@ def get_area_key(username, area_name):
     return data
 
 
-def get_cell(path, row):
-    n = C_CELL %(path, row)
-    #print "get_cell() ", n
+def get_cell(path, row, area_name):
+    
+    n = C_CELL %(path, row, area_name)
     data = unpack(memcache.get(n))
-    if data is None:
-        data = models.LandsatCell.all().filter('path =', int(path)).filter('row =', int(row)).get()
+    if data is None:  
+        
+        if area_name is not None:
+            area_key = get_area_key(None, area_name)
+            cell_name=str(path*1000+row)
+            data = models.LandsatCell.get_by_key_name (cell_name,  area_key)
+        else:
+            data = models.LandsatCell.all().filter('path =', int(path)).filter('row =', int(row)).get()
+             
         if data is None:
-            logging.error("get_cell() Cache did not find cell object %d %d", path, row)
+            logging.error("cache:get_cell() did not find cell object %d %d for area %s", path, row, area_key)
         else:
             memcache.add(n, pack(data))
     return data
