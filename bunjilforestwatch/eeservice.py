@@ -727,7 +727,13 @@ def getPathRow(collection, sort_property, ascending):
 '''
 getLandsatCells() is given an AreaOfInterest and returns a list of overlapping cells (Landsat Swathes).
 
-  From an area, the function first extracts its boundary. 
+  parameters: area, and AreaOfInterest.
+  
+  Normally, this function is only called once for an area whe it does not have any cells in its cellList.
+  Otherwise, duplicate cells may be created.
+  
+  The function first extracts its boundary.
+  
   Then it calls earth engine to generate a collection of L7 images from the last 2 years.
   It queries the collection for the images with the min and max paths and min and max row. This includes cells that don't overlap the area.
   It then loops through each path and row within these bounds to check for an image with that path row combination.
@@ -741,11 +747,22 @@ getLandsatCells() is given an AreaOfInterest and returns a list of overlapping c
        if percentage is min threshold (say 50% of image area) then default-select the cell.
        if percentage is below then deselect cell from auto-monitoring.
        Lastly find any area that is not intersected by any selected cell and find a cell that intersects it.
+
+TODO: Could add the latest observation here. First sort in reverse date order.#obs = image_info['properties']['system_date']
        
 '''
 #TODO: There is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query.
 def getLandsatCells(area):
-    #TODO: Better to store area.coordinates as an ee.FeatureCollection type. Then this is not repeated for each new image.
+    print 'getLandsatCells'
+
+    # Test if area already has cellList
+    if len(area.cells) != 0 :
+        logging.error("getLandsatCells assumes area has no cells, but it does!") #TODO - turn into an assert.
+        print area.cells
+        #TODO: Instead of returning, delete the cells in the exisitng area.cellLists,  and replace them.
+        return False;
+    
+    # Get the area's boundary and convert to a FeatureCollection.    
     boundary_polygon = []
     for geopt in area.coordinates:
         boundary_polygon.append([geopt.lon, geopt.lat])
@@ -754,84 +771,91 @@ def getLandsatCells(area):
     feat = cw_feat.buffer(0, 1e-10)   
     boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1}) 
     park_boundary = ee.FeatureCollection(boundary_feature)
+
+    park_geom= park_boundary.geometry()
+    park_area = park_geom.area(10).getInfo()
     
+    # Get an imageCollection of all L7 images from recent years that overlap the area, load just the image metadata ['features'].
     end_date   = datetime.datetime.today()
-    start_date = end_date - datetime.timedelta(weeks = 52) # last 52 weeks.
-
-    boundCollection = ee.ImageCollection('LANDSAT/LE7_L1T').filterBounds(park_boundary).filterDate(start_date, end_date)
-    
+    start_date = end_date - datetime.timedelta(weeks = 104) # last 2 years.
+    boundCollection = ee.ImageCollection('LANDSAT/LE7_L1T').filterBounds(park_boundary).filterDate(start_date, end_date) #.sort('system:time_start', False )
     features = boundCollection.getInfo()['features']
-
-    def txn(keyname, area, p, r, overlap, monitored):
-        #cell = models.LandsatCell.get_by_key_name(keyname, parent=area) #Expensive to read for each cell. if cell is None:
-        logging.debug('getLandsatCells(): creating cell(%d, %d)', p, r)
-        cell = models.LandsatCell(parent=area.key(), key_name = keyname )
-        cell.path = p
-        cell.row = r
-        cell.monitored = monitored
-        cell.overlap = overlap
-        cell.put()
-        area.cells.append(cell.key()) #This is added even though the owner has not selected this cell for monitoring.
-        area.put() #TODO expensive to write for each cell.
-        return cell
     
-    if area.cells is not None:
-        logging.error("getLandsatCells assumes area has no cells, but it does!") #TODO - turn into an assert.
-        print area.cells
-    cellnames = []  #temporary array to detect duplicates without calling db.  
-    newarea_geom = park_boundary.geometry()
+    #Find one of each cell (p,r) in collection. Calculate and store how much of the park the cell overlaps and add it to a tmp list.
+    
+    cellList = [] #local array of unique cells will be later stored in area.cellList.
+    
     for image_info in features:
         p = int(image_info['properties']['WRS_PATH'])
         r = int(image_info['properties']['WRS_ROW'])
-        
-        #TODO (NICE TO HAVE) Could add the latest observation here. First sort in reverse date order.#obs = image_info['properties']['system_date']
         cell_name=str(p*1000+r)
-        
-   
-        if not cell_name in cellnames:
-            cellnames.append(cell_name)
+        #if not cell_name in cellnames:
+        if not any(c.key().name() == cell_name for c in cellList):
+            try:
+                image_id= image_info['properties']['system:index']
+                image = ee.Image(image_id)
+                image_geom = image.geometry() # should be relatively constant
+                overlap_geom = image_geom.intersection(park_geom, 10)
+                overlap_area  = overlap_geom.area(10).getInfo()
+            except Exception, e:
+                logging.error("findcell exception {0!s}".format(e)) #Image not found?
+                continue
+            overlap = overlap_area/park_area 
+           
+            #cellnames.append(cell_name)
+            cell = models.LandsatCell(parent=area.key(), key_name=cell_name, aoi=area.key(), path=p, row=r, monitored=False , overlap=overlap, image_id=image_id)
+            cellList.append(cell)
             
-            image_id= image_info['properties']['system:index']
-            #image = ee.Image(image_id)
-
-            #cellarea = image.geometry().area(10).getInfo() # should be relatively constant
-            
-            cell_geometry = ee.Image(image_id).geometry()
-            
-            remaining_area = newarea_geom.area(10).getInfo() # should be relatively constant
-            print remaining_area, remaining_area
-            
-            #intersect = newarea_geom.intersect(cell_geometry)
-            monitored = False
-            if newarea_geom.contains(cell_geometry) or newarea_geom.intersects(cell_geometry):
-                monitored = True
-                overlap = 1.0
-  
-                newarea_geom = newarea_geom.difference(cell_geometry) # remove cell from area
-                
-                #if newarea_geom is None: #test this
-                #    break
-            else:
-                pass
-                #skip cell - do not monitor
-
-            cell = db.run_in_transaction(txn, cell_name, area, p, r, overlap, monitored)
-                    
-            #test_overlap = park_boundary.filterBounds(image.geometry()).geometry().area(10).getInfo()
-            #overlap = test_overlap/cellarea # park_boundary.filterBounds(image.geometry()).geometry().area(10).divide(cellarea).getInfo()
-            #print cellarea
-            #print overlap
-            #logging.debug("Cell Area: Overlap: %f, %d %d", overlap, cellarea, test_overlap)
-            #overlap = float(overlap_area) / float(cellarea)
-            #if overlap > 0.8: # If above threshold default is to monitor cell, user can chnge later.
-            #    monitored = True
-            #else:
-            #    monitored = False
         else:
             pass  # found a duplicate, skipping
-   
-    cache.flush() # FIXME: want to do cache.set(area, cell)
     
-    return 
+    # Now we have a list of cells, before we store them work out which ones should default to monitored?
+        
+    # Sort the cellList so that cells which overlap the largest area of the park are first.
+    
+    cellList.sort(key=lambda x: x.overlap, reverse=True)
+        
+    remaining_geom = park_geom #Each time a cell is selected, it's footprint is removed from the park.
+    remaining_area = park_area   #When zero, the whole park has been covered.
+    
+    for cell in cellList:
+        if remaining_area > 0: # select more cells
+            try:
+                image = ee.Image(cell.image_id)
+                image_geom = image.geometry()
+                
+                new_overlap_geom =  image_geom.intersection(remaining_geom, 10)
+                new_overlap_area  = new_overlap_geom.area(10).getInfo()
+                new_overlap = new_overlap_area/park_area
+
+                cell.monitored = True if (new_overlap > 0.01) else False # If overlap is above arbitrary threshold (1%) default is to monitor cell, user can change later.
+                if cell.monitored:
+                    remaining_geom = remaining_geom.difference(new_overlap_geom)
+                    remaining_area = remaining_geom.area(10).getInfo()
+            except Exception, e:
+                logging.error("exception {0!s}".format(e)) #Image not found?
+                new_overlap= 0 
+                new_overlap_area = 0 
+                continue
+        else:
+            # skip remaining cells, we have our set and just want to print them out.
+            new_overlap= 0 
+            new_overlap_area = 0 
+
+        logging.debug("Cell {0:s} overlaps {1:.1f}% of your park's area, {2:.1f}% uniquely. {3:s}. Remaining area {4:.1f}% ".format( \
+                   cell.key().name(), (cell.overlap*100), (new_overlap*100), ('Monitored' if cell.monitored else 'Unmonitored'), (remaining_area/park_area*100)) )
+    
+    #Store the cells and the area's cellList.
+    def txn_saveCellList(cellList, area):
+        for cell in cellList:
+            cell.put()
+            area.cells.append(cell.key()) 
+        area.put()
+        return cellList
+
+    db.run_in_transaction(txn_saveCellList, cellList, area)
+
+    cache.flush() # FIXME: get user to call cache.set(area, cells)
+    return True
 
 ################# EOF ############################################

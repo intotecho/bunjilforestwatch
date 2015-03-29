@@ -361,3 +361,8 @@ iframe { /* retain video aspect ratio */
   top:10px;   
 }
 
+.red_cross/* cursor or rhs map follows lhs cursor*/
+{
+    color:red;
+    font-weight: bold;
+}

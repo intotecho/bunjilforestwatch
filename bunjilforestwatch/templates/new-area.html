@@ -105,12 +105,24 @@ function initialize_map() {
             var area_descr =  $('#area_descr').val();
             var area_boundary_ft =  $('#boundary_ft').val();
             
-            if ((area_boundary_ft === "") &&(null === creator.showData())) {
-                    problems += 'Please mark out the boundary of your area or provide a fusion table id.\n\n';
-            }     
+            var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
             
+            
+            if(selection == 'is-fusion')  {
+                if ((!area_boundary_ft  )|| (area_boundary_ft == "" )) {
+                    problems += 'Please provide a fusion table id.\n\n';
+                }
+            }
+            else if(selection == 'is-drawmap')  {
+                if (null === creator.showData() ) {
+                    problems += 'Please mark out the boundary of your area or provide a fusion table id.\n\n';
+                 }
+            }    
+            else {
+                problems += 'Please first select whether to provide a fusion table or draw map.\n\n';
+            }
+      
          	console.log("area name:" + area_name);
-        	
         	if ((null == area_name) || (area_name === "")) {
                   problems += 'Please give your area a short name\n\n';
             }

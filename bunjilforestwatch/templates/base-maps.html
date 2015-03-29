@@ -77,11 +77,13 @@ body {
     overflow:display;
 }
 
+
 #rhs_cursor-c /* cursor or rhs map follows lhs cursor*/
 {
     height:0px;
     width:0px;
 }
+
 
 </style>
 
@@ -105,7 +107,7 @@ body {
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js" ></script>
 
 <script>
-
+var area_url = '{{ area.name }}';
 var lhs_offset_top =0;
 var lhs_offset_left =0;
 
@@ -295,9 +297,8 @@ function initialize() {
      *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
      */    
     cellarray = {{celllist}}    //cellarray = jQuery.parseJSON({{celllist}});
-    
   
-    var jobid =-1;
+    var jobid = -1;
     
     if(cellarray.length == 0) { // Then fetch the overlapping cells from server.
         console.log("Init: Fetching Overlapping Cells for Area");
@@ -552,18 +553,47 @@ function initialize() {
         $("#map-left-c").on({
             mouseleave: function(){
                 $("#rhs_cursor").hide(); 
-                console.log('hide');
+                //console.log('hide');
             },
             
             mouseenter: function(){
                 $("#rhs_cursor").show(); 
-                console.log('show');
+                //console.log('show');
             }
         })
-    };//initialize
+    
+        
+        
+        $('#delete_area_id').click(function(e) {
+	        
+        		bootbox.dialog({
+        			  message: "<b>Warning!</b> Deleting this area cannot be undone.<br>Volunteers who follow this area will be notified.",
+        			  title: "Delete Area <b>{{area.name}}</b> - Are You Sure?",
+        			  buttons: {
+        			    success: {
+        			      label: "Cancel",
+        			      className: "btn-info",
+        			      callback: function() {
+        			      }
+        			    },
+        			    danger: {
+        			      label: "Delete",
+        			      className: "btn-danger",
+        			      callback: function() {
+        			    	  console.log("Deleting area");
+                              window.location.href = "{{ area|area_url }}/delete" ;
+        			      }
+        			    }
+        			  }
+        			});
+	        }     
+        );//delete-are-you-sure handler
 
+};//initialize
+
+    
 google.maps.event.addDomListener(window, 'load', initialize); 
-
+	
 </script>
 {% block map_head %} {% endblock  map_head%} 
 
@@ -620,8 +650,6 @@ google.maps.event.addDomListener(window, 'load', initialize);
                         </div>
                     </div>
                 </div>
-                
-                
                 <div class="accordion-group">
                     <div class="accordion-heading">
                         <a class="accordion-toggle" data-toggle="collapse" href="#area_panel"> Area  </a>
@@ -643,7 +671,18 @@ google.maps.event.addDomListener(window, 'load', initialize);
                         </div>
                     </div>
                 </div>
-    
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#area_followers_panel"> Followers {{area.followers}}</a>
+                    </div>
+                    <div id="area_followers_panel" class="accordion-body collapse">
+                        <div class="accordion-inner">
+   					{% for j in area_followers%}
+                           <ul><a href="{{ "user"|url(j) }}" data-toggle="tooltip" title="A volunteer who monitors this area.">{{j}}</a></ul>
+						{% endfor %}
+                        </div>
+                    </div>
+                </div>
                 <div class="accordion-group">
                     <div class="accordion-heading">
                         <a class="accordion-toggle" data-toggle="collapse" href="#map_panel"> Map View </a>
@@ -712,11 +751,16 @@ google.maps.event.addDomListener(window, 'load', initialize);
                 </div>
            </div>
            <div>
-                <p>
-                   <input type="checkbox" id="1" class="layer" unchecked data-toggle="tooltip" title="Report a change or disturbance" /><label for="1">Make Report</label> 
+                
+                   <input type="checkbox" id="1" class="layer" data-toggle="tooltip" title="Report a change or disturbance" /><label for="1">Make Report</label> 
                    <!--  <input type="checkbox" id="2" class="layer" unchecked data-toggle="tooltip"
                    title="Show FORMA estimate of recent tree loss" /><label for="2">FORMA</label>  -->
            </div> 
+           {% if show_delete %} 
+           <div id='user-is-owner-div'>
+                    <a  id="delete_area_id" class="btn btn-small btn-lightred map-panel-oops-button confirm" style='width:40%' data-toggle="tooltip" title="Delete Area (Can't be undone) ">Delete area <span class='red_cross'>&times;</span></a>
+           </div>
+           {% endif %}
         </div>
         
         <!-- MAP CANVAS  -->
