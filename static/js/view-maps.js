@@ -12,7 +12,6 @@ var overlayMaps = [];
 var latlngs = [];
 var boundary_coords= "";
 
-var area_url = '{{ area.name }}';
 
 function setActionUrl(action)
 {

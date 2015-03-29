@@ -9,9 +9,9 @@
             {% endif %}
             <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
             <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
-            <tr><td>observers </td><td>{{ j.subscriber }}</td></tr>
+            <tr><td>followers</td><td>{{ j.followers }}</td></tr>
              <tr><td><a href="{{ j|area_tasks_url}}" data-toggle="tooltip" title="List Observation Tasks for this area"><h4>tasks</h4></a></td><td></td></tr>
-             <tr><td><a href="{{ 'user'|url(user.name) }}/follow/{{ j }}?unfollow=true" class="btn btn-small btn-lightblue" data-toggle="tooltip" title="Stop receiving review requests for this area.">Unfollow</a></td></tr>
+             <tr><td><a href="{{ 'user'|url(user.name) }}/follow/{{ j }}?unfollow=true" class="btn btn-small btn-lightred" data-toggle="tooltip" title="Stop receiving review requests for this area.">Unfollow <span class='red_cross'>&times;</span></a></td></tr>
  
             </tbody>        
            </table></pre> 

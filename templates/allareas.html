@@ -1,18 +1,33 @@
 <!-- Included by index-user.html -->
 
    {% for j in other_areas %}
-            <pre class="table-journalbackground">
-	        <table class="table table-condensed ">
-	        <tbody>
-	        {% if thisuser %}
-	            <tr><a data-toggle="tooltip" title="Click to view. Description: {{ j.description}}" href="{{ j|area_url }}"><h4>{{ j }}</h4></a></tr>
-	        {% else %}
-	            <tr>{{ j }}</tr>
-	        {% endif %}
-	        <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
-	        <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
-	        <tr><td>observers </td><td>{{ j.subscriber }}</td></tr>
-	         <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j }}" class="btn btn-small btn-lightgreen" data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a></td></tr>
-	        </tbody>        
-	       </table></pre> 
-    {% endfor %}
+         <div class="accordion" id="accordion-areas">
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#a_{{j.key()}}">{{ j }}</a>
+                    </div>
+                    <div id="a_{{ j.key() }}" class="accordion-body collapse ">
+                        <div class="accordion-inner">
+                            <div class="container-fluid">
+                                <div class="row">
+                                    <div class=" panel-tight">
+                                           <pre class="table-myareabackground">
+                                                <table class="table table-condensed  ">
+                                                    <tbody>
+                                                        <tr><td><a href="{{ j|area_url }}">view area</a></td></tr>
+                                                        <tr><td><a href="{{ j|area_tasks_url}}">view tasks</a></td><td>
+                                                        <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
+                                                        <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
+                                                        <tr><td>followers</td><td>{{ j.followers }}</td></tr>
+                                                        
+                                                            <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j }}" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a></td></tr>
+                                                    </tbody>        
+                                               </table>
+                                             </pre> 
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>    {% endfor %}

@@ -127,19 +127,17 @@ class User(db.Model):
 		return [i for i in USER_SOURCE_CHOICES if getattr(self, '%s_id' %i)]
 
 
-class UserFollowersIndex(db.Model):
+class UserFollowersIndex(db.Model): #An User has a list of followers (other users) in an UserFollowersIndex(key=user)
 	users = db.StringListProperty()
 
-class UserFollowingIndex(db.Model):
+class UserFollowingIndex(db.Model):#A User has a list of other users they follow in a UserFollowingAreasIndex(key=area)
 	users = db.StringListProperty()
 
-class AreaFollowersIndex(db.Model):  #A Area has a list of users in an AreaFollowersIndex(key=user)
-    users = db.StringListProperty()
+class AreaFollowersIndex(db.Model):  #An Area has a list of users in an AreaFollowersIndex(key=user)
+	users = db.StringListProperty()
 
 class UserFollowingAreasIndex(db.Model): #A User has a list of areas in a UserFollowingAreasIndex(key=area)
-    areas = db.StringListProperty()
-    
-
+	areas = db.StringListProperty()
 
 class AreaOfInterest(db.Model):
 
@@ -183,19 +181,18 @@ class AreaOfInterest(db.Model):
 	map_zoom    = db.IntegerProperty(required=True, default=1)
 	
 	#User (subscriber) who created AOI 
-	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
-	owner = db.ReferenceProperty(User) #key to subscriber that created area.
+	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)  #set automatically when created. never changes.
+	owner = db.ReferenceProperty(User) #key to subscriber that created area.   # set by caller. could be reassigned.
 	private = db.BooleanProperty(required=True, default=False) #set to keep area hidden.
+	followers = db.IntegerProperty(required=True, default=0)
 	
-	#timestsamps
+	#timestamps
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
 	
-	@property
-	def observers(self):
-			return User.all().filter('areas_observing', self.key())
-	
-	# all frequencies are per week
+	#@property
+	#def observers(self):
+	#		return User.all().filter('areas_observing', self.key())
 
 	def __unicode__(self):
 		return unicode(self.name)
@@ -247,23 +244,20 @@ class LandsatCell(db.Model):
 	#constants - not changed once created. Created when AOI is created. 
 	path = db.IntegerProperty(required=True, default=0)     # Landsat Path
 	row  = db.IntegerProperty(required=True, default=0)     # Landsat Row
-	#Can filter on these using imageCollection.filterMetadata('WRS_PATH', 'EQUALS', 40).filterMetadata('WRS_ROW', 'EQUALS', 30)
-	
-	center = db.GeoPtProperty(required=False, default=None) # Geographic Center of Cell
-	bound = db.ListProperty(float, default=None)            # Geographic Boundary of Cell
-	#created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)
-	
 	aoi = db.ReferenceProperty(AreaOfInterest) #key to area that includes this cell
 	
+	#center = db.GeoPtProperty(required=False, default=None) # Geographic Center of Cell - not set or used.
+	#bound = db.ListProperty(float, default=None)            # Geographic Boundary of Cell- not set or used
+	
 	overlap = db.FloatProperty(required = False) #What proportion of this cell overlaps the AOI (>0, <=1). 
+	image_id = db.StringProperty(required =False) # An ID of a Landsat image for this cell (may not be latest)
 	
-	#FIXME: Multiple AOI could reference the same cell so change to a list...
-	
+	monitored = db.BooleanProperty(required = True, default = False) # Set if cell is monitored for new data (i.e selected in view-area)
+
 	#L8_latest   = db.ReferenceProperty(Observation, default=None)
 	#L8_previous = db.ReferenceProperty(Observation, default=None)
 	#L7_latest   = db.ReferenceProperty(Observation, default=None)
 	#L7_previous = db.ReferenceProperty(Observation, default=None)
-	monitored = db.BooleanProperty(required = True, default = False) # Set if cell is monitored for new data (i.e selected in view-area)
 
 	'''
 	Cell2Dictionary()converts a cell object into a dictionary of the path,row, monitored 
@@ -517,7 +511,7 @@ ACTIVITY_NEW_AREA = 5
 ACTIVITY_NEW_OBS = 6
 ACTIVITY_NEW_REPORT = 7
 ACTIVITY_NEW_FEEDBACK = 8
-
+ACTIVITY_DELETE_AREA = 9
 
 
 ACTIVITY_CHOICES = [
@@ -525,7 +519,11 @@ ACTIVITY_CHOICES = [
 	ACTIVITY_NEW_ENTRY,
 	ACTIVITY_FOLLOWING,
 	ACTIVITY_SAVE_ENTRY,
-	ACTIVITY_NEW_AREA
+	ACTIVITY_NEW_AREA,
+	ACTIVITY_NEW_OBS,
+	ACTIVITY_NEW_REPORT,
+	ACTIVITY_NEW_FEEDBACK,
+	ACTIVITY_DELETE_AREA
 ]
 
 ACTIVITY_ACTION = {
@@ -534,6 +532,10 @@ ACTIVITY_ACTION = {
 	ACTIVITY_FOLLOWING: 	'started following',
 	ACTIVITY_SAVE_ENTRY: 	'updated a journal entry',
 	ACTIVITY_NEW_AREA: 		'created a new area of interest',
+	ACTIVITY_NEW_OBS: 'created a new observation',
+	ACTIVITY_NEW_REPORT: 'created a new report',
+	ACTIVITY_NEW_FEEDBACK: 'created new feedback',
+	ACTIVITY_DELETE_AREA: 'deleted an area of interest'
 }
 
 class Activity(DerefModel):

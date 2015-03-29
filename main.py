@@ -159,9 +159,7 @@ class BaseHandler(webapp2.RequestHandler):
         }
         self.session['journals'] = cache.get_journal_list(db.Key(self.session['user']['key']))
         self.session['areas_list']    = cache.get_areas_list(db.Key(self.session['user']['key'])) #TODO This list can be long and expensive.
-        self.session['following_areas_list'] = cache.get_following_areas_list(self.session['user']['name'])
-        #self.session['areas']    = cache.get_areas(db.Key(self.session['user']['key']))
-        #self.session['following_areas']    = cache.get_by_keys(cache.get_following_areas(self.session['user']['name']), 'AreaOfInterest')
+        self.session['following_areas_list'] = cache.get_following_areas_list(self.session['user']['key']) # used for basehandler menu.
 
     MESSAGE_KEY = '_flash_message'
     def add_message(self, level, message):
@@ -224,11 +222,6 @@ class MainPage(BaseHandler):
             #print "MainPage()"
             following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User') # for journal not areas
             followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User') # for journal not areas
-            #print self.session['user']['name']
-            #following_areas_list = cache.get_following_areas_list(self.session['user']['name']) #this is in session so redundant
-    
-            #following_areas = cache.get_by_keys(cache.get_area_followers(self.session['user']['name']), 'AreaOfInterest')
-            #area_followers = cache.get_by_keys(cache.get_area_followers(self.session['user']['name']), 'AreaOfInterest)
             journals = cache.get_journals(db.Key(self.session['user']['key']))
             areas = cache.get_areas(db.Key(self.session['user']['key'])) # areas user created
             following_areas = cache.get_following_areas(self.session['user']['name'])
@@ -843,15 +836,121 @@ class NewAreaHandler(BaseHandler):
                 counters.increment(counters.COUNTER_AREAS)
                 
                 self.populate_user_session()
-                self.redirect(webapp2.uri_for('view-area', area_name=area.name))
+                self.redirect(webapp2.uri_for('follow-area', username=user.name, area_name=area.name))
                 return
-            except: 
-                self.add_message('danger', "Sorry, Only ASCII in area names:(We're working on it)") # FIXME:BPA-  
+            except Exception, e : 
+                self.add_message('danger', "Error creating area.  Exception: {0!s}".format(e)) 
                 self.redirect(webapp2.uri_for('new-area'))
                 return
 
         self.redirect(webapp2.uri_for('new-area'))
 
+class DeleteAreaHandler(BaseHandler):
+
+    def get(self, area_name):
+        current_user = users.get_current_user()
+        if  not current_user:
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
+            self.add_message('danger', 'You must log in to create a new area .')
+            return self.redirect(users.create_login_url(original_url))
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
+ 
+        if not registered:
+            return self.redirect(webapp2.uri_for('register'))
+        try:
+            username = self.session['user']['name']
+        except:
+            logging.error('Should never get this exception')
+            self.add_message('danger', 'You must log in to create a new area.')
+            
+            if 'user' not in self.session:
+                self.redirect(webapp2.uri_for('main'))
+                return
+
+        cell_list = []
+
+        area = cache.get_area(None, area_name)
+
+        if not area:
+            logging.error('DeleteArea: Area not found! %s', area_name)
+            return self.error(404)
+        else:
+            cell_list = area.CellList()
+            observations =    {} 
+            if area.ft_docid is not None and len(area.ft_docid) <> 0:
+                area.isfusion = True
+            else:
+                area.isfusion = False
+
+        # if user does not own area or user is not admin - disallow
+       
+         
+        if (area.owner.name != user.name) and (user.role != 'admin'):
+            logging.error('Only the owner of an area or admin can delete an area %s %s', area.owner, user)
+            self.add_message('danger', "Only the owner of an area or admin can delete an area. owner:'{0!s}' user:'{1!s}'".format(area.owner, user))
+  
+            self.redirect(webapp2.uri_for('view-area', area_name=area_name), {
+                'username': self.session['user']['name'],
+                'area': area,
+                'show_navbar': True,
+                'celllist':json.dumps(cell_list),
+                'obslist': json.dumps(observations)
+            })
+        
+        #remove area from other user's area_following lists.        
+        #remove area from user's list of areas (no such thing. see cache.get_areas()
+        #areas = cache.get_areas(db.Key(self.session['user']['key'])) # areas user created
+        area_followers_index = cache.get_area_followers(area_name)
+        #print 'area_followers_index ', area_followers_index
+        def txn(user_key, area, area_followers_index):
+            user = db.get(user_key)
+            user.areas_count -= 1 # decrement the user's area count.
+            db.put(user)
+            for cell_key in area.cells:
+                db.delete(cell_key)
+            if  area_followers_index is not None:
+                db.delete(area_followers_index.key())
+            db.delete(area.key())
+            #del area.cells[:]
+            return
+
+        xg_on = db.create_transaction_options(xg=True)
+        owner_key = area.owner.key()
+        print 'owner_key' , owner_key
+        
+        try:
+            db.run_in_transaction_options(xg_on, txn, owner_key, area, area_followers_index)
+            
+            cache.clear_area_cache(user.key(), area.key())
+            cache.clear_area_followers(area.key())
+            cache.set(cache.pack(user), cache.C_KEY, user.key())
+            
+            models.Activity.create(user, models.ACTIVITY_DELETE_AREA, area.key())
+            counters.increment(counters.COUNTER_AREAS, -1)
+            
+            self.populate_user_session()
+            self.add_message('success', 'Deleted area of interest: {0!s}'.format(area_name))
+            self.redirect(webapp2.uri_for('main'))
+            #raise Exception('test', 'exception')
+            return
+        except Exception, e: 
+            message = 'Sorry, Could not delete area: {0!s} Exception {1!s}'.format(area_name, e)
+            self.add_message('danger', message)
+            logging.error(message)
+            self.redirect(webapp2.uri_for('view-area', area_name=area.name))
+            return
+            
+        #current_user.areas_observing.remove(area)
+        
+        #remove past observation tasks for this area (nice to do)
+        
+        #delete the cells in the area's cell list
+        
+        # delete the area
+        
+        
 
 '''
 SelectCellHandler is called by Ajax when a user clicks on a Landsat Cell in the browser.
@@ -894,11 +993,11 @@ class SelectCellHandler(BaseHandler):
         print 'SelectCellHandler post'
         name = self.request.get('name')
         descr = self.request.get('description')
-        #logging.debug('NewAreaHandler name: %s description:%s', name, descr)
+        #logging.debug('SelectCellHandler name: %s description:%s', name, descr)
         
         try:
             coordinate_geojson_str = self.request.get('coordinates').decode('utf-8')
-            #logging.debug("NewAreaHandler() coordinate_geojson_str: ", coordinate_geojson_str)
+            #logging.debug("SelectCellHandler() coordinate_geojson_str: ", coordinate_geojson_str)
             geojsonBoundary = geojson.loads(coordinate_geojson_str)
     
         except:
@@ -907,6 +1006,7 @@ class SelectCellHandler(BaseHandler):
             })    
         
         self.render('view-area.html')
+
 
 class NewJournal(BaseHandler):
     def get(self):
@@ -949,11 +1049,33 @@ class NewJournal(BaseHandler):
 class ViewArea(BaseHandler):
         
     def get(self, area_name):
+        
+        current_user = users.get_current_user()
+        if  not current_user:
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
+            self.add_message('danger', 'You must log in to create a new area .')
+            return self.redirect(users.create_login_url(original_url))
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
+ 
+        if not registered:
+            return self.redirect(webapp2.uri_for('register'))
+        try:
+            username = self.session['user']['name']
+        except:
+            logging.error('Should never get this exception')
+            self.add_message('danger', 'You must log in to create a new area.')
+            
+            if 'user' not in self.session:
+                self.redirect(webapp2.uri_for('main'))
+                return
+
         area = cache.get_area(None, area_name)
-        cell_list = []
         if not area:
+            self.add_message('danger', "Area: '{0:s}' not found!".format(area_name))
             logging.error('ViewArea: Area not found! %s', area_name)
-            self.error(404)
+            self.redirect(webapp2.uri_for('main'))
         else:
             # Make a list of the cells that overlap the area with their path, row and status. 
             #This may be an empty list for a new area.
@@ -973,58 +1095,48 @@ class ViewArea(BaseHandler):
             #     logging.debug('ViewArea area_name %s %s', area.name, cell_list)
             #===================================================================
             
+            cell_list = []        
             cell_list = area.CellList()
             observations =    {} 
-            #print 'area.boundary_fc', area.boundary_fc
-            #boundary_ft = json.loads(area.boundary_fc)
-            '''                
-            try:
-                boundary_ft = boundary_ft['properties']['DocID']
-                print 'fusion table DocId', boundary_ft
-                area.isfusion = True
-            except:
-                boundary_ft = None
-                print 'no fusion table in boundary_fc', area.boundary_fc
-                area.isfusion = False
-            '''              
+            
             if area.ft_docid is not None and len(area.ft_docid) <> 0:
-                print 'fusion table DocId', area.ft_docid
+                #print 'fusion table DocId', area.ft_docid
                 area.isfusion = True
             else:
-                print 'no fusion table in area', area.ft_docid, area.boundary_fc
+                #print 'no fusion table in area', area.ft_docid, area.boundary_fc
                 area.isfusion = False
     
+            area_followers_index = cache.get_area_followers(area_name)
+            #print 'area_followers ', area_followers_index, 
+            if area_followers_index:
+                area_followers = area_followers_index.users
+            else:
+                area_followers = []
+            
+            #print 'user ', user.name, user.role
+            
+            if (area.owner.name == user.name):
+                is_owner = True
+                show_delete = True
+            else:
+                is_owner = False
+                show_delete = False
+                
+            if users.is_current_user_admin():
+                show_delete = True
+                
             self.render('view-area.html', {
-                'username': self.session['user']['name'],
+                'username': user.name,
                 'area': area,
                 #'boundary_ft' : area.boundary_ft,
                 'show_navbar': True,
+                'show_delete':show_delete,
+                'is_owner': is_owner,
                 'celllist':json.dumps(cell_list),
+                'area_followers': area_followers,
                 'obslist': json.dumps(observations)
             })
             
-            
-#FIXME:ViewActionForArea not called?
-class ViewActionForArea(BaseHandler):
-    
-    def get(self, area_name, action, satelite, algorithm, latest):
-        
-        area = cache.get_area(None, area_name)
-        logging.debug('ViewActionForArea area_name %s %s', area_name, area)
-        if not area:
-            area = cache.get_area(None, area_name)
-            logging.error('ViewArea: Area not found! %s', area_name)
-            self.error(404)
-        else:
-            # logging.info('ViewArea else ')
-            self.render('view-area.html', {
-                'username': self.session['user']['name'],
-                'area': area,
-                'action': action,
-                'algorithm': algorithm,
-                'satelite' : satelite,
-                'latest' : latest
-            })
 
 '''
 Use Earth Engine to work out which cells belong to an AreaOfInterest.
@@ -1035,43 +1147,36 @@ class GetLandsatCellsHandler(BaseHandler):
     #This handler responds to Ajax request, hence it returns a response.write()
 
     def get(self, area_name):
-        #TODO: This test is to help me understand AJAX vs HTTP but serves not other purpose.
-        #if not self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        #    logging.debug('GetLandsatCellsHandler() - This is a normal HTTP request') # render the ViewArea page, then send image.
-        #else:
-        #    logging.debug('GetLandsatCellsHandler() - This is an AJAX request') 
-        
         area = cache.get_area(None, area_name)
         if not area or area is None:
             logging.info('GetLandsatCellsHandler - bad area returned %s', area_name)
             self.error(404)
             return
         cell_list = area.CellList()
-        reason = ''
         result ='success'
- 
-        #logging.debug('GetLandsatCellsHandler area.name: %s type: %d area.key(): %s', area.name, type(area), area.key())
-    
-        if not eeservice.initEarthEngineService(): # we need earth engine now.
-            result = 'danger'
-            reason = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
-            self.add_message('danger', reason)
-            logging.error(reason)
-            getCellsResult = {'result': result, 'reason': reason}
-            self.response.write(json.dumps(getCellsResult))
-            return
-        else:
-           
-            eeservice.getLandsatCells(area)
-            area = cache.get_area(None, area_name) # refresh the cache as it has been updated by getLandsatCells(). #TODO test this works
-            cell_list = area.CellList()
-            reason = 'Your area is covered by {0:d} Landsat Cells'.format(len(area.cells))
-            self.add_message('success',reason)
-            logging.debug(reason)
+        if len(cell_list)== 0:
             
-            getCellsResult = {'result': result, 'reason': reason, 'cell_list': cell_list }
-            self.response.write(json.dumps(getCellsResult))
-            return 
+            #logging.debug('GetLandsatCellsHandler area.name: %s type: %d area.key(): %s', area.name, type(area), area.key())
+            if not eeservice.initEarthEngineService(): # we need earth engine now.
+                result = 'danger'
+                reason = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
+                self.add_message('danger', reason)
+                logging.error(reason)
+                getCellsResult = {'result': result, 'reason': reason}
+                self.response.write(json.dumps(getCellsResult))
+                return
+            else:       
+                eeservice.getLandsatCells(area)
+                area = cache.get_area(None, area_name) # refresh the cache as it has been updated by getLandsatCells(). #TODO test this works
+                cell_list = area.CellList()
+                reason = 'Your area is covered by {0:d} Landsat Cells'.format(len(area.cells))
+                self.add_message('success',reason)
+                logging.debug(reason)
+        else:
+            reason = 'calculate previously'
+        getCellsResult = {'result': result, 'reason': reason, 'cell_list': cell_list }
+        self.response.write(json.dumps(getCellsResult))
+        return 
 
 class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
     #This handler responds to Ajax request, hence it returns a response.write()
@@ -1476,6 +1581,7 @@ class CheckNewAreaHandler(BaseHandler):
 
         returnstr = initstr + checkAreaForNew(area)
         self.response.write(returnstr.encode('utf-8')) 
+
 
 
              
@@ -1885,28 +1991,37 @@ class FollowAreaHandler(BaseHandler):
 
         xg_on = db.create_transaction_options(xg=True)
 
-        def txn(thisuser, area, op):
-            tu, ar = db.get([thisuser, area])
-            #print("FollowAreaHandler() adding key=", thisuser)
+        def txn(userfollowingareas_key, areafollowers_key, area, op):
+            tu, ar = db.get([userfollowingareas_key, areafollowers_key])
+            #print("FollowAreaHandler() adding key=", userfollowingareas_key)
             if not tu:
-                tu = models.UserFollowingAreasIndex(key=thisuser)
+                print("FollowAreaHandler() user not found: %s", userfollowingareas_key)
+                tu = models.UserFollowingAreasIndex(key=userfollowingareas_key)
             if not ar:
-                ar = models.AreaFollowersIndex(key=area)  # FIXME: This looks wrong, ar is initialised as an area above but an afi here. Probably never executes.
-
+                logging.error("FollowAreaHandler() area not found: %s", areafollowers_key)
+                ar = models.AreaFollowersIndex(key=areafollowers_key)  # FIXME: This looks wrong, ar is initialised as an area above but an afi here. Probably never executes.
+    
             changed = []
+            if not area.followers:
+                area.followers = 0
+                
             if op == 'add':
-                if thisuser.name() not in ar.users:
-                    ar.users.append(thisuser.name())
+                if userfollowingareas_key.name() not in ar.users:
+                    ar.users.append(userfollowingareas_key.name())
                     changed.append(ar)
-                if area.name() not in tu.areas:
-                    tu.areas.append(area.name())
+                if areafollowers_key.name() not in tu.areas:
+                    tu.areas.append(areafollowers_key.name())
                     changed.append(tu)
+                    area.followers += 1
+                    changed.append(area)
             elif op == 'del':
-                if thisuser.name() in ar.users:
-                    ar.users.remove(thisuser.name())
+                if userfollowingareas_key.name() in ar.users:
+                    ar.users.remove(userfollowingareas_key.name())
                     changed.append(ar)
-                if area.name() in tu.areas:
-                    tu.areas.remove(area.name())
+                if areafollowers_key.name() in tu.areas:
+                    area.followers -= 1
+                    changed.append(area)
+                    tu.areas.remove(areafollowers_key.name())
                     changed.append(tu)
 
             db.put(changed)
@@ -1916,10 +2031,7 @@ class FollowAreaHandler(BaseHandler):
         following_key = db.Key.from_path('User', thisuser, 'UserFollowingAreasIndex', thisuser)
         followers_key = db.Key.from_path('AreaOfInterest', area_name.decode('utf-8'), 'AreaFollowersIndex', area_name.decode('utf-8'))
 
-        #followers_key = db.Key.from_path('User', thisuser, 'User', thisuser)
-        #areas_following_key = db.Key.from_path('AreaOfInterest', area_name)   #, 'User', username)
-
-        areas_following, followers,  = db.run_in_transaction_options(xg_on, txn, following_key, followers_key, op)
+        areas_following, followers,  = db.run_in_transaction_options(xg_on, txn, following_key, followers_key, area, op)
 
         if op == 'add':
             self.add_message('success', 'You are now following area <em>%s</em>.' %area_name.decode('utf-8'))
@@ -1964,8 +2076,6 @@ class FollowAreaHandler(BaseHandler):
         #counters.increment(counters.COUNTER_AREAS) # should be FOLLOW_AREAS
 
         self.populate_user_session()
-        #self.redirect(webapp2.uri_for('view-area', area))
-        #self.redirect(webapp2.uri_for('view-area', username=thisuser, area_name=area.name))
         if op == 'add':
             self.redirect(webapp2.uri_for('view-area', area_name=area.name))
         else:
@@ -2914,7 +3024,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/logout/google', handler=GoogleSwitch, name='logout-google'),
     webapp2.Route(r'/markup', handler=MarkupHandler, name='markup'),
 
-    webapp2.Route(r'/new/area', handler=NewAreaHandler, name='new-area'),
+    
     webapp2.Route(r'/new/journal', handler=NewJournal, name='new-journal'),
     webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
     webapp2.Route(r'/mailtest', handler=MailTestHandler, name='mail-test'),
@@ -2943,13 +3053,20 @@ app = webapp2.WSGIApplication([
     # google site verification
     webapp2.Route(r'/%s.html' %settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
     
-    webapp2.Route(r'/myareas', handler=ViewAreas, name='view-areas'),
-    webapp2.Route(r'/<username>/myareas', handler=ViewAreas, name='view-areas'),
-    webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),
-    webapp2.Route(r'/<username>/unfollow/<area_name>', handler=FollowAreaHandler, name='follow-area'),
-    webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),
-    webapp2.Route(r'/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'), #was new-obstask
+    
+    webapp2.Route(r'/myareas', handler=ViewAreas, name='view-areas'), # view my areas
+    webapp2.Route(r'/<username>/myareas', handler=ViewAreas, name='view-areas'), # view someone else's areas.
+
+    webapp2.Route(r'/new/area', handler=NewAreaHandler, name='new-area'),                             # create area
+    webapp2.Route(r'/area/<area_name>/delete', handler=DeleteAreaHandler, name='delete-area'),  # delete area (owner or admin)
+  
+    webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),  # view area.
+    
     webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #ajax
+    
+    webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),   # start following area
+    webapp2.Route(r'/<username>/unfollow/<area_name>', handler=FollowAreaHandler, name='follow-area'),# stop following area
+    
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
     #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
@@ -2957,6 +3074,7 @@ app = webapp2.WSGIApplication([
     #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
     #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
     #webapp2.Route(r'/<username>/<area_name><param:.*>', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
+    #webapp2.Route(r'/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'), #was new-obstask
         
     # this section must be last, since the regexes below will match one and two -level URLs
     webapp2.Route(r'/<username>/journals',  handler=ViewJournalsHandler, name='view-journals'),
@@ -2987,6 +3105,7 @@ RESERVED_NAMES = set([
     'blog',
     'checknew',
     'contact',
+    'delete',
     'docs',
     'donate',
     'dropbox',

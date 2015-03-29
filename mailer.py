@@ -65,10 +65,10 @@ def new_image_email(task, hosturl):
 
     try: 
         message = mail.EmailMessage(sender=thesender, subject=subject)
-        if user is not None:
+        if user is not None and user.email is not None:
             message.to = user.email
         else:
-            massage.to = thesender #user does not exist
+            message.to = thesender #user does not exist
 
         message.body = """
 Dear  {0!s},

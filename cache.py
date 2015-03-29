@@ -175,7 +175,7 @@ def decode_key(key):
     path.reverse()
     #print 'app=%r, path=%r' % (_app, path)
 
-def get_areas(user_key):
+def get_areas(user_key):  #return all areas's owned by user.
     n = C_AREAS %user_key
     data = unpack(memcache.get(n))
     if data is None:
@@ -517,7 +517,7 @@ def get_stats():
 def clear_area_cache(user_key, area_key):
     #print "clear_area_cache(%s, %s)", user_key, area_key
     tag = "users"
-    memcache.delete_multi([    C_AREAS_ALL,
+    r = memcache.delete_multi([    C_AREAS_ALL,
                             C_AREA_ALL_LIST,
                             C_AREAS %user_key, 
                             C_AREA_LIST %user_key, 
@@ -528,12 +528,12 @@ def clear_area_cache(user_key, area_key):
                             C_AREA_FOLLOWERS %area_key,
                             C_AREA %(user_key, area_key),
                             C_AREA %(tag, area_key) ])
+    print 'clear_area_cache() returned', r
+    return r
 
 
-def clear_area_followers(area_key): #not used
+def clear_area_followers(area_key): 
     memcache.delete(C_AREA_FOLLOWERS %area_key)
-
-
 
 def clear_journal_cache(user_key):
     memcache.delete_multi([C_JOURNALS %user_key, C_JOURNAL_LIST %user_key])
@@ -631,14 +631,8 @@ def get_area_followers(area_name):
     n = C_AREA_FOLLOWERS %area_name
     data = memcache.get(n)
     if data is None:
-        followers = models.AreaFollowersIndex.get_by_key_name(area_name) 
-        #, parent=db.Key.from_path('AreaOfInterest', area_name))
-        if followers is not None:
-            data = [(i.url(), i.name, i.id()) for i in followers]
-        else: 
-            data = []    
+        data= models.AreaFollowersIndex.get_by_key_name(area_name, parent=db.Key.from_path('AreaOfInterest', area_name))
         memcache.add(n, data)
-    #print "get_area_followers"
     return data
 
 def get_following_areas(user_key): 
@@ -646,32 +640,20 @@ def get_following_areas(user_key):
     data = memcache.get(n)
     if data is None:
         following_key = db.Key.from_path('User', user_key, 'UserFollowingAreasIndex', user_key)
-        #following = models.UserFollowingAreasIndex.from_path(kind, id_or_name, parent=None, namespace=None)
-        #following_key = db.Key.from_path('User', thisuser, 'UserFollowingAreasIndex', thisuser)
-        #following = models.UserFollowingAreasIndex.get_by_key_name(user_key, None)
         following = models.UserFollowingAreasIndex.get(following_key)
         data = []
-        #following = models.UserFollowingAreasIndex.get_by_key_name(username, None)
         if not following:
-            logging.debug("  get_following_areas - [no followers] %s", user_key)
+            logging.debug("get_following_areas(): %s not following any areas", user_key)
         else:
-            #print ("get_following_areas: areas", following.areas)
-            #data = following.areas
             following_areas = following.areas
-            #print "get_following_areas(): ", following_areas, type(following_areas) 
-            
-            #data = [get_area(None, af) for af in following_areas]
-            allareas = models.AreaOfInterest.all()  #inefficient
+            allareas = models.AreaOfInterest.all()  #TODO: This is inefficient. Give each user model a list.
             data = [x for x in allareas if x.name in following_areas]
-            
-            #print ("get_following_areas", following.areas)
-            #data = [(get_area(None, i).url(), get_area(None, i).name) for i in following.areas]
-        #memcache.add(n, pack(data))
         memcache.add(n, data)
+        
         #for y in data:
             #print ("  get_following_areas af:",  y)
-        #logging.debug("get_following_areas() reloaded: %s ", user_key)
-        #print ("get_following_areas: ", data)
+        logging.debug("get_following_areas() reloaded: %s ", user_key)
+
     return data
 
 def get_following_areas_list(user_key):
@@ -682,7 +664,7 @@ def get_following_areas_list(user_key):
         data = [(i.url(), i.name) for i in areas]
         #data = [(get_area(None, i).url(), get_area(None, i).name) for i in areas]
         memcache.add(n, data)
-        #print ("get_following_areas_list() reloaded: ", user_key)
+        print ("get_following_areas_list() reloaded: ", user_key)
         
     return data
 
