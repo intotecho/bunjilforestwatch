@@ -44,7 +44,7 @@ def user_area_url(username, area_name):
 	return webapp2.uri_for('view-area', username=username, area_name=area_name)
 
 def area_tasks_url(area):
-	return webapp2.uri_for('view-obstasks', username=None, areaname=area.name)
+	return webapp2.uri_for('view-obstasks', area_name=area.name)
 
 def area_url(area, page=1):
 	return area.url(page)
@@ -78,27 +78,17 @@ def journal_next(ob, page):
 def obstask_url(obstask):
 	return obstask.taskurl()
 
-#def listurl(self, page=1, username=None): #show a list of recent tasks
-	#logging.debug("listurl %s ", username )
-
-def obstasks_url(obstask, page=1,user2view=None):
-	#return obstask.listurl(page, username)
-	if user2view == 'None' or user2view == None:
-		if page > 1:
-			return webapp2.uri_for('view-obstasks', page=page)
-		else:
-			return webapp2.uri_for('view-obstasks')
+def obstasks_url(obstask, user2view, area_name, page=1):
+	if page > 1:
+		return webapp2.uri_for('view-obstasks',   area_name=area_name, user2view=user2view, page=page)
 	else:
-		if page > 1:
-			return webapp2.uri_for('view-obstasks',   user2view= user2view, page=page)
-		else:
-			return webapp2.uri_for('view-obstasks',  user2view= user2view  )
-		
-def obstasks_prev(ob, page, username):
-	return obstasks_url(ob, str(page - 1), username)
+		return webapp2.uri_for('view-obstasks',  area_name=area_name, user2view=user2view )
 
-def obstasks_next(ob, page, username=None):
-	return obstasks_url(ob, str(page + 1), username)
+def obstasks_prev(ob, user2view, area_name, page):
+	return obstasks_url(ob,  user2view, area_name, str(page - 1))
+
+def obstasks_next(ob, user2view, area_name, page):
+	return obstasks_url(ob, user2view, area_name, str(page + 1))
 
 def blog_url(page=1):
 	return webapp2.uri_for('blog', page=page)

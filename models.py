@@ -135,6 +135,7 @@ class UserFollowingIndex(db.Model):#A User has a list of other users they follow
 
 class AreaFollowersIndex(db.Model):  #An Area has a list of users in an AreaFollowersIndex(key=user)
 	users = db.StringListProperty()
+	
 
 class UserFollowingAreasIndex(db.Model): #A User has a list of areas in a UserFollowingAreasIndex(key=area)
 	areas = db.StringListProperty()
@@ -143,7 +144,11 @@ class AreaOfInterest(db.Model):
 
 	ENTRIES_PER_PAGE = 5 #TODO Move to Settings.py
 	MAX_AREAS = 24       #TODO Move to Settings.py
-
+	
+	PUBLIC_AOI = 0		#Everyone can see and follow this area.share
+	UNLISTED_AOI = 1    #Anyone with the link can see and follow this area.share
+	PRIVATE_AOI = 2 		#Only the owner can see or follow this area.share
+	
 	# Area Description
 	name = db.StringProperty(required=True)
 	#description = db.StringProperty(multiline=True) # text might be better type as it is not indexed.
@@ -161,10 +166,6 @@ class AreaOfInterest(db.Model):
 	cells = db.ListProperty(db.Key, default=None) # list of Landsat cells overlapping this area - calculated on new.
 	entry_count = db.IntegerProperty(required=True, default=0) # reports related to this area - not used yet
 	
-	#max_path = db.IntegerProperty(required=False, default=-1) # these are not important and will not be set correctly.
-	#min_path = db.IntegerProperty(required=False, default=-1)
-	#max_row  = db.IntegerProperty(required=False, default=-1)
-	#min_row  = db.IntegerProperty(required=False, default=-1)
 	max_latlon = db.GeoPtProperty(required=True, default=None)
 	min_latlon = db.GeoPtProperty(required=True, default=None)
 
@@ -183,17 +184,14 @@ class AreaOfInterest(db.Model):
 	#User (subscriber) who created AOI 
 	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)  #set automatically when created. never changes.
 	owner = db.ReferenceProperty(User) #key to subscriber that created area.   # set by caller. could be reassigned.
-	private = db.BooleanProperty(required=True, default=False) #set to keep area hidden.
-	followers = db.IntegerProperty(required=True, default=0)
+	share = db.IntegerProperty(required=True, default=PUBLIC_AOI) #set to hide area. see @properties below
+	
+	followers_count = db.IntegerProperty(required=True, default=0) # count user following this area.
 	
 	#timestamps
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
 	
-	#@property
-	#def observers(self):
-	#		return User.all().filter('areas_observing', self.key())
-
 	def __unicode__(self):
 		return unicode(self.name)
 
@@ -210,17 +208,44 @@ class AreaOfInterest(db.Model):
 		else:
 			#return webapp2.uri_for('view-area', username=self.key().parent().name(),  area_name= self.name)
 			return webapp2.uri_for('view-area', area_name= self.name)
-		
+
+	@property
+	def shared_str(self):
+		if self.share == self.PUBLIC_AOI:
+			return 'public'
+		elif self.share == self.UNLISTED_AOI:
+			return 'unlisted'
+		elif self.share == self.PRIVATE_AOI:
+			return 'private'	
+		else:
+			return 'error'	
+
+	def set_shared(self, share_str):
+		if share_str == 'public':
+			self.share = self.PUBLIC_AOI
+			return self.share
+		elif share_str == 'unlisted':
+			self.share = self.UNLISTED_AOI
+			return self.share
+		elif share_str == 'private':
+			self.share = self.PRIVATE_AOI
+			return self.share
+		else:
+			logging.error('set_shared() invalid value provided.{0!s}'.format(share_str))
+			return 'error'	# no change to database.
+
+	
 	#CellList() returns a cached list of the area's cells as a json dictionary
 	def CellList(self):
 		cell_list = []
+		
 		for cell_key in self.cells:
-			#cell = cache.get_cell_from_key(cell_key)
 			cell = cache.get_cell_from_key(cell_key)
 			if cell is not None:
 				celldict = cell.Cell2Dictionary()
 				if celldict is not None:
 					cell_list.append(celldict)
+					
 			else:
 				logging.error ("AreaofInterest::CellList() no cell returned from key %s ", cell_key)
 			
@@ -354,21 +379,31 @@ class Task is an observation task, based on a landsat image in an AOI. The task 
 Each task has a unique ID.
 '''    
 class ObservationTask(db.Model):
-	OBSTASKS_PER_PAGE = 20
+	OBSTASKS_PER_PAGE = 5
 	# Observation
 	name = db.StringProperty()
 	aoi = db.ReferenceProperty(AreaOfInterest) #key to area that includes this cell
+	
+	#privacy and sharing
+	share = db.IntegerProperty(required=True, default=AreaOfInterest.PUBLIC_AOI) #set to hide area. see @properties below
+	aoi_owner = db.ReferenceProperty(User, collection_name='aoi_user') #owner of the aoi- not the volunteer assigned to task. Allows quicker filtering of private areas..
+
 	observations = db.ListProperty(db.Key) #key to observations related to this task. E.g if two images are in the same path and published at same time.
 
 	#people - 	Expected to be a user  who is one of the area's followers. volunteering to follow the AOI
-	original_owner = db.ReferenceProperty(User, collection_name='original_user') # user originally assigned the the task
 	assigned_owner = db.ReferenceProperty(User, collection_name='assigned_user') # user who is currently assigned the the task
+	#original_owner = db.ReferenceProperty(User, collection_name='original_user') # user originally assigned the the task - 
 	
-	#timestsamps
+	#timestamps
 	created_date = db.DateTimeProperty(auto_now_add=True)
 	last_modified = db.DateTimeProperty(auto_now=True)
 	
+	#workflow
 	status = db.StringProperty() #Task's workflow
+	priority = db.IntegerProperty() #Task's priority - zero is highest priority. Other followers may be given same task but at a lower priority.
+	
+	#TODO: add list of references to reports
+	#TODO: add an Activity record.
 	
 	@property
 	def pages(self, obstask_count):
@@ -390,6 +425,16 @@ class ObservationTask(db.Model):
 		else:
 			return webapp2.uri_for('view-obstasks', username = username, user2view= self.assigned_owner.name,  task_name= self.key())
 			
+	def shared_str(self):
+		if self.share == AreaOfInterest.PUBLIC_AOI:
+			return 'public'
+		elif self.share == AreaOfInterest.UNLISTED_AOI:
+			return 'unlisted'
+		elif self.share == AreaOfInterest.PRIVATE_AOI:
+			return 'private'	
+		else:
+			return 'unspecified'	
+
 '''
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
 Based on journalr.org 

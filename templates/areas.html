@@ -17,7 +17,7 @@
 					                                    <tr><td><a href="{{ j|area_tasks_url}}">view tasks</a></td><td>
 												        <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
 												        <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
-												        <tr><td>followers</td><td>{{ j.followers }}</td></tr>
+												        <tr><td>followers</td><td>{{ j.followers_count }}</td></tr>
                                                         
                                                         {% set exists = [] %}
                                                         {% for f in following_areas %}

@@ -219,18 +219,14 @@ class MainPage(BaseHandler):
     def get(self):
         if 'user' in self.session:
             #THIS CAN BE OPTIMISED
-            #print "MainPage()"
             following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User') # for journal not areas
             followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User') # for journal not areas
             journals = cache.get_journals(db.Key(self.session['user']['key']))
-            areas = cache.get_areas(db.Key(self.session['user']['key'])) # areas user created
+            areas = cache.get_areas(db.Key(self.session['user']['key'])) # areas created by this user.
             following_areas = cache.get_following_areas(self.session['user']['name'])
             other_areas = cache.get_other_areas(self.session['user']['name'], db.Key(self.session['user']['key']))
             #print  "MainHandler areas: ", areas,  " following_areas: ",  following_areas, " other_areas: ", other_areas
             self.populate_user_session() #Only need to do this when areas, journals  or followers change
-            
-            #all_areas = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User')
-            
             self.render('index-user.html', {
                 'activities': cache.get_activities_follower(self.session['user']['name']),
                 'username' : self.session['user']['name'],
@@ -244,8 +240,6 @@ class MainPage(BaseHandler):
                 'following_areas': following_areas,
                 'other_areas': other_areas, #other areas.
                 'show_navbar': True
-                #'following_areas_list': following_areas_list, #other areas.
-                #'all_areas': all_areas
             })
         else:
             self.render('index.html', {
@@ -637,15 +631,12 @@ class NewAreaHandler(BaseHandler):
         name = self.request.get('name')
         descr = self.request.get('description')
         boundary_ft = self.request.get('boundary_ft')
+        park_boundary_fc = None
+        total_area = 0
         coords = []
         logging.debug('NewAreaHandler name: %s fusion:%s, description:%s', name, boundary_ft, descr)
-        
-        print (self.request.get('description'))
-        print (self.request.get('description-what'))
-        print (self.request.get('description-why'))
-        print (self.request.get('description-who'))
-        print (self.request.get('description-how'))
-        
+        ftlink = 'https://www.google.com/fusiontables/DataSource?docid=none'
+                
         if not eeservice.initEarthEngineService(): # we need earth engine now.
             self.add_message('danger', 'Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later')
             self.redirect(webapp2.uri_for('main'))
@@ -728,123 +719,161 @@ class NewAreaHandler(BaseHandler):
           
         else:
             ### User Provided a Fusion Table ###
-            
             #Test the fusion table
             #authenticate to fusion table API
-            http = eeservice.EarthEngineService.credentials.authorize(httplib2.Http(memcache))
-            service = build('fusiontables', 'v2', http=http)
-            result = service.column().list(tableId=boundary_ft).execute(http)
-            message = "Fusion Table Columns: "
-            cols = result.get('items', [])
-            geo_col_name= ""
-            for c in cols:
-                message += c['name']
-                if c['type'] == 'LOCATION':
-                    message += '[LOCATION]'
-                    geo_col_name = c['name']
-                message +=  "; "
-            logging.debug("results=%s, column names=%s", result, message)
-            self.add_message('warning', "Fusion Tables are still experimental: " + message) 
+            try:
+                http = eeservice.EarthEngineService.credentials.authorize(httplib2.Http(memcache))
+                service = build('fusiontables', 'v2', http=http)
+                
+                result = service.column().list(tableId=boundary_ft).execute(http)
+                message = "Fusion Table Columns: "
+                cols = result.get('items', [])
+                
+                geo_col_name= ""
+                for c in cols:
+                    message += c['name']
+                    if c['type'] == 'LOCATION':
+                        message += '[LOCATION]'
+                        geo_col_name = c['name']
+                    message +=  "; "
+                logging.debug("results=%s, column names=%s", result, message)
+                    
+                # Fusion table EE operations tested at https://ee-api.appspot.com/b8dec39252c0eced49bb085f2b6fcdd4
+                #make a convex hull and store the coordinates in db.model.AreoOfInterest.coords
+    
+                park_boundary_fc = ee.FeatureCollection(u'ft:' + boundary_ft, 'geometry')
+                hull = park_boundary_fc.geometry().convexHull(10);
+                coord_list = hull.coordinates().getInfo() #.buffer(0, 1e-10)  #(0, ee.ErrorMargin(10, 'units'), 'EPSG:3786')
+                #print coord_list
+                for lat,lng in coord_list[0]:
+                    #print lat,lng
+                    gp = db.GeoPt(float(lng), float(lat))
+                    coords.append(gp)
+                        
+                bounds = park_boundary_fc.geometry().bounds(10)
+                #centroid = bounds.centroid(10).getInfo()
+                
+                rectangle = bounds.coordinates().getInfo()
+                print 'rectangle', rectangle[0]
             
-            #results = oauth_client.query(sqlbuilder.SQL().select(boundary_ft, None, None))
-            #query = service.query()
-            #sql = "SELECT * from " + boundary_ft
-            #request = query.sql(sql=sql)
-            #response = request.execute()
-            #x=0
-            #for row in response['rows']:
-            #    if x> 25:
-            #        print row
-            #    x= x+1
-            #print "All Rows Done"
-            #sqlstr = "SELECT " + geo_col_name + " FROM " + boundary_ft
-            #geom = service.query(sqlstr).execute(http)
-            #logging.debug(geom)
-            
-            
-            # Fusion table EE operations tested at https://ee-api.appspot.com/b8dec39252c0eced49bb085f2b6fcdd4
-            #make a convex hull and store the coordinates in db.model.AreoOfInterest.coords
+                for p in rectangle[0]:
+                    print 'rectangle point', p
+                maxlatlon = db.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
+                minlatlon =  db.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][0]))
+                print 'maxlatlon', maxlatlon          
+                print 'minlatlon', minlatlon          
+                
+                centroid = bounds.centroid(10).coordinates().getInfo()
+                print 'centroid', centroid
+                
+                center = db.GeoPt(float(centroid[1]), float(centroid[0]))
+                total_area = hull.area(10).getInfo()/1e6#area in sq km
+                zoom = 12 # zoom will be calculated when the map is displayed.
+                ftlink = 'https://www.google.com/fusiontables/DataSource?docid=' + boundary_ft
 
-            park_boundary_fc = ee.FeatureCollection(u'ft:' + boundary_ft, 'geometry')
-            hull = park_boundary_fc.geometry().convexHull(10);
-            coord_list = hull.coordinates().getInfo() #.buffer(0, 1e-10)  #(0, ee.ErrorMargin(10, 'units'), 'EPSG:3786')
-            #print coord_list
-            for lat,lng in coord_list[0]:
-                #print lat,lng
-                gp = db.GeoPt(float(lng), float(lat))
-                coords.append(gp)
+            except Exception, e : 
+                logging.error("Exception reading fusion table %s", e)
+                self.add_message('danger', "Error reading fusion table.  Exception: {0!s}".format(e)) 
+                return self.redirect(webapp2.uri_for('new-area'))
+            self.add_message('warning', "Fusion Tables are still experimental - Please reports any bugs") 
+
+        def txn(user_key, area):
+            user = db.get(user_key)
+            user.areas_count += 1
+            db.put([user, area])
+            return user, area
         
-            #print coords
-            
-            bounds = park_boundary_fc.geometry().bounds(10)
-            #centroid = bounds.centroid(10).getInfo()
-            
-            rectangle = bounds.coordinates().getInfo()
-            print 'rectangle', rectangle[0]
-        
-            for p in rectangle[0]:
-                print 'rectangle point', p
-            maxlatlon = db.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
-            minlatlon =  db.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][0]))
-            print 'maxlatlon', maxlatlon          
-            print 'minlatlon', minlatlon          
-            
-            centroid = bounds.centroid(10).coordinates().getInfo()
-            print 'centroid', centroid
-            
-            center = db.GeoPt(float(centroid[1]), float(centroid[0]))
-            total_area = hull.area(10).getInfo()/1e6#area in sq km
-            zoom = 12 # zoom will be calculated when the map is displayed.
-        
-        ### CHECK AREA ###
         area_in_cells = total_area/LANSAT_CELL_AREA
         if total_area > (LANSAT_CELL_AREA * 6): # limit area to an arbitrary maximum size where the system breaks down.
             self.add_message('danger', 'Sorry, your area is too big (%d sq km = %d Landsat images). Try a smaller area.' %(total_area, area_in_cells))
             self.redirect(webapp2.uri_for('new-area'))
-        else:
-            fc_info= json.dumps(park_boundary_fc.getInfo())
-            ftlink = 'https://www.google.com/fusiontables/DataSource?docid=' + boundary_ft
-            decoded_name = name.decode('utf-8') #allow non-english area names.
-            area = models.AreaOfInterest(
-                                        key_name=decoded_name, name=decoded_name, 
-                                        description=self.request.get('description-what').decode('utf-8'), 
-                                        description_why=self.request.get('description-why').decode('utf-8'), 
-                                        description_who=self.request.get('description-who').decode('utf-8'), 
-                                        description_how=self.request.get('description-how').decode('utf-8'), 
-                                        coordinates=coords, boundary_fc= fc_info, ft_link=ftlink, ft_docid = boundary_ft,
-                                        map_center = center, map_zoom = zoom, 
-                                        max_latlon = maxlatlon,min_latlon = minlatlon, 
-                                        owner=db.Key(self.session['user']['key']) )
+        
+        decoded_name = name.decode('utf-8') #allow non-english area names.
+        fc_info= json.dumps(park_boundary_fc.getInfo())
+        area = models.AreaOfInterest(
+                                    key_name=decoded_name, name=decoded_name, 
+                                    description=self.request.get('description-what').decode('utf-8'), 
+                                    description_why=self.request.get('description-why').decode('utf-8'), 
+                                    description_who=self.request.get('description-who').decode('utf-8'), 
+                                    description_how=self.request.get('description-how').decode('utf-8'), 
+                                    coordinates=coords, boundary_fc= fc_info, ft_link=ftlink, ft_docid = boundary_ft,
+                                    map_center = center, map_zoom = zoom, 
+                                    max_latlon = maxlatlon,min_latlon = minlatlon, 
+                                    owner=db.Key(self.session['user']['key']) )
+        
+        xg_on = db.create_transaction_options(xg=True)
+        try:
+            user, area = db.run_in_transaction_options(xg_on, txn, self.session['user']['key'], area)
+            models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
+            self.add_message('success', 'Created your new area of interest: %s covering about %d sq.km'  %(area.name, total_area ) )
+
+            cache.clear_area_cache(user.key(), area.key())
+            #clear_area_followers(area.key())
+            cache.set(cache.pack(user), cache.C_KEY, user.key())
+            
+            counters.increment(counters.COUNTER_AREAS)
+            
+            self.populate_user_session()
+            self.redirect(webapp2.uri_for('follow-area', username=user.name, area_name=area.name))
+            return
+        except Exception, e : 
+            self.add_message('danger', "Error creating area.  Exception: {0!s}".format(e)) 
+            self.redirect(webapp2.uri_for('new-area'))
+            return
+
+class UpdatedAreaSharedHandler(BaseHandler):
+    def post(self, area_name, shared):
+        current_user = users.get_current_user()
+        if  not current_user:
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
+            return self.response.write('error no login')
+
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
  
-            def txn(user_key, area):
-                user = db.get(user_key)
-                user.areas_count += 1
-                db.put([user, area])
-                return user, area
+        if not registered:
+            return self.response.write('error not registered')
+        try:
+            username = self.session['user']['name']
+        except:
+            logging.error('Should never get this exception')
+            return self.response.write('error exception')
+            
+            if 'user' not in self.session:
+                return self.response.write('error user')
+                return
 
-            xg_on = db.create_transaction_options(xg=True)
+        area = cache.get_area(None, area_name)
+
+        if not area:
+            return self.response.write('error no area')
+            
+        # if user does not own area or user is not admin - disallow
+        if (area.owner.name != user.name) and (user.role != 'admin'):
+            logging.error("Only the owner '{0!s}' of area '{1!s}' or admin can update an area.".format(area.owner, area.name))
+            return self.response.write('error not owner')
+
+        if area.set_shared(shared) == 'error':
+            logging.error('Shared, invalid value {0!s}'.format(shared))
+            return self.response.write('error bad value {0!s}'.format(shared))
+        try:
+            db.put(area)
+            if area.share != area.PUBLIC_AOI: # Now unlisted or private so get rid of all references in the cache.
+                  cache.flush() 
+            else:      
+                cache.delete([cache.C_AREA %(username, area_name),  
+                          cache.C_AREA %(None, area_name)])
+            
+            msg = 'Updated Area of interest: {0!s} is now {1!s}'.format(area_name, area.shared_str)
+            logging.info(msg)
+            return self.response.write(area.shared_str)
+        except Exception, e: 
+            message = 'error Exception {0!s}'.format(e)
+            logging.error(message)
+            return self.response.write(message)
+
  
-            try:
-                user, area = db.run_in_transaction_options(xg_on, txn, self.session['user']['key'], area)
-                models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key())
-                self.add_message('success', 'Created your new area of interest: %s covering about %d sq.km'  %(area.name, total_area ) )
-
-                cache.clear_area_cache(user.key(), area.key())
-                #clear_area_followers(area.key())
-                cache.set(cache.pack(user), cache.C_KEY, user.key())
-
-                counters.increment(counters.COUNTER_AREAS)
-                
-                self.populate_user_session()
-                self.redirect(webapp2.uri_for('follow-area', username=user.name, area_name=area.name))
-                return
-            except Exception, e : 
-                self.add_message('danger', "Error creating area.  Exception: {0!s}".format(e)) 
-                self.redirect(webapp2.uri_for('new-area'))
-                return
-
-        self.redirect(webapp2.uri_for('new-area'))
-
 class DeleteAreaHandler(BaseHandler):
 
     def get(self, area_name):
@@ -853,7 +882,7 @@ class DeleteAreaHandler(BaseHandler):
             abs_url  = urlparse(self.request.uri)
             original_url = abs_url.path
             logging.info('No user logged in. Redirecting from protected url: ' + original_url)
-            self.add_message('danger', 'You must log in to create a new area .')
+            self.add_message('danger', 'You must log in to delete an area .')
             return self.redirect(users.create_login_url(original_url))
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
  
@@ -863,7 +892,7 @@ class DeleteAreaHandler(BaseHandler):
             username = self.session['user']['name']
         except:
             logging.error('Should never get this exception')
-            self.add_message('danger', 'You must log in to create a new area.')
+            self.add_message('danger', 'You must log in to delete an area.')
             
             if 'user' not in self.session:
                 self.redirect(webapp2.uri_for('main'))
@@ -913,7 +942,6 @@ class DeleteAreaHandler(BaseHandler):
             if  area_followers_index is not None:
                 db.delete(area_followers_index.key())
             db.delete(area.key())
-            #del area.cells[:]
             return
 
         xg_on = db.create_transaction_options(xg=True)
@@ -931,7 +959,7 @@ class DeleteAreaHandler(BaseHandler):
             counters.increment(counters.COUNTER_AREAS, -1)
             
             self.populate_user_session()
-            self.add_message('success', 'Deleted area of interest: {0!s}'.format(area_name))
+            self.add_message('info', 'Deleted area of interest: {0!s}'.format(area_name))
             self.redirect(webapp2.uri_for('main'))
             #raise Exception('test', 'exception')
             return
@@ -1055,7 +1083,7 @@ class ViewArea(BaseHandler):
             abs_url  = urlparse(self.request.uri)
             original_url = abs_url.path
             logging.info('No user logged in. Redirecting from protected url: ' + original_url)
-            self.add_message('danger', 'You must log in to create a new area .')
+            self.add_message('danger', 'You must log in to view areas.')
             return self.redirect(users.create_login_url(original_url))
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
  
@@ -1065,35 +1093,23 @@ class ViewArea(BaseHandler):
             username = self.session['user']['name']
         except:
             logging.error('Should never get this exception')
-            self.add_message('danger', 'You must log in to create a new area.')
+            self.add_message('danger', 'You must log in to see this page.')
             
             if 'user' not in self.session:
                 self.redirect(webapp2.uri_for('main'))
                 return
 
         area = cache.get_area(None, area_name)
-        if not area:
+        if not area or (area.share == area.PRIVATE_AOI and area.owner.name != user.name and not users.is_current_user_admin()):
             self.add_message('danger', "Area: '{0:s}' not found!".format(area_name))
             logging.error('ViewArea: Area not found! %s', area_name)
             self.redirect(webapp2.uri_for('main'))
         else:
+            if (area.share == area.PRIVATE_AOI and area.owner.name != user.name and users.is_current_user_admin()):
+                self.add_message('warning', "Only admin and owner can view this area: '{0:s}'!".format(area_name))
+    
             # Make a list of the cells that overlap the area with their path, row and status. 
             #This may be an empty list for a new area.
-            
-            #===================================================================
-            # for cell_key in area.cells:
-            #     cell = cache.get_cell_from_key(cell_key)
-            #     if cell is not None:
-            #         #cell_list.append({"path":cell.path, "row":cell.row, "followed":cell.followed})
-            #         if cell.monitored:
-            #             cell_list.append({"path":cell.path, "row":cell.row, "followed":"true"})
-            #         else:
-            #             cell_list.append({"path":cell.path, "row":cell.row, "followed":"false"})
-            #     else:
-            #         logging.error ("ViewAreaHandler no cell returned from key %s ", cell_key)
-            #     
-            #     logging.debug('ViewArea area_name %s %s', area.name, cell_list)
-            #===================================================================
             
             cell_list = []        
             cell_list = area.CellList()
@@ -1169,12 +1185,13 @@ class GetLandsatCellsHandler(BaseHandler):
                 eeservice.getLandsatCells(area)
                 area = cache.get_area(None, area_name) # refresh the cache as it has been updated by getLandsatCells(). #TODO test this works
                 cell_list = area.CellList()
-                reason = 'Your area is covered by {0:d} Landsat Cells'.format(len(area.cells))
+                monitored_count = sum(c['monitored'] == 'true' for c in cell_list)
+                reason = 'Your area is covered by {0:d} Landsat Cells of which {1:d} were selected for monitoring'.format(len(area.cells), monitored_count)
                 self.add_message('success',reason)
                 logging.debug(reason)
         else:
             reason = 'calculate previously'
-        getCellsResult = {'result': result, 'reason': reason, 'cell_list': cell_list }
+        getCellsResult = {'result': result, 'reason': reason, 'cell_list': cell_list, 'monitored_count': monitored_count }
         self.response.write(json.dumps(getCellsResult))
         return 
 
@@ -1411,11 +1428,9 @@ class UpdateOverlayHandler(BaseHandler):
         self.response.write(json.dumps(returnval))
 
 
-
 '''
 ObservationTaskHandler() when a user clicks on a link in an obstask email they come here to see the new image.
 '''
-
 class ObservationTaskHandler(BaseHandler):
     
     def get(self, username, task_name):
@@ -1427,7 +1442,7 @@ class ObservationTaskHandler(BaseHandler):
             return self.redirect(users.create_login_url(original_url))
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
 
-        task_owner = cache.get_user(username) #user who owns the task is passed in url.
+        task_owner = cache.get_user(username) #user who owns the task is passed in url (not the task object.
 
         if task_owner is None:
             self.add_message('danger', 'Sorry, invalid task owner: ' + username)
@@ -1436,9 +1451,11 @@ class ObservationTaskHandler(BaseHandler):
          
         task = cache.get_task(task_name)  #FIXME Must be typesafe
         if task is not None:
+            if current_user.nickname != task.assigned_owner.name:
+                self.add_message('info', "You {0!s} are not assigned to this task. Task assigned to {1!s}".format(current_user.nickname , task.assigned_owner))
             area = task.aoi 
             cell_list = area.CellList()  
-            resultstr = "New Task for {0!s} to check area {1!s}".format(task_owner.name, area.name.encode('utf-8') )
+            resultstr = "New Task for {0!s} to check area {1!s}".format(user.name, area.name.encode('utf-8') )
             #self.add_message('success', resultstr)
             debugstr = resultstr + " task: " + str(task.key()) + " has " + str(len(task.observations)) + "observations"
             obslist = []
@@ -1449,8 +1466,6 @@ class ObservationTaskHandler(BaseHandler):
                 else:
                     logging.error("Missing Observation from cache")
                     
-            #logging.debug( json.dumps(obslist))
-            
             self.populate_user_session(user)
             self.render('view-obstask.html', {
                 'username':  self.session['user']['name'],
@@ -1470,7 +1485,8 @@ class ObservationTaskHandler(BaseHandler):
    
 
 '''
-function to check if any new images for the specified area. Called by CheckNewAreaHandler and CheckNewAllHandler
+checkAreaForNew() is a function to check if any new images for the specified area. 
+Called by CheckNewAllAreasHandler() and CheckNewAreaHandler()
 returns a HTML formatted string
 '''
 def checkAreaForNew(area, hosturl):
@@ -1486,42 +1502,51 @@ def checkAreaForNew(area, hosturl):
             if cell is not None:
                 #logging.debug("cell %s %s", cell.path, cell.row)
                 if cell.monitored:
-                    linestr += u'({0!s}, {1!s}) '.format(cell.path,cell.row)
+                    linestr += u'({0!s}, {1!s}) '.format(cell.path, cell.row)
                     obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")
+                        
                     if obs is not None :
-                        db.put(obs)
+                        #obs.share = area.share #private and unlisted areas lead to private and unlisted tasks
+                        #if obs.share != area.PUBLIC_AOI:
+                        #    obs.aoi_owner = area.owner # owner of the area - not volunteeer assigned to task. Allows quicker filtering of private areas.
+                        #db.put(obs)
                         linestr += 'New '
                         new_observations.append(obs.key())
-                        # find followers of this area
-                        # send them an email
-        
             else:
                 logging.error (u"CheckNewAreaHandler no cell returned from key %s ", cell_key)
-        linestr += u']</p>'
-        
+        if new_observations == []:
+            linestr += u'] Area has no monitored cells!</p>'
+        else:
+            linestr += u']</p>'
+            
+        # send each follower of this area an email with reference to a task.
         if new_observations:
-            new_task = models.ObservationTask(aoi=area.key(), observations=new_observations) # always select the first follower.
-            user = cache.get_user(area_followers.users[0]) # TODO - This always assigns tasks to the first follower. 
-            new_task.assigned_owner = user
-            new_task.original_owner = user
-            new_task.name = user.name + u"'s task for " + area.name
-            db.put(new_task)
-            mailer.new_image_email(new_task, hosturl) 
-            linestr += "<p>Created task with " + str(len(new_observations)) +" observations.</p>"
+            new_task = models.ObservationTask(aoi=area.key(), observations=new_observations, aoi_owner=area.owner, share=area.share, status="open") # always select the first follower.
+            priority = 0
+            for user_key in area_followers.users:
+                user = cache.get_user(user_key)  
+                new_task.assigned_owner = user
+                new_task.name = user.name + u"'s task with priority " + str(priority) + " for " + area.name
+                new_task.priority = priority
+                priority += 1
+                db.put(new_task)
+                mailer.new_image_email(new_task, hosturl) 
+                linestr += "<p>Created task with " + str(len(new_observations)) +" observations.</p>"
+                
+                taskurl = "/obs/" + user.name + "/" + str(new_task.key())
+                linestr += u'<a href=' + taskurl + ' target="_blank">' + taskurl.encode('utf-8') + '</a>'
             
-            taskurl = "/obs/" + user.name + "/" + str(new_task.key())
-            linestr += u'<a href=' + taskurl + ' target="_blank">' + taskurl.encode('utf-8') + '</a>'
+
             linestr += u'<ul>'
-            
-            cache.flush() # TODO To scale, will need a better strategy to just flush applicable items.
-            
             for ok in new_observations:
                 o = cache.get_by_key(ok)
                 #clear_obstasks_cache(o)
                 linestr += u'<li>image_id: ' + o.image_id + u'</li>' 
             linestr += u'</ul>'
+
+            cache.flush() # TODO To scale, will need a better strategy to just flush applicable items.
         else:
-            linestr += u"<p>No new observations found.</p>"
+            linestr += u"<ul><li>No new observations found.</li></ul>"
     else:
         linestr += u'Area has no followers. Skipping check for new observations.<br>'.format(area.name)
     
@@ -1530,32 +1555,37 @@ def checkAreaForNew(area, hosturl):
 
 
 '''
-CheckNewAllAreasHandler() looks at each subscribed area of interest and checks each monitored cell to see if there is a new image in EE since the last check.
+CheckNewAllAreasHandler() looks at each subscribed area of interest.
+It checks each monitored cell to see if there is a new image in EE since the last check.
+This is called by the cron task, but may be kicked of by admin.
+Not: Includes private and unlisted areas in the check. So the tasks lists must be filtered.
 '''
            
 class CheckNewAllAreasHandler(BaseHandler):
     def get(self):
-        logging.info("Cron CheckNewHandler check-new-images")
+        logging.info("Cron CheckNewAllAreasHandler check-new-images")
         initstr = u"<h1>Check areas for new observations</h1>"
         initstr += u"<p>The scheduled task is looking for new images over all areas of interest</p>"
         initstr += u"<p>The area must have at least one cell selected for monitoring and at least one follower for a observation task to be created.</p>"
         initstr += u"<p>If an observation task is created, the first follower of the area receives an email with an observation task.</p>"
-        all_areas = cache.get_all_areas()
         
         if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
-            initstr =u'CheckNewHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
+            initstr =u'CheckNewAllAreasHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
             self.response.write(initstr) 
             return
-
         returnstr = initstr
 
+        all_areas = cache.get_all_areas() # includes unlisted and private areas.
         for area in all_areas:
             returnstr += checkAreaForNew(area,  self.request.headers.get('host', 'no host'))
 
         self.response.write(returnstr.encode('utf-8')) 
 
 '''
-CheckNewAreaHandler() looks at a single area of interest and checks each monitored cell to see if there is a new image in EE since the last check.
+CheckNewAreaHandler() looks at a single area of interest and checks each monitored cell.
+It checks if there is a new image in EE since the last check.
+This function is called by admin only.
+#TODO: It could be refactored with CheckAllAreasHnadler.
 '''
        
 class CheckNewAreaHandler(BaseHandler):
@@ -1571,7 +1601,6 @@ class CheckNewAreaHandler(BaseHandler):
         initstr = u"<h1>Check area for new observations</h1>"
         initstr += u"<p>The area must have at least one cell selected for monitoring and at least one follower for a observation task to be created.</p>"
         initstr += u"<p>If an observation task is created, the first follower of the area receives an email with an observation task.</p>"
-
         
         if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
             initstr =u'CheckNewAreaHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
@@ -1580,84 +1609,6 @@ class CheckNewAreaHandler(BaseHandler):
             return
 
         returnstr = initstr + checkAreaForNew(area)
-        self.response.write(returnstr.encode('utf-8')) 
-
-
-
-             
-class CheckNewHandler(BaseHandler):
-    #This handler responds to Cron requests to check for new images in each AOI, no need to return a response
-    #But is also called from the admin menu
-    
-    def get(self):
-        logging.info("Cron CheckNewHandler check-new-images")
-        initstr = u"<h1>Check areas for new observations</h1>"
-        initstr += u"<p>The scheduled task is looking for new images over all areas of interest</p>"
-        initstr += u"<p>The area must have at least one cell selected for monitoring and at least one follower for a observation task to be created.</p>"
-        initstr += u"<p>If an observation task is created, the first follower of the area receives an email with an observation task.</p>"
-        all_areas = cache.get_all_areas()
-        
-        if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
-            initstr =u'CheckNewHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
-            #self.add_message('danger', initstr)
-            self.response.write(initstr) 
-            return
-
-        #self.response.write(initstr) 
-        returnstr = initstr
-
-        for area in all_areas:
-            
-            area_followers  = models.AreaFollowersIndex.get_by_key_name(area.name, area) 
-            linestr = u'<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
-            if area_followers:
-                linestr += u'<p>Monitored cells ['
-                new_observations = []
-                for cell_key in area.cells:
-                    cell = cache.get_cell_from_key(cell_key)
-                    if cell is not None:
-                        #logging.debug("cell %s %s", cell.path, cell.row)
-                        if cell.monitored:
-                            linestr += u'({0!s}, {1!s}) '.format(cell.path,cell.row)
-                            obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")
-                            if obs is not None :
-                                db.put(obs)
-                                linestr += 'New '
-                                new_observations.append(obs.key())
-                                # find followers of this area
-                                # send them an email
-                    else:
-                        logging.error (u"CheckNewHandler no cell returned from key %s ", cell_key)
-                linestr += u']</p>'
-                
-                if new_observations:
-                    new_task = models.ObservationTask(aoi=area.key(), observations=new_observations) # always select the first follower.
-                    user = cache.get_user(area_followers.users[0]) # TODO - This always assigns tasks to the first follower. 
-                    new_task.assigned_owner = user
-                    new_task.original_owner = user
-                    new_task.name = user.name + u"'s task for " + area.name
-                    db.put(new_task)
-                    mailer.new_image_email(new_task, self.request.headers.get('host', 'no host'))
-                    linestr += "<p>Created task with " + str(len(new_observations)) +" observations.</p>"
-                    
-                    taskurl = "/obs/" + user.name + "/" + str(new_task.key())
-                    linestr += u'<a href=' + taskurl + ' target="_blank">' + taskurl.encode('utf-8') + '</a>'
-                    linestr += u'<ul>'
-                    for ok in new_observations:
-                        o = cache.get_by_key(ok)
-                        linestr += u'<li>image_id: ' + o.image_id + u'</li>' 
-                    linestr += u'</ul>'
-                else:
-                    linestr += u"<p>No new observations found.</p>"
-            else:
-                linestr += u'Area has no followers. Skipping check for new observations.<br>'.format(area.name)
-            
-            logging.debug(linestr)
-            
-            print 'returnstr' + returnstr.encode('utf-8')
-            
-            returnstr += linestr             
-
         self.response.write(returnstr.encode('utf-8')) 
 
 '''
@@ -1685,6 +1636,7 @@ class MailTestHandler(BaseHandler):
     self.response.write( resultstr)        
 
 class ViewJournal(BaseHandler):
+    #FIXME: Pagination for view-journals does not work.
     def get(self, username, journal_name):
         page = int(self.request.get('page', 1))
         journal= cache.get_journal(username, journal_name)
@@ -1707,60 +1659,93 @@ class ViewJournal(BaseHandler):
                 'pagelist': utils.page_list(page, journal.pages),
             })
 
+    
 class ViewObservationTasksHandler(BaseHandler):
-
-    def get(self):
-        
-        user = cache.get_user(self.session['user']['name']) #user from current session
+    
+    def ViewTasks(self):
         page = int(self.request.get('page', 1))
+        u = self.request.get('user2view')
+        a = self.request.get('area_name')
+        user2view  = None if u == "" or u == "None" else u
+        area_name = None if a == ""or a == "None"  else a
 
-        if 'user2view' in self.request.GET:
-            user2view = self.request.get('user2view')
-            #print ("user2view is ", user2view)
-            user2 = cache.get_user(user2view) # could be another user
-            areaname=None
-            filter = 'mytasks'
-        elif 'areaname' in self.request.GET:
-            areaname = self.request.get('areaname')
-            #print ("areaname is ", user2view)
-            areakey = cache.get_area_key(None, areaname)
-            user2view = None
-            user2 = None
-            filter = 'areatasks'
-        else:
-            user2view = None
-            user2 = None
-            areaname=None
-            filter = None
+        # get the logged in user.
+        current_user = users.get_current_user()
+        if  not current_user:
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
+            return self.response.write('error no login')
 
-        obstasks = cache.get_obstasks_page(page, user2view, areaname) # rendered page of tasks #TODO is it needed? 
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
         
-        if len(obstasks)  == 0 :
-            logging.info('ViewObservationTasksHandler user %s has no tasks', user2view) 
+        #if 'user' not in self.session:
+        #        return self.response.write('error user')
+ 
+        if not registered:
+            return self.response.write('error not registered')
+        try:
+            username = self.session['user']['name']
+        except:
+            logging.error('Should never get this exception')
+            return self.response.write('error exception')
+            
+        if area_name:
+            area = cache.get_area(None, area_name)
+            if area:
+                # if user does not own area or user is not admin - disallow
+                if (area.shared_str == 'private') and (area.owner.name != user.name) and (user.role != 'admin'):
+                    message = "Cannot show tasks for non-public area: '{0!s}', except to owner: '{1!s}'.".format(area_name, area.owner)
+                    logging.error(message)
+                    return self.response.write(message)
+            else:
+                return self.response.write('Request area {0!s} not found '.format(area_name))
+                message = 'Request area {0!s} not found '.format(area_name)
+                logging.error(message)
+                return self.response.write(message)
+                
+        logging.info('ViewObservationTasks: user:%s, area:%s, page:%d', user2view, area_name, page) 
+        tasks  = cache.get_obstasks_keys(user2view, area_name) # list of all task keys
+        obstasks = cache.get_obstasks_page(page, user2view, area_name) # rendered page of tasks #TODO is it needed? 
+        
+        if obstasks == None or len(obstasks)  == 0 :
+            logging.info('ViewObservationTasksHandler - no tasks!') 
             obstask = None
             obstasks = None
             pages =  0
             tasks = None
         else:
-            pages = len(obstasks)
-            tasks = cache.get_obstasks_keys(user2view,areaname) # list of all task keys
+            pages = len(tasks) / models.ObservationTask.OBSTASKS_PER_PAGE
+            if pages < 1:
+                pages = 1
+
+            if page < 1 or page > pages:
+                self.error(404)
+                return
+            
             obstask = cache.get_task(tasks[0]) # template needs this to get listurl to work?
             logging.info('ViewObservationTasksHandler showing %d tasks for user %s', len(obstasks), user2view) 
         
+        user = cache.get_user(self.session['user']['name']) #user from current session
+        
         self.render('view-obstasks.html', {
-           'username': user,
-            'user2view': user2,
-            'areaname': areaname,
+            'username': user,  #logged in user
+            'user2view': user2view,  # or none
+            'area_name': area_name, # or none
             'obstask': obstask,
             'obstasks': obstasks,
             'tasks' :  tasks,
             'pages' : pages,
             'page': page,
             'show_navbar': True,
-            'filter' : filter,
             'pagelist': utils.page_list(page, pages)
         })
- 
+            
+    def ViewObservationTasksForAll(self):       
+        #as above
+        logging.debug('ViewObservationTasksForAll')
+        return self.ViewTasks()
+   
 class AboutHandler(BaseHandler):
     def get(self):
         self.render('about.html' , {
@@ -1770,19 +1755,6 @@ class AboutHandler(BaseHandler):
 class DonateHandler(BaseHandler):
     def get(self):
         self.render('donate.html')
-        
-class StatsHandler(BaseHandler):
-    def get(self):
-        self.render('stats.html', {'stats': cache.get_stats()})
-
-class ObservatoryHandler(BaseHandler):
-    def get(self):
-        self.render('observatory.html', {'observatory': cache.get_stats()})
-
-class EngineHandler(BaseHandler): # not used
-    def get(self):
-        self.render('engine.html', {'engine': cache.get_stats()})
-        eeservice.initEarthEngineService()
         
 class ActivityHandler(BaseHandler):
     def get(self):
@@ -2002,8 +1974,8 @@ class FollowAreaHandler(BaseHandler):
                 ar = models.AreaFollowersIndex(key=areafollowers_key)  # FIXME: This looks wrong, ar is initialised as an area above but an afi here. Probably never executes.
     
             changed = []
-            if not area.followers:
-                area.followers = 0
+            if not area.followers_count:
+                area.followers_count = 0
                 
             if op == 'add':
                 if userfollowingareas_key.name() not in ar.users:
@@ -2012,14 +1984,14 @@ class FollowAreaHandler(BaseHandler):
                 if areafollowers_key.name() not in tu.areas:
                     tu.areas.append(areafollowers_key.name())
                     changed.append(tu)
-                    area.followers += 1
+                    area.followers_count += 1
                     changed.append(area)
             elif op == 'del':
                 if userfollowingareas_key.name() in ar.users:
                     ar.users.remove(userfollowingareas_key.name())
                     changed.append(ar)
                 if areafollowers_key.name() in tu.areas:
-                    area.followers -= 1
+                    area.followers_count -= 1
                     changed.append(area)
                     tu.areas.remove(areafollowers_key.name())
                     changed.append(tu)
@@ -2531,7 +2503,9 @@ class UploadSuccess(BaseHandler):
 class FlushMemcache(BaseHandler): #Admin Only Function
     def get(self):
         cache.flush()
-        self.render('admin.html', {'msg': 'memcache flushed'})
+        self.render('admin.html', {
+                                   'msg': ' memcache flushed',
+                                      'show_navbar': True})
 
 class NewBlogHandler(BaseHandler):  #Admin Only Function
     def get(self):
@@ -3003,7 +2977,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/admin/new/blog', handler=NewBlogHandler, name='new-blog'),
     webapp2.Route(r'/admin/update/users', handler=UpdateUsersHandler, name='update-users'),
     webapp2.Route(r'/admin/checknew', handler=CheckNewAllAreasHandler, name='check-new-all-images'),
-    webapp2.Route(r'/admin/obs/list', handler=ViewObservationTasksHandler, name='view-obstasks'),
+    webapp2.Route(r'/admin/obs/list', handler=ViewObservationTasksHandler,  handler_method='ViewObservationTasksForAll', name='view-obstasks'),
     webapp2.Route(r'/admin/checknew/<area_name>', handler=CheckNewAreaHandler, name='check-new-area-images'),
     webapp2.Route(r'/blob/<key>', handler=BlobHandler, name='blob'),
     webapp2.Route(r'/blog', handler=BlogHandler, name='blog'),
@@ -3023,28 +2997,24 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/logout', handler=Logout, name='logout'),
     webapp2.Route(r'/logout/google', handler=GoogleSwitch, name='logout-google'),
     webapp2.Route(r'/markup', handler=MarkupHandler, name='markup'),
-
     
+    #webapp2.Route(r'/api-docs', include('rest_framework.urls', namespace='rest_framework')),
     webapp2.Route(r'/new/journal', handler=NewJournal, name='new-journal'),
     webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
     webapp2.Route(r'/mailtest', handler=MailTestHandler, name='mail-test'),
     webapp2.Route(r'/selectcell/<area_name>/<celldata>', handler=SelectCellHandler, name='select-cell'),
 
-    webapp2.Route(r'/stats', handler=StatsHandler, name='stats'),
-    webapp2.Route(r'/observatory', handler=ObservatoryHandler, name='observatory'),
-    webapp2.Route(r'/engine', handler=EngineHandler, name='engine'),
     webapp2.Route(r'/twitter/<action>', handler=TwitterHandler, name='twitter'),
     webapp2.Route(r'/upload/file/<username>/<journal_name>/<entry_id>', handler=UploadHandler, name='upload-file'),
     webapp2.Route(r'/upload/success', handler=UploadSuccess, name='upload-success'),
     webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
-    # observation tasks
-    webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, name='view-obstasks'),
-    #webapp2.Route(r'/obs/list/<user2view>', handler=ViewObservationTasksHandler, name='view-obstasks'),
+    # observation tasks see also admin/obs/list
+    webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler,  handler_method='ViewObservationTasksForAll', name='view-obstasks'),
+    webapp2.Route(r'/obs/<username>/<task_name>', handler=ObservationTaskHandler, name='view-obstask'),
+
     webapp2.Route(r'/obs/<username>/overlay/create/<obskey>/<role>/<algorithm>', handler=CreateOverlayHandler, name='create-overlay'), #AJAX call
     webapp2.Route(r'/obs/<username>/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayHandler, name='update-overlay'), #AJAX call
-    #webapp2.Route(r'/obs/<username>/prioroverlay/create/<obskey>/<algorithm>', handler=CreatePriorOverlayHandler, name='create-prioroverlay'), #AJAX call
-    webapp2.Route(r'/obs/<username>/<task_name>', handler=ObservationTaskHandler, name='view-obstask'),
     
     # taskqueue
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
@@ -3059,23 +3029,16 @@ app = webapp2.WSGIApplication([
 
     webapp2.Route(r'/new/area', handler=NewAreaHandler, name='new-area'),                             # create area
     webapp2.Route(r'/area/<area_name>/delete', handler=DeleteAreaHandler, name='delete-area'),  # delete area (owner or admin)
-  
-    webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),  # view area.
-    
+    webapp2.Route(r'/area/<area_name>/update/share/<shared>', handler=UpdatedAreaSharedHandler, name='share-area'),  # updatearea (owner only)
     webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #ajax
+    webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),  # view area.
     
     webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),   # start following area
     webapp2.Route(r'/<username>/unfollow/<area_name>', handler=FollowAreaHandler, name='follow-area'),# stop following area
     
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
-    #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
-        
-    #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
-    #webapp2.Route(r'/area/<area_name>/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
-    #webapp2.Route(r'/<username>/<area_name><param:.*>', handler=L8LatestVisualDownloadHandler, name='new-obstask'),
-    #webapp2.Route(r'/area/<area_name>/new', handler=NewEntryHandler, name='new-obstask'), #was new-obstask
-        
+                
     # this section must be last, since the regexes below will match one and two -level URLs
     webapp2.Route(r'/<username>/journals',  handler=ViewJournalsHandler, name='view-journals'),
     webapp2.Route(r'/<username>', handler=UserHandler, name='user'),
@@ -3140,7 +3103,6 @@ RESERVED_NAMES = set([
     'privacy',
     'register',
     'save',
-    #'security',
     'site',
     'selectcell',
     'stats',
@@ -3156,6 +3118,7 @@ RESERVED_NAMES = set([
 
 # assert that all routes are listed in RESERVED_NAMES
 for i in app.router.build_routes.values():
+    
     name = i.template.partition('/')[2].partition('/')[0]
     if name not in RESERVED_NAMES:
         import sys

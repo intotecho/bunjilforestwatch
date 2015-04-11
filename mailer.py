@@ -93,7 +93,7 @@ From  Bunjil Forest Watch
         message.html = """
 Dear  <b>{0!s}:</b><br><b>
 
-<b>NOTE: THIS IS JUST A TEST EMAIL. NO ACTION REQUIRED !!!</b><br>
+<b>PROTOTYPE !!!</b><br>
 
 A new image was taken on <i>{1!s}</i> of an area you follow: <b>{3!s}</b><br><br>
  

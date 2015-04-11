@@ -77,7 +77,6 @@ def reallyinitEarthEngineService():
         print EE_CREDENTIALS
         return EE_CREDENTIALS
     except Exception, e:
-        #self.add_message('error', 'An error occurred with Earth Engine. Try again.')
         logging.error("Failed to connect to Earth Engine Google API. Exception: %s", e)
         return False
 
@@ -121,7 +120,7 @@ def checkForNewObservationInCell(area, cell, collection_name):
     if latest_image is not None:
         storedlastObs = cell.latestObservation(collection_name)             #FIXME - Need to use the cache here.
         if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-            #obs = models.Observation(parent=cell, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, map_id=None, token=None,  algorithm="")
+            
             obs = models.Observation(parent=cell, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="latest")
             db.put(obs)
             if storedlastObs is None:

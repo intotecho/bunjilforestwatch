@@ -50,8 +50,6 @@ function initialize() {
 	   //Radio Button Handler - Select Fusion or Draw Map 
     
 	$('#new_area_form input').on('change', function() {
-     
-    
         var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
         console.log("selected: ", selection);
      
@@ -97,8 +95,7 @@ function initialize_map() {
       var creator = new PolygonCreator(map);       
 
       //function to add the polygon coordinates to the form data prior to submit. 
-    
-    
+      
       $('#createarea_id').click(function(){ 
         	var problems = "";
         	var area_name =  $('#area_name').val();
@@ -107,39 +104,44 @@ function initialize_map() {
             
             var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
             
-            
+            // form validation
+            if ((null == area_name) || (area_name === "")) {
+                problems += 'Please give your area a short name<br/><br/>';
+	        }
+	        else    if(!/^[a-zA-Z 0-9]+$/.test(area_name)){ 
+	             //problems += 'Sorry, Please use only the characters A-Z, a-z and 0-9 in the area name. A full name can be entered into the description\n\n';
+	        }
+	        if ((null == area_descr) || (area_descr=== "")) {
+	            if (problems.length > 0)
+	                {
+	                   problems += 'Giving  your area an optional description helps others know why it should be monitored.<br/><br/>';
+	                }   
+	        }
             if(selection == 'is-fusion')  {
-                if ((!area_boundary_ft  )|| (area_boundary_ft == "" )) {
-                    problems += 'Please provide a fusion table id.\n\n';
+                if ((null == area_boundary_ft  )|| (area_boundary_ft == "" )) {
+                    problems += 'Please provide a fusion table id.<br/><br/>';
                 }
             }
             else if(selection == 'is-drawmap')  {
                 if (null === creator.showData() ) {
-                    problems += 'Please mark out the boundary of your area or provide a fusion table id.\n\n';
+                    problems += 'Please mark out the boundary of your area or provide a fusion table id.<br/><br/>';
                  }
             }    
             else {
-                problems += 'Please first select whether to provide a fusion table or draw map.\n\n';
+                problems += 'Please select either fusion table or draw map.<br/><br/>';
             }
       
-         	console.log("area name:" + area_name);
-        	if ((null == area_name) || (area_name === "")) {
-                  problems += 'Please give your area a short name\n\n';
-            }
-        	else 	if(!/^[a-zA-Z 0-9]+$/.test(area_name)){ 
-                 //problems += 'Sorry, Please use only the characters A-Z, a-z and 0-9 in the area name. A full name can be entered into the description\n\n';
-        	}
-        	
-        	if ((null == area_descr) || (area_descr=== "")) {
-        	    if (problems.length > 0)
-        	    	{
-        	    	   problems += 'Giving  your area an optional description helps others know why it should be monitored.\n\n';
-        	    	}   
-            }
-        	
         	if (problems.length > 0) {
-        		
-        		alert ('Please fix these problems and then click Create Area:\n\n' + problems);
+        		bootbox.dialog({
+                      message: problems,
+                      title: "Please fix these problems and then click <i>Create Area</i>",
+                      buttons: {
+                        success: {
+                          label: "OK",
+                          className: "btn-info",
+                        }
+                      }
+                    });
         		return;
         	}
 
@@ -149,7 +151,7 @@ function initialize_map() {
             var mapzoom = map.getZoom();
             var newArea;
             
-            if ((!area_boundary_ft  )|| (area_boundary_ft == "" )) { 
+            if(selection == 'is-drawmap')  {
 		           //convert (x,y)(x,y) to [x,y], [x,y]  > This coordstring is only printed briefly in the panel, so can be deleted.
 		           var str="[" + creator.showData(); 
 		           var n=str.replace(/\(/gi, "[");
@@ -392,7 +394,7 @@ function initialize_map() {
 						            </div>
 	                                <div class="accordion-group">
                                             <div class="accordion-heading">
-                                                <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_how"> How' it protected?</a>
+                                                <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_how"> How's it protected?</a>
                                             </div>
                                             <div id="area_descr_how" class="accordion-body collapse ">
                                                 <div class="accordion-inner small">
@@ -409,19 +411,19 @@ function initialize_map() {
 						<fieldset class='control-label map-panel-controls'>
 	                    <legend class='control-label'>How will you enter your area's boundary? <span style="color: #ff0000">*</span></legend>
 	                     <div class="radio">
-	                        <label><input type="radio" name="opt-fusion" value="is-drawmap">I'll draw my area on a map</label>
+	                        <label><input type="radio" name="opt-fusion" value="is-drawmap">Draw my area on a map</label>
 	                    </div>
 	                     <div class="radio" >
-	                        <label><input type="radio" name="opt-fusion" value="is-fusion">My area's boundary is in a fusion table</label>
+	                        <label><input type="radio" name="opt-fusion" value="is-fusion">Area's boundary is in a fusion table</label>
 	                    </div>
 	                    </fieldset>
                     </div>
                     
                     <div class="map-panel-fusiontable" id="fusiontable-form-c" style='display:none'>
                         <label class="control-label map-panel-controls" for="boundary_ft" data-toggle="tooltip"
-                        title="If your area is already described in a fusion table, link to it here">
+                        title="If your area's boundary is already in a fusion table, link to it here.">
                         Fusion Table Id: <span style="color: #ff0000">*</span></label>
-                        <input class="map-panel-controls"  name="boundary_ft" type="text"/>
+                        <input class="map-panel-controls"  id="boundary_ft" name="boundary_ft" type="text"/>
                     </div>
                     <div id="boundary-instructions" style='display:none'>
                                 <placeholder>

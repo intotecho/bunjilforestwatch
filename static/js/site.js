@@ -61,11 +61,17 @@ $(function() {
 
 
 $(document).ready(function() {
-
-	
 	$('[data-toggle=offcanvas]').click(function() {
 	    $('.row-offcanvas').toggleClass('active');
 	  });
 	});
+
+//fadeout and slide up bootstrap .alert messages after 10 seconds.
+window.setTimeout(function() {
+    $(".alert").fadeTo(1000, 0).slideUp(1000, function(){
+        $(this).remove(); 
+    });
+}, 10000);
+
 
 
