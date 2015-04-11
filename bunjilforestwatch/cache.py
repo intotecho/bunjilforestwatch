@@ -188,7 +188,7 @@ def get_areas(user_key):  #return all areas's owned by user.
 
     return data
 
-def get_other_areas(username, user_key): # returns list of areas I created but includes areas I follow
+def get_other_areas(username, user_key): # returns list of areas user neither created nor follows.
     #user_key = db.Key.from_path('User', username)
     #print ("get_other_areas() ", username, user_key)
 
@@ -197,20 +197,10 @@ def get_other_areas(username, user_key): # returns list of areas I created but i
     if data is None:
         allareas = models.AreaOfInterest.all()
         af =  get_following_areanames_list(username)
-        #for y in af:
-        #    print ("get_other_areas following:",  y)
-
-        #data = models.AreaOfInterest.all().ancestor(user_key).fetch(models.AreaOfInterest.MAX_AREAS)
-        #q = db.Query(models.AreaOfInterest)
-        #udata = q.filter('owner !=',  user_key) # excludes areas I created but includes areas I follow
-        #print ("get_other_areas: ", udata, af)
-        otherareas = [x for x in allareas if x.name not in af and  x.owner.name != username ] # remove areas user created and elements in af that user follows
+        otherareas = [x for x in allareas if x.name not in af and  x.owner.name != username and x.share == x.PUBLIC_AOI ] # remove areas user created and elements in af that user follows
         data = otherareas #[(x.url(), x.name, x.owner.name) for x in otherareas]
-        #for y in data:
-        #    print "get_other_areas() returns: ",  y
-        #print "get_other_areas() reloaded: ", username, user_key
+        
         memcache.add(n, pack(data))
-        #memcache.add(n, data)
 
     return data
 
@@ -225,7 +215,7 @@ def get_areas_list(user_key):
 
     return data
 
-#returns a list of keys for all areas.
+#get_all_areas() returns a list of keys for all areas - inlcuding private and unlisted areas.
 def get_all_areas():
     n = C_AREAS_ALL
     data = unpack(memcache.get(n))
@@ -375,22 +365,27 @@ def get_obstasks_keys(username=None, areaname=None):
         # todo: fix limit to 1000 most recent journal obstasks
         if username is not None:
             user_key = db.Key.from_path('User', username)
-            data = models.ObservationTask.all(keys_only=True).filter('original_owner =', user_key).order('-created_date').fetch(200)
+            data = models.ObservationTask.all(keys_only=True).filter('assigned_owner =', user_key).order('-created_date').fetch(200)
             logging.debug("get_obstasks_keys for user %s %s", username, user_key)
             if len(data) == 0 :
                 logging.info("get_obstasks_keys() user %s has no tasks", username)
         elif areaname is not None:
+            area = get_area(username, areaname) 
             area_key = db.Key.from_path('AreaOfInterest', areaname)
-            print ("area_key ", area_key)
-            data = models.ObservationTask.all(keys_only=True).filter('aoi =', area_key).order('-created_date').fetch(200)
-            logging.debug("get_obstasks_keys for area %s %s", areaname, area_key)
-            if len(data) == 0 :
-                logging.info("get_obstasks_keys() area %s has no tasks", areaname)
+            
+            #print ("area_key ", area_key)
+            if (area.share == area.PRIVATE_AOI ) and (area.owner.name != username):
+                logging.debug("get_obstasks_keys PERMISSION ERROR for %s area %s %s", area.shared_str, areaname, area_key, )
+                data = None
+            else:
+                data = models.ObservationTask.all(keys_only=True).filter('aoi =', area_key).order('-created_date').fetch(200)
+                logging.debug("get_obstasks_keys for % area %s %s", area.shared_str, areaname, area_key)
+                if len(data) == 0:
+                    logging.info("get_obstasks_keys() area %s has no tasks", areaname)
         else:
-            data = models.ObservationTask.all(keys_only=True).order('-created_date').fetch(200)
+            data = models.ObservationTask.all(keys_only=True).filter('share <', models.AreaOfInterest.UNLISTED_AOI).order('-share').order('-created_date').fetch(200)
             logging.debug("get_obstasks_keys() for all tasks")
         memcache.add(n, data)
-
     return data
 
 # returns ObsTasks keys of given page
@@ -405,37 +400,33 @@ def get_obstasks_keys_page(page, username=None, areaname=None):
     data = memcache.get(n)
     if data is None:
         obstasks = get_obstasks_keys(username, areaname)
-        data = obstasks[(page  - 1) * models.ObservationTask.OBSTASKS_PER_PAGE:page * models.ObservationTask.OBSTASKS_PER_PAGE]
-        memcache.add(n, data)
-
-        if not data:
-            logging.warning('Page %i requested but only %i obstasks, %i pages.', page, len(obstasks), len(obstasks) / models.ObservationTask.OBSTASKS_PER_PAGE + 1)
-
+        if obstasks != None:
+            data = obstasks[(page  - 1) * models.ObservationTask.OBSTASKS_PER_PAGE:page * models.ObservationTask.OBSTASKS_PER_PAGE]
+            memcache.add(n, data)
+            if not data:
+                logging.warning('Page %i requested but only %i obstasks, %i pages.', page, len(obstasks), len(obstasks) / models.ObservationTask.OBSTASKS_PER_PAGE + 1)
     return data
 
 # returns rendered list of ObservationTasks of given page
 def get_obstasks_page(page, username=None, areaname=None):
     if areaname is not None:    
         n = C_OBSTASKS_PAGE %(page, areaname)
-        filter = areaname
     elif username is not None:    
         n = C_OBSTASKS_PAGE %(page, username)
-        filter=areaname
     else:    
         n = C_OBSTASKS_PAGE %(page, None)
-        filter=None
  
-    
     data = memcache.get(n)
     if data is None:
         if page < 1:
             page = 1
 
         obstasks = get_obstasks_keys_page(page, username, areaname)
-        data = [unicode(get_obstask_render(i)) for i in obstasks]
-        memcache.add(n, data)
-
+        if obstasks:
+            data = [unicode(get_obstask_render(i)) for i in obstasks]
+            memcache.add(n, data)
     return data
+
 
 #Renders an ObservationTask into an HTML row.
 def get_obstask_render(task_key):
@@ -448,9 +439,11 @@ def get_obstask_render(task_key):
             area = obstask.aoi 
             cell_list = area.CellList()  
             
-            resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.original_owner, area.name.encode('utf-8') )
-            resultstr += "Task assigned to: {0!s}<br>".format(obstask.assigned_owner)
-            resultstr += "Task Status <em>{0!s}. </em> ".format("Created")
+            resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.assigned_owner, area.name.encode('utf-8') )
+            resultstr += "{0!s} Task assigned to: {1!s}<br>".format(obstask.shared_str(), obstask.assigned_owner)
+            resultstr += "Status <em>{0!s}</em>. ".format(obstask.status)
+            if obstask.priority != None:
+                resultstr += "Priority <em>{0:d}.</em> ".format(obstask.priority)
             
             #debugstr = resultstr + " task: " + str(obstask.key()) + " has " + str(len(obstask.observations)) + " observations"
             debugstr = resultstr + "Task has " + str(len(obstask.observations)) + " observations"
@@ -468,28 +461,37 @@ def get_obstask_render(task_key):
             'resultstr': debugstr,
             'area' :  area.name.encode('utf-8'),
             'created_date' : obstask.created_date.strftime("%Y-%m-%d"),
-            'obstask_url': webapp2.uri_for('view-obstask', username=obstask.original_owner, task_name=obstask.key()),
+            'obstask_url': webapp2.uri_for('view-obstask', username=obstask.assigned_owner, task_name=obstask.key()),
         })
         memcache.add(n, data)
 
     return data
 
 
-# called when a new entry is posted, and we must clear all the entry and page cache
-def clear_obstasks_cache(ok):
-    #FIXME: Change from Journal to ObsTasks
+def clear_obstasks_cache(username=None, areaname=None):
 
-    obstask = get_by_key(key)
-    if obstask is not None:
-        userkey= C_OBSTASKS_KEYS_%s_obstask.original_owner
-        areakey = obstask.aoi
-        keys = [C_OBSTASKS_KEYS, C_OBSTASKS_KEY_]
-
-    # add one key per page for get_obstasks_page and get_obstasks_keys_page 
-    #for p in range(1, ObservationTasks.entry_count / models.ObservationTasks.OBSTASKS_PER_PAGE + 2):
-        #keys.extend([C_OBSTASKS_PAGE %(journal.key().parent().name(), journal.name, p), C_OBSTASKS_KEYS_PAGE %(journal_key, p)])
-
-    #memcache.delete_multi(keys)
+    obstasks = get_obstasks_keys(username, areaname)
+    if obstasks:
+        pages = len(obstasks) / models.ObservationTask.OBSTASKS_PER_PAGE + 1    
+        for page in pages:
+            if areaname is not None:
+                memcache.delete_multi([    
+                        C_OBSTASKS_KEYS%(areaname),
+                        C_OBSTASKS_PAGE %(page, areaname),
+                        C_OBSTASKS_KEYS_PAGE %(page,areaname)
+            ])
+            if username is not None:
+                memcache.delete_multi([    
+                        C_OBSTASKS_KEYS%(username),
+                        C_OBSTASKS_PAGE %(page, username),
+                        C_OBSTASKS_KEYS_PAGE %(page,username)
+            ])
+            if areaname is None and username is None:
+                memcache.delete_multi([    
+                       C_OBSTASKS_PAGE %(page, None),
+                       C_OBSTASKS_KEYS_PAGE %(page, None)
+                ])
+        logging.debug('cleared %d obstask pages', pages )
 
 ###########
 

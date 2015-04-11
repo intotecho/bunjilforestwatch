@@ -5,16 +5,14 @@
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 
 <style type="text/css">
-html {
-    height: 100%
-}
 
+html { 
+         height: 100%;
+         overflow-y:scroll /* show scroll bar */
+}
 body {
     overflow: hidden; 
- }
-
-
-
+}
 #map-left-latest, #map-left-prior, #map-left-c, #map-right-c {
     height: 100%,
     overflow: hidden; //if content is wider than div, truncate it.
@@ -107,7 +105,7 @@ body {
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js" ></script>
 
 <script>
-var area_url = '{{ area.name }}';
+var area_url = '{{ area|area_url  }}';
 var lhs_offset_top =0;
 var lhs_offset_left =0;
 
@@ -137,8 +135,6 @@ function ajaxActionUrl(action)
    url = area_url  + '/action/' + satellite + '/' + algorithm + '/' + latest;
    return url
 };
-
-
 
 function drawLandsatCells(cellarray) {
     createLandsatGridOverlay(map_over_lhs, 0.5, true, cellarray);
@@ -210,6 +206,32 @@ function initialize() {
     
     map_over_lhs.bindTo('center', map_under_lhs);
     map_over_lhs.bindTo('zoom', map_under_lhs);
+    
+    var share = '{{area.shared_str}}'; 
+    
+    if (share == 'public')
+    {
+    	$("#public").prop("checked", true)   		
+    }
+    else if (share == 'unlisted')
+    {
+        $("#unlisted").prop("checked", true)          
+    }
+    else 	if (share == 'private')
+    {
+        $("#private").prop("checked", true)          
+    }
+    else
+   	{
+        console.log('area.share unrecognised state %s', share);
+    }
+
+    $('#shared_form input').on('change', function() {
+        var selection = $('input[name=opt-sharing]:checked', '#shared_form').val();
+        console.log("share returned: ", selection);
+        updateAreaShared(selection); //ajax call
+        $('#area_sharing_heading').html("Sharing: updating ...");
+    });
     
     google.maps.event.addListener(map_under_lhs, 'bounds_changed', function() {        
         //$(map_panel).empty();
@@ -333,8 +355,8 @@ function initialize() {
                 console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
          
             	var plurals = (cellarray.length == 1)? ' cell covers': ' cells cover';
-                updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area.</p> ", 'black');
-               
+            	var plurals_mon = (getCellsResult.monitored_count == 1)? ' cell selected': ' cells selected';
+                updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area. " + getCellsResult.monitored_count + plurals_mon + '</p>', 'black');
                 drawLandsatCells(cellarray);
             }            
             else
@@ -367,53 +389,28 @@ function initialize() {
         
     }); //get_overlay_btn.click
 
-    //Checkbox to show/hide overlays  - these checkboxes will soon move to the layersliders      
-    $('.layer').click(function(){
-            var layerID = parseInt($(this).attr('id'));
-            if(layerID === 0) //Was LANDSAT grid - re use? 
-            {
   
-            }
-            
-            if(layerID === 1) //Drawing Tools
-            {
-                if($(this).is(':checked')){
-                    drawingManager = createDrawingManager(map_over_lhs);
-                    google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-                        //if (event.type == google.maps.drawing.OverlayType.CIRCLE) {
-                        //  var radius = event.overlay.getRadius();
-                        href = "{{ "user"|url(user.name) }}/journal/Observations for {{area.name}}/new/";
-                        if (mapobj != null)
-                        {
-                            window.location.href = href + mapobj.id;
-                        }
-                        else
-                        {
-                            window.location.href = href + "Observation"; // no overlay for this observation
-                        }
-                    });
-                }
-                else {
-                    // TODO: Hide Drawing Tools                 
-                }
-            }
-            if(layerID === 2) //FORMA grid 
-            {
-                if($(this).is(':checked')){
-                  //getFORMA(map, true); //map, showlayer,
-                  
-                    $("#layers_panel").collapse('show');
-                    alert("Sorry, Not implemented");  
-                }
-                else {
-                  //getFORMA(map, false); //map, hide
-                    //removeLandsatGrid();  //TODO put inside above funciton.
-                    //$("#layers_panel").collapse('hide');
-                }
-            }
-    
-    });
+    $('#make_report').click(function(){
+
+    	drawingManager  = createDrawingManager(map_over_lhs)
         
+    	google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+                    //if (event.type == google.maps.drawing.OverlayType.CIRCLE) {
+                    //  var radius = event.overlay.getRadius();
+                    href = "{{ "user"|url(user.name) }}/journal/Observations for {{area.name}}/new/";
+                    window.location.href = href; //+ mapobj.id;
+                    /*
+                    if (mapobj != null)
+                    {
+                    }
+                    else
+                    {
+                        window.location.href = href + "Observation"; // no overlay for this observation
+                    }
+                    */
+                });
+     });
+    
     //Change the text in the drop-down button when a selection is changed.
     $('#algorithm-visual').click(function(e){
            $("#algorithm:first-child").text("RGB");
@@ -673,7 +670,17 @@ google.maps.event.addDomListener(window, 'load', initialize);
                 </div>
                 <div class="accordion-group">
                     <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#area_followers_panel"> Followers {{area.followers}}</a>
+                        <a class="accordion-toggle" data-toggle="collapse" href="#obstasks_panel"> Observation Tasks</a>
+                    </div>
+                    <div id="obstasks_panel" class="accordion-body collapse">
+                        <div class="accordion-inner">
+                            <a href="{{ area|area_tasks_url}}">view tasks</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#area_followers_panel"> Followers {{area.follower_count}}</a>
                     </div>
                     <div id="area_followers_panel" class="accordion-body collapse">
                         <div class="accordion-inner">
@@ -682,6 +689,33 @@ google.maps.event.addDomListener(window, 'load', initialize);
 						{% endfor %}
                         </div>
                     </div>
+                </div>
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" id='area_sharing_heading' href="#area_sharing_panel"> Sharing: '{{area.shared_str}}'</a>
+                    </div>
+                    {% if is_owner%} 
+                    <div id="area_sharing_panel" class="accordion-body collapse">
+                       <form id="shared_form" class="form-vertical" method="POST">
+                        <fieldset class='control-label accordion-body'>
+                         <div class="radio">
+                            <label><input type="radio" id='public' name="opt-sharing" value="public" checked="false" data-toggle="tooltip" title="Everyone can see and follow this area"><b>Public</b></label>
+                            <br/>Everyone can see and follow this area.
+                        </div>
+                             <div class="radio">
+                            <label><input type="radio" id='unlisted' name="opt-sharing" value="unlisted" checked="false" data-toggle="tooltip" title="Only people with the link can see or follow this area"><b>Unlisted</b></label>
+                            <br/>Anyone with the <a href={{ area|area_url }}>link</a> can see and follow this area.
+                        </div>
+                        <div class="radio">
+                            <label><input type="radio" id='private' name="opt-sharing" value="private" checked="false" data-toggle="tooltip" title="Only you can see or follow this area"><b>Private</b></label>
+                            <br/>Only you can see or follow this area. See <a href="http://bunjilforestwatch.wordpress.com/privacy">Privacy</a>
+                        </div>
+                    </fieldset>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div>
                 </div>
                 <div class="accordion-group">
                     <div class="accordion-heading">
@@ -751,10 +785,7 @@ google.maps.event.addDomListener(window, 'load', initialize);
                 </div>
            </div>
            <div>
-                
-                   <input type="checkbox" id="1" class="layer" data-toggle="tooltip" title="Report a change or disturbance" /><label for="1">Make Report</label> 
-                   <!--  <input type="checkbox" id="2" class="layer" unchecked data-toggle="tooltip"
-                   title="Show FORMA estimate of recent tree loss" /><label for="2">FORMA</label>  -->
+                <br/><a  id='make_report' class="btn btn-small btn-lightblue confirm" style='width:40%' data-toggle="tooltip" title="Report a change or disturbance">Make report</a>
            </div> 
            {% if show_delete %} 
            <div id='user-is-owner-div'>

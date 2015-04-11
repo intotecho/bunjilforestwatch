@@ -66,11 +66,11 @@ function cellSelected(landsat_cell)
        $('#ee_panel').empty();
        $('#ee_panel').append("SelectCell...");
        $('#ee_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
-       $.get(httpget_url).done(function(data) {
               $('#ee_panel').empty();
-              var panel_str = "Cell:"          
+              $.get(httpget_url).done(function(data) {
+              var panel_str = "Cell:";          
               var celldict = jQuery.parseJSON(data);
-              console.log(celldict)
+              console.log(celldict);
               if (celldict['result'] == "ok") {                                           
                   if (celldict.monitored == "true") 
                       {
@@ -99,3 +99,21 @@ function cellSelected(landsat_cell)
      });
 }
 
+//modify area with new value of shared.
+function updateAreaShared(shared)
+{
+  var url = area_url + "/update/share/" + shared;
+  var result;
+  console.log( "updateAreaShared() url:%s", url);
+
+  var xhr = $.post(url).done(function(data) {
+			console.log ('done. updated area.shared: ' + data);
+			$('#area_sharing_heading').html("Sharing: "+ data);
+ 			return data;
+ 			
+	}).error(function(xhr, textStatus, error){
+			  console.log ('updateAreaShared() request failed:', xhr.status, error);
+			  $('#area_sharing_heading').html("Sharing Update error");
+			  return error;
+		});
+}
