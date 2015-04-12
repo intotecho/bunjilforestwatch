@@ -383,8 +383,8 @@ def get_obstasks_keys(username=None, areaname=None):
                 if len(data) == 0:
                     logging.info("get_obstasks_keys() area %s has no tasks", areaname)
         else:
-            data = models.ObservationTask.all(keys_only=True).filter('share <', models.AreaOfInterest.UNLISTED_AOI).order('-created_date').fetch(200)
-            logging.debug("get_obstasks_keys() for all tasks")
+            data = models.ObservationTask.all(keys_only=True).filter('share =', models.AreaOfInterest.PUBLIC_AOI).order('-created_date').fetch(200)
+            logging.debug("get_obstasks_keys() loading cache for all tasks")
         memcache.add(n, data)
     return data
 
