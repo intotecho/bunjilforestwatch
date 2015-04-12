@@ -58,8 +58,9 @@ function jsonStringifySelectedCell(landsat_cell)
 function cellSelected(landsat_cell)
 {
 // Fetch Outline and status of this Landsat Cell
+	//TODO: Check it works fro special chars in area name.
 
-  var httpget_url = "/selectcell/" + area_url + "/" + jsonStringifySelectedCell(landsat_cell)
+  var httpget_url = "/selectcell/" + area_name+ "/" + jsonStringifySelectedCell(landsat_cell)
   console.log( "cellSelected() %d %d %s", landsat_cell.path, landsat_cell.row, httpget_url);
    
   $("#ee_panel").collapse('show');

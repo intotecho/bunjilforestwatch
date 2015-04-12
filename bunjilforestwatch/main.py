@@ -989,17 +989,23 @@ class SelectCellHandler(BaseHandler):
     def get(self, area_name, celldata):
         # get cell info in request.
         self.populate_user_session()
-        #print 'SelectCellHandler get ', celldata
-        #username = self.session['user']['name']
         cell_feature = json.loads(celldata)
-        print 'cell_feature ', cell_feature
+        #print 'cell_feature ', cell_feature
         path = cell_feature['properties']['path']
         row = cell_feature['properties']['row']
         displayAjaxResponse = 'Cell {0:d} {1:d}'.format(path, row)
-        
+
+        area = cache.get_area(None, area_name)
+        username = self.session['user']['name']
+
+        if not area or area.owner.name != username:
+            logging.info('selectCell() not owner')
+            response = {'error':'Only area owner can select cell for monitoring'}
+            return self.response.write( json.dumps(response))
+
         #build cell info in response.
         cell = cache.get_cell(path, row, area_name)
-        print "cell", cell 
+        #print "cell", cell 
         if cell is not None:
             #Update the followed flag.
             if cell.monitored == True:
