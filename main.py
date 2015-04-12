@@ -1738,11 +1738,23 @@ class ViewObservationTasksHandler(BaseHandler):
             'pages' : pages,
             'page': page,
             'show_navbar': True,
+            'filter' : filter, # not used
             'pagelist': utils.page_list(page, pages)
         })
+    '''
+    def ViewObservationTasksForArea(self, area_name):
+        #page = int(self.request.get('page', 1))
+        logging.debug('ViewObservationTasksForArea')
+        return self.ViewTasks(None, area_name)
+
+    def ViewObservationTasksForUser(self, user2view):
+        #page = int(self.request.get('page', 1))
+        logging.debug('ViewObservationTasksForUser')
+        return self.ViewTasks(user2view, None)
+    '''
             
     def ViewObservationTasksForAll(self):       
-        #as above
+        #page = int(self.request.get('page', 1))
         logging.debug('ViewObservationTasksForAll')
         return self.ViewTasks()
    
@@ -3103,6 +3115,7 @@ RESERVED_NAMES = set([
     'privacy',
     'register',
     'save',
+    #'security',
     'site',
     'selectcell',
     'stats',
