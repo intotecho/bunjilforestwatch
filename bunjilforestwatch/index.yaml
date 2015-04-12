@@ -26,6 +26,12 @@ indexes:
 - kind: ObservationTask
   properties:
   - name: share
+  - name: created_date
+    direction: desc
+
+- kind: ObservationTask
+  properties:
+  - name: share
     direction: desc
   - name: created_date
     direction: desc
