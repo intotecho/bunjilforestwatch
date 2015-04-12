@@ -752,7 +752,7 @@ TODO: Could add the latest observation here. First sort in reverse date order.#o
 '''
 #TODO: There is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query.
 def getLandsatCells(area):
-    print 'getLandsatCells'
+    #print 'getLandsatCells'
 
     # Test if area already has cellList
     if len(area.cells) != 0 :
