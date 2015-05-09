@@ -418,6 +418,15 @@ function initialize_map() {
 	                    </div>
 	                    </fieldset>
                     </div>
+                    <!--  CREATE BUTTON  -->
+                    <div class="control-group">
+                        <input id = "createarea_id" type="button" class="btn btn-lightgreen map-panel-controls" value="Create Area"  style='display:none'>
+                    </div>
+                    <div class="control-group">
+                        <input id="reset_id" type="button" class="btn btn-small btn-lightred map-panel-oops-button"  value="Oops! Restart" data-toggle="tooltip" title="Clear all the markers on the map"  style='display:none'>
+                    <div class="controls">
+                        <input id="coordinates_id" name="coordinates" type="hidden" value="undefined">
+                    </div>  
                     
                     <div class="map-panel-fusiontable" id="fusiontable-form-c" style='display:none'>
                         <label class="control-label map-panel-controls" for="boundary_ft" data-toggle="tooltip"
@@ -433,15 +442,6 @@ function initialize_map() {
 						<input type="checkbox" id="0" class="layer" unchecked/>
 						<label for="0">Show Landsat Grid </label>
 					</div>
-					<!--  CREATE BUTTON  -->
-					<div class="control-group">
-						<input id = "createarea_id" type="button" class="btn btn-lightgreen map-panel-controls" value="Create Area"  style='display:none'>
-					</div>
-                    <div class="control-group">
-                        <input id="reset_id" type="button" class="btn btn-small btn-lightred map-panel-oops-button"  value="Oops! Restart" data-toggle="tooltip" title="Clear all the markers on the map"  style='display:none'>
-                    <div class="controls">
-                        <input id="coordinates_id" name="coordinates" type="hidden" value="undefined">
-                    </div>  
                     <!--  MAP DIVIDER ?-->
 					<div id="map_panel" class="control-group" name="panel" >
 						<p class="divider"></p>

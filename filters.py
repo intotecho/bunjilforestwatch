@@ -45,7 +45,6 @@ def user_area_url(username, area_name):
 
 def area_tasks_url(area):
 	return webapp2.uri_for('view-obstasks', area_name=area.name)
-
 def area_url(area, page=1):
 	return area.url(page)
 

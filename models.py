@@ -238,14 +238,13 @@ class AreaOfInterest(db.Model):
 	#CellList() returns a cached list of the area's cells as a json dictionary
 	def CellList(self):
 		cell_list = []
-		
 		for cell_key in self.cells:
 			cell = cache.get_cell_from_key(cell_key)
 			if cell is not None:
 				celldict = cell.Cell2Dictionary()
 				if celldict is not None:
+					celldict['index']  = len(cell_list)
 					cell_list.append(celldict)
-					
 			else:
 				logging.error ("AreaofInterest::CellList() no cell returned from key %s ", cell_key)
 			
@@ -254,6 +253,22 @@ class AreaOfInterest(db.Model):
 			
 		return cell_list
 	
+
+	#CountMonitoredCells() returns a number of cells that are monitored.
+	def CountMonitoredCells(self):
+		#cell_list = []
+		cell_count = 0
+		for cell_key in self.cells:
+			cell = cache.get_cell_from_key(cell_key)
+			if cell is not None:
+				if cell.monitored == True:
+					cell_count += 1
+			else:
+				logging.error ("AreaofInterest::CountMonitoredCells() no cell returned from key %s ", cell_key)
+				return -1
+		logging.debug("AreaofInterest::CountMonitoredCells()=%d", cell_count )
+		return cell_count
+
 
 '''
 Landsat Cell represents an 170sq km area where each image is captured. 
@@ -298,7 +313,6 @@ class LandsatCell(db.Model):
 		q = self.latestObservation('LANDSAT/LC8_L1T_TOA')
 		if q is not None:
 			celldict['LC8_latest_capture']	= q.captured.strftime("%Y-%m-%d @ %H:%M")
-		#print celldict
 		return celldict
 	
 	def latestObservation(self, collectionName="L8"): # query for latest observation from given imageColleciton.
@@ -386,12 +400,12 @@ class ObservationTask(db.Model):
 	
 	#privacy and sharing
 	share = db.IntegerProperty(required=True, default=AreaOfInterest.PUBLIC_AOI) #set to hide area. see @properties below
-	aoi_owner = db.ReferenceProperty(User, collection_name='aoi_user') #owner of the aoi- not the volunteer assigned to task. Allows quicker filtering of private areas..
+	aoi_owner = db.ReferenceProperty(User, collection_name='aoi_owner') #owner of the aoi- not the volunteer assigned to task. Allows quicker filtering of private areas..
 
 	observations = db.ListProperty(db.Key) #key to observations related to this task. E.g if two images are in the same path and published at same time.
 
 	#people - 	Expected to be a user  who is one of the area's followers. volunteering to follow the AOI
-	assigned_owner = db.ReferenceProperty(User, collection_name='assigned_user') # user who is currently assigned the the task
+	assigned_owner = db.ReferenceProperty(User, collection_name='assigned_owner') # user who is currently assigned the the task
 	#original_owner = db.ReferenceProperty(User, collection_name='original_user') # user originally assigned the the task - 
 	
 	#timestamps

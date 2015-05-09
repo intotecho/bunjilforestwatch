@@ -530,7 +530,7 @@ def clear_area_cache(user_key, area_key):
                             C_AREA_FOLLOWERS %area_key,
                             C_AREA %(user_key, area_key),
                             C_AREA %(tag, area_key) ])
-    print 'clear_area_cache() returned', r
+    logging.debug ('clear_area_cache() returning: %s', r)
     return r
 
 
@@ -666,8 +666,10 @@ def get_following_areas_list(user_key):
         data = [(i.url(), i.name) for i in areas]
         #data = [(get_area(None, i).url(), get_area(None, i).name) for i in areas]
         memcache.add(n, data)
-        print ("get_following_areas_list() reloaded: ", user_key)
-        
+        if user_key is not None:
+            logging.debug("get_following_areas_list() reloaded user_key: %s", user_key)
+        else:
+            logging.error("get_following_areas_list() no user key")
     return data
 
 def get_following_areanames_list(user_key): #as above but returns list of names only without urls for excluding from other_areas
@@ -683,7 +685,7 @@ def get_following_areanames_list(user_key): #as above but returns list of names 
             data = []
         memcache.add(n, data)
         #logging.debug("get_following_areanames_list() reloaded: ", user_key)
-        
+ 
     return data
 
 

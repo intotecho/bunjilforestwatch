@@ -17,9 +17,9 @@ function createLandsatGridOverlay(map, opacity, clickable, cellarray) {
         var landsatGridOverlay = new LandsatGridOverlay(map, opacity, clickable, cellarray);
         landsatGridOverlay.name = "grid" ;
         landsatGridOverlay.initialize();       
-        overlayMaps.push(landsatGridOverlay);
-       
         map['landsatGridOverlay'] = landsatGridOverlay;
+        overlayMaps.push(landsatGridOverlay);
+        update_cell_panel(landsatGridOverlay);
     }
 }
    

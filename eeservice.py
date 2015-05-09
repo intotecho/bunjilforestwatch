@@ -475,7 +475,7 @@ def SharpenLandsat8HSVUpres(image):
         upres = ee.Image.cat(huesat, pan).hsvtorgb()  
         byteimage = upres.multiply(255).byte()
         newImage = image.addBands(byteimage); #keep all the metadata of image, but add the new bands.
-        return(newImage)
+        return(newImage) 
 
 
 ###################################
@@ -491,7 +491,7 @@ def SharpenLandsat8HSVUpres(image):
 #===============================================================================
 
 def getPercentile(image, percentile, crs):
-    return image.reduceRegion(                                    
+    return image.reduceRegion(
         ee.Reducer.percentile(percentile), # reducer
         None, # geometry (Defaults to the footprint of the image's first band)
         1000, # scale (Set automatically because bestEffort == true)
@@ -618,7 +618,7 @@ def getOverlayPath(image, prefix, red, green, blue):
                      #'region' : boundary_polygon,    
                      'filePerBand' : False
                 }   
-    path      = image.getDownloadUrl(visparams)
+    path      = image.getDownloadUrl(visparams) #deprecated
     logging.info('getOverlayPath: %s',       path)
     return path
 
