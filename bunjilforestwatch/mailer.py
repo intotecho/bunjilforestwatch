@@ -20,9 +20,9 @@ def new_image_email(task, hosturl):
     returnstr = ""
     
     if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
-        thesender ="Postmaster@bunjilforestwatch.org"
+        thesender ="admin@bunjilforestwatch.net"
     else:    
-        thesender = "admin@bunjilfw.appspotmail.com" 
+        thesender = "admin@bunjilforestwatch.net" 
     
     if task is None:
         returnstr = "new_image_email: no task to send"

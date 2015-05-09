@@ -25,6 +25,18 @@ indexes:
 
 - kind: ObservationTask
   properties:
+  - name: aoi
+  - name: created_date
+    direction: desc
+
+- kind: ObservationTask
+  properties:
+  - name: assigned_owner
+  - name: created_date
+    direction: desc
+
+- kind: ObservationTask
+  properties:
   - name: share
   - name: created_date
     direction: desc

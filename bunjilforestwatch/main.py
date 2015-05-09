@@ -337,13 +337,13 @@ class Register(BaseHandler):
             errors = {}
             if 'role' in self.request.POST:
                 role = self.request.get('role')
-                print 'post'
+                #print 'post'
             elif 'role' in self.request.GET:
                 role = self.request.get('role')
-                print 'get '  + role
+                #print 'get '  + role
             if not role or role=='unknown':
                 role = self.request.get('roleoptionsRadios')
-                print 'options ' + role
+                #print 'options ' + role
             if not role:
                 role = "unknown"
             if 'submit' in self.request.POST:
@@ -566,10 +566,10 @@ class AccountHandler(BaseHandler): #superseded for now by user.html. no menu pat
 
         if 'settings' in self.request.POST:
             if 'email' in self.request.POST:
-                email = self.request.get('email')
+                email = self.request.get('email') 
                 if not email:
                     email = None
-
+                email = email.replace("'","").replace('"',"")    # Not XSS sanitised
                 self.add_message('info', 'Email address updated.')
                 
                 if self.session['user']['email'] != email:
@@ -754,17 +754,17 @@ class NewAreaHandler(BaseHandler):
                 #centroid = bounds.centroid(10).getInfo()
                 
                 rectangle = bounds.coordinates().getInfo()
-                print 'rectangle', rectangle[0]
+                #print 'rectangle', rectangle[0]
             
-                for p in rectangle[0]:
-                    print 'rectangle point', p
+                #for p in rectangle[0]:
+                #    print 'rectangle point', p
                 maxlatlon = db.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
                 minlatlon =  db.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][0]))
-                print 'maxlatlon', maxlatlon          
-                print 'minlatlon', minlatlon          
+                #print 'maxlatlon', maxlatlon          
+                #print 'minlatlon', minlatlon          
                 
                 centroid = bounds.centroid(10).coordinates().getInfo()
-                print 'centroid', centroid
+                #print 'centroid', centroid
                 
                 center = db.GeoPt(float(centroid[1]), float(centroid[0]))
                 total_area = hull.area(10).getInfo()/1e6#area in sq km
@@ -821,6 +821,78 @@ class NewAreaHandler(BaseHandler):
             self.redirect(webapp2.uri_for('new-area'))
             return
 
+class UpdateAreaViewHandler(BaseHandler):
+    def post(self, area_name):
+        current_user = users.get_current_user()
+        
+        
+        
+        print UpdateAreaViewHandler
+        if  not current_user:
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
+            return self.response.write('error no login')
+
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
+ 
+        if not registered:
+            return self.response.write('error not registered')
+        try:
+            username = self.session['user']['name']
+        except:
+            logging.error('Should never get this exception')
+            return self.response.write('error exception')
+            
+            if 'user' not in self.session:
+                return self.response.write('error user')
+                return
+
+        area = cache.get_area(None, area_name)
+
+        if not area:
+            return self.response.write('UpdateAreaViewHandler() - area not found')
+            
+        # if user does not own area or user is not admin - disallow
+        if (area.owner.name != user.name) and (user.role != 'admin'):
+            logging.error("Only the owner '{0!s}' of area '{1!s}' or admin can update an area.".format(area.owner, area.name))
+            return self.response.write('error not owner')
+
+
+        lat_str =  self.request.get('lat')
+        if lat_str:
+            lat = float(lat_str)
+        else: 
+            return self.response.write('error no lat param')
+        
+        lng_str =  self.request.get('lng')
+        if lng_str:
+            lng = float(lng_str)
+        else: 
+            return self.response.write('error no lng param ')
+
+        zoom_str =  self.request.get('zoom')
+        if zoom_str:
+            lng = float(zoom_str)
+        else: 
+            return self.response.write('error no zoomparam ')
+
+        area.map_zoom = int(zoom_str)
+        area.map_center = db.GeoPt(float(lat_str), float(lng_str))
+
+        try:
+            db.put(area)
+            cache.delete([cache.C_AREA %(username, area_name),  
+                          cache.C_AREA %(None, area_name)])
+            
+            msg = 'Updated Area of interest: {0!s} Saved map view'.format(area_name)
+            logging.info(msg)
+            return self.response.write(msg)
+        except Exception, e: 
+            message = 'error Exception {0!s}'.format(e)
+            logging.error(message)
+            return self.response.write(message)
+
 class UpdatedAreaSharedHandler(BaseHandler):
     def post(self, area_name, shared):
         current_user = users.get_current_user()
@@ -847,7 +919,7 @@ class UpdatedAreaSharedHandler(BaseHandler):
         area = cache.get_area(None, area_name)
 
         if not area:
-            return self.response.write('error no area')
+            return self.response.write('UpdatedAreaSharedHandler() - area not found')
             
         # if user does not own area or user is not admin - disallow
         if (area.owner.name != user.name) and (user.role != 'admin'):
@@ -903,7 +975,8 @@ class DeleteAreaHandler(BaseHandler):
         area = cache.get_area(None, area_name)
 
         if not area:
-            logging.error('DeleteArea: Area not found! %s', area_name)
+            self.add_message('danger', 'Delete Area failed - Area not found.')
+            logging.error('DeleteArea: Area not found! %s', area_name) # XSS should not return area to client.
             return self.error(404)
         else:
             cell_list = area.CellList()
@@ -929,8 +1002,6 @@ class DeleteAreaHandler(BaseHandler):
             })
         
         #remove area from other user's area_following lists.        
-        #remove area from user's list of areas (no such thing. see cache.get_areas()
-        #areas = cache.get_areas(db.Key(self.session['user']['key'])) # areas user created
         area_followers_index = cache.get_area_followers(area_name)
         #print 'area_followers_index ', area_followers_index
         def txn(user_key, area, area_followers_index):
@@ -946,7 +1017,7 @@ class DeleteAreaHandler(BaseHandler):
 
         xg_on = db.create_transaction_options(xg=True)
         owner_key = area.owner.key()
-        print 'owner_key' , owner_key
+        logging.debug('owner_key' , owner_key)
         
         try:
             db.run_in_transaction_options(xg_on, txn, owner_key, area, area_followers_index)
@@ -964,20 +1035,11 @@ class DeleteAreaHandler(BaseHandler):
             #raise Exception('test', 'exception')
             return
         except Exception, e: 
-            message = 'Sorry, Could not delete area: {0!s} Exception {1!s}'.format(area_name, e)
+            message = 'Sorry, Could not delete area: Exception {0!s}'.format(e) #XSS safe
             self.add_message('danger', message)
             logging.error(message)
             self.redirect(webapp2.uri_for('view-area', area_name=area.name))
             return
-            
-        #current_user.areas_observing.remove(area)
-        
-        #remove past observation tasks for this area (nice to do)
-        
-        #delete the cells in the area's cell list
-        
-        # delete the area
-        
         
 
 '''
@@ -999,7 +1061,7 @@ class SelectCellHandler(BaseHandler):
         username = self.session['user']['name']
 
         if not area or area.owner.name != username:
-            logging.info('selectCell() not owner')
+            logging.info('selectCell() not area owner')
             response = {'error':'Only area owner can select cell for monitoring'}
             return self.response.write( json.dumps(response))
 
@@ -1017,6 +1079,7 @@ class SelectCellHandler(BaseHandler):
             cache.delete([cache.C_CELL_KEY %cell.key(),
                           cache.C_CELL %(path, row, area_name), 
                           cache.C_CELLS %(cell.aoi)])
+            cell_dict['monitoredCount'] = area.CountMonitoredCells()
             self.response.write(json.dumps(cell_dict))
         else:
             logging.error('Selected Cell does not exist %d %d', path, row)
@@ -1024,7 +1087,7 @@ class SelectCellHandler(BaseHandler):
         return
     
     def post(self):
-        print 'SelectCellHandler post'
+        #print 'SelectCellHandler post'
         name = self.request.get('name')
         descr = self.request.get('description')
         #logging.debug('SelectCellHandler name: %s description:%s', name, descr)
@@ -1107,7 +1170,7 @@ class ViewArea(BaseHandler):
 
         area = cache.get_area(None, area_name)
         if not area or (area.share == area.PRIVATE_AOI and area.owner.name != user.name and not users.is_current_user_admin()):
-            self.add_message('danger', "Area: '{0:s}' not found!".format(area_name))
+            self.add_message('danger', "Area not found!")
             logging.error('ViewArea: Area not found! %s', area_name)
             self.redirect(webapp2.uri_for('main'))
         else:
@@ -1171,7 +1234,7 @@ class GetLandsatCellsHandler(BaseHandler):
     def get(self, area_name):
         area = cache.get_area(None, area_name)
         if not area or area is None:
-            logging.info('GetLandsatCellsHandler - bad area returned %s', area_name)
+            logging.info('GetLandsatCellsHandler - area %s not found', area_name)
             self.error(404)
             return
         cell_list = area.CellList()
@@ -1253,7 +1316,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
             row =  int(opt_params['row'])
             
             #logging.debug("LandsatOverlayRequestHandler() path %s, row %s", path, row)
-            cell = cache.get_cell(path, row)
+            cell = cache.get_cell(path, row, area_name)
             if cell is not None:
                 #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
                 obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], 
@@ -1506,20 +1569,14 @@ def checkAreaForNew(area, hosturl):
         for cell_key in area.cells:
             cell = cache.get_cell_from_key(cell_key)
             if cell is not None:
-                #logging.debug("cell %s %s", cell.path, cell.row)
                 if cell.monitored:
                     linestr += u'({0!s}, {1!s}) '.format(cell.path, cell.row)
                     obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")
-                        
                     if obs is not None :
-                        #obs.share = area.share #private and unlisted areas lead to private and unlisted tasks
-                        #if obs.share != area.PUBLIC_AOI:
-                        #    obs.aoi_owner = area.owner # owner of the area - not volunteeer assigned to task. Allows quicker filtering of private areas.
-                        #db.put(obs)
                         linestr += 'New '
                         new_observations.append(obs.key())
             else:
-                logging.error (u"CheckNewAreaHandler no cell returned from key %s ", cell_key)
+                logging.error (u"CheckNewAreaHandler() in area:{0!s} no cell returned from key:{1!s} ".format(area.name, cell_key))
         if new_observations == []:
             linestr += u'] Area has no monitored cells!</p>'
         else:
@@ -1602,7 +1659,7 @@ class CheckNewAreaHandler(BaseHandler):
         if not area:
             area = cache.get_area(None, area_name)
             logging.error('CheckNewAreaHandler: Area not found! %s', area_name)
-            self.error(404)
+            return self.error(404)
 
         initstr = u"<h1>Check area for new observations</h1>"
         initstr += u"<p>The area must have at least one cell selected for monitoring and at least one follower for a observation task to be created.</p>"
@@ -1611,11 +1668,11 @@ class CheckNewAreaHandler(BaseHandler):
         if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
             initstr =u'CheckNewAreaHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
             #self.add_message('danger', initstr)
-            self.response.write(initstr) 
-            return
+            return self.response.write(initstr) 
+            
 
         returnstr = initstr + checkAreaForNew(area)
-        self.response.write(returnstr.encode('utf-8')) 
+        return self.response.write(returnstr.encode('utf-8')) 
 
 '''
 MailTestHandler() - This handler sends a test email 
@@ -1705,12 +1762,9 @@ class ViewObservationTasksHandler(BaseHandler):
                     logging.error(message)
                     return self.response.write(message)
             else:
-                return self.response.write('Request area {0!s} not found '.format(area_name))
-                message = 'Request area {0!s} not found '.format(area_name)
-                logging.error(message)
-                return self.response.write(message)
+                logging.error('Requested area {0!s} not found '.format(area_name))
+                return self.response.write('Requested area not found') # Don't print area to avoid XSS attack.
                 
-        logging.info('ViewObservationTasks: user:%s, area:%s, page:%d', user2view, area_name, page) 
         tasks  = cache.get_obstasks_keys(user2view, area_name) # list of all task keys
         obstasks = cache.get_obstasks_page(page, user2view, area_name) # rendered page of tasks #TODO is it needed? 
         
@@ -1721,6 +1775,7 @@ class ViewObservationTasksHandler(BaseHandler):
             pages =  0
             tasks = None
         else:
+            logging.debug('ViewObservationTasks: user:%s, area:%s, page:%d', user2view, area_name, page) # Move here to XSS sanitise user2view
             pages = len(tasks) / models.ObservationTask.OBSTASKS_PER_PAGE
             if pages < 1:
                 pages = 1
@@ -1811,7 +1866,7 @@ class UserHandler(BaseHandler):
             is_following = username in cache.get_following(self.session['user']['name'])
             thisuser = self.session['user']['name'] == u.name
         else:
-            print "no followers"
+            logging.debug("%s has no followers", username)
             is_following = False
             thisuser = False 
 
@@ -1865,7 +1920,7 @@ class ViewJournalsHandler(BaseHandler):
             is_following = username in cache.get_following(self.session['user']['name'])
             thisuser = self.session['user']['name'] == u.name
         else:
-            print "no followers"
+            logging.debug("%s has no followers", username)
             is_following = False
             thisuser = False 
 
@@ -1985,7 +2040,7 @@ class FollowAreaHandler(BaseHandler):
             tu, ar = db.get([userfollowingareas_key, areafollowers_key])
             #print("FollowAreaHandler() adding key=", userfollowingareas_key)
             if not tu:
-                print("FollowAreaHandler() user not found: %s", userfollowingareas_key)
+                logging.error("FollowAreaHandler() user not found: %s", userfollowingareas_key)
                 tu = models.UserFollowingAreasIndex(key=userfollowingareas_key)
             if not ar:
                 logging.error("FollowAreaHandler() area not found: %s", areafollowers_key)
@@ -2075,14 +2130,14 @@ class FollowAreaHandler(BaseHandler):
 
 class NewEntryHandler(BaseHandler):
     def get(self, username, journal_name, images=""):
-        print ("NewEntryHandler: ", journal_name, images)
+        #print ("NewEntryHandler: ", journal_name, images)
         if username != self.session['user']['name']:
-            print ("NewEntryHandler", username, journal_name, images)
+            logging.error("NewEntryHandler missing user", username, journal_name, images)
             self.error(404)
             return
         journal_key = cache.get_journal_key(username, journal_name)
         if not journal_key:
-            print ("NewEntryHandler missing journal_key")
+            logging.error("NewEntryHandler missing journal_key")
             self.error(404)
             return
 
@@ -3048,6 +3103,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/new/area', handler=NewAreaHandler, name='new-area'),                             # create area
     webapp2.Route(r'/area/<area_name>/delete', handler=DeleteAreaHandler, name='delete-area'),  # delete area (owner or admin)
     webapp2.Route(r'/area/<area_name>/update/share/<shared>', handler=UpdatedAreaSharedHandler, name='share-area'),  # updatearea (owner only)
+    webapp2.Route(r'/area/<area_name>/update/view', handler=UpdateAreaViewHandler, name='area-save-view'),
+    #webapp2.Route(r'/area/<area_name>/update/view/<lat:\d+>/<lng:\d+>/<zoom:\d+>/', handler=UpdateAreaViewHandler, name='area-save-view'),
+    
     webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #ajax
     webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),  # view area.
     
@@ -3056,7 +3114,8 @@ app = webapp2.WSGIApplication([
     
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
-                
+   
+         
     # this section must be last, since the regexes below will match one and two -level URLs
     webapp2.Route(r'/<username>/journals',  handler=ViewJournalsHandler, name='view-journals'),
     webapp2.Route(r'/<username>', handler=UserHandler, name='user'),
@@ -3142,6 +3201,6 @@ for i in app.router.build_routes.values():
     if name not in RESERVED_NAMES:
         import sys
         logging.critical('%s not in RESERVED_NAMES', name)
-        print '%s not in RESERVED_NAMES' %name
+        logging.error('%s not in RESERVED_NAMES' %name)
         sys.exit(1)
         

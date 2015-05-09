@@ -48,17 +48,6 @@ textarea {
   float: bottom;
 }      
 
-.map-panel-controls {
-	width: 100%; 
-	padding=0%;
-}
-
-.map-panel-oops-button{
-    width: 80%; 
-    padding=10%;
-    border-top: 1px solid #eeeeee;
-    margin-top: 5%;
-}
     
 .btn-lightgreen {  /* http://charliepark.org/bootstrap_buttons/ */
   background-color: hsl(86, 79%, 44%) !important;
@@ -365,4 +354,111 @@ iframe { /* retain video aspect ratio */
 {
     color:red;
     font-weight: bold;
+}
+
+#dialog-new-cells {
+    font-size: 11pt;
+	bottom: 0; 
+    right:0; 
+    left: auto; 
+    top: auto; 
+    bottom: 0; 
+    height: auto;
+    min-height: 100% !important;
+	width: 200%;
+}
+.cell-panel{
+	font-size: 8pt;
+}
+
+.cell-panel-monitored {
+    font-weight: bold  !important;
+    font-size: 8pt;
+    color: darkgreen !important;
+}
+
+.cell-panel-unmonitored {
+    font-size: 8pt;
+	color: gray !important;
+}
+
+.cell-panel-hover {
+    font-size: 8pt;
+    color: blue !important;
+    font-weight: bold  !important;
+}
+.cell-panel-nohover {
+    font-size: 8pt;
+    color: black !important;
+}
+
+.cell-panel-selected {
+    font-size: 8pt;
+    font-style: italic; 
+}
+.cell-panel-unselected {
+    font-size: 8pt;
+}
+
+.cell-panel-updating {
+    font-size: 8pt;
+    color: green!important;
+    font-weight: bold  !important;
+}
+
+.cell-panel-popover-locked {
+    font-size: 11pt;
+    color: red!important;
+    font-weight: bold  !important;
+}
+.cell-panel-popover-edit {
+    font-size: 11pt;
+    color: green!important;
+    font-weight: bold  !important;
+}
+
+cell-panel-date
+{
+    color: black!important;
+	font-size: 8pt;
+    font-weight: bold  !important;
+}
+.cell-panel-warn{
+      font-size: 8pt;
+      color: red !important;
+      font-weight: bold  !important;
+}
+
+.cell-panel-info{
+    font-size: 8pt;
+    color: #428bca !important;  
+    width: 100%; 
+    padding=0%;
+}
+
+.map-panel-controls {
+    font-size: 8pt;
+    width: 100%; 
+    padding=0%;
+}
+
+.map-panel-data {
+    font-size: 8pt;
+	color: gray!important;
+    width: 100%; 
+    padding=0%;
+}
+
+.map-panel-cursor {
+    font-size: 8pt;
+	color: black !important;
+    width: 100%; 
+    padding=0%;
+}
+
+.map-panel-oops-button{
+    width: 80%; 
+    padding=10%;
+    border-top: 1px solid #eeeeee;
+    margin-top: 5%;
 }

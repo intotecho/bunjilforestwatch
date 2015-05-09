@@ -1,8 +1,9 @@
-
-
 var map_under_lhs; //side by side maps
 var map_over_lhs; //side by side maps
 var map_rhs;
+
+var map_center;
+var map_zoom;
 
 var satellite = 'l8'
 var algorithm = 'rgb'; // ndvi 
@@ -11,6 +12,18 @@ var overlayMaps = [];
 
 var latlngs = [];
 var boundary_coords= "";
+
+
+
+
+
+var save_view_instructions = 
+	    "Save the current view.<br/>" +
+	    "All users will see this as the initial view when they open an observation for this area. <br/>" ;
+	    
+var reset_view_instructions = 
+	        "Return map to the initial view.<br/>" +
+	        "This does not update the saved view.<br/>" ;
 
 
 function setActionUrl(action)
@@ -55,51 +68,6 @@ function jsonStringifySelectedCell(landsat_cell)
    return JSON.stringify(cell_feature);
 };
 
-function cellSelected(landsat_cell)
-{
-// Fetch Outline and status of this Landsat Cell
-	//TODO: Check it works fro special chars in area name.
-
-  var httpget_url = "/selectcell/" + area_name+ "/" + jsonStringifySelectedCell(landsat_cell)
-  console.log( "cellSelected() %d %d %s", landsat_cell.path, landsat_cell.row, httpget_url);
-   
-  $("#ee_panel").collapse('show');
-       $('#ee_panel').empty();
-       $('#ee_panel').append("SelectCell...");
-       $('#ee_panel').append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
-              $('#ee_panel').empty();
-              $.get(httpget_url).done(function(data) {
-              var panel_str = "Cell:";          
-              var celldict = jQuery.parseJSON(data);
-              console.log(celldict);
-              if (celldict['result'] == "ok") {                                           
-                  if (celldict.monitored == "true") 
-                      {
-                        panel_str = "Now Monitoring Cell(" + celldict.path  + ", " +  celldict.row + ")<br>Last Obs: " + celldict.LC8_latest_capture;
-                        console.log( "Following: " + celldict.path  + ", " +  celldict.row)
-                        landsat_cell.Monitored = true;
-                        monitor_cell(landsat_cell, landsat_cell.Monitored);
-                      }
-                  else
-                      {
-                         panel_str = "Stopped Monitoring Cell(" + celldict.path  + ", " +  celldict.row + ") ";
-                         console.log( "Stopped Monitoring: " + celldict.path  +", " +  celldict.row)
-                         landsat_cell.Monitored = false;
-                         monitor_cell(landsat_cell, landsat_cell.Monitored);
-                      }
-                  $('#ee_panel').append(panel_str);  
-               }
-               else {
-                   console.log( "Error: " + celldict['result']);
-               }             
-        }).error(function( jqxhr, textStatus, error ) {
-            var err = textStatus + ', ' + error;
-            console.log( "Request Failed: " + err);
-            $('#ee_panel').empty();
-            $('#ee_panel').append("<p>Failed: " + err + "</p>"); 
-     });
-}
-
 //modify area with new value of shared.
 function updateAreaShared(shared)
 {
@@ -117,4 +85,83 @@ function updateAreaShared(shared)
 			  $('#area_sharing_heading').html("Sharing Update error");
 			  return error;
 		});
+}
+
+$('#save-view').click(function(){
+	
+	var map = map_under_lhs;
+	var url = area_url  + '/update/view?lat=' + map.getCenter().lat().toFixed(5)+ '&lng=' + map.getCenter().lng().toFixed(5) + '&zoom=' + map.getZoom();
+	console.log('save-view:', url);
+
+	var xhr = $.post(url).done(function(data) {
+		  $('#map_panel_center').empty().append("<p>Saved</p>"); 
+			return data;
+			
+	}).error(function(xhr, textStatus, error){
+			  console.log ('UpdateAreaView() request failed:', xhr.status, error);
+			  $('#map_panel_center').empty().append("<p>UpdateAreaView Failed: " + error + "</p>"); 
+			  return error;
+	});
+});
+
+
+$('#reset-view').click(function(){
+	console.log('reset-view:');
+	var map = map_under_lhs;
+    map.setZoom(map_zoom);
+    map.setCenter(map_center);
+});
+
+
+$('#reset-view').click(function(){
+    console.log('reset-view');
+});
+
+
+
+var monitored_cells_are= 
+	"<b>Monitored</b> cells are highlighted with a bolder outline. " + 
+	"Only <b>Monitored</b> cells generate new observation tasks which are " +
+	"sent to the area\'s followers when new images are found. <br/>";
+
+var edit_cells_instructions_editing = 
+	"Now <b>Editing Cells</b>. Swap any cell between monitored and unmonitored by clicking it.<br/>" +
+	"When finished, click <span class='glyphicon glyphicon-edit cell-panel-popover-edit'/> to prevent further changes.<br/><br/>" +
+	monitored_cells_are;
+
+var edit_cells_instructions_locked = 
+    "While <b>Locked</b>, cells won't change when you click them. <br/>" +
+    "Click <span class='glyphicon glyphicon-edit cell-panel-popover-locked'/> to <b>Edit cells</b>.<br/><br/>" +
+     monitored_cells_are;
+
+function toggle_edit_cells_lock()
+{
+	edit_cells_mode = ! edit_cells_mode; //toggle editing.
+	console.log("Edit Cells Lock: ", edit_cells_mode);
+    
+	var panel = $('#edit-cells-lock');
+	if (edit_cells_mode) {
+		panel.html("<span class='glyphicon glyphicon-edit cell-panel-popover-edit'/><span class='cell-panel-info'> Editing Cells<span>");
+		panel.popover('destroy').popover({ 
+		    html : true, 
+		    animation: true,
+		    trigger: 'hover',
+		    container: 'body',
+		    title: "<span class='cell-panel-popover-edit'> Editing Monitored Cells</span>",  
+		    placement: 'right',
+		    content:  edit_cells_instructions_editing
+		    });		
+	}
+	else {
+		panel.html("<span class='glyphicon glyphicon-lock cell-panel-popover-locked'/><span class='cell-panel-info'> Locked (Click to edit cells)<span>");
+		panel.popover('destroy').popover({ 
+		    html : true, 
+		    animation: true,
+		    trigger: 'hover',
+		    container: 'body',
+		    title: "<span class='cell-panel-popover-locked'> Cell editing is Locked</span>",  
+		    placement: 'right',
+		    content: edit_cells_instructions_locked
+		    });
+	}
 }

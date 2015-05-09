@@ -9,9 +9,8 @@ var COUNTRY_GRID_FT = '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ'; // https://www.
 var MAPS_API_KEY = 'AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I';    // #Google Maps API public key
 
 
-var landsatgrid_panel = '#map_panel'; // panel used to display info about the selected cell. Client may set this.
-
-
+var landsatgrid_panel = '#cell_panel'; // panel used to display info about the selected cell. Client may set this.
+var edit_cells_mode = true; // toggled by initialise to false.
 
 /* LandsatGridOverlay(map, opacity, clickable, cellarray)
  * 
@@ -31,7 +30,9 @@ function LandsatGridOverlay(map, opacity, clickable, cellarray) {
   this.landsat_overlays = []; //empty array of cell overlays.
   this.selectedPath = -1;
   this.selectedRow = -1;
-	  
+  this.hoverPath = -1;
+  this.hoverRow = -1;
+    
   google.maps.OverlayView.call(this);
 }
 
@@ -211,8 +212,7 @@ function createLandsatGrid(data, landsatGridOverlay) {
 			var selectedPath = parseInt(cellobject['<strong>PATH</strong>'], 10);
 			var selectedRow = parseInt(cellobject['<strong>ROW</strong>'], 10);
 
-			// colour as checkerboard
-			// checkerboard = (both are odd) or (both are even).
+			// colour as checkerboard (both are odd) or (both are even).
 			var cell_colour;
 
 			if ((selectedPath % 2) == (selectedRow % 2)) {
@@ -241,18 +241,13 @@ function createLandsatGrid(data, landsatGridOverlay) {
 			landsat_cell['row']    = selectedRow;
 			landsat_cell['parent'] = landsatGridOverlay;
 			
-			
 			if (isMonitored(selectedPath, selectedRow, landsatGridOverlay.cellarray) == "true") {		
-				//landsat_cell.set('Monitored', true);
-				monitor_cell(landsat_cell, true);
-				
+				monitor_cell(landsat_cell, true);		
 			} else {
-				//landsat_cell.set('Monitored', false);
 				monitor_cell(landsat_cell, false);
 			}
 
 			landsat_cell.set("Description", description); 
-			// Add attribute description in polygon.
 
 			landsatGridOverlay.landsat_overlays.push(landsat_cell);
 
@@ -265,9 +260,12 @@ function createLandsatGrid(data, landsatGridOverlay) {
 			google.maps.event.addListener(landsat_cell, 'zoom',
 					landsatGrid_zoom);
 			
+			google.maps.event.addListener(landsat_cell, 'mousemove', function (event) {
+			        update_map_cursor(landsat_cell, event.latLng, '#map_panel_cursor');               
+			});
+
 			landsat_cell.setMap(landsatGridOverlay.map);
 		
-			$(landsatgrid_panel).collapse('show');
 		} // if geometry
 		else {
 			console.log("no geometry ", i);
@@ -291,6 +289,22 @@ function polygon2LatLngCoordinates(polygon) {
 }
 
 
+
+//Get Landsat_cell
+function getCellArrrayCell(selectedPath, selectedRow, cellarray) {
+	if (cellarray != null) {
+		for (var i = 0; i < cellarray.length; i++) {
+			if ((cellarray[i].path == selectedPath)
+					&& (cellarray[i].row == selectedRow)) {
+				return cellarray[i];
+			}
+		}
+		console.log("getLansatCell(): missing cell %d, %d", 
+								selectedPath, selectedRow);
+	}
+	return null;
+}
+
 //Used in initial drawing of grid 
 function isMonitored(selectedPath, selectedRow, cellarray) {
 	if (cellarray != null) {
@@ -306,6 +320,8 @@ function isMonitored(selectedPath, selectedRow, cellarray) {
 	return false;
 }
 
+
+
 //monitor_cell() returns true if the cell overlay has isMonitored set.
 function monitor_cell(landsat_cell, isMonitored) {
 	
@@ -315,12 +331,12 @@ function monitor_cell(landsat_cell, isMonitored) {
 		landsat_cell.setOptions({
 			strokeWeight : 4
 		
-		})
-	} else {
+		});
+	} 
+	else {
 		landsat_cell.setOptions({
 			strokeWeight : 0.5
 		})
-		//console.log("createLandsatGrid() unmonitored cell");
 	}
 	return isMonitored;
 }
@@ -331,28 +347,34 @@ function landsatGrid_mouseover(e) {
 		this.setOptions({
 			fillOpacity : 0.3 * this.parent.opacity
 		})
-	} else {
+	} 
+	else {
 		this.setOptions({
 			fillOpacity : 0.1 * this.parent.opacity 
 		})
 	}
-	display_cell_info(this, false)
+	this.parent.hoverPath = this.path;
+	this.parent.hoverRow = this.row;	
+	
+	update_cell_panel(this.parent);
 }
 
 function landsatGrid_mouseout(e) {
 	this.setOptions({
 		fillOpacity : 0
 	})
-	$(landsatgrid_panel).empty();
+	this.parent.hoverPath = -1;
+	this.parent.hoverRow = -1;	
+	
+	update_cell_panel(this.parent);
 }
 
 function landsatGrid_click(e) {
-	display_cell_info(this, true)
+	
 	this.parent.selectedPath = this.path;
 	this.parent.selectedRow = this.row;	
 	cellSelected(this);
 }
-
 
 function landsatGrid_zoom(e) {
 	// needs work
@@ -364,43 +386,135 @@ function landsatGrid_zoom(e) {
 	console.log(e.zoom());
 }
 
-function display_cell_info(e, isSelected) {
-	// console.log('display_cell_info()')
-	cellobject = YAML.parse(e.get("Description")); // converts the YAML html
-													// description to JS object.
-	var path = parseInt(cellobject['<strong>PATH</strong>'], 10);
-	var row = parseInt(cellobject['<strong>ROW</strong>'], 10);
-	//or path = e.path;
-	
-	if (isSelected = true) {
-		var selectedPath = path;
-		var selectedRow = row;
-		e.selectedLAT_UL = parseFloat(cellobject['<strong>LAT UL</strong>']);
-		e.selectedLON_UL = parseFloat(cellobject['<strong>LON UL</strong>']);
-		e.selectedLAT_UR = parseFloat(cellobject['<strong>LAT UR</strong>']);
-		e.selectedLON_UR = parseFloat(cellobject['<strong>LON UR</strong>']);
-		e.selectedLAT_LL = parseFloat(cellobject['<strong>LAT LL</strong>']);
-		e.selectedLON_LL = parseFloat(cellobject['<strong>LON LL</strong>']);
-		e.selectedLAT_LR = parseFloat(cellobject['<strong>LAT LR</strong>']);
-		e.selectedLON_LR = parseFloat(cellobject['<strong>LON LR</strong>']);
-	}
 
-	$(landsatgrid_panel).empty();
-	htmlString = "<p><font-size:50%;color:blue strong>zoom:</strong> "
-	//		+ map.getZoom() + "</p>"
-	//      + "<p>lat: " + map.getCenter().lat().toFixed(3) + ", lng: "
-	//		+ map.getCenter().lng().toFixed(3) + "<br>" 
-			+ "Path: " + parseInt(e.path, 10) 
-			+ " Row: " + parseInt(e.row, 10);
-	if (e.get("Monitored") == true) {
-		htmlString += " Monitored"
-	} else {
-		htmlString += " Unmonitored"
-	}
-	htmlString += "<br></p>";
-	$(landsatgrid_panel).html(htmlString);
+function cellSelected(landsat_cell)
+{
+  // Fetch Outline and status of this Landsat Cell
+  //TODO: Check it works for special chars in area name.
+
+  var cell = getCellArrrayCell(landsat_cell.path, landsat_cell.row, cellarray);
+  var div_id = '#cell-panel-' + cell.index;
+  var httpget_url = "/selectcell/" + area_name+ "/" + jsonStringifySelectedCell(landsat_cell)
+  
+  console.log( "cellSelected() %d %d %s %s %s", landsat_cell.path, landsat_cell.row, div_id, (edit_cells_mode == true)?"editing cells":"locked", httpget_url);
+  
+  //var panel = $("#cell_panel");
+  var panel = $(div_id);
+  if (panel === null)
+  {
+	  console.log("error in DOM. missing Cell panel.")
+	  return;
+  }
+  //panel.collapse('show').css('overflow', 'scroll');
+  //panel.empty();
+  
+  if (edit_cells_mode == false) {
+	  update_cell_panel(landsat_cell.parent);
+	  return;
+  }
+  
+  panel.addClass('cell-panel-updating'); 
+  panel.append("Updating Cell...");
+  panel.append('<img src="/static/img/ajax-loader.gif" class="ajax-loader"/>');
+  $.get(httpget_url).done(function(data) {
+	  	  // store toggled cell.
+	  	  var celldict = jQuery.parseJSON(data);
+		  console.log(celldict);
+		  if (celldict['result'] == "ok") { 
+			  var cell = getCellArrrayCell(celldict.path, celldict.row, cellarray);
+			  if (cell !== null) {
+				  cell['LC8_latest_capture'] = celldict.LC8_latest_capture;
+				  cell.monitored  = celldict.monitored;
+				  if (celldict.monitored == "true") {
+					  monitor_cell(landsat_cell, true);
+				  }
+				  else {
+					  monitor_cell(landsat_cell, false);
+				  }
+			  }
+			  else {
+				  console.log('cell not found!');
+			  }
+		      if (celldict.monitored == "true") {
+			            console.log( "Now Monitoring: " + celldict.path  + ", " +  celldict.row)
+		      }
+		      else {
+			            console.log( "Stopped Monitoring: " + celldict.path  +", " +  celldict.row)
+		      }
+		      update_cell_panel(landsat_cell.parent);
+		  }
+		  else {
+		      console.log( "Error: " + celldict['result']);
+		  }             
+  }).error(function( jqxhr, textStatus, error ) {
+		  var err = textStatus + ', ' + error;
+		  console.log( "Request Failed: " + err);
+		  panel.empty();
+		  panel.append("<p>Failed: " + err + "</p>"); 
+  });
 }
 
+function update_cell_panel(landsatGridOverlay) {
 
+	var panel = $(landsatgrid_panel);
+	panel.addClass('cell-panel'); 
+	panel.empty();
+
+	var panel_str = ""	
+	monitored_cells_count= 0;
+	
+	var cellarray = landsatGridOverlay.cellarray;
+	if (cellarray != null) {
+		for (var i = 0; i < cellarray.length; i++) {
+	
+			var path = cellarray[i].path
+            var row  = cellarray[i].row;
+			var monitored = cellarray[i].monitored;
+			var hover = ((path == landsatGridOverlay.hoverPath)
+					&& (row == landsatGridOverlay.hoverRow));
+			var selected = ((path == landsatGridOverlay.selectedPath)
+					&& (row == landsatGridOverlay.selectedRow));
+			
+			panel_str += "<div id=cell-panel-" + i + " class=";
+			
+			if (selected) {
+					panel_str += "'cell-panel-selected '";
+			}
+			else
+				panel_str += "'cell-panel-unselected '";
+				
+			if (hover) { //draw the Cell(n,n) in hover style.
+				panel_str += "><span class='cell-panel-hover' data-toggle='tooltip' title='Landsat Cell (Path, Row)'>Cell(";	
+			}
+			else {
+				panel_str += "><span class='cell-panel-nohover' data-toggle='tooltip' title='Landsat Cell (Path, Row)' >Cell(";
+			}
+			
+			panel_str += path  + ", " +  row + ") </span>";  //end of hover div
+			   
+    		if (monitored == "true") {
+    			panel_str += "<span class='cell-panel-monitored data-toggle='tooltip' title='Regular observation tasks will be sent for this cell'> Monitoring </span>";
+    			monitored_cells_count += 1;
+    		}
+    		else
+    			panel_str += "<span class='cell-panel-unmonitored' data-toggle='tooltip' title='No observation tasks will be created from this cell'> Unmonitored </span>";
+    		
+            if (cellarray[i].LC8_latest_capture !== "none") {
+            	var datestr =  cellarray[i].LC8_latest_capture.substr(0,  cellarray[i].LC8_latest_capture.indexOf('@')); 
+            	panel_str += "<span class='cell-panel-date' data-toggle='tooltip' title='Most Recent Image mm-dd'><a href='#'> " + datestr.substring(5) + "</a>"; //remove initial '2015-'
+            }
+			panel_str += "<br></div>"; // end-row
+		}
+		if (monitored_cells_count == 0) {
+			panel_str += "<div class='cell-panel-warn'>You won't receive any notifications as no cells monitored!</div>" 
+			panel.parent().collapse('show');
+		}
+	}
+	else 	{
+		panel_str += "<div class='cell-panel-warn'>Error: No Cells !</div>";
+		panel.parent().collapse('show');	
+	}		
+	panel.html(panel_str);
+}
 
 
