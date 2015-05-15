@@ -57,11 +57,11 @@ body {
 
 #draghandle { // inspired by storage.googleapis.com/jlivni/presentations/lightning/styled.html
     overflow: display; 
-    top: 0px;
+    top: 0px
 }
 
 .map-canvas {
-	border:2px solid gray;
+	border:2px solid gray
 }
 
 #rhs_cursor /* cursor or rhs map follows lhs cursor*/
@@ -72,38 +72,33 @@ body {
     font-size:10px;
     z-index:99;
     color:yellow;
-    overflow:display;
+    overflow:display
 }
-
 
 #rhs_cursor-c /* cursor or rhs map follows lhs cursor*/
 {
     height:0px;
     width:0px;
 }
-
 </style>
-
 <link href="/static/css/jquery.nouislider.css" rel="stylesheet">
-
 {% block map_head %} {% endblock  map_head%} 
-
 {% endblock  head%} 
-
 {% block content %}
+<div id='area_url'     class='django-template'>{{area|area_url }}</div>
+<div id='area_json'   class='django-template'>{{ area_json}}</div>
+<div id='celllist'         class='django-template'>{{ celllist }}</div>
+<div id='obslist'         class='django-template'>{{ obslist }}</div>
+<div id='user_name' class='django-template'>{{ user.name }}</div>
+<div id='user_url'       class='django-template'>{{ "user"|url(user.name) }}</div>
+
 {% block breadcrumbs %}{% endblock breadcrumbs %} 
-
-
-<div class="container-fluid"
+<div class="container-fluid">
     <div class="row">
         <div class="col-xs-2 lesspadding" style="margin: 0;">
             <h5 lesspadding>
-                <i>Manage Your Area</i>
+                <i>Manage Your Area </i><span><input id="instructions" type="button" class="btn btn-sm btn-lightgreen " rel="popover" value="?"></span>
             </h5>
-            <div class="controls">
-                <input id="instructions" type="button" class="btn btn-sm btn-lightblue map-panel-controls" rel="popover"
-                    value="Help ?">
-            </div>
                 <div class="accordion" id="accordion2">
                 <div class="accordion-group">
                     <div class="accordion-heading">
@@ -318,12 +313,7 @@ body {
            <div>
                 <br/><a  id='make_report' class="btn btn-small btn-lightblue confirm" style='width:80%' data-toggle="tooltip" title="Report a change or disturbance">Make report</a>
            </div> 
-           {% if show_delete %} 
-           <div id='user-is-owner-div'>
-                    <a  id="delete_area_id" class="btn btn-small btn-lightred map-panel-oops-button confirm" style='width:80%' data-toggle="tooltip" title="Delete Area (Can't be undone) ">Delete area <span class='red_cross'>&times;</span></a>
-           </div>
-           {% endif %}
-        </div>
+         </div>
         
         <!-- MAP CANVAS  -->
         
@@ -382,6 +372,8 @@ body {
 <script type="text/javascript"
     src="//maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> 
 </script>
+
+
 <script type="text/javascript" src="/static/js/draggable-object.js" defer></script>
 <script type="text/javascript" src="/static/js/yaml/YamlInline.js" defer></script>
 <script type="text/javascript" src="/static/js/yaml/YamlParser.js" defer></script>
@@ -395,575 +387,11 @@ body {
 <script type="text/javascript" src="/static/js/jquery.nouislider.min.js" defer></script>
 <script type="text/javascript" src="/static/js/layerslider.js" defer></script>
 <script type="text/javascript" src="/static/js/view-maps.js" defer></script>
+<script type="text/javascript" src="/static/js/base-maps.js" defer></script>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js" defer></script>
+ <!--
 
-<script>
-var area_url = '{{ area|area_url  }}';
-var area_name = "{{ area.name}}"; //TODO might not work for  special characters.
-
-var lhs_offset_top =0;
-var lhs_offset_left =0;
-
-
-function httpgetActionUrl(action)
-{
-   // action/<action> can be 'overlay' or 'download' or image.
-   //TODO: satellite is 'l8' or 'l7' but should change to collection name.
-   //TODO: latest is still a global var....
-   var satellite = $("#satellite:first-child").text().trim();
-   var algorithm = $("#algorithm:first-child").text().trim();
-   var path = map_over_lhs.landsatGridOverlay.selectedPath;
-   var row  = map_over_lhs.landsatGridOverlay.selectedRow;
-
-   var url = area_url  + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
-  
-   if((path != -1) && (row != -1))
-   {
-       url  += "/" + path + "/" + row;
-   }
-   return url
-};
-
-function ajaxActionUrl(action)
-{
-   // action can be 'overlay' or 'download'.
-   url = area_url  + '/action/' + satellite + '/' + algorithm + '/' + latest;
-   return url
-};
-
-function drawLandsatCells(cellarray) {
-    createLandsatGridOverlay(map_over_lhs, 0.5, true, cellarray);
-    addLayer( map_over_lhs.landsatGridOverlay.name,
-            'Landsat Cells',
-            'gray',  
-            75, 
-            "Each Landsat image covers one of these cells.", 
-            layerslider_callback ); //create slider.
-    /*
-    createLandsatGridOverlay(map_under_lhs, 0.75, true, cellarray);
-    addLayer( map_under_lhs.landsatGridOverlay.name,
-             'Landsat Cell Overlay',
-             'brown',  
-             75, 
-             "Cells show the outline of Landsat images on overlay.", 
-             layerslider_callback ); //create slider.
-  */
-}
-
-
-
-// update_map_panel updates the panel div based on values of the map after bounds changed event.
-
-function update_map_panel(map, panel) {       
-    htmlString = "<span class=divider small><strong>zoom:</strong>   " + map.getZoom() + " <br/>";
-    //htmlString += "<strong>center:</strong><br>";
-    htmlString += "Center(" + map_under_lhs.getCenter().lat().toFixed(3) + ",  " + map_under_lhs.getCenter().lng().toFixed(3) + ")</span>";
-    $(panel).empty().html(htmlString); 
-};
-
-
-//update_map_cursorupdates the panel div with values of the cursor in long based after map becomes idle.
-
-function update_map_cursor(map, pnt, panel) {   
-    var lat = pnt.lat();
-    lat = lat.toFixed(4);
-    var lng = pnt.lng();
-    lng = lng.toFixed(4);
-    var htmlString  = "Cursor( " + lat + ", " + lng + ")";
-    $(panel).html(htmlString); 
-};
-
-function initialize() {
-    map_center = new google.maps.LatLng({{area.map_center}}); // init global
-    map_zoom = {{ area.map_zoom }};  // init global.
-
-    var mapOptions_latest = {
-        zoom: {{ area.map_zoom }},
-        center: map_center,    
-        mapTypeId: google.maps.MapTypeId.HYBRID,
-        panControl:true,
-        zoomControl:true,
-        mapTypeControl:true,
-        scaleControl:true,
-        streetViewControl:false,
-        overviewMapControl:false,
-        rotateControl:false,
-        clickable: true
-    }
-
-    var mapOptions_prior = {
-            zoom: map_zoom,
-            center: map_center,    
-            mapTypeId: google.maps.MapTypeId.TERRAIN,
-            panControl:true,
-            zoomControl:true,
-            mapTypeControl:true,
-            scaleControl:true,
-            streetViewControl:false,
-            overviewMapControl:false,
-            rotateControl:false,
-            clickable: true
-        }
- 
-    map_under_lhs      = new google.maps.Map(document.getElementById("map-left-prior"), mapOptions_prior);
-    map_over_lhs    = new google.maps.Map(document.getElementById("map-left-latest"), mapOptions_latest);
-    map_rhs               = new google.maps.Map(document.getElementById("map-right"), mapOptions_prior);
-    
-    if (single_map == true){
-        initial_dragger = "10%";
-        $('#map-right-c').hide();
-        $('#map-left-c').removeClass('col-md-5');
-        $('#map-left-c').addClass('col-md-10');
-    }
-    else {
-        initial_dragger = "90%";
-    }
-    $('#dragger').css('left', initial_dragger );
-    
-    map_rhs.bindTo('center', map_under_lhs);
-    map_rhs.bindTo('zoom', map_under_lhs);
-    
-    map_over_lhs.bindTo('center', map_under_lhs);
-    map_over_lhs.bindTo('zoom', map_under_lhs);
-    
-  
-    
-    var share = '{{area.shared_str}}'; 
-    
-    if (share == 'public')
-    {
-        $("#public").prop("checked", true)          
-    }
-    else if (share == 'unlisted')
-    {
-        $("#unlisted").prop("checked", true)          
-    }
-    else    if (share == 'private')
-    {
-        $("#private").prop("checked", true)          
-    }
-    else
-    {
-        console.log('area.share unrecognised state %s', share);
-    }
-
-    $('#shared_form input').on('change', function() {
-        var selection = $('input[name=opt-sharing]:checked', '#shared_form').val();
-        console.log("share returned: ", selection);
-        updateAreaShared(selection); //ajax call
-        $('#area_sharing_heading').html("Sharing: updating ...");
-    });
-    
-    google.maps.event.addListener(map_under_lhs, 'bounds_changed', function() {        
-        update_map_panel(map_under_lhs, '#map_panel_data')    
-    });
-
-    google.maps.event.addListener(map_under_lhs, 'mousemove', function (event) {
-        update_map_cursor(map_under_lhs, event.latLng, '#map_panel_cursor');               
-    });
-    
-    google.maps.event.addListener(map_over_lhs, 'mousemove', function (event) {
-        update_map_cursor(map_under_lhs, event.latLng, '#map_panel_cursor');               
-    });
-   
-    google.maps.event.addListener(map_rhs, 'bounds_changed', function() {    
-
-    });
-    
-    google.maps.event.addListener(map_under_lhs, 'zoom', function() { 
-    });
-
-    google.maps.event.addListener(map_rhs, 'zoom', function() { 
-    });
-
-    google.maps.event.addListener(map_under_lhs, 'idle', function() {
-            //This is needed so the fusion tables query works
-            var map_center = map_under_lhs.getCenter()
-            if (map_center.lng() < -180) { 
-                map_under_lhs.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()+360));
-            }
-            if (map_center.lng() > 180) { 
-                map_under_lhs.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()-360));
-            }
-            
-            //map_rhs.setCenter(map_center);
-    });
-
-    //Collect the Boundary coordinates from the area and convert to a Google Maps object.
-    
-    
-    boundary_coords = '<p class="divider small">'
-    {% for j in area.coordinates %}
-        var latlng = new google.maps.LatLng({{j}})
-        latlngs.push(latlng)
-        boundary_coords += latlng.toUrlValue(3) + '<br>';
-    {% endfor %}
-    boundary_coords += '</p>'
-    console.log(boundary_coords);
-    $('#boundary_panel').empty();
-    $('#boundary_panel').append(boundary_coords);
-    
-    //TODO: Note that Border of AOI does not adjust opacity on both overlays yet.
-    areaBoundary_over_lhs = new google.maps.Polygon({
-                paths: latlngs,
-                strokeColor: '#FFFF00',
-                strokeOpacity: 0.5,
-                strokeWeight: 2,
-                fillColor: '#000000',
-                fillOpacity: 0.05
-    });
-    
-    areaBoundary_under_lhs= new google.maps.Polygon({
-                paths: latlngs,
-                strokeColor: '#FFFF00',
-                strokeOpacity: 0.5,
-                strokeWeight: 2,
-                fillColor: '#000000',
-                fillOpacity: 0.05
-    });
-    
-    areaBoundary_rhs = new google.maps.Polygon({
-        paths: latlngs,
-        strokeColor: '#FFFF00',
-        strokeOpacity: 0.5,
-        strokeWeight: 2,
-        fillColor: '#000000',
-        fillOpacity: 0.05
-    });
-    
-    areaBoundary_over_lhs.setMap(map_over_lhs);
-    areaBoundary_under_lhs.setMap(map_under_lhs);
-    areaBoundary_rhs.setMap(map_rhs);
-
-    areaBoundary_over_lhs.name = "boundary" ;
-    overlayMaps.push(areaBoundary_over_lhs);
-    
-    addLayer(areaBoundary_over_lhs.name, "{{area.name}} Border", "yellow",  50, "Boundary of Area {{area.name}}", layerslider_callback);
-    //addLayer("rhs_border", "{{area.name}} Border", "purple",  0, "Boundary of Area {{area.name}}" /*, layerslider_callback*/);
-      
-    /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
-     *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
-     */    
-    cellarray = {{celllist}}    //cellarray = jQuery.parseJSON({{celllist}});
-  
-    var jobid = -1;
-
-    
-    $('#close-dialog-new-cells').click(function(){
-        $('#dialog-new-cells').modalPopover('hide').style.display = 'none';;
-    }); 
-
-    $('#close-dialog-new-cells-open-accordion').click(function(){
-        $('#cell_panel_title').collapse('show');       //open  cell_panel_title
-        $('#dialog-new-cells').modalPopover('hide').style.display = 'none';;
-   }); 
-    
-    if(cellarray.length == 0) { // Then fetch the overlapping cells from server.
-        console.log("Init: Fetching Overlapping Cells for Area");
-        var url = area_url   + '/getcells';
-        
-        //$('#cell_panel_title').collapse('show');       //open  cell_panel_title to set height.
-        
-        $('#dialog-new-cells').modalPopover({
-            target: '#cell_panel_t', //container
-        });
-        $('#dialog-new-cells').modalPopover('show');
-        setTimeout(function() {
-            $('#dialog-new-cells').modalPopover('hide');
-        }, 20000);
-
-        
-        //console.log( "url: ", url);
-
-        prompt = "<h6><small>Calculating Cells</small></h6><img src='/static/img/ajax-loader.gif' class='ajax-loader'/>";
-        jobid = addJob(prompt, 'gray');
-       /*
-        bootbox.dialog({
-            message: new_cell_list_instructions_str,
-            title: "Next Steps",
-            closeButton: true,
-            timeOut : 2000,
-            buttons: {
-              success: {
-              label: "Continue ...",
-              className: "btn-success",
-              callback: function() {
-                  bootbox.hideAll();
-              }
-            }
-          }
-        })
-        
-        window.setTimeout(function(){
-            bootbox.hideAll();
-         }, 10000); // 10 seconds expressed in milliseconds
-         */
-        $.get(url).done(function(data) {
-                        
-            var getCellsResult = jQuery.parseJSON(data);
-            
-            if (getCellsResult.result == 'success'){
-                cellarray = getCellsResult.cell_list;
-                console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
-         
-                var plurals = (cellarray.length == 1)? ' cell covers': ' cells cover';
-                var plurals_mon = (getCellsResult.monitored_count == 1)? ' cell selected': ' cells selected';
-                updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area. " + getCellsResult.monitored_count + plurals_mon + '</p>', 'black');
-                drawLandsatCells(cellarray);
-            }            
-            else
-            {
-                updateJob(jobid,"<p class = 'small'>GetCells Failed:" + getCellsResult.reason + "</p>", 'red');
-                //TODO: Redirect to home?
-            }
-        }).error(function( jqxhr, textStatus, error ) {
-            var err = textStatus + ', ' + error; 
-            console.log( "GetCells Failed: " + err);
-            updateJob(jobid, "<p class = 'small'>GetCells Failed: " + err + "</p>",'red');
-        });
-    } //get cells     
-    else
-    {
-        //server passed an existing cellarray -  don't wait for ajax - just display it.
-        drawLandsatCells(cellarray);
-    }
-    
-    observations = {{obslist}};
-
-    for (i=0; i < observations.length; i++) {        
-        displayObsOverlay(observations[i], 'latest', 'rgb'); //LHS overlay(s)
-        displayObsOverlay(observations[i], 'prior', 'rgb'); //RHS overlays(s)        
-     }
- 
-    // View button will fetch Latest Overlay Image of selected (last clicked) cell on LHS.
-    $('#get_overlay_btn').click(function(){
-        requestAdHocOverlay();
-        
-    }); //get_overlay_btn.click
-
-    $('#make_report').click(function(){
-
-        drawingManager  = createDrawingManager(map_over_lhs)
-        
-        google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-                    //if (event.type == google.maps.drawing.OverlayType.CIRCLE) {
-                    //  var radius = event.overlay.getRadius();
-                    href = "{{ "user"|url(user.name) }}/journal/Observations for {{area.name}}/new/";
-                    window.location.href = href; //+ mapobj.id;
-             
-                });
-     });
-    
-    //Change the text in the drop-down button when a selection is changed.
-    $('#algorithm-visual').click(function(e){
-           $("#algorithm:first-child").text("RGB");
-           algorithm = 'rgb';
-           e.preventDefault();
-        });
-        $('#algorithm-ndvi').click(function(e){
-           $("#algorithm:first-child").text("NDVI");
-           algorithm = 'ndvi';
-           e.preventDefault();
-        });
-        $('#algorithm-change').click(function(e){
-           $("#algorithm:first-child").text("Change");
-           algorithm = 'change';
-           e.preventDefault();
-        });
-        
-        $('#latest').click(function(e){
-            $("#latest:first-child").text("Latest  ");
-            latest = 0;
-            e.preventDefault();
-        });
-        $('#latest-1').click(function(e){
-            $("#latest:first-child").text("Latest-1");
-            latest = 1;
-            e.preventDefault();
-        });
-        $('#latest-2').click(function(e){
-            $("#latest:first-child").text("Latest-2");
-            latest = 2;
-            e.preventDefault();
-        });
-        $('#latest-3').click(function(e){
-            $("#latest:first-child").text("Latest-3");
-            latest = 3;
-            e.preventDefault();
-        });
-        
-        $('#satellite').click(function(e){
-            $("#satellite:first-child").text("L8");
-            satellite = 'l8';
-            e.preventDefault();
-        });
-        $('#satellite-l7').click(function(e){
-            $("#satellite:first-child").text("L7");
-            satellite = 'l7';
-            e.preventDefault();
-        });
-        $('#satellite-both').click(function(e){
-            $("#satellite:first-child").text("Both");
-            satellite = 'l78';
-            e.preventDefault();
-        });
-        
-        $(window).resize(function () {
-                //<!--resize tip from //github.com/twitter/bootstrap/issues/2475 -->
-                var h = $(window).height(),
-                offsetTop = 30; // Calculate the top offset
-                $('#map-left-c').css('height', (h - offsetTop));
-                $('#map-left-latest').css('height', (h - offsetTop));
-                $('#map-left-prior').css('height', (h - offsetTop));
-                $('#map-right').css('height', (h - offsetTop));
-                $('#map-left-latest').width('100%');
-                $('#map-left-prior').width( $('#map-left-latest').width() );
-                //$('#map-left-prior').width($(window).width());
-                $('#dragger').css('height', (h - offsetTop));
-                
-                //get offset of rhs map cursor (and offset for half size of cursor)
-                lhs_offset_top = $('#map-left-c-prior').offset().top+10;
-                lhs_offset_left  = $('#map-left-c-prior').offset().left+1;
-                
-                //google.maps.event.trigger(mapStyled, 'resize');
-            }).resize();
-
-        $('#instructions').popover({ 
-            html : true, 
-            animation: true,
-            trigger: 'hover',
-            container: 'body',
-            title: 'Manage Area',  
-            placement: 'bottom',
-            content:  "The square white cells overlapping your area are the outlines of Landsat images<br/><br/>" + 
-            "Selected cells are highlighted with a bolder line.<br/><br/>" + 
-            "You can change which cells are monitored with the controls below.<br/><br/>" + 
-            "You can also change the default view and sharing settings for your area.<br/><br/>" 
-            });
-        
-        $('#save-view').popover({ 
-            html : true, 
-            animation: true,
-            trigger: 'hover',
-            container: 'body',
-            title: 'Save View',  
-            placement: 'bottom',
-            content: save_view_instructions
-            });
-        
-        $('#reset-view').popover({ 
-            html : true, 
-            animation: true,
-            trigger: 'hover',
-            container: 'body',
-            title: 'Reset View',  
-            placement: 'bottom',
-            content: reset_view_instructions
-            });
-        
-        
-        
-        $('#lock-map-rhs').click(function(e){
-            alert ("lock map - not implemented");
-            console.log("lock map");
-        });
-
-        $('#expand-map-rhs').click(function(e){
-           if(e.target.checked) {
-                $('#map-right-c').hide();
-                $('#map-left-c').removeClass('col-md-5');
-                $('#map-left-c').addClass('col-md-10');
-           }
-           else {
-                  $('#map-left-c').removeClass('col-md-10');
-                  $('#map-left-c').addClass('col-md-5');        
-                  $('#map-right-c').show();
-           }
-           google.maps.event.trigger(map_under_lhs,'resize');
-           // google.maps.event.trigger(map_rhs,'resize');
-        });
-        
-        $('#map-left-c-prior').width(initial_dragger); // must be same value as {dragger:left} to init correctl
-        $('#draghandle-c').width('12px').height('12px');
-        $('#draghandle').width('11px').height('11px');
-  
-        $('#dragger').draggable({
-            axis: 'x',
-            containment: 'parent',
-            drag: function(e, u) {
-              var left = u.position.left;
-              $('#map-left-c-prior').width(left);
-              $('#draghandle-c').width('12px').height('12px');
-              $('#draghandle').width('11px').height('11px');
-            }
-        });
-        
-        $("#map-left-c-prior").on({
-            mousemove: function(e){
-                x = e.pageX - lhs_offset_left;
-                y = e.pageY - lhs_offset_top;
-                $("#rhs_cursor").css({left: x, top: y})
-            }
-        });
-        
-        $("#map-left-c-latest").on({
-            mousemove: function(e){
-                x = e.pageX - lhs_offset_left;
-                y = e.pageY - lhs_offset_top;
-                $("#rhs_cursor").css({left: x, top: y});
-             }
-        })
-
-        $("#map-left-c").on({
-            mouseleave: function(){
-                $("#rhs_cursor").hide(); 
-                //console.log('hide');
-            },
-            
-            mouseenter: function(){
-                $("#rhs_cursor").show(); 
-                //console.log('show');
-            }
-        })
-    
-        $('#edit-cells-lock').click(function(e){
-            toggle_edit_cells_lock();
-        });
-        toggle_edit_cells_lock();  // call during init to draw div
-        
-        $('#delete_area_id').click(function(e) {
-            
-                bootbox.dialog({
-                      message: "<b>Warning!</b> Deleting this area cannot be undone.<br>Volunteers who follow this area will be notified.",
-                      title: "Delete Area <b>{{area.name}}</b> - Are You Sure?",
-                      buttons: {
-                        success: {
-                          label: "Cancel",
-                          className: "btn-info",
-                          callback: function() {
-                          }
-                        },
-                        danger: {
-                          label: "Delete",
-                          className: "btn-danger",
-                          callback: function() {
-                              console.log("Deleting area");
-                              window.location.href = "{{ area|area_url }}/delete" ;
-                          }
-                        }
-                      }
-                    });
-            }     
-        );//delete-are-you-sure handler
-
-     
-
-};//initialize
-
-    
-google.maps.event.addDomListener(window, 'load', initialize); 
-    
-</script>
+-->
 
 {% endblock %}
 

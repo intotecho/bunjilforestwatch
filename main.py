@@ -103,7 +103,12 @@ class BaseHandler(webapp2.RequestHandler):
         context['user'] = self.session.get('user')
         context['messages'] = self.get_messages()
         context['active'] = _template.partition('.')[0]
-        
+
+        if 'bunjilfw' in self.request.url:
+            self.add_message("warning", "Test Instance - Production is now at bunjilforestwatch.net")
+        if 'localhost' in self.request.url:
+            self.add_message("warning", "Local - Production instance at <a href='http://www.bunjilforestwatch.net'>www.bunjilforestwatch.net</a>")
+       
         for k in ['login_source']:
             if k in self.session:
                 context[k] = self.session[k]
@@ -157,6 +162,7 @@ class BaseHandler(webapp2.RequestHandler):
             'token': user.token,
             'role' : user.role
         }
+             
         self.session['journals'] = cache.get_journal_list(db.Key(self.session['user']['key']))
         self.session['areas_list']    = cache.get_areas_list(db.Key(self.session['user']['key'])) #TODO This list can be long and expensive.
         self.session['following_areas_list'] = cache.get_following_areas_list(self.session['user']['key']) # used for basehandler menu.
@@ -824,10 +830,6 @@ class NewAreaHandler(BaseHandler):
 class UpdateAreaViewHandler(BaseHandler):
     def post(self, area_name):
         current_user = users.get_current_user()
-        
-        
-        
-        print UpdateAreaViewHandler
         if  not current_user:
             abs_url  = urlparse(self.request.uri)
             original_url = abs_url.path
@@ -992,12 +994,18 @@ class DeleteAreaHandler(BaseHandler):
         if (area.owner.name != user.name) and (user.role != 'admin'):
             logging.error('Only the owner of an area or admin can delete an area %s %s', area.owner, user)
             self.add_message('danger', "Only the owner of an area or admin can delete an area. owner:'{0!s}' user:'{1!s}'".format(area.owner, user))
-  
-            self.redirect(webapp2.uri_for('view-area', area_name=area_name), {
-                'username': self.session['user']['name'],
+            
+            geojson_area = area.geojsonArea()
+ 
+            return self.redirect(webapp2.uri_for('view-area', area_name=area_name), {
+                'username': user.name,
+                'area_json' : geojson_area,
                 'area': area,
                 'show_navbar': True,
-                'celllist':json.dumps(cell_list),
+                'show_delete':false,
+                'is_owner': false,
+                'celllist':json.dumps(cell_list), # to be replaced by jsonarea
+                'area_followers': area_followers,
                 'obslist': json.dumps(observations)
             })
         
@@ -1209,15 +1217,18 @@ class ViewArea(BaseHandler):
                 
             if users.is_current_user_admin():
                 show_delete = True
-                
+            
+            geojson_area = area.geojsonArea()
+             
             self.render('view-area.html', {
                 'username': user.name,
+                'area_json' : geojson_area,
                 'area': area,
                 #'boundary_ft' : area.boundary_ft,
                 'show_navbar': True,
                 'show_delete':show_delete,
                 'is_owner': is_owner,
-                'celllist':json.dumps(cell_list),
+                'celllist':json.dumps(cell_list), # to be replaced by jsonarea
                 'area_followers': area_followers,
                 'obslist': json.dumps(observations)
             })
@@ -1534,14 +1545,18 @@ class ObservationTaskHandler(BaseHandler):
                     obslist.append(obs.Observation2Dictionary()) # includes a list of precomputed overlays
                 else:
                     logging.error("Missing Observation from cache")
-                    
+            
+            geojson_area = area.geojsonArea()
             self.populate_user_session(user)
             self.render('view-obstask.html', {
                 'username':  self.session['user']['name'],
+                'area_json' : geojson_area,
                 'area': area,
                 'owner': task_owner,
+                'show_delete':False,
                 'task': task,
                 'show_navbar': True,
+                #'area_followers': area_followers,
                 'obslist': json.dumps(obslist),
                 'celllist':json.dumps(cell_list)
             })
@@ -1788,6 +1803,7 @@ class ViewObservationTasksHandler(BaseHandler):
             logging.info('ViewObservationTasksHandler showing %d tasks for user %s', len(obstasks), user2view) 
         
         user = cache.get_user(self.session['user']['name']) #user from current session
+        
         
         self.render('view-obstasks.html', {
             'username': user,  #logged in user

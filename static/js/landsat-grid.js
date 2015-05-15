@@ -394,7 +394,7 @@ function cellSelected(landsat_cell)
 
   var cell = getCellArrrayCell(landsat_cell.path, landsat_cell.row, cellarray);
   var div_id = '#cell-panel-' + cell.index;
-  var httpget_url = "/selectcell/" + area_name+ "/" + jsonStringifySelectedCell(landsat_cell)
+  var httpget_url = "/selectcell/" + area_json['properties']['area_name'] + "/" + jsonStringifySelectedCell(landsat_cell)
   
   console.log( "cellSelected() %d %d %s %s %s", landsat_cell.path, landsat_cell.row, div_id, (edit_cells_mode == true)?"editing cells":"locked", httpget_url);
   

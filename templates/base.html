@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-
-<title>Bunjil Forest Watch</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Community based forest monitoring">
 <meta name="author" content="Chris Goodman">
 
+<title>Bunjil Forest Watch</title>
+<!-- 
 <link rel="alternate" type="application/atom+xml" title="bunjil forest watch" href="{{ "feeds"|url("blog") }}">
-
+ -->
+ 
 <link rel="stylesheet" href='//fonts.googleapis.com/css?family=Montserrat:400,700' type='text/css'>
 <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
 <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
@@ -25,7 +27,7 @@
 
 </head>
 
-<body>
+<body     background="/static/images/bfw_bg.jpg">
 	{% if show_navbar %}
 	<div class="container" >
 		<nav role="navigation" class="navbar navbar-default navbar-margin">
@@ -44,7 +46,7 @@
 					   <a href="{{ "main"|url }}">home</a>
 					</li>
 					<li {% if active== "blog" %} class="active"{% endif %}> 
-					   <a href="//bunjilforestwatch.wordpress.com/">blog</a>
+					   <a href="//blog.bunjilforestwatch.net/">blog</a>
 					</li> 
 					<li {% if active== "about" %} class="active"{% endif %}>
 					   <a href="{{ "about"|url }}">about</a>

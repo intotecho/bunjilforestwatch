@@ -14,6 +14,8 @@ import urllib
 import utils
 import webapp2
 import ee
+import geojson
+import string
 
 class DerefModel(db.Model):
 	def get_key(self, prop_name):
@@ -252,8 +254,67 @@ class AreaOfInterest(db.Model):
 		logging.debug(returnstr)
 			
 		return cell_list
-	
 
+	#geojsonCoordinates () returns boundary as a geojson dictionary
+	#After http://google-app-engine-samples.googlecode.com/svn-history/r4/trunk/geodatastore/jsonOutput
+	def geojsonArea(self):
+
+		coords = []
+		for c in self.coordinates:
+			p = {'lat': c.lat, 'lng': c.lon}
+			coords.append(p)
+		
+		center = []
+		center.append(geojson.Point({'lat': self.map_center.lat, 'lng': self.map_center.lon}))
+		
+		print self.map_center
+		print center
+		
+		geojson_obj = 	{ 
+			"type": "FeatureCollection",
+			"properties": {
+						"area_name" :self.name,
+						"shared" :self.shared_str,
+						"area_url" : self.url(),
+						#"created_by" : self.created_by.name,
+						#"owner" : self.owner.name,
+					    "area_description": {
+					           "description": self.description,
+					           "description_why": self.description_why,
+					           "description_who": self.description_who,
+					           "description_how": self.description_how,
+					           "wiki": self.wiki,
+					           "threats": self.threats
+					    },
+						"fusion_table": {
+		           			"ft_link": self.ft_link,
+		           		 	"ft_docid": self.ft_docid,
+		           		  	"boundary_fc": self.boundary_fc
+		    		     }
+			},
+		    "features": [
+			      { "type": "ViewPort",
+				        "geometry": center, 
+				        "properties": {
+				        	"name": "map_center", 
+				        	"map_zoom" :self.map_zoom
+				        }
+			      },
+			      { "type": "Feature",
+				        "geometry": {
+									   "type": "Polygon", 
+									   "coordinates" : coords,
+						 },
+				         "properties": {
+				           	"name": "boundary"
+			             }
+			  }
+	    	]
+		}
+		geojson_str = geojson.dumps(geojson_obj)
+		logging.debug("area geojson: %s",  geojson_str)
+		return geojson_str
+	
 	#CountMonitoredCells() returns a number of cells that are monitored.
 	def CountMonitoredCells(self):
 		#cell_list = []
