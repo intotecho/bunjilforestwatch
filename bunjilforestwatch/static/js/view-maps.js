@@ -10,12 +10,6 @@ var algorithm = 'rgb'; // ndvi
 var latest = 0;  //latest - 0
 var overlayMaps = [];
 
-var latlngs = [];
-var boundary_coords= "";
-
-
-
-
 
 var save_view_instructions = 
 	    "Save the current view.<br/>" +
@@ -71,7 +65,7 @@ function jsonStringifySelectedCell(landsat_cell)
 //modify area with new value of shared.
 function updateAreaShared(shared)
 {
-  var url = area_url + "/update/share/" + shared;
+  var url =  area_json['properties']['area_url'] + "/update/share/" + shared;
   var result;
   console.log( "updateAreaShared() url:%s", url);
 
@@ -90,7 +84,7 @@ function updateAreaShared(shared)
 $('#save-view').click(function(){
 	
 	var map = map_under_lhs;
-	var url = area_url  + '/update/view?lat=' + map.getCenter().lat().toFixed(5)+ '&lng=' + map.getCenter().lng().toFixed(5) + '&zoom=' + map.getZoom();
+	var url =  area_json['properties']['area_url'] + '/update/view?lat=' + map.getCenter().lat().toFixed(5)+ '&lng=' + map.getCenter().lng().toFixed(5) + '&zoom=' + map.getZoom();
 	console.log('save-view:', url);
 
 	var xhr = $.post(url).done(function(data) {
@@ -111,13 +105,6 @@ $('#reset-view').click(function(){
     map.setZoom(map_zoom);
     map.setCenter(map_center);
 });
-
-
-$('#reset-view').click(function(){
-    console.log('reset-view');
-});
-
-
 
 var monitored_cells_are= 
 	"<b>Monitored</b> cells are highlighted with a bolder outline. " + 

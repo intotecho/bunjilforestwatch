@@ -53,19 +53,19 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="accordion-group">
+                 <div class="accordion-group">
                     <div class="accordion-heading">
                         <a class="accordion-toggle" data-toggle="collapse" href="#boundary_panel"> Boundary Coordinates </a>
                     </div>
                     <div id="boundary_panel" class="accordion-body collapse">
-                        <div class="accordion-inner small">
-                            <!--  {% for j in area.coordinates %}
-                            <p class="divider">{{j}}</p>
-                            {% endfor %} -->
+                        <div id='boundary-coords-panel' class="accordion-inner small divider">
                             
                         </div>
                     </div>
                 </div>
+                 {% if show_delete %} 
+                 <div id='user-is-owner-div'><a  id="delete_area_id" class="btn btn-small btn-lightred map-panel-oops-button confirm" style='width:60%' data-toggle="tooltip" title="Delete Area (Can't be undone) ">Delete area <span class='red_cross'>&times;</span></a>
+                 </div>
+                 {% endif %}
             </div>
             <p/>

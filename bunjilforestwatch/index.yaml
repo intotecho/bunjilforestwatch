@@ -10,9 +10,21 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
+- kind: Activity
+  properties:
+  - name: user
+  - name: date
+    direction: desc
+
 - kind: ActivityIndex
   properties:
   - name: receivers
+  - name: date
+    direction: desc
+
+- kind: Entry
+  ancestor: yes
+  properties:
   - name: date
     direction: desc
 
