@@ -32,6 +32,10 @@ textarea {
  
 }
 
+.blog-iframe {
+	height: 400px;
+}
+
 .chewy-font {
   font-family: 'Chewy', cursive;
 }

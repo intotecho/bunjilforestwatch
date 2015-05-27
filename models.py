@@ -516,7 +516,7 @@ Based on journalr.org
 '''
 class Journal(db.Model):
 	ENTRIES_PER_PAGE = 5
-	MAX_JOURNALS = 10
+	MAX_JOURNALS = 30
 
 	journal_type= db.StringProperty(required=True, default="journal") #"journal", "observations", "reports" etc.
 	name = db.StringProperty(required=True)

@@ -674,7 +674,8 @@ class NewAreaHandler(BaseHandler):
         
             except:
                 return self.render('new-area.html', {
-                    'username': name
+                    'username': name,
+                    'latlng':  '8.2, 22.2',
                 })    
            
             pts = []

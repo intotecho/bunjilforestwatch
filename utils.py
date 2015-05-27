@@ -23,7 +23,7 @@ import jinja2
 import webapp2
 
 import cache
-import facebook
+#import facebook
 import filters
 import models
 import settings
@@ -44,9 +44,9 @@ import rst_directive
 import textile
 
 #env = jinja2.Environment(loader=jinja2.FileSystemLoader('templates'))
-env = jinja2.Environment(loader=jinja2.FileSystemLoader( 'templates'))
-env.filters.update(filters.filters)
-
+#env = jinja2.Environment(loader=jinja2.FileSystemLoader( 'templates'))
+#env.filters.update(filters.filters)
+env = settings.jinja_env
 #show all templates in router 
 #logging.debug(env.list_templates())
 

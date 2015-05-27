@@ -1,5 +1,5 @@
-var user_url    = $('#user_url').text();
-
+var user_url;
+var area_json_str;
 var lhs_offset_top =0;
 var lhs_offset_left =0;
 var border_latlngs = [];
@@ -8,15 +8,16 @@ google.maps.event.addDomListener(window, 'load', initialize);
 
 function initialize() {
 
-	var area_json_str = $('#area_json').text();
+	user_url    = $('#user_url').text();
+	area_json_str = $('#area_json').text();
 	if (area_json_str !== "") {
 		area_json = jQuery.parseJSON( area_json_str);
 	}
 	else
 	{
-		alert("missing area data");
-		return;
-	}	
+		//alert("missing area data");
+		//return;
+	}
 	var center_coords = area_json['features'][0]['geometry'][0]['coordinates'];  // init global.
     map_center = new google.maps.LatLng(parseInt(center_coords.lat), parseInt(center_coords.lng) );
 	map_zoom = area_json['features'][0]['properties']['map_zoom'];  // init global.
