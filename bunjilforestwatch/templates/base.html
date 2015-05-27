@@ -2,85 +2,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- <meta name="viewport" content="width=device-width, initial-scale=1">  -->
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" /> 
 <meta name="description" content="Community based forest monitoring">
 <meta name="author" content="Chris Goodman">
 
-<title>Bunjil Forest Watch</title>
-<!-- 
-<link rel="alternate" type="application/atom+xml" title="bunjil forest watch" href="{{ "feeds"|url("blog") }}">
- -->
- 
+<link rel=	"alternate" type="application/atom+xml" title="bunjil forest watch" href="{{ "feeds"|url("blog") }}">
+
 <link rel="stylesheet" href='//fonts.googleapis.com/css?family=Montserrat:400,700' type='text/css'>
 <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
 <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
-
+<link rel='stylesheet' type='text/css' href='/static/css/bootstrap-social.css'>
 <link rel="stylesheet" href="/static/css/wbpreview-theme.css"> <!-- Theme for the messages -->
-
+<link rel="stylesheet" href="/static/css/jquery.nouislider.css">
 <link rel="stylesheet" href="/static/css/site.css">
-<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>  <!-- v1.11.1 -->
-<script type="text/javascript" src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="/static/js/site.js"></script>
+{% include "includes/head_scripts.html" %}
+{% block head %}
 
-
-{% block head %} {% endblock %}
-
+ {% endblock %}
+{% block map_head %} {% endblock %}
 </head>
+<body>
 
-<body     background="/static/images/bfw_bg.jpg">
 	{% if show_navbar %}
 	<div class="container" >
 		<nav role="navigation" class="navbar navbar-default navbar-margin">
 			<!-- Brand and toggle get grouped for better mobile display -->
 			<div class="navbar-header">
 				<button type="button" data-target="#navbarCollapse" data-toggle="collapse" class="navbar-toggle">
-					<span class="sr-only">Toggle navigation</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span
-						class="icon-bar"></span>
+					<span class="sr-only">Toggle navigation</span>
 				</button>
-				<a href="#" class="navbar-brand">Bunjil</a>
+				<a href='{{ "main"|url }}' class="navbar-brand"><span class="glyphicon glyphicon-home"></span> Bunjil</a>
 			</div>
 			<!-- Collection of nav links and other content for toggling -->
 			<div id="navbarCollapse" class="collapse navbar-collapse">
 				<ul class="nav navbar-nav">
-					<li {% if active== "index" or active== "index-user" %} class="active" {% endif %}>
-					   <a href="{{ "main"|url }}">home</a>
-					</li>
-					<li {% if active== "blog" %} class="active"{% endif %}> 
-					   <a href="//blog.bunjilforestwatch.net/">blog</a>
-					</li> 
 					<li {% if active== "about" %} class="active"{% endif %}>
-					   <a href="{{ "about"|url }}">about</a>
+					   <a href="//blog.bunjilforestwatch.net/about"">about</a>
 					</li> 
 					{% if user %} 
-					<li class="dropdown{% if active  == " view-journal" or active== "entry" or active=="new-journal" %} active{% endif %}">
-						<a href="#" class="dropdown-toggle" data-toggle="dropdown">journals<b class="caret"></b></a>
-						<ul class="dropdown-menu">
-                            <li><a href="{{ "user"|url(user.name) }}/journals"><span class="glyphicon glyphicon-home"></span> my journals</a></li>
-                            <li {% if active== "new-journal" %} class="active"{% endif %}>
-                                 <a href="{{ "new-journal"|url }}"><span class="glyphicon glyphicon-plus"></span>  new journal</a>
-                            </li>
-                            <li class="divider"></li>
-
-							{% for j in session.journals %}
-							<li {% if active== "view-journal" and j.1== journal.name %} class="active"{% endif %}>
-							     <a href="{{ j.0 }}">
-							     {% if j.2 == "observations" %}
-							     <span class="glyphicon glyphicon-eye-open"></span> 
-							     {% else %}
-							     <span class="glyphicon glyphicon-book"></span> 
-							     {% endif %}
-							     {{ j.1 }}
-							     </a>
-							</li> 
-							{% endfor %}
-				    	</ul>
-					</li>
+					<!--  AREAS-->
 					<li class="dropdown{% if active  == " view-area" or active== "entry" or active=="new-area" %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">areas <b class="caret"></b></a>
                         <ul class="dropdown-menu">
                             {% for ar in session.areas_list %}
                                 <li {% if active== "view-area" and ar.1== area.name %} class="active"{% endif %}>
-						          <a href="{{ ar.0 }}"> <span class="glyphicon glyphicon-home"></span> {{ ar.1 }}</a>
+						          <a href="{{ ar.0 }}"> <span class="glyphicon glyphicon-map-marker"></span> {{ ar.1 }}</a>
                                 </li> 
                             {% endfor %}
                                 <li class="divider"></li> 
@@ -96,7 +63,7 @@
 							</li>
 						</ul>
 					</li>
-					
+					<!--  TASKS -->
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">tasks<b class="caret"></b></a>
                         <ul class="dropdown-menu">
@@ -108,8 +75,31 @@
                             </li>
                         </ul>
                     </li>
+                        <!--  REPORTS/JOURNALS -->
+                     <li class="dropdown{% if active  == " view-journal" or active== "entry" or active=="new-journal" %} active{% endif %}">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">journals<b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{{ "user"|url(user.name) }}/journals"><span class="glyphicon glyphicon-home"></span> my journals</a></li>
+                            <li {% if active== "new-journal" %} class="active"{% endif %}>
+                                 <a href="{{ "new-journal"|url }}"><span class="glyphicon glyphicon-plus"></span>  new journal</a>
+                            </li>
+                            <li class="divider"></li>
 
-			{% endif %} <!-- { % if user% } -->
+                            {% for j in session.journals %}
+                            <li {% if active== "view-journal" and j.1== journal.name %} class="active"{% endif %}>
+                                 <a href="{{ j.0 }}">
+                                 {% if j.2 == "observations" %}
+                                 <span class="glyphicon glyphicon-list-alt"></span> 
+                                 {% else %}
+                                 <span class="glyphicon glyphicon-book"></span> 
+                                 {% endif %}
+                                 {{ j.1 }}
+                                 </a>
+                            </li> 
+                            {% endfor %}
+                        </ul>
+                    </li>
+			{% endif %} <!-- if user  -->
     		</ul>
   			<ul class="nav navbar-nav navbar-right">
   			       {% if user %} 
@@ -155,14 +145,10 @@
 	{% endif %} 
 	{% if messages %}
 	<div class="container">
-		<div class="row">
-			<p></p>
-		</div>
 		{% for m in messages %}
-		<div class="row">
-			<div class="col-16-m">
-				<div class="alert alert-{{ m.1 }} fade in" data-dismiss="alert" data-alert="alert">
-					<a class="close" href="#">&times;</a> {{ m.0 }}
+		<div class="row ">
+			<div class="col-md-12 ">
+				<div class="alert alert-{{ m.1 }} fade in" data-dismiss="alert" data-alert="alert"><a class="close" href="#">&times;</a> {{ m.0 }}
 				</div>
 			</div>
 		</div>
@@ -172,30 +158,38 @@
 
 {% block content %}{% endblock %} 
 
-{% if google_analytics %}	
-<script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+{%block layer_template %}{% endblock layer_template  %}
 
-  ga('create', 'UA-44897494-1', 'bunjilfw.appspot.com');
-  ga('send', 'pageview');
-</script>
+{%block jobs_template %}{% endblock jobs_template  %}
+
+{% block footer_js%}
+   <!--  {% include "includes/project_scripts.html" %}  -->
   
-  <!-- Google Tag Manager -->
-  <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-PHBW8V"
-  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-PHBW8V');</script>
-  <!-- End Google Tag Manager -->
+   
+{% endblock footer_js %}
 
-
-	
-	{% endif %}
+ {% if google_analytics %}   
+         <script>
+           (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+           (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+           m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+           })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+         
+           ga('create', 'UA-44897494-1', 'appbfw.appspot.com');
+           ga('send', 'pageview');
+         </script>
+           
+           <!-- Google Tag Manager -->
+           <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-PHBW8V"
+           height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+           <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+           j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+           '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+           })(window,document,'script','dataLayer','GTM-PHBW8V');</script>
+           <!-- End Google Tag Manager -->
+ {% endif %}
+{% include "includes/project_scripts.html" %}
 </body>
 </html>
 

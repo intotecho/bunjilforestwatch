@@ -1,6 +1,6 @@
 *.pyc
 *.swp
-settings.py
+secrets.py
 secrets/
 secrets/settings.py
 app-journalr/
@@ -23,3 +23,5 @@ OpenSSL*
 crypt.py
 photothumb.db
 *.bak
+*.json
+/settings - Copy.py

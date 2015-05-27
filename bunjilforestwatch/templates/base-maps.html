@@ -1,8 +1,8 @@
-{% extends "base.html" %} 
-{% block head %}
-<!-- Example URL  //localhost:8001/obs/bunjilfw/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgMymCQw  -->
-<!-- //localhost:8001/obs/test2/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgLbNCAw -->
-<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+{%  extends "base.html" %} 
+        <!-- Example URL  //localhost:8001/obs/bunjilfw/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgMymCQw  -->
+        <!-- //localhost:8001/obs/test2/agxkZXZ-YnVuamlsZndyHAsSD09ic2VydmF0aW9uVGFzaxiAgICAgLbNCAw -->
+{% block head%}
+<title>Bunjil Forest Watch View Map</title>
 
 <style type="text/css">
 
@@ -72,7 +72,7 @@ body {
     font-size:10px;
     z-index:99;
     color:yellow;
-    overflow:display
+    overflow:display;
 }
 
 #rhs_cursor-c /* cursor or rhs map follows lhs cursor*/
@@ -81,18 +81,18 @@ body {
     width:0px;
 }
 </style>
-<link href="/static/css/jquery.nouislider.css" rel="stylesheet">
-{% block map_head %} {% endblock  map_head%} 
+
 {% endblock  head%} 
+
+{% block breadcrumbs %}{% endblock breadcrumbs %} 
+
 {% block content %}
-<div id='area_url'     class='django-template'>{{area|area_url }}</div>
+
 <div id='area_json'   class='django-template'>{{ area_json}}</div>
 <div id='celllist'         class='django-template'>{{ celllist }}</div>
 <div id='obslist'         class='django-template'>{{ obslist }}</div>
 <div id='user_name' class='django-template'>{{ user.name }}</div>
 <div id='user_url'       class='django-template'>{{ "user"|url(user.name) }}</div>
-
-{% block breadcrumbs %}{% endblock breadcrumbs %} 
 <div class="container-fluid">
     <div class="row">
         <div class="col-xs-2 lesspadding" style="margin: 0;">
@@ -337,8 +337,7 @@ body {
         </div>
     </div>
 </div>
-
-{% block map_content %}{% endblock %}
+{% endblock content %}
 
 {%block layer_template %}
 <!--TEMPLATE DIV  does not display till added by addLayer() call. See layerslider.js ?-->
@@ -357,7 +356,6 @@ body {
 {% endblock layer_template %}
 
 {%block jobs_template %}
-
 <!--TEMPLATE DIV  does not display till added by addLayer() call. -->
 <div class="row addjobdiv" id='JobTemplate' >
         <a id='tcross_id' class="close">&times;</a> 
@@ -365,33 +363,16 @@ body {
        <small>template message text to replace</small>
     </div>
 </div>
-<!--END TEMPLATE DIV  ?-->
-
- {%endblock jobs_template %}
-
-<script type="text/javascript"
-    src="//maps.googleapis.com/maps/api/js?key=AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I&sensor=false&v=3&libraries=geometry,visualization,drawing"> 
-</script>
 
 
-<script type="text/javascript" src="/static/js/draggable-object.js" defer></script>
-<script type="text/javascript" src="/static/js/yaml/YamlInline.js" defer></script>
-<script type="text/javascript" src="/static/js/yaml/YamlParser.js" defer></script>
-<script type="text/javascript" src="/static/js/yaml/Yaml.js" defer></script>
-<script type="text/javascript" src="/static/js/landsat-grid.js" defer></script>
-<script type="text/javascript" src="/static/js/overlay-mgr.js" defer></script>
-<script type="text/javascript" src="/static/js/polygon-outliner.js" defer></script>
-<script type="text/javascript" src="/static/js/drawing-tools.js" defer></script>
-<script type="text/javascript" src="/static/js/bootbox.min.js" defer></script>
-<script type="text/javascript" src="/static/js/bootstrap-modal-popover.js" defer></script>
-<script type="text/javascript" src="/static/js/jquery.nouislider.min.js" defer></script>
-<script type="text/javascript" src="/static/js/layerslider.js" defer></script>
-<script type="text/javascript" src="/static/js/view-maps.js" defer></script>
-<script type="text/javascript" src="/static/js/base-maps.js" defer></script>
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js" defer></script>
- <!--
+{%endblock jobs_template %}
 
--->
+{% block footer_js%}
 
-{% endblock %}
+
+{% include "includes/map_scripts.html" %}
+<script type="text/javascript" src="/static/js/base-maps.js" ></script>
+<script type="text/javascript" src="/static/js/view-maps.js" ></script>
+
+{% endblock footer_js %}
 
