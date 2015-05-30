@@ -1,8 +1,19 @@
-#palette https://kuler.adobe.com/jamaica-sanel-color-theme-2160027/
-import os
+#Bunjil Forest Watch setttings.py
 
+
+# Hosts/domain names that are valid for this site; required if DEBUG is False
+# See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'bunjilforestwatch.net']
+    
+# Local time zone for this installation. Choices can be found here:
+# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
+TIME_ZONE = 'Australia/Melbourne'
 
+# Language code for this installation. All choices can be found here:
+# http://www.i18nguy.com/unicode/language-identifiers.html
+LANGUAGE_CODE = 'en-us'
+
+SITE_ID = 1
 
 #os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
@@ -19,18 +30,18 @@ USE_TZ = True
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/var/www/example.com/media/"
-MEDIA_ROOT = ''
+MEDIA_ROOT = 'uploads/'  
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 # Examples: "http://example.com/media/", "http://media.example.com/"
-MEDIA_URL = ''
+MEDIA_URL = "/media/"  
 
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/var/www/example.com/static/"
-STATIC_ROOT = ''
+STATIC_ROOT = 'static/'  
 
 # URL prefix for static files.
 # Example: "http://example.com/static/", "http://static.example.com/"
@@ -51,6 +62,14 @@ STATICFILES_FINDERS = (
 #    'pipeline.finders.PipelineFinder',
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
+
+import os
+PROJECT_PATH = os.path.realpath(os.path.dirname(__file__))
+
+DEBUG = True
+TEMPLATE_DEBUG = DEBUG
+#MANAGERS = ADMINS
+
 '''
 #This has no effect without pipeline
 PIPELINE_JS = {
@@ -104,22 +123,6 @@ PIPELINE_CSS = {
     }
 }
 '''
-import jinja2
-#from jinja2 import Environment, PackageLoader
-#import pipeline
-
-try:
-    from secrets import *
-except ImportError, exp:
-    logging.error('no secerets.py')
-    pass
-
-PROJECT_PATH = os.path.realpath(os.path.dirname(__file__))
-
-
-DEBUG = True
-TEMPLATE_DEBUG = DEBUG
-MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
@@ -129,27 +132,9 @@ DATABASES = {
         'USER': '',
         'PASSWORD': '',
         'HOST': '',                      # Empty for localhost through domain sockets or '127.0.0.1' for localhost through TCP.
-        'PORT': '',                      # Set to empty string for default.
+        'PORT': ''                     # Set to empty string for default.
     }
 }
-
-# Hosts/domain names that are valid for this site; required if DEBUG is False
-# See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ['www.bunjilforestwatch.net']
-    
-# Local time zone for this installation. Choices can be found here:
-# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
-# although not all choices may be available on all operating systems.
-# In a Windows environment this must be set to your system time zone.
-TIME_ZONE = 'Australia/Melbourne'
-
-# Language code for this installation. All choices can be found here:
-# http://www.i18nguy.com/unicode/language-identifiers.html
-LANGUAGE_CODE = 'en-us'
-
-SITE_ID = 1
-
-
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
@@ -159,7 +144,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     
     # Uncomment the next line for simple clickjacking protection:
-    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
+     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
 ROOT_URLCONF = '{{ project_name }}.urls'
@@ -224,36 +209,55 @@ LOGGING = {
     }
 }
 
+
+
 #STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage' # According to Glen Robertson
 #STATICFILES_STORAGE = 'pipeline.storage.PipelineStorage' # According to Pipeline Read the docs.
-
 
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     'pipeline.finders.PipelineFinder'
 )
-#PIPELINE_ENABLE = True
-#PIPELINE_JS_COMPRESSOR = 'pipeline.compressors.closure.ClosureCompressor'
-#PIPELINE_CLOSURE_BINARY = 'C:\bunjilsrc\tools\minify\minify.bat'
-#PIPELINE_DISABLE_WRAPPER = False
-#PIPELINE_ENABLE_GAE_SUPPORT = True
 
-STATIC_ROOT = 'static/'  
-STATIC_URL = '/static/'  
-MEDIA_ROOT = 'uploads/'  
-MEDIA_URL = "/media/"  
-
-jinja_env = jinja2.Environment(
+import jinja2
+try:
+    from secrets import *
+except ImportError, exp:
+    logging.error('no secerets.py')
+    pass
+'''
+import jac
+try:
+    import jac
+    from jac import CompressorExtension
+    jinja_env = jinja2.Environment(
                                #extensions=['pipeline.templatetags.ext.PipelineExtension'], #latest pipeline 1.5
                                #extensions=['pipeline.jinja2.ext.PipelineExtension'],            #pipeline 1.3
+                               extensions=[CompressorExtension],
+                               loader=jinja2.FileSystemLoader( 'templates') 
+                               ) # Moved From utils.py
+    jinja_env .compressor_output_dir = './static/dist'
+    jinja_env .compressor_static_prefix = '/static'
+    jinja_env .compressor_source_dirs = './static_files'
+    print 'imported jac'
+
+except:
+    jinja_env = jinja2.Environment(
+                               loader=jinja2.FileSystemLoader( 'templates') 
+                               ) # Moved From utils.py
+    print 'failed to import jac' 
+
+
+'''
+jinja_env = jinja2.Environment(
                                loader=jinja2.FileSystemLoader( 'templates') 
                                ) # Moved From utils.py
 import filters
 jinja_env.filters.update(filters.filters)
 
 if os.getenv('SERVER_SOFTWARE', '').startswith('Google App Engine'):
-    # Running on production App Engine, so use a Google Cloud SQL database.
+    # Running on production App Engine
     pass
 
 elif os.getenv('SETTINGS_MODE') == 'prod':
@@ -262,12 +266,12 @@ elif os.getenv('SETTINGS_MODE') == 'prod':
     pass
 
 else:
-    # Running in development, so use a local MySQL database.
+    # Running in development.
     print "Local Dev"
     pass
 
 import warnings
 
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore",category=DeprecationWarning)
-    import md5, sha, webob
+#with warnings.catch_warnings(): # doesn't work
+#    warnings.filterwarnings("ignore",category=DeprecationWarning)
+#    import md5, sha, webob

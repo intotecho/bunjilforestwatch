@@ -18,5 +18,6 @@
 	</buildSpec>
 	<natures>
 		<nature>org.python.pydev.pythonNature</nature>
+		<nature>org.python.pydev.django.djangoNature</nature>
 	</natures>
 </projectDescription>
