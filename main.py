@@ -36,7 +36,7 @@ from apiclient.discovery import build
 from oauth2client.appengine import OAuth2Decorator
 
 import settings
-
+import secrets
 
 '''
 decorator = OAuth2Decorator(
@@ -103,19 +103,30 @@ class BaseHandler(webapp2.RequestHandler):
         context['user'] = self.session.get('user')
         context['messages'] = self.get_messages()
         context['active'] = _template.partition('.')[0]
-
-        if 'bunjilfw' in self.request.url:
-            self.add_message("warning", "Test Instance - Production is now at bunjilforestwatch.net")
+        
+        ga = ''
         if 'localhost' in self.request.url:
             self.add_message("warning", "Local - Production instance at <a href='http://www.bunjilforestwatch.net'>www.bunjilforestwatch.net</a>")
-       
+            ga = secrets.GOOGLE_ANALYTICS_DEV
+        
+        if 'bunjilfw' in self.request.url:
+            self.add_message("warning", "Test Instance - Production is now at bunjilforestwatch.net")
+            ga = secrets.GOOGLE_ANALYTICS_TEST
+        
+        if 'appbfw' in self.request.url:
+            self.add_message("info", "Production is now at bunjilforestwatch.net")
+            ga = secrets.GOOGLE_ANALYTICS_PROD
+        
+        if 'bunjilforestwatch' in self.request.url:
+            ga = secrets.GOOGLE_ANALYTICS_PROD
+            self.add_message("info", "Production")
+   
+        context['google_analytics'] = ga
+                   
         for k in ['login_source']:
             if k in self.session:
                 context[k] = self.session[k]
 
-        if settings.GOOGLE_ANALYTICS:
-            context['google_analytics'] = settings.GOOGLE_ANALYTICS
-       #context['show_navbar'] = True
 
         #logging.info('BaseHandler: render template %s with context <<%s>>,', _template, context)
         #logging.debug('BaseHandler: messages %s', context['messages'])
