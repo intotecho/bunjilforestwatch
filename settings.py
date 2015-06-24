@@ -137,6 +137,7 @@ DATABASES = {
 }
 
 MIDDLEWARE_CLASSES = (
+    'google.appengine.ext.ndb.django_middleware.NdbDjangoMiddleware'
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -267,7 +268,7 @@ elif os.getenv('SETTINGS_MODE') == 'prod':
 
 else:
     # Running in development.
-    print "Local Dev"
+    #print "Local Dev"
     pass
 
 import warnings

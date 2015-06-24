@@ -2,7 +2,7 @@
 {% block content %}
  	    {% for a in activities %}
 	           <div class="row">
-    		      <div class="col-xs-10">
+    		      <div class="col-md-12">
 			         <p>{% if a.img %}<img src="{{ a.img }}" alt="{{ a.user }}"> {% endif %}<a href="{{ "user"|url(a.user) }}">{{ a.user }}</a> {{ a.get_action()|safe }} {{ a.date|timesince }}</p>
 	       	      </div>
 	           </div>

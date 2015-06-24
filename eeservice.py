@@ -20,7 +20,9 @@ import sys
 import math
 from google.appengine.ext import db # is it required?
 import cache
-import models # only required for Observations model.
+from models import Observation # only required for Observations model.
+import models
+import ndb
 
 import os
 from os import environ
@@ -116,13 +118,14 @@ def checkForNewObservationInCell(area, cell, collection_name):
     for geopt in area.coordinates:
         poly.append([geopt.lon, geopt.lat]) 
     params = {'path':cell.path, 'row':cell.row}
+    #print 'area', area, ' params: ', params
     latest_image = getLatestLandsatImage(poly, collection_name, 0, params) # most recent image for this cell in the collection
     if latest_image is not None:
-        storedlastObs = cell.latestObservation(collection_name)             #FIXME - Need to use the cache here.
+        storedlastObs = cell.latestObservation(collection_name)
         if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
             
-            obs = models.Observation(parent=cell, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="latest")
-            db.put(obs)
+            obs = Observation(parent=cell.key, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="latest")
+            obs.put()
             if storedlastObs is None:
                 logging.debug('checkForNewObservationInCell FIRST observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
             else:
@@ -140,24 +143,19 @@ def checkForNewObservationInCell(area, cell, collection_name):
 '''
 getLatestLandsatImage(array of points, string as name of ee.imagecollection)
 
-returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
-Could also clip the image to the coordinates to reduce the size.
-return type is ee.Image(). Some attributes are appended to the object.
-    capture_date, is a string rep of the system_date.
+    returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
+    Could also clip the image to the coordinates to reduce the size.
+    return type is ee.Image(). Some non-ee attributes are appended to the object.
+        capture_date, is a string rep of the system_date.
 '''
 secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
 
 def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, params):
     #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
     cw_feat = ee.Geometry.Polygon(boundary_polygon)
-    feat = cw_feat.buffer(0, 1e-10)
+    feat = cw_feat.buffer(0, 1e-10) # buffer will force polygon to be CCW so search intersects with interior.
     #logging.info('feat %s', feat)
     boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-    
-    #boundary_feature_buffered = boundary_feature.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
-    #logging.debug('Temporarily disabled buffer to allow AOI points in clockwise order due to EEAPI bug')
-    #boundary_feature_buffered = boundary_feature 
-
     park_boundary = ee.FeatureCollection(boundary_feature)
     
     end_date   = datetime.datetime.today()
@@ -166,22 +164,21 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
     #logging.debug('getLatestLandsatImage() park boundary as FC %s ',park_boundary)
 
     image_collection = ee.ImageCollection(collection_name)
-    #print image_collection.getInfo()
-    
+
     if ('path' in params) and ('row' in params): 
 
         path = int(params['path'])
         row = int(params['row'])
-        logging.debug("filter Landsat by Path/Row and date %d/%d", path, row)
+        logging.debug("filter Landsat Collection by Path=%d Row=%d and date", path, row)
         #image_name =  collection_name[8:11] + "%03d%03d" %(path, row)
         resultingCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row)#) #latest image form this cell.
     else:
+        logging.debug("filter Landsat Collection by date and bounds only")
         resultingCollection = image_collection.filterDate(start_date, end_date).filterBounds(park_boundary) # latest image from any cells that overlaps the area. 
     
     sortedCollection = resultingCollection.sort('system:time_start', False )
-    
-    #logging.info('Collection description : %s', sortedCollection.getInfo())
-    #logging.debug("sortedCollection: %s", sortedCollection)
+    #print sortedCollection
+    #logging.debug('sortedCollection: %s', sortedCollection)
     scenes  = sortedCollection.getInfo()
     #logging.info('Scenes: %s', sortedCollection)
     
@@ -194,18 +191,12 @@ def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, param
         except IndexError:
             logging.error("No Scenes in Filtered Collection")
             logging.debug("scenes: ", scenes)
-            return 0
-
-    
+            return None
+ 
     iid = feature['id']   
-    #logging.info('getLatestLandsatImage found scene: %s', iid)
+    logging.info('getLatestLandsatImage found scene: %s', iid)
     latest_image = ee.Image(iid)
     props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
-    #test = latest_image.getInfo()['bands']
-
-    #crs = latest_image.getInfo()['bands'][0]['crs']
-    #path    = props['WRS_PATH']
-    #row     = props['STARTING_ROW']
     system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")
 
@@ -322,16 +313,10 @@ def cloudScore (img):
     #return score.min(rescale(ndsi, 'img', [0.8, 0.6]))
     return score.min(rescale(ndsi, 'img', [0.8, 0.6]))
 
-#cloud_invert_lambda = lambda img :  (img.addBands(ee.Image(1).subtract(cloudScore(img.select(LC8_BANDS, STD_NAMES))).select([0], ['cloudscore'])))
-
 def cloud_invert(img):
     score1 = cloudScore(img.select(LC8_BANDS, STD_NAMES))
     score = ee.Image(1).subtract(score1).select([0], ['cloudscore'])
     return img.addBands(score)
-
-def test(a):
-    print ("algorithm")
-    #print a
     
 def simpleCloudScoreOverlay():
 
@@ -341,7 +326,6 @@ def simpleCloudScoreOverlay():
     
     cloudfree =  collection.qualityMosaic('cloudscore') #extract latest pixel
     
-    #vizParams = {'bands': ['B4', 'B3', 'B2'], 'max': 0.4, 'gamma': 1.6}
     vizParams = {'bands': 'B4,B3,B2', 'max': 0.4, 'gamma': 1.6}
     
     display(mymap)
@@ -536,7 +520,7 @@ def getVisualMapId(image, red, green, blue):
   
     min = str(pcdict['red_p5']) + ', '  + str(pcdict['green_p5'])  + ', ' + str(pcdict['blue_p5'])
     max = str(pcdict['red_p95']) + ', ' + str(pcdict['green_p95']) + ', ' + str(pcdict['blue_p95'])
-    logging.debug('Percentile  5%% %s 95%% %s', min, max)
+    logging.debug('Percentiles  5%% [%s] 95%% [%s]', min, max)
     
     # Define visualization parameters, based on the image statistics.
     mapparams = {    'bands':  'red, green, blue', 
@@ -595,8 +579,8 @@ def getOverlayPath(image, prefix, red, green, blue):
     p05 = getPercentile(image, 5, crs)
     p95 = getPercentile(image, 95, crs)
     # Print out the image ststistics.
-    print('Percentile  5%: ', p05)
-    print('Percentile 95%: ', p95)
+    #print('Percentile  5%: ', p05)
+    #print('Percentile 95%: ', p95)
 
     bands1 = [     {u'id': red},
                    {u'id': green},
@@ -789,7 +773,7 @@ def getLandsatCells(area):
         r = int(image_info['properties']['WRS_ROW'])
         cell_name=str(p*1000+r)
         #if not cell_name in cellnames:
-        if not any(c.key().name() == cell_name for c in cellList):
+        if not any(c.key.string_id() == cell_name for c in cellList):
             try:
                 image_id= image_info['properties']['system:index']
                 image = ee.Image(image_id)
@@ -802,7 +786,8 @@ def getLandsatCells(area):
             overlap = overlap_area/park_area 
            
             #cellnames.append(cell_name)
-            cell = models.LandsatCell(parent=area.key(), key_name=cell_name, aoi=area.key(), path=p, row=r, monitored=False , overlap=overlap, image_id=image_id)
+            #cell = models.LandsatCell(parent=area.key(), key_name=cell_name, aoi=area.key(), path=p, row=r, monitored=False , overlap=overlap, image_id=image_id)
+            cell = models.LandsatCell(parent=area.key, id=cell_name, aoi=area.key, path=p, row=r, monitored=False , overlap=overlap, image_id=image_id)
             cellList.append(cell)
             
         else:
@@ -842,13 +827,13 @@ def getLandsatCells(area):
             new_overlap_area = 0 
 
         logging.debug("Cell {0:s} overlaps {1:.1f}% of your park's area, {2:.1f}% uniquely. {3:s}. Remaining area {4:.1f}% ".format( \
-                   cell.key().name(), (cell.overlap*100), (new_overlap*100), ('Monitored' if cell.monitored else 'Unmonitored'), (remaining_area/park_area*100)) )
+                   cell.key.string_id(), (cell.overlap*100), (new_overlap*100), ('Monitored' if cell.monitored else 'Unmonitored'), (remaining_area/park_area*100)) )
     
     #Store the cells and the area's cellList.
     def txn_saveCellList(cellList, area):
         for cell in cellList:
             cell.put()
-            area.cells.append(cell.key()) 
+            area.cells.append(cell.key) 
         area.put()
         return cellList
 

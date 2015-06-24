@@ -6,9 +6,8 @@
 <mapEntry key="MY_PRIVATE_KEY_FILE" value="251ba32eacf1e172dadd64eda0cbbe359e64c9df-privatekey2.pem"/>
 <mapEntry key="MY_SERVICE_ACCOUNT" value="486762466976@developer.gserviceaccount.com"/>
 </mapAttribute>
-<stringAttribute key="org.eclipse.debug.ui.ATTR_CONSOLE_ENCODING" value="US-ASCII"/>
+<stringAttribute key="org.eclipse.debug.ui.ATTR_CONSOLE_ENCODING" value="ISO-8859-1"/>
 <listAttribute key="org.eclipse.debug.ui.favoriteGroups">
-<listEntry value="org.eclipse.debug.ui.launchGroup.debug"/>
 <listEntry value="org.eclipse.debug.ui.launchGroup.run"/>
 </listAttribute>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="${GOOGLE_APP_ENGINE}/dev_appserver.py"/>

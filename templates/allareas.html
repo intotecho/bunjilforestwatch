@@ -4,9 +4,9 @@
          <div class="accordion" id="accordion-areas">
                 <div class="accordion-group">
                     <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#a_{{j.key()}}">{{ j }}</a>
+                        <a class="accordion-toggle" data-toggle="collapse" href="#o_{{  j.key.urlsafe() }}">{{ j }}</a>
                     </div>
-                    <div id="a_{{ j.key() }}" class="accordion-body collapse ">
+                    <div id="o_{{  j.key.urlsafe()  }}" class="accordion-body collapse ">
                         <div class="accordion-inner">
                             <div class="container-fluid">
                                 <div class="row">

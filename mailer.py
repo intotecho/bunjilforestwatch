@@ -29,7 +29,12 @@ def new_image_email(task, hosturl):
         logging.error(returnstr)
         return False
 
-    user = task.assigned_owner
+    user_key = task.assigned_owner
+    if user_key is None:
+        returnstr = "new_image_email: no user key assigned to send"
+        logging.error(returnstr)
+        return returnstr
+    user=user_key.get()
     if user is None:
         returnstr = "new_image_email: no user assigned to send"
         logging.error(returnstr)
@@ -42,7 +47,7 @@ def new_image_email(task, hosturl):
         return returnstr
     
     ok = task.observations[0]
-    obs = cache.get_by_key(ok)
+    obs = ok.get() #cache.get_by_key(ok)
     if obs is None:
         returnstr = "new_image_email: task has no observations"
         logging.error(returnstr)
@@ -55,8 +60,8 @@ def new_image_email(task, hosturl):
     
     date_str = captured_date.strftime("%Y-%m-%d @ %H:%M")
     
-    task_url = hosturl + "/obs/" + user.name + "/" + str(task.key())
-    print task_url
+    task_url = task.taskurl() #hosturl + "/obs/" + user.name + "/" + str(task.key())
+    #print task_url
     
     if len(task.observations) == 1:
         subject = "A new image {0!s} is ready for your inspection".format(obs.image_id)
@@ -65,6 +70,7 @@ def new_image_email(task, hosturl):
 
     try: 
         message = mail.EmailMessage(sender=thesender, subject=subject)
+        
         if user is not None and user.email is not None:
             message.to = user.email
         else:
@@ -73,7 +79,7 @@ def new_image_email(task, hosturl):
         message.body = """
 Dear  {0!s},
 
-NOTE: THIS IS JUST A TEST EMAIL. NO ACTION REQUIRED !!!
+BUNJIL PROTOTYPE TASK NOTIFICATION !!!
 
 A new image was taken on {1!s} of an area you follow: {3!s}.
  
@@ -88,7 +94,7 @@ You are receiving this email because you have registered as a Bunjil Forest Watc
 To stop receiving emails you can unfollow the area or send an email to {5!s} with "UNSUBSCRIBE" in the subject.
 From  Bunjil Forest Watch 
 {4!s}
-""".format(user.name, captured_date, task_url, task.aoi.name.encode('utf-8'), hosturl, thesender,completion_date )
+""".format(user.name, captured_date, task_url, task.aoi.string_id().encode('utf-8'), hosturl, thesender,completion_date )
 
         message.html = """
 Dear  <b>{0!s}:</b><br><b>
@@ -105,7 +111,7 @@ You are receiving this email because you have registered as a Bunjil Forest Watc
 To stop receiving emails you can unfollow the area or send an email to {5!s} with "UNSUBSCRIBE" in the subject.<br>
 <a href="mailto:{5!s}u'?'subject=UNSUBSCRIBE" target="_top"></a><br>
 <br>From <b><i><a href="{4!s}">Bunjil Forest Watch</a></b></i><br>
-""".format(user.name, captured_date, task_url, task.aoi.name.encode('utf-8'), hosturl, thesender,completion_date )
+""".format(user.name, captured_date, task_url, task.aoi.string_id().encode('utf-8'), hosturl, thesender,completion_date )
 
         message.send()
         

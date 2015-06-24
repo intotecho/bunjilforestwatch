@@ -17,7 +17,7 @@
 		  <form class="form" role='form' id="form" method="POST" action="{{ "entry-save"|url }}">
             <input type="hidden" name="journal_name" value="{{ journal_name }}">
             <input type="hidden" name="username" value="{{ username }}">
-            <input type="hidden" name="entry_id" value="{{ entry.key().id() }}">
+            <input type="hidden" name="entry_id" value="{{ entry.key.integer_id() }}">
         
 			  <div class="form-group">
 			  
@@ -39,7 +39,7 @@
                   <label class="control-label" for="text">Your Report</label>
                   <div class="controls">
                       <textarea class="form-control" rows=8 type="text" id="text" name="text">{{ content.text|default('', True) }}</textarea>
-                      <span class="help-block">Describe the disturbance or changes your can see.</span>
+                      <span class="help-block">Describe the disturbance or changes you can see.</span>
                   </div>
               </div>
               <div class="form-group col-xs-3">
@@ -105,7 +105,7 @@
 
 	{{ render|safe }}
 
-<!--  	<script src="/static/js/jquery.form.js"></script>-->
+<script src="/static/js/vendor/jquery.form.min.js"></script>
 
 	<script type="text/javascript">
 	$(function() {
@@ -187,7 +187,7 @@
 
 								if(data == '')
 								{
-									label.html('error during upload');
+									label.html('error during upload - no data');
 									$this.parent().html('<span class="uneditable-input">' + name + '</span>');
 								}
 								else if(xhr.responseXML.title.substr(0, 3) == "413")
