@@ -68,10 +68,27 @@ $(document).ready(function() {
 
 //fadeout and slide up bootstrap .alert messages after 10 seconds.
 window.setTimeout(function() {
-    $(".alert").fadeTo(1000, 0).slideUp(1000, function(){
+    $(".alert-info").fadeTo(1500, 0).slideUp(1500, function(){
         $(this).remove(); 
     });
-}, 10000);
+}, 15000);
 
+window.setTimeout(function() {
+    $(".alert-warning").fadeTo(1500, 0).slideUp(1500, function(){
+        $(this).remove(); 
+    });
+}, 15000);
 
+window.setTimeout(function() {
+    $(".alert-error").fadeTo(1500, 0).slideUp(1500, function(){
+        $(this).remove(); 
+    });
+}, 15000);
+
+window.setTimeout(function() {
+    $(".alert-success").fadeTo(1500, 0).slideUp(1500, function(){
+        $(this).remove(); 
+    });
+}, 15000);
+// don't fade out alert-error or alert-danger.
 

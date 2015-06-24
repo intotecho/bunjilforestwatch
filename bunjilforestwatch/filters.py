@@ -27,7 +27,7 @@ def url(ob, name=''):
 	elif ob == 'follow':
 		return webapp2.uri_for(ob, username=name)
 	elif ob in ['new-entry', 'download-journal']:
-		return webapp2.uri_for(ob, username=name.key().parent().name(), journal_name=name.name)
+		return webapp2.uri_for(ob, username=name.key.parent().string_id(), journal_name=name.key.string_id())
 	elif ob == 'blog-entry':
 		return webapp2.uri_for(ob, entry=name)
 	elif ob == 'edit-blog':
@@ -45,6 +45,7 @@ def user_area_url(username, area_name):
 
 def area_tasks_url(area):
 	return webapp2.uri_for('view-obstasks', area_name=area.name)
+
 def area_url(area, page=1):
 	return area.url(page)
 

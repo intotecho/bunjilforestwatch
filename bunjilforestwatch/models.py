@@ -6,7 +6,7 @@ import re
 
 from google.appengine.api import images
 from google.appengine.ext import blobstore
-from google.appengine.ext import db
+from google.appengine.ext import ndb
 
 import cache
 import hashlib
@@ -17,11 +17,12 @@ import ee
 import geojson
 import string
 
-class DerefModel(db.Model):
+class DerefModel(ndb.Model):
 	def get_key(self, prop_name):
-		return getattr(self.__class__, prop_name).get_value_for_datastore(self)
+		#return getattr(self.__class__, prop_name).get_value_for_datastore(self)
+		return getattr(self.__class__, prop_name)
 
-class DerefExpando(db.Expando):
+class DerefExpando(ndb.Expando):
 	def get_key(self, prop_name):
 		return getattr(self.__class__, prop_name).get_value_for_datastore(self)
 
@@ -40,45 +41,45 @@ USER_SOCIAL_NETWORKS = [
 ]
 
 #registered User builds on google user.
-class User(db.Model):
-	name = db.StringProperty(required=True, indexed=False)
-	lname = db.StringProperty(indexed=True)
-	email = db.EmailProperty()
-	register_date = db.DateTimeProperty(auto_now_add=True)
-	last_active = db.DateTimeProperty(auto_now=True)
-	token = db.StringProperty(required=True, indexed=False)
+class User(ndb.Model):
+	name = ndb.StringProperty(required=True, indexed=False)
+	lname = ndb.StringProperty(indexed=True)
+	email = ndb.StringProperty()
+	register_date = ndb.DateTimeProperty(auto_now_add=True)
+	last_active = ndb.DateTimeProperty(auto_now=True)
+	token = ndb.StringProperty(required=True, indexed=False)
 	
-	areas_observing = db.ListProperty(db.Key, default=None) # list of areas we watch - Not Used
-	areas_subscribing = db.ListProperty(db.Key, default=None) # list of areas I subscribe to  (only for local)
+	areas_observing = ndb.KeyProperty(repeated=True, default=None) # list of areas we watch - Not Used
+	areas_subscribing = ndb.KeyProperty(repeated=True,  default=None) # list of areas I subscribe to  (only for local)
 	
-	role = db.StringProperty(required=True, choices=set(["volunteer", "local", "admin", "viewer"]))	#roles for bunjil app users. 
+	role = ndb.StringProperty(required=True, choices=set(["volunteer", "local", "admin", "viewer"]))	#roles for bunjil app users. 
 
 # not required
-	first_entry = db.DateTimeProperty()
-	last_entry = db.DateTimeProperty()
-	entry_days = db.IntegerProperty(required=True, default=0)
+	first_entry =ndb.DateTimeProperty()
+	last_entry = ndb.DateTimeProperty()
+	entry_days = ndb.IntegerProperty(required=True, default=0)
 
 	# these two properties will be deleted
-	source = db.StringProperty(choices=USER_SOURCE_CHOICES)
-	uid = db.StringProperty()
+	source = ndb.StringProperty(choices=USER_SOURCE_CHOICES)
+	uid = ndb.StringProperty()
 
-	google_id = db.StringProperty()
-	allowed_data = db.IntegerProperty(required=True, default=50 * 2 ** 20) # 50 MB default
-	used_data = db.IntegerProperty(required=True, default=0)
+	google_id = ndb.StringProperty()
+	allowed_data = ndb.IntegerProperty(required=True, default=50 * 2 ** 20) # 50 MB default
+	used_data = ndb.IntegerProperty(required=True, default=0)
 
-	areas_count = db.IntegerProperty(required=True, default=0)
+	areas_count = ndb.IntegerProperty(required=True, default=0)
 
-	journal_count = db.IntegerProperty(required=True, default=0)
-	entry_count = db.IntegerProperty(required=True, default=0)
+	journal_count = ndb.IntegerProperty(required=True, default=0)
+	entry_count = ndb.IntegerProperty(required=True, default=0)
 
-	facebook_id = db.StringProperty()
-	facebook_enable = db.BooleanProperty(indexed=False)
-	facebook_token = db.StringProperty(indexed=False)
+	facebook_id = ndb.StringProperty()
+	facebook_enable = ndb.BooleanProperty(indexed=False)
+	facebook_token = ndb.StringProperty(indexed=False)
 
-	twitter_id = db.StringProperty()
-	twitter_enable = db.BooleanProperty(indexed=False)
-	twitter_key = db.StringProperty(indexed=False)
-	twitter_secret = db.StringProperty(indexed=False)
+	twitter_id = ndb.StringProperty()
+	twitter_enable = ndb.BooleanProperty(indexed=False)
+	twitter_key = ndb.StringProperty(indexed=False)
+	twitter_secret = ndb.StringProperty(indexed=False)
 
 
 # not really required
@@ -129,20 +130,20 @@ class User(db.Model):
 		return [i for i in USER_SOURCE_CHOICES if getattr(self, '%s_id' %i)]
 
 
-class UserFollowersIndex(db.Model): #An User has a list of followers (other users) in an UserFollowersIndex(key=user)
-	users = db.StringListProperty()
+class UserFollowersIndex(ndb.Model): #An User has a list of followers (other users) in an UserFollowersIndex(key=user)
+	users = ndb.StringProperty(repeated=True)
 
-class UserFollowingIndex(db.Model):#A User has a list of other users they follow in a UserFollowingAreasIndex(key=area)
-	users = db.StringListProperty()
+class UserFollowingIndex(ndb.Model):#A User has a list of other users they follow in a UserFollowingAreasIndex(key=area)
+	users = ndb.StringProperty(repeated=True)
 
-class AreaFollowersIndex(db.Model):  #An Area has a list of users in an AreaFollowersIndex(key=user)
-	users = db.StringListProperty()
+class AreaFollowersIndex(ndb.Model):  #An Area has a list of users in an AreaFollowersIndex(key=user)
+	users = ndb.StringProperty(repeated=True)
 	
 
-class UserFollowingAreasIndex(db.Model): #A User has a list of areas in a UserFollowingAreasIndex(key=area)
-	areas = db.StringListProperty()
+class UserFollowingAreasIndex(ndb.Model): #A User has a list of areas in a UserFollowingAreasIndex(key=area)
+	areas = ndb.StringProperty(repeated=True)
 
-class AreaOfInterest(db.Model):
+class AreaOfInterest(ndb.Model):
 
 	ENTRIES_PER_PAGE = 5 #TODO Move to Settings.py
 	MAX_AREAS = 24       #TODO Move to Settings.py
@@ -152,47 +153,48 @@ class AreaOfInterest(db.Model):
 	PRIVATE_AOI = 2 		#Only the owner can see or follow this area.share
 	
 	# Area Description
-	name = db.StringProperty(required=True)
-	#description = db.StringProperty(multiline=True) # text might be better type as it is not indexed.
-	description = db.TextProperty()        # What? text type is longer but is not indexed.
-	description_why = db.TextProperty() # text type is longer but is not indexed.
-	description_who = db.TextProperty() # #who looks after this area?
-	description_how = db.TextProperty() # text type is longer but is not indexed.
+	name = ndb.StringProperty(required=True)
+	#description = ndb.StringProperty(multiline=True) # text might be better type as it is not indexed.
+	description = ndb.TextProperty()        # What? text type is longer but is not indexed.
+	description_why = ndb.TextProperty() # text type is longer but is not indexed.
+	description_who = ndb.TextProperty() # #who looks after this area?
+	description_how = ndb.TextProperty() # text type is longer but is not indexed.
 	
-	threats = db.TextProperty()      # text type is longer but is not indexed.
+	threats = ndb.TextProperty()      # text type is longer but is not indexed.
 	
-	type = db.StringProperty()
-	wiki = db.LinkProperty() # link to s a story about this area.
-	#tags = db.ListProperty(unicode,default=None) #TODO: Caused a unicode not callable error. Not yet implemented.
+	type = ndb.StringProperty()
+	wiki = ndb.StringProperty() # beware max url 500 - like to a story about this area.
+	#tags = ndb.StringProperty(repeated=True, unicode, default=None) #TODO: Caused a unicode not callable error. Not yet implemented.
 	
-	cells = db.ListProperty(db.Key, default=None) # list of Landsat cells overlapping this area - calculated on new.
-	entry_count = db.IntegerProperty(required=True, default=0) # reports related to this area - not used yet
+	cells = ndb.KeyProperty(repeated=True, default=None) # list of Landsat cells overlapping this area - calculated on new.
+	entry_count = ndb.IntegerProperty(required=True, default=0) # reports related to this area - not used yet
 	
-	max_latlon = db.GeoPtProperty(required=True, default=None)
-	min_latlon = db.GeoPtProperty(required=True, default=None)
+	max_latlon = ndb.GeoPtProperty(required=True, default=None)
+	min_latlon = ndb.GeoPtProperty(required=True, default=None)
 
 	#Geometry of area boundary
-	ft_link =  db.LinkProperty() #link to a fusion table.
-	ft_docid =  db.StringProperty() #link to a fusion table.
+	ft_link =  ndb.StringProperty() #link to a fusion table.
+	ft_docid =  ndb.StringProperty() #link to a fusion table.
 
-	coordinates = db.ListProperty(db.GeoPt, default=None) # When a fusion table is provided in boundary_ft, this is the convexHull of the FT.
-	boundary_fc = db.TextProperty(required = True) # ee.FeatureCollection or park boundary in JSON string format
-	bound = db.ListProperty(float, default=None)
+	coordinates = ndb.GeoPtProperty(repeated=True, default=None) # When a fusion table is provided in boundary_ft, this is the convexHull of the FT.
+	boundary_fc = ndb.TextProperty(required = True) # ee.FeatureCollection or park boundary in JSON string format
+	bound = ndb.FloatProperty(repeated=True, default=None)
 	
 	# Parameters for viewing Area
-	map_center = db.GeoPtProperty(required=True, default=None)
-	map_zoom    = db.IntegerProperty(required=True, default=1)
+	map_center = ndb.GeoPtProperty(required=True, default=None)
+	map_zoom    = ndb.IntegerProperty(required=True, default=1)
 	
 	#User (subscriber) who created AOI 
-	created_by = db.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)  #set automatically when created. never changes.
-	owner = db.ReferenceProperty(User) #key to subscriber that created area.   # set by caller. could be reassigned.
-	share = db.IntegerProperty(required=True, default=PUBLIC_AOI) #set to hide area. see @properties below
+	created_by = ndb.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)  #set automatically when created. never changes.
+	#owner = ndb.ReferenceProperty(User) #key to subscriber that created area.   # set by caller. could be reassigned.
+	owner = ndb.KeyProperty(kind=User) #key to subscriber that created area.   # set by caller. could be reassigned.
+	share = ndb.IntegerProperty(required=True, default=PUBLIC_AOI) #set to hide area. see @properties below
 	
-	followers_count = db.IntegerProperty(required=True, default=0) # count user following this area.
+	followers_count = ndb.IntegerProperty(required=True, default=0) # count user following this area.
 	
 	#timestamps
-	created_date = db.DateTimeProperty(auto_now_add=True)
-	last_modified = db.DateTimeProperty(auto_now=True)
+	created_date = ndb.DateTimeProperty(auto_now_add=True)
+	last_modified = ndb.DateTimeProperty(auto_now=True)
 	
 	def __unicode__(self):
 		return unicode(self.name)
@@ -205,10 +207,10 @@ class AreaOfInterest(db.Model):
 
 	def url(self, page=1):
 		if page > 1:
-			#return webapp2.uri_for('view-area', username=self.key().parent().name(), area_name= self.name, page=page)
+			#return webapp2.uri_for('view-area', username=self.key.parent().name(), area_name= self.name, page=page)
 			return webapp2.uri_for('view-area',  area_name= self.name, page=page)
 		else:
-			#return webapp2.uri_for('view-area', username=self.key().parent().name(),  area_name= self.name)
+			#return webapp2.uri_for('view-area', username=self.key.parent().name(),  area_name= self.name)
 			return webapp2.uri_for('view-area', area_name= self.name)
 
 	@property
@@ -341,24 +343,19 @@ Note that multiple LandsatCell objects for the same Landsat Cell(p,r) can be cre
 
 The normal name for a Cell is a Swath.                
 '''
-class LandsatCell(db.Model):
+class LandsatCell(ndb.Model):
 	#constants - not changed once created. Created when AOI is created. 
-	path = db.IntegerProperty(required=True, default=0)     # Landsat Path
-	row  = db.IntegerProperty(required=True, default=0)     # Landsat Row
-	aoi = db.ReferenceProperty(AreaOfInterest) #key to area that includes this cell
+	path = ndb.IntegerProperty(required=True, default=0)     # Landsat Path
+	row  = ndb.IntegerProperty(required=True, default=0)     # Landsat Row
+	aoi = ndb.KeyProperty(kind=AreaOfInterest) #key to area that includes this cell
 	
-	#center = db.GeoPtProperty(required=False, default=None) # Geographic Center of Cell - not set or used.
-	#bound = db.ListProperty(float, default=None)            # Geographic Boundary of Cell- not set or used
+	#center = ndb.GeoPtProperty(required=False, default=None) # Geographic Center of Cell - not set or used.
+	#bound = ndb.ListProperty(float, default=None)            # Geographic Boundary of Cell- not set or used
 	
-	overlap = db.FloatProperty(required = False) #What proportion of this cell overlaps the AOI (>0, <=1). 
-	image_id = db.StringProperty(required =False) # An ID of a Landsat image for this cell (may not be latest)
+	overlap = ndb.FloatProperty(required = False) #What proportion of this cell overlaps the AOI (>0, <=1). 
+	image_id = ndb.StringProperty(required =False) # An ID of a Landsat image for this cell (may not be latest)
 	
-	monitored = db.BooleanProperty(required = True, default = False) # Set if cell is monitored for new data (i.e selected in view-area)
-
-	#L8_latest   = db.ReferenceProperty(Observation, default=None)
-	#L8_previous = db.ReferenceProperty(Observation, default=None)
-	#L7_latest   = db.ReferenceProperty(Observation, default=None)
-	#L7_previous = db.ReferenceProperty(Observation, default=None)
+	monitored = ndb.BooleanProperty(required = True, default = False) # Set if cell is monitored for new data (i.e selected in view-area)
 
 	'''
 	Cell2Dictionary()converts a cell object into a dictionary of the path,row, monitored 
@@ -372,15 +369,19 @@ class LandsatCell(db.Model):
 		if self.monitored:
 			celldict['monitored'] = "true"
 		q = self.latestObservation('LANDSAT/LC8_L1T_TOA')
-		if q is not None:
+		#print 'latestObservation ', q
+		if q is not None: #and len(q) <> 0:
 			celldict['LC8_latest_capture']	= q.captured.strftime("%Y-%m-%d @ %H:%M")
 		return celldict
 	
-	def latestObservation(self, collectionName="L8"): # query for latest observation from given imageColleciton.
-		#return db.GqlQuery("SELECT * FROM Observation WHERE ((landsatCell = self )AND (collection = collectionName)) ORDER_BY captured ASC LIMIT 1")
-		q = Observation.all().ancestor(self).filter('image_collection =', collectionName).order('-captured')
-		return q.get()
-
+	def latestObservation(self, collectionName="L8"): # query for latest observation from given imageCollection.
+		#return ndb.GqlQuery("SELECT * FROM Observation WHERE ((landsatCell = self )AND (collection = collectionName)) ORDER_BY captured ASC LIMIT 1")
+		#q = Observation.all().ancestor(self).filter('image_collection =', collectionName).order('-captured')
+		q = Observation.query(Observation.image_collection == collectionName, ancestor = self.key).order(-Observation.captured).fetch(1)
+		if q is not None and len(q) <> 0:
+			return q[0]
+		else:
+			return None
 
 
 '''
@@ -391,22 +392,20 @@ The image is based on an Observatioin Asset.
 Note that the Overlay is an asset in the earth engine that has a limited expiry date.
 If the tiles returned are 404 then it is necessary to recreate the overlay.
 '''
-class Overlay(db.Model):
-	map_id    = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
-	token	  = db.StringProperty(required=False, default=None) 	# RGB Map Overlay Token might have expired.
-	algorithm = db.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
-	overlay_role      = db.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
-	 
-	#observation = db.ReferenceProperty(db.Model) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
-
+class Overlay(ndb.Model):
+	map_id    = ndb.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
+	token	  = ndb.StringProperty(required=False, default=None) 	# RGB Map Overlay Token might have expired.
+	algorithm = ndb.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
+	overlay_role      = ndb.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
+	
 	def Overlay2Dictionary(self):		
 		obsdict = {
-			"map_id":self.map_id, 
-			"token":self.token, 
-			"algorithm":self.algorithm,
+			"map_id"        :self.map_id, 
+			"token"          :self.token, 
+			"algorithm"     :self.algorithm,
 			"overlay_role":self.overlay_role, 
-			"parent" : str(self.parent_key()),
-			"key": str(self.key())
+			"parent"         : str(self.key.parent()),
+			"key"             : self.key.id()
 		}
 		return obsdict
 
@@ -422,29 +421,38 @@ In which case, app will need to regenerate the observation.
 Some Observations have no image_id as they are composites of many images.
 '''
 
-class Observation(db.Model):
+class Observation(ndb.Model):
+	image_collection = ndb.StringProperty(required=False)			#identifies the ImageCollection name, not an EE object.
+	image_id  = ndb.StringProperty(required=False)           		# LANDSAT Image ID of Image - key to query EE.
+	captured  = ndb.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
+	obs_role  = ndb.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
+	overlays  = ndb.KeyProperty(repeated=True, default=None) # list of keys to overlays (visualisations of this observation asset) 
+	#landsatCell = ndb.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
 	
-
-	image_collection = db.StringProperty(required=False)			#identifies the ImageCollection name, not an EE object.
-	image_id  = db.StringProperty(required=False)           		# LANDSAT Image ID of Image - key to query EE.
-	captured  = db.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
-	obs_role  = db.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
-	overlays  = db.ListProperty(db.Key, default=None) # list of keys to overlays (visualisations of this observation asset) 
-	#landsatCell = db.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
-
+	@staticmethod # make it static so ndb recognises the kind='Observation'
+	def get_from_encoded_key(encoded_key):
+		obskey = ndb.Key(urlsafe=encoded_key)
+		if not obskey:
+			logging.error('Observtion:get_from_encoded_key() -  no observation key in url') 
+			return None	
+		obs =obskey.get()
+		if not obs:
+			logging.error('Observtion:get_from_encoded_key() -  no observation key in url') 
+			return None
+		return obs
+	
 	def Observation2Dictionary(self):		
-			
 		obsdict = {
 			"image_collection":self.image_collection, 
-			"image_id":self.image_id, 	
-			"captured": self.captured.strftime("%Y-%m-%d @ %H:%M"), 
-			"obs_role":self.obs_role, 	# ex 'latest'
-			"key": str(self.key()),		
-			"overlays": []
+			"image_id" : self.image_id, 	
+			"captured" : self.captured.strftime("%Y-%m-%d @ %H:%M"), 
+			"obs_role" : self.obs_role, 	# ex 'latest'
+			"encoded_key"   : self.key.urlsafe(),
+            "overlays"  : []
 		}
-		
+		#obsdict['encoded_key'] = self.key.urlsafe()
 		for ovl_key in self.overlays:
-			overlay = cache.get_by_key(ovl_key)
+			overlay = ovl_key.get()
 			if overlay is not None:
 				obsdict['overlays'].append(overlay.Overlay2Dictionary())
 		return obsdict
@@ -452,30 +460,31 @@ class Observation(db.Model):
 '''
 class Task is an observation task, based on a landsat image in an AOI. The task includes a user who is responsible for completing the task.
 Each task has a unique ID.
-'''    
-class ObservationTask(db.Model):
+'''
+
+class ObservationTask(ndb.Model):
 	OBSTASKS_PER_PAGE = 5
 	# Observation
-	name = db.StringProperty()
-	aoi = db.ReferenceProperty(AreaOfInterest) #key to area that includes this cell
+	name = ndb.StringProperty()
+	aoi = ndb.KeyProperty(kind=AreaOfInterest) #key to area that includes this cell
 	
 	#privacy and sharing
-	share = db.IntegerProperty(required=True, default=AreaOfInterest.PUBLIC_AOI) #set to hide area. see @properties below
-	aoi_owner = db.ReferenceProperty(User, collection_name='aoi_owner') #owner of the aoi- not the volunteer assigned to task. Allows quicker filtering of private areas..
+	share = ndb.IntegerProperty(required=True, default=AreaOfInterest.PUBLIC_AOI) #set to hide area. see @properties below
+	aoi_owner = ndb.KeyProperty(kind=User) #,collection_name='aoi_owner') #owner of the aoi- not the volunteer assigned to task. Allows quicker filtering of private areas..
 
-	observations = db.ListProperty(db.Key) #key to observations related to this task. E.g if two images are in the same path and published at same time.
+	observations = ndb.KeyProperty(repeated=True) #key to observations related to this task. E.g if two images are in the same path and published at same time.
 
 	#people - 	Expected to be a user  who is one of the area's followers. volunteering to follow the AOI
-	assigned_owner = db.ReferenceProperty(User, collection_name='assigned_owner') # user who is currently assigned the the task
-	#original_owner = db.ReferenceProperty(User, collection_name='original_user') # user originally assigned the the task - 
+	assigned_owner = ndb.KeyProperty(kind=User) #, collection_name='assigned_owner') # user who is currently assigned the the task
+	#original_owner = ndb.KeyProperty(kind=User) #, collection_name='original_user') # user originally assigned the the task - 
 	
 	#timestamps
-	created_date = db.DateTimeProperty(auto_now_add=True)
-	last_modified = db.DateTimeProperty(auto_now=True)
+	created_date = ndb.DateTimeProperty(auto_now_add=True)
+	last_modified = ndb.DateTimeProperty(auto_now=True)
 	
 	#workflow
-	status = db.StringProperty() #Task's workflow
-	priority = db.IntegerProperty() #Task's priority - zero is highest priority. Other followers may be given same task but at a lower priority.
+	status = ndb.StringProperty() #Task's workflow
+	priority = ndb.IntegerProperty() #Task's priority - zero is highest priority. Other followers may be given same task but at a lower priority.
 	
 	#TODO: add list of references to reports
 	#TODO: add an Activity record.
@@ -488,17 +497,18 @@ class ObservationTask(db.Model):
 
 
 	def taskurl(self):
-			return webapp2.uri_for('view-obstask',  username=self.assigned_owner.name, task_name= self.key())
-			#taskurl = "/obs/" + user.name + "/" + str(new_task.key())
-			#linestr += u'<a href=' + taskurl + ' target="_blank">' + taskurl.encode('utf-8') + '</a>'
+			username=self.assigned_owner.string_id()
+			task_id= self.key.id()
+			print 'taskurl: ', username, ' task id: ', task_id
+			return webapp2.uri_for('view-obstask', task_id=task_id)
 
 	
 	def listurl(self, page=1, username=None): #show a list of recent tasks
 		#logging.debug("listurl %s ", username )
 		if page > 1:
-			return webapp2.uri_for('view-obstasks',  username = username, user2view= self.assigned_owner.name, task_name= self.key(), page=page)
+			return webapp2.uri_for('view-obstasks',  username = username, user2view= self.assigned_owner.name, task_name= self.key.id(), page=page)
 		else:
-			return webapp2.uri_for('view-obstasks', username = username, user2view= self.assigned_owner.name,  task_name= self.key())
+			return webapp2.uri_for('view-obstasks', username = username, user2view= self.assigned_owner.name,  task_name= self.key.id())
 			
 	def shared_str(self):
 		if self.share == AreaOfInterest.PUBLIC_AOI:
@@ -514,28 +524,28 @@ class ObservationTask(db.Model):
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
 Based on journalr.org 
 '''
-class Journal(db.Model):
+class Journal(ndb.Model):
 	ENTRIES_PER_PAGE = 5
-	MAX_JOURNALS = 30
+	MAX_JOURNALS = 100
 
-	journal_type= db.StringProperty(required=True, default="journal") #"journal", "observations", "reports" etc.
-	name = db.StringProperty(required=True)
-	created_date = db.DateTimeProperty(auto_now_add=True)
-	last_entry = db.DateTimeProperty()
-	first_entry = db.DateTimeProperty()
-	last_modified = db.DateTimeProperty(auto_now=True)
-	entry_count = db.IntegerProperty(required=True, default=0)
-	entry_days = db.IntegerProperty(required=True, default=0)
+	journal_type= ndb.StringProperty(required=True, default="journal") #"journal", "observations", "reports" etc.
+	#name = ndb.StringProperty(required=True) # with ndb can use id now
+	created_date = ndb.DateTimeProperty(auto_now_add=True)
+	last_entry = ndb.DateTimeProperty()
+	first_entry = ndb.DateTimeProperty()
+	last_modified = ndb.DateTimeProperty(auto_now=True)
+	entry_count = ndb.IntegerProperty(required=True, default=0)
+	entry_days = ndb.IntegerProperty(required=True, default=0)
 
-	chars = db.IntegerProperty(required=True, default=0)
-	words = db.IntegerProperty(required=True, default=0)
-	sentences = db.IntegerProperty(required=True, default=0)
+	chars = ndb.IntegerProperty(required=True, default=0)
+	words = ndb.IntegerProperty(required=True, default=0)
+	sentences = ndb.IntegerProperty(required=True, default=0)
 
 	# all frequencies are per week
-	freq_entries = db.FloatProperty(required=True, default=0.)
-	freq_chars = db.FloatProperty(required=True, default=0.)
-	freq_words = db.FloatProperty(required=True, default=0.)
-	freq_sentences = db.FloatProperty(required=True, default=0.)
+	freq_entries = ndb.FloatProperty(required=True, default=0.)
+	freq_chars = ndb.FloatProperty(required=True, default=0.)
+	freq_words = ndb.FloatProperty(required=True, default=0.)
+	freq_sentences = ndb.FloatProperty(required=True, default=0.)
 
 	def count(self):
 		if self.entry_count:
@@ -553,7 +563,7 @@ class Journal(db.Model):
 			self.freq_sentences = 0.
 
 	def __unicode__(self):
-		return unicode(self.name)
+		return unicode(self.key.string_id)
 
 	@property
 	def pages(self):
@@ -563,10 +573,17 @@ class Journal(db.Model):
 
 	def url(self, page=1):
 		if page > 1:
-			return webapp2.uri_for('view-journal', username=self.key().parent().name(), journal_name=self.name, page=page)
+			return webapp2.uri_for('view-journal', username=self.key.parent().string_id(), journal_name=self.key.string_id(), page=page)
 		else:
-			return webapp2.uri_for('view-journal', username=self.key().parent().name(), journal_name=self.name)
-
+			return webapp2.uri_for('view-journal', username=self.key.parent().string_id(), journal_name=self.key.string_id())
+	
+	@staticmethod
+	def get_journal(username, journal_name):
+		user_key = ndb.Key('User', username)
+		journal_key = ndb.Key('Journal', journal_name, parent=user_key)
+		#print 'journal_key', journal_key
+		return journal_key.get()		
+		
 RENDER_TYPE_HTML = 'HTML'
 RENDER_TYPE_MARKDOWN = 'markdown'
 RENDER_TYPE_RST = 'reStructured Text'
@@ -580,29 +597,33 @@ CONTENT_TYPE_CHOICES = [
 	RENDER_TYPE_TEXTILE,
 ]
 
-class EntryContent(db.Model):
-	subject = db.StringProperty()
-	tags = db.StringListProperty()
-	text = db.TextProperty()
-	rendered = db.TextProperty(default='')
-	markup = db.StringProperty(required=True, indexed=False, choices=CONTENT_TYPE_CHOICES, default=RENDER_TYPE_TEXT)
-	images = db.StringListProperty()
+class EntryContent(ndb.Model):
+	subject = ndb.StringProperty()
+	tags = ndb.StringProperty(repeated=True)
+	text = ndb.TextProperty()
+	rendered = ndb.TextProperty(default='')
+	markup = ndb.StringProperty(required=True, indexed=False, choices=CONTENT_TYPE_CHOICES, default=RENDER_TYPE_TEXT)
+	images = ndb.StringProperty(repeated=True)
 
+	@staticmethod
+	def get_entrycontent_key(journal):
+		entry_id = Entry.allocate_ids(1)[0] # return next available entry_id inside parents space. [0] is start, [1] is end.
+		return ndb.Key('EntryContent', entry_id, parent=journal.key)
 
-class Entry(db.Model):
-	date = db.DateTimeProperty(auto_now_add=True)
-	created = db.DateTimeProperty(required=True, auto_now_add=True)
-	last_edited = db.DateTimeProperty(required=True, auto_now=True)
+class Entry(ndb.Model):
+	date = ndb.DateTimeProperty(auto_now_add=True)
+	created = ndb.DateTimeProperty(required=True, auto_now_add=True)
+	last_edited = ndb.DateTimeProperty(required=True, auto_now=True)
 
-	content = db.IntegerProperty(required=True) # key id of EntryContent
-	blobs = db.StringListProperty()
+	content = ndb.IntegerProperty(required=True) # key id of EntryContent
+	blobs = ndb.StringProperty(repeated=True)
 
-	chars = db.IntegerProperty(required=True, default=0)
-	words = db.IntegerProperty(required=True, default=0)
-	sentences = db.IntegerProperty(required=True, default=0)
+	chars = ndb.IntegerProperty(required=True, default=0)
+	words = ndb.IntegerProperty(required=True, default=0)
+	sentences = ndb.IntegerProperty(required=True, default=0)
 
-	dropbox_rev = db.StringProperty(indexed=False)
-	google_docs_id = db.StringProperty(indexed=False)
+	dropbox_rev = ndb.StringProperty(indexed=False)
+	google_docs_id = ndb.StringProperty(indexed=False)
 
 	WORD_RE = re.compile("[A-Za-z0-9']+")
 	SENTENCE_RE = re.compile("[.!?]+")
@@ -616,13 +637,53 @@ class Entry(db.Model):
 
 	@property
 	def content_key(self):
-		return db.Key.from_path('EntryContent', long(self.content), parent=self.key())
+		return ndb.Key('EntryContent', long(self.content), parent=self.key)
 
 	@property
 	def blob_keys(self):
-		return [db.Key.from_path('Blob', long(i), parent=self.key()) for i in self.blobs]
+		return [ndb.Key.from_path('Blob', long(i), parent=self.key) for i in self.blobs]
 
+	@staticmethod
+	def get_entry_key(journal, entry_id = None):
+		if entry_id ==  None:
+			entry_id = Entry.allocate_ids(1)[0] # return next available entry_id inside parents space. [0] is start, [1] is end.
+		return ndb.Key('Entry', long(entry_id), parent=journal.key)
 
+	@staticmethod
+	def get_entry(username, journal_name, entry_id, entry_key=None):
+		journal = cache.get_journal(username, journal_name)
+		if not journal:
+			logging.error('Entry.get_entry(): Error no journal %s for user %s',  journal_name, username )
+			return None, None, None
+		if not entry_key:
+			logging.error('Entry.get_entry(): Error no entry_id %d, for user %s, journal %s', entry_id, username, journal_name )
+			entry_key = Entry.get_entry_key(journal, entry_id)  #get_entry_key(username, journal_name, entry_id)
+		if not entry_key:
+			return None, None, None
+		entry = entry_key.get()
+
+		if entry:
+			content=EntryContent.get_by_id(long(entry.content), parent = journal.key)
+			if not content :
+				logging.error('Entry.get_entry(): Error. No content')
+			if entry.blobs:
+				blobs = ndb.get_multi(entry.blob_keys)
+			else:
+				blobs = []
+			return entry, content, blobs
+		else:
+			return None, None, None
+	
+
+	@staticmethod
+	def get_entries(journal, latestFirst=True):
+		q= Entry.query(ancestor = journal.key)
+		if latestFirst:
+			entries= q.order(-Entry.date)
+		else:
+			entries = q.order(Entry.date)
+		return entries.fetch(2)
+	
 ACTIVITY_NEW_JOURNAL = 1
 ACTIVITY_NEW_ENTRY = 2
 ACTIVITY_FOLLOWING = 3
@@ -659,19 +720,20 @@ ACTIVITY_ACTION = {
 }
 
 class Activity(DerefModel):
-	RESULTS = 25
+	RESULTS = 50
 
-	user = db.StringProperty(required=True)
-	img = db.StringProperty(indexed=False)
-	date = db.DateTimeProperty(auto_now_add=True)
-	action = db.IntegerProperty(required=True, choices=ACTIVITY_CHOICES)
-	object = db.ReferenceProperty()
+	user = ndb.StringProperty(required=True)
+	img = ndb.StringProperty(indexed=False)
+	date = ndb.DateTimeProperty(auto_now_add=True)
+	action = ndb.IntegerProperty(required=True, choices=ACTIVITY_CHOICES)
+	object = ndb.KeyProperty()
 
 	def get_action(self):
 		r = ACTIVITY_ACTION[self.action]
 
 		if self.action == ACTIVITY_FOLLOWING:
-			name = self.get_key('object').name()
+			#name = self.get_key('object').name()
+			name = self.get_key('object')
 			r += ' <a href="%s">%s</a>' %(webapp2.uri_for('user', username=name), name)
 
 		return r
@@ -679,18 +741,19 @@ class Activity(DerefModel):
 	@staticmethod
 	def create(user, action, object):
 		a = Activity(user=user.name, img=user.gravatar('30'), action=action, object=object)
-		ar = db.put_async(a)
+		ar = a.put()
 
 		#receivers = cache.get_followers(user.name)
 		#receivers.append(user.name)
-		ar.get_result()
+		#a.get_result() 
+		
 		#ai = ActivityIndex(parent=a, receivers=receivers)
-		ai = ActivityIndex(parent=a)
+		ai = ActivityIndex(parent=ar)
 		ai.put()
 
-class ActivityIndex(db.Model):
-	receivers = db.StringListProperty()
-	date = db.DateTimeProperty(auto_now_add=True)
+class ActivityIndex(ndb.Model):
+	receivers = ndb.StringProperty(repeated=True)
+	date = ndb.DateTimeProperty(auto_now_add=True)
 
 BLOB_TYPE_IMAGE = 1
 BLOB_TYPE_PDF = 2
@@ -700,14 +763,15 @@ BLOB_TYPE_CHOICES = [
 	BLOB_TYPE_PDF,
 ]
 
+
 class Blob(DerefExpando):
 	MAXSIZE = 4 * 2 ** 20 # 4MB
 
-	blob = blobstore.BlobReferenceProperty(required=True)
-	type = db.IntegerProperty(required=True, choices=BLOB_TYPE_CHOICES)
-	name = db.StringProperty(indexed=False)
-	size = db.IntegerProperty()
-	url = db.StringProperty(indexed=False)
+	blob = ndb.BlobKeyProperty(required=True)
+	type = ndb.IntegerProperty(required=True, choices=BLOB_TYPE_CHOICES)
+	name = ndb.StringProperty(indexed=False)
+	size = ndb.IntegerProperty()
+	url = ndb.StringProperty(indexed=False)
 
 	def get_url(self, size=None, name=None):		
 		if self.type == BLOB_TYPE_IMAGE:
@@ -730,6 +794,38 @@ class Blob(DerefExpando):
 
 			return webapp2.uri_for('blob', **kwargs)
 
+	@staticmethod
+	def get_blob_key(entry, blob_id = None):
+		if blob_id ==  None:
+			blob_id = Blob.allocate_ids(1)[0] # return next available entry_id inside parents space. [0] is start, [1] is end.
+		return ndb.Key('Blob', long(blob_id), parent=entry.key)
+
+	@staticmethod
+	def get_blob(username, journal_name, entry_id, entry_key=None):
+		journal = cache.get_journal(username, journal_name)
+		if not entry_key:
+			entry_key = Entry.get_entry_key(journal, entry_id)  #get_entry_key(username, journal_name, entry_id)
+		entry = entry_key.get()
+
+		if entry:
+			content=EntryContent.get_by_id(long(entry.content), parent = journal.key)
+			if not content :
+				logging.error('Entry.get_entry(): Error. No content')
+			if entry.blobs:
+				blobs = ndb.get_multi(entry.blob_keys)
+			else:
+				blobs = []
+			return entry, content, blobs
+		else:
+			return None        
+	
+		#handmade_key = ndb.Key('Blob', 1, parent=entry_key)
+		#blob_id = ndb.allocate_ids(handmade_key, 1)[0]
+		#blob_key = ndb.Key.from_path('Blob', blob_id, parent=entry_key)
+		blob_key  = Blob.get_blob_key(entry)
+		new_blob = Blob(key=blob_key, blob=blob, type=blob_type, name=blob.filename, size=blob.size)
+
+
 RENDER_TYPE_CHOICES = [
 	RENDER_TYPE_HTML,
 	RENDER_TYPE_MARKDOWN,
@@ -738,25 +834,27 @@ RENDER_TYPE_CHOICES = [
 	RENDER_TYPE_TEXTILE,
 ]
 
-class BlogEntry(db.Model):
+
+
+class BlogEntry(ndb.Model):
 	ENTRIES_PER_PAGE = 10
 
-	date = db.DateTimeProperty(required=True, auto_now_add=True)
-	draft = db.BooleanProperty(required=True, default=True)
-	markup = db.StringProperty(required=True, indexed=False, choices=RENDER_TYPE_CHOICES, default=RENDER_TYPE_MARKDOWN)
-	title = db.StringProperty(required=True, indexed=False, default='Title')
-	text = db.TextProperty(default='')
-	rendered = db.TextProperty(default='')
-	user = db.StringProperty(required=True)
-	avatar = db.StringProperty()
-	slug = db.StringProperty(indexed=False)
+	date = ndb.DateTimeProperty(required=True, auto_now_add=True)
+	draft = ndb.BooleanProperty(required=True, default=True)
+	markup = ndb.StringProperty(required=True, indexed=False, choices=RENDER_TYPE_CHOICES, default=RENDER_TYPE_MARKDOWN)
+	title = ndb.StringProperty(required=True, indexed=False, default='Title')
+	text = ndb.TextProperty(default='')
+	rendered = ndb.TextProperty(default='')
+	user = ndb.StringProperty(required=True)
+	avatar = ndb.StringProperty()
+	slug = ndb.StringProperty(indexed=False)
 
 	@property
 	def url(self):
 		if not self.slug:
-			self.slug = str(self.key().id())
+			self.slug = str(self.key.urlsafe())
 
 		return webapp2.uri_for('blog-entry', entry=self.slug)
 
-class Config(db.Expando):
+class Config(ndb.Expando):
 	pass

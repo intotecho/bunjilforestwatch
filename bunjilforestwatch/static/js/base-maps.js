@@ -141,7 +141,7 @@ function initialize() {
     boundary_coords_str = '<p class="divider small">'
     var coords_arr   =  area_json['features'][1]['geometry']['coordinates'];  // init global.
 
-    console.log(coords_arr);
+    //console.log(coords_arr);
     
     for (j=0; j < coords_arr.length; j++)
     {

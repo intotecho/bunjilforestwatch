@@ -1,10 +1,23 @@
 /** For Bootstrap and Google Maps Info window styles problem - 
 Fix from http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden 
 TODO: Should test to see if this is still required**/
+
 img[src*="gstatic.com/"],img[src*="googleapis.com/"] {
     max-width: none;!important
 }
 
+
+/* bootstrap customisaitons - must be loaded after bootstrap.min.css to override*/
+.alert {
+  padding: 2px 35px 2px 14px;  /* tighten up the message window */
+  margin-bottom: 6px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  background-color: #fcf8e3;
+  border: 1px solid #fbeed5;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+}
 
 textarea {
 	height: 200px;

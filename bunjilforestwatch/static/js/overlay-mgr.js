@@ -51,19 +51,24 @@ function fetchOverlay(overlayname, tooltip, prompt, httpget_url) {
 	  var jobid = addJob(prompt, 'green');
       
       $.get(httpget_url).done(function(data) {
-	       var ovl = jQuery.parseJSON(data);
-	       if (ovl) {
-		       if (ovl.result == 'error') {
-	    	   		updateJob(jobid, "<p class = 'small'>" + ovl.reason +"</p><br>", 'red');
-		    	   }
-		       else {
-		    	   displayOverlay(ovl, overlayname, tooltip);
-		    	   removeJob(jobid);
+    	  if(data === "") {
+    	   		updateJob(jobid, "<p class = 'small'>" + "no data from server"+"</p><br>", 'red');
+    	  }
+    	  else {
+	    	  var ovl = jQuery.parseJSON(data);
+		       if (ovl) {
+			       if (ovl.result == 'error') {
+		    	   		updateJob(jobid, "<p class = 'small'>" + ovl.reason +"</p><br>", 'red');
+			    	   }
+			       else {
+			    	   displayOverlay(ovl, overlayname, tooltip);
+			    	   removeJob(jobid);
+			       }
 		       }
-	       }
-	       else {
-	    	   		updateJob(jobid, "<p class = 'small'>No Overlay Data</p><br>", 'red');
-	       }
+		       else {
+		    	   		updateJob(jobid, "<p class = 'small'>No Overlay Data</p><br>", 'red');
+		       }
+    	   }
 	  }).error(function( jqxhr, textStatus, error ) {
 	           var err = textStatus + ', ' + error;
 	           console.log( "Request " + jobid + " Failed: " + err);
@@ -84,7 +89,7 @@ function updateOverlay(ovl, overlayname, tooltip) {
 
 function createObsOverlay(obs, role, algorithm) {
 	
-	var httpget_url = 'overlay/create/' + obs.key + '/' + role + '/' + algorithm; 
+	var httpget_url = 'overlay/create/'  + obs.encoded_key + '/' + role + '/' + algorithm; 
 	
 	var prompt  = "Creating " + role + " "  + algorithm + " overlay";
        

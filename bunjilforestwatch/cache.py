@@ -1,4 +1,4 @@
-# Based on cache.py from Copyright (c) 2011 Matt Jibson <matt.jibson@gmail.com>
+# Based on cache.py from Matt Jibson <matt.jibson@gmail.com>, modified by Chris Goodman for Bunjil Forest Watch
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -15,15 +15,14 @@
 import logging
 import models
 
-from google.appengine.api import memcache
-from google.appengine.datastore import entity_pb
-from google.appengine.ext import db
-
 import counters
 import feeds
-import models
 import utils
 import webapp2
+
+from google.appengine.api import memcache
+from google.appengine.ext import ndb
+from google.appengine.datastore import entity_pb
 
 # use underscores since usernames are guaranteed to not have them
 # still a problem with journal names?
@@ -92,7 +91,7 @@ def set_multi(mapping):
     memcache.set_multi(mapping)
 
 def set_keys(entities):
-    memcache.set_multi(dict([(C_KEY %i.key(), pack(i)) for i in entities]))
+    memcache.set_multi(dict([(C_KEY %i.key, pack(i)) for i in entities]))
 
 def delete(keys):
     memcache.delete_multi(keys)
@@ -106,29 +105,28 @@ def flush():
 def pack(models):
     if models is None:
         return None
-    elif isinstance(models, db.Model):
+    elif isinstance(models, ndb.Model):
     # Just one instance
-        return db.model_to_protobuf(models).Encode()
+        return ndb.ModelAdapter().entity_to_pb(models).Encode()
     else:
     # A list
-        return [db.model_to_protobuf(x).Encode() for x in models]
+        return [ndb.ModelAdapter().entity_to_pb(models).Encode(x) for x in models]
 
 def unpack(data):
     if data is None:
         return None
     elif isinstance(data, str):
     # Just one instance
-        return db.model_from_protobuf(entity_pb.EntityProto(data))
+        return ndb.ModelAdapter().pb_to_entity(entity_pb.EntityProto(data)) 
     else:
-        return [db.model_from_protobuf(entity_pb.EntityProto(x)) for x in data]
+        return [ndb.ModelAdapter().pb_to_entity(entity_pb.EntityProto(x)) for x in data]
 
 def get_by_key(key):
     n = C_KEY %key
-    data = unpack(memcache.get(n))
+    data = memcache.get(n)
     if data is None:
-        data = db.get(key)
-        memcache.add(n, pack(data))
-
+        data = ndb.Key(urlsafe=key)
+        memcache.add(n, data)
     return data
 
 # idea: use async functions, although i'm not convinced it'd be faster
@@ -136,7 +134,7 @@ def get_by_key(key):
 def get_by_keys(keys, kind=None):
     #print("get_by_keys: ", keys)    
     if kind:
-        keys = [str(db.Key.from_path(kind, i)) for i in keys]
+        keys = [str(ndb.Key.from_path(kind, i)) for i in keys]
     #print("  get_by_keys as kind: ", keys, kind)
     for i in keys:
         decode_key(i) #debug
@@ -154,7 +152,7 @@ def get_by_keys(keys, kind=None):
                 to_fetch.append(i)
     
         fetch_keys = [keys[i] for i in to_fetch]
-        fetched = db.get(fetch_keys)
+        fetched = ndb.get(fetch_keys)
         set_multi(dict(zip(fetch_keys, fetched)))
         #print("get_by_keys to_fetch : ", to_fetch, fetch_keys, fetched)    
 
@@ -165,7 +163,7 @@ def get_by_keys(keys, kind=None):
 
 def decode_key(key):
     #for debugging print the path of the key.
-    k = db.Key(key)
+    k = ndb.Key(key)
     _app = k.app()
     path = []
     while k is not None:
@@ -177,30 +175,27 @@ def decode_key(key):
 
 def get_areas(user_key):  #return all areas's owned by user.
     n = C_AREAS %user_key
-    data = unpack(memcache.get(n))
+    data = memcache.get(n)
     if data is None:
-        #data = models.AreaOfInterest.all().ancestor(user_key).fetch(models.AreaOfInterest.MAX_AREAS)
-        #q = db.Query(models.AreaOfInterest)
-        #data = q.filter('owner =',  user_key)
-        data = models.AreaOfInterest.all().filter('owner =',  user_key).fetch(models.AreaOfInterest.MAX_AREAS)
-        #print "get_areas()", data
-        memcache.add(n, pack(data))
+        data = models.AreaOfInterest.query(models.AreaOfInterest.owner == user_key).fetch(models.AreaOfInterest.MAX_AREAS)
+        memcache.add(n, data)
 
     return data
 
 def get_other_areas(username, user_key): # returns list of areas user neither created nor follows.
-    #user_key = db.Key.from_path('User', username)
+    #user_key = ndb.Key.from_path('User', username)
     #print ("get_other_areas() ", username, user_key)
 
     n = C_OTHER_AREAS %user_key
-    data = unpack(memcache.get(n))
+    data = memcache.get(n)
     if data is None:
-        allareas = models.AreaOfInterest.all()
-        af =  get_following_areanames_list(username)
-        otherareas = [x for x in allareas if x.name not in af and  x.owner.name != username and x.share == x.PUBLIC_AOI ] # remove areas user created and elements in af that user follows
-        data = otherareas #[(x.url(), x.name, x.owner.name) for x in otherareas]
+        Area = models.AreaOfInterest
+        allareas = models.AreaOfInterest.query()
+        af = get_following_areas(user_key)
+        otherareas = [x for x in allareas if x.name not in af and  x.owner != username and x.share == x.PUBLIC_AOI ] # remove areas user created and elements in af that user follows
         
-        memcache.add(n, pack(data))
+        data = otherareas #[(x.url(), x.name, x.owner.name) for x in otherareas]
+        memcache.add(n, data)
 
     return data
 
@@ -218,10 +213,10 @@ def get_areas_list(user_key):
 #get_all_areas() returns a list of keys for all areas - inlcuding private and unlisted areas.
 def get_all_areas():
     n = C_AREAS_ALL
-    data = unpack(memcache.get(n))
+    data = memcache.get(n)
     if data is None:
-        data = models.AreaOfInterest.all().fetch(180) #FIXME limit of 180 will be a problem in future. This is used by CheckNew cron job.
-        memcache.add(n, pack(data))
+        data = models.AreaOfInterest.query().fetch(300) #FIXME limit of 300 will be a problem in future. This is used by CheckNew cron job.
+        memcache.add(n, data)
 
     return data
 
@@ -239,10 +234,11 @@ def get_all_areas_list():
 
 def get_journals(user_key):
     n = C_JOURNALS %user_key
-    data = unpack(memcache.get(n))
+    data = memcache.get(n)
     if data is None:
-        data = models.Journal.all().ancestor(user_key).fetch(models.Journal.MAX_JOURNALS)
-        memcache.add(n, pack(data))
+        data = models.Journal.query(ancestor=user_key).fetch(models.Journal.MAX_JOURNALS)
+        
+        memcache.add(n, data)
 
     return data
 
@@ -252,7 +248,7 @@ def get_journal_list(user_key):
     data = memcache.get(n)
     if data is None:
         journals = get_journals(user_key)
-        data = [(i.url(), i.name, i.journal_type) for i in journals]
+        data = [(j.url(), j.key.string_id(), j.journal_type) for j in journals]
         memcache.add(n, data)
 
     return data
@@ -263,9 +259,8 @@ def get_entries_keys(journal_key):
     data = memcache.get(n)
     if data is None:
         # todo: fix limit to 1000 most recent journal entries
-        data = models.Entry.all(keys_only=True).ancestor(journal_key).order('-date').fetch(1000)
+        data = models.Entry.query(ancestor = journal_key).order(-models.Entry.date).fetch(300, keys_only=True)
         memcache.add(n, data)
-
     return data
 
 # returns entry keys of given page
@@ -296,64 +291,69 @@ def get_entries_page(username, journal_name, page, journal_key):
 
     return data
 
-def get_entry_key(username, journal_name, entry_id):
-    n = C_ENTRY_KEY %(username, journal_name, entry_id)
-    data = memcache.get(n)
-    if data is None:
-        data = db.get(db.Key.from_path('Entry', long(entry_id), parent=get_journal_key(username, journal_name)))
-
-        if data:
-            data = data.key()
-
-        memcache.add(n, data)
-
-    return data
-
 # called when a new entry is posted, and we must clear all the entry and page cache
 def clear_entries_cache(journal_key):
-    journal = get_by_key(journal_key)
+    journal = journal_key.get()
     keys = [C_ENTRIES_KEYS %journal_key, C_JOURNALS %journal_key.parent()]
 
     # add one key per page for get_entries_page and get_entries_keys_page
     for p in range(1, journal.entry_count / models.Journal.ENTRIES_PER_PAGE + 2):
-        keys.extend([C_ENTRIES_PAGE %(journal.key().parent().name(), journal.name, p), C_ENTRIES_KEYS_PAGE %(journal_key, p)])
-
+        keys.extend([C_ENTRIES_PAGE %(journal.key.parent().string_id(), journal.key.string_id(), p), C_ENTRIES_KEYS_PAGE %(journal_key, p)])
     memcache.delete_multi(keys)
 
 
 
 ##### OBSTASK LIST #####
-''' get a single ObserevationTask by its key.
+
+def get_obstask(task_name):
+    obstask_key = ndb.Key('ObservationTask', task_name)
+    task = obstask_key.get()
+    if task:
+        return task
+    
+    logging.error('get_obstask(): no task found for %s', task_name)
+    #Second attempt
+    obstask_key = ndb.Key(urlsafe = task_name) 
+    task_id = obstask_key.id()
+    task = models.ObservationTask.get_by_id(task_id)
+    if not task:
+        logging.error('get_obstask(): no task found for %s with id %d', task_name, task_id)
+    return task
+
+''' get a single ObserevationTask by its key name.
 '''
 def get_task(task_key_name):
    
     n = C_OBS_TASK %(task_key_name)
-    data = unpack(memcache.get(n))
+    data = memcache.get(n)
     if data is None:
-        data= get_by_key(task_key_name)
+        #data= get_by_key(task_key_name).get()
+        data= task_key_name.get()
         if data is None:
             logging.error("get_task(): Not an object") 
             return None
         else:
-            if data.kind() != "ObservationTask":
+            if data.key.kind() != "ObservationTask":
                 logging.error("get_task(): Not a task object") 
                 return None
-        memcache.add(n, pack(data))
+        memcache.add(n, data)
     return data
 
-#### New functions
 
 def get_obstask_key(entry_id):
     n = C_OBSTASK_KEY %(entry_id)
     data = memcache.get(n)
     if data is None:
-        data = db.get(db.Key.from_path('ObservationTask', long(entry_id) ))
+        data = ndb.get(ndb.Key('ObservationTask', long(entry_id) ))
         if data:
-            data = data.key()
+            data = data.key
         memcache.add(n, data)
     return data
 
-# returns all ObservationTask keys sorted by descending date, filtered by username OR areaname but not both.
+''' 
+    get_obstasks_keys() returns all ObservationTask keys sorted by descending date, filtered by username OR areaname but not both.
+'''
+
 def get_obstasks_keys(username=None, areaname=None):
     
     if areaname is not None:
@@ -364,31 +364,37 @@ def get_obstasks_keys(username=None, areaname=None):
     if data is None:
         # todo: fix limit to 1000 most recent journal obstasks
         if username is not None:
-            user_key = db.Key.from_path('User', username)
-            data = models.ObservationTask.all(keys_only=True).filter('assigned_owner =', user_key).order('-created_date').fetch(200)
+            user_key = ndb.Key('User', username)
+            #data = models.ObservationTask.all(keys_only=True).filter('assigned_owner =', user_key).order('-created_date').fetch(200)
+            data = models.ObservationTask.query(models.ObservationTask.assigned_owner == user_key).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
             logging.debug("get_obstasks_keys for user %s %s", username, user_key)
             if len(data) == 0 :
                 logging.info("get_obstasks_keys() user %s has no tasks", username)
         elif areaname is not None:
             area = get_area(username, areaname) 
-            area_key = db.Key.from_path('AreaOfInterest', areaname)
+            area_key = ndb.Key('AreaOfInterest', areaname)
             
             #print ("area_key ", area_key)
             if (area.share == area.PRIVATE_AOI ) and (area.owner.name != username):
                 logging.debug("get_obstasks_keys PERMISSION ERROR for %s area %s %s", area.shared_str, areaname, area_key, )
                 data = None
             else:
-                data = models.ObservationTask.all(keys_only=True).filter('aoi =', area_key).order('-created_date').fetch(200)
+                #data = models.ObservationTask.all(keys_only=True).filter('aoi =', area_key).order('-created_date').fetch(200)
+                data = models.ObservationTask.query(models.ObservationTask.aoi == area_key).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
                 logging.debug("get_obstasks_keys for % area %s %s", area.shared_str, areaname, area_key)
                 if len(data) == 0:
                     logging.info("get_obstasks_keys() area %s has no tasks", areaname)
         else:
-            data = models.ObservationTask.all(keys_only=True).filter('share =', models.AreaOfInterest.PUBLIC_AOI).order('-created_date').fetch(200)
+            #data = models.ObservationTask.all(keys_only=True).filter('share =', models.AreaOfInterest.PUBLIC_AOI).order('-created_date').fetch(200)
+            data = models.ObservationTask.query(models.ObservationTask.share == models.AreaOfInterest.PUBLIC_AOI).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
             logging.debug("get_obstasks_keys() loading cache for all tasks")
         memcache.add(n, data)
     return data
 
-# returns ObsTasks keys of given page
+
+''' 
+    get_obstasks_keys_page() returns all ObservationTask keys for a given page - sorted by descending date, filtered by username OR areaname but not both.
+'''
 def get_obstasks_keys_page(page, username=None, areaname=None):
     if areaname is not None:    
         n = C_OBSTASKS_KEYS_PAGE %(page,areaname)
@@ -436,19 +442,19 @@ def get_obstask_render(task_key):
         task = obstask = get_task(task_key)  #FIXME Must be typesafe
         obslist = []  #FIXME obslist won't be loaded if task is in the cache.
         if obstask is not None:
-            area = obstask.aoi 
+            area = obstask.aoi.get() 
             cell_list = area.CellList()  
             
-            resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.assigned_owner, area.name.encode('utf-8') )
-            resultstr += "{0!s} Task assigned to: {1!s}<br>".format(obstask.shared_str(), obstask.assigned_owner)
+            resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.assigned_owner.string_id(), area.name.encode('utf-8') )
+            resultstr += "{0!s} Task assigned to: {1!s}<br>".format(obstask.shared_str(), obstask.assigned_owner.string_id())
             resultstr += "Status <em>{0!s}</em>. ".format(obstask.status)
             if obstask.priority != None:
                 resultstr += "Priority <em>{0:d}.</em> ".format(obstask.priority)
             
-            #debugstr = resultstr + " task: " + str(obstask.key()) + " has " + str(len(obstask.observations)) + " observations"
+            #debugstr = resultstr + " task: " + str(obstask.key) + " has " + str(len(obstask.observations)) + " observations"
             debugstr = resultstr + "Task has " + str(len(obstask.observations)) + " observations"
             for obs_key in obstask.observations:
-                obs = get_by_key(obs_key) 
+                obs = obs_key.get() 
                 if obs is not None:
                     obslist.append(obs.Observation2Dictionary()) # includes a list of precomputed overlays
                 else:
@@ -461,8 +467,9 @@ def get_obstask_render(task_key):
             'resultstr': debugstr,
             'area' :  area.name.encode('utf-8'),
             'created_date' : obstask.created_date.strftime("%Y-%m-%d"),
-            'obstask_url': webapp2.uri_for('view-obstask', username=obstask.assigned_owner, task_name=obstask.key()),
-        })
+            #'obstask_url': webapp2.uri_for('view-obstask', username=obstask.assigned_owner.urlsafe(), task_name=obstask.key.urlsafe)
+            'obstask_url': obstask.taskurl()
+            } )
         memcache.add(n, data)
 
     return data
@@ -542,19 +549,20 @@ def clear_journal_cache(user_key):
 
 def get_activities(username='', action='', object_key=''):
     n = C_ACTIVITIES %(username, action, object_key)
-    data = unpack(memcache.get(n))
+    data = memcache.get(n)
     if data is None:
-        data = models.Activity.all()
+        data = models.Activity.query()
 
         if username:
-            data = data.filter('user', username)
+            data = data.filter(models.Activity.user == username)
+            logging.debug('activity filter user=%s', username)
         if action:
-            data = data.filter('action', action)
+            data = data.filter(models.Activity.action, action)
         if object_key:
-            data = data.filter('object', object_key)
+            data = data.filter(models.Activity.object, object_key)
 
-        data = data.order('-date').fetch(models.Activity.RESULTS)
-        memcache.add(n, pack(data), 60) # cache for 1 minute
+        data = data.order(-models.Activity.date).fetch(models.Activity.RESULTS)
+        memcache.add(n, data, 60) # cache for 1 minute
 
     return data
 
@@ -562,7 +570,9 @@ def get_activities_follower_keys(username):
     n = C_ACTIVITIES_FOLLOWER_KEYS %username
     data = memcache.get(n)
     if data is None:
-        index_keys = models.ActivityIndex.all(keys_only=True).filter('receivers', username).order('-date').fetch(50)
+        #index_keys = models.ActivityIndex.all(keys_only=True).filter('receivers', username).order('-date').fetch(50)
+        ActivityIdx = models.ActivityIndex
+        index_keys = ActivityIdx.query(ActivityIdx.receivers == username).order(-ActivityIdx.date).fetch(models.Activity.RESULTS, keys_only=True, )
         data = [str(i.parent()) for i in index_keys]
         memcache.add(n, data, 300) # cache for 5 minutes
 
@@ -572,7 +582,7 @@ def get_activities_follower_data(keys):
     n = C_ACTIVITIES_FOLLOWER_DATA %'_'.join(keys)
     data = unpack(memcache.get(n))
     if data is None:
-        data = db.get(keys)
+        data = ndb.get_multi(keys)
         memcache.add(n, pack(data)) # no limit on this cache since this data never changes
 
     return data
@@ -597,15 +607,17 @@ def get_feed(feed, token):
 
     return data
 
+
 def get_user(username):
-    user_key = db.Key.from_path('User', username)
-    return get_by_key(user_key)
+    user_key = ndb.Key('User', username)
+    #return get_by_key(user_key)
+    return user_key.get()
 
 def get_followers(username):
     n = C_FOLLOWERS %username
     data = memcache.get(n)
     if data is None:
-        followers = models.UserFollowersIndex.get_by_key_name(username, parent=db.Key.from_path('User', username))
+        followers = models.UserFollowersIndex.get_by_id(username, parent=ndb.Key('User', username))
         if not followers:
             data = []
         else:
@@ -619,7 +631,7 @@ def get_following(username):
     n = C_FOLLOWING %username
     data = memcache.get(n)
     if data is None:
-        following = models.UserFollowingIndex.get_by_key_name(username, parent=db.Key.from_path('User', username))
+        following = models.UserFollowingIndex.get_by_id(username, parent=ndb.Key('User', username))
         if not following:
             data = []
         else:
@@ -633,7 +645,7 @@ def get_area_followers(area_name):
     n = C_AREA_FOLLOWERS %area_name
     data = memcache.get(n)
     if data is None:
-        data= models.AreaFollowersIndex.get_by_key_name(area_name, parent=db.Key.from_path('AreaOfInterest', area_name))
+        data= models.AreaFollowersIndex.get_by_id(area_name, parent=ndb.Key('AreaOfInterest', area_name))
         memcache.add(n, data)
     return data
 
@@ -641,20 +653,19 @@ def get_following_areas(user_key):
     n = C_FOLLOWING_AREAS %user_key
     data = memcache.get(n)
     if data is None:
-        following_key = db.Key.from_path('User', user_key, 'UserFollowingAreasIndex', user_key)
-        following = models.UserFollowingAreasIndex.get(following_key)
+        following_key = ndb.Key('User', user_key.id(), 'UserFollowingAreasIndex', user_key.id())
+
+        following = models.UserFollowingAreasIndex.get_by_id(following_key.id())
         data = []
         if not following:
-            logging.debug("get_following_areas(): %s not following any areas", user_key)
+            logging.debug("get_following_areas(): %s not following any areas", user_key.string_id())
         else:
             following_areas = following.areas
             allareas = models.AreaOfInterest.all()  #TODO: This is inefficient. Give each user model a list.
             data = [x for x in allareas if x.name in following_areas]
         memcache.add(n, data)
         
-        #for y in data:
-            #print ("  get_following_areas af:",  y)
-        logging.debug("get_following_areas() reloaded: %s ", user_key)
+        logging.debug("get_following_areas() reloaded: %s ", user_key.string_id())
 
     return data
 
@@ -664,10 +675,9 @@ def get_following_areas_list(user_key):
     if data is None:
         areas= get_following_areas(user_key)
         data = [(i.url(), i.name) for i in areas]
-        #data = [(get_area(None, i).url(), get_area(None, i).name) for i in areas]
         memcache.add(n, data)
         if user_key is not None:
-            logging.debug("get_following_areas_list() reloaded user_key: %s", user_key)
+            logging.debug("get_following_areas_list() reloaded user_key: %s", user_key.string_id())
         else:
             logging.error("get_following_areas_list() no user key")
     return data
@@ -691,16 +701,15 @@ def get_following_areanames_list(user_key): #as above but returns list of names 
 
 def get_area(username, area_name):
     n = C_AREA %(username, area_name)
-    data = unpack(memcache.get(n))
+    data = memcache.get(n)
     if data is None:
-        area_key = get_area_key(username, area_name)
-        if area_key is None:
-            logging.error("get_area() no key for %s %s", username, area_name)
+        #area_key = get_area_key(username, area_name)
+        data = models.AreaOfInterest.get_by_id(area_name.decode('utf-8'))
+        #data = models.AreaOfInterest.query(models.AreaOfInterest.name == area_name.decode('utf-8')).fetch()
+        if data  is None:
+            logging.error("get_area() no area found for %s %s", username, area_name)
             return None
-        data = db.get(area_key)
-        if data is None:
-            logging.error("get_area() ERROR!!!! %s %s %s", username, area_name, area_key )
-        memcache.add(n, pack(data))
+        memcache.add(n, data)
     #logging.debug("get_area() returns: %s", data )
     return data
 
@@ -710,14 +719,16 @@ def get_area_key(username, area_name):
         n = C_AREA_KEY %("users", area_name)  #users a reserved name so never a username. Fetch areas for all users.
         data = memcache.get(n)
         if data is None:
-            data = models.AreaOfInterest.all(keys_only=True).filter('name', area_name.decode('utf-8')).get()
+            #data = models.AreaOfInterest.all(keys_only=True).filter('name', area_name.decode('utf-8')).get()
+            data = models.AreaOfInterest.query(models.AreaOfInterest.name == area_name.decode('utf-8')).fetch(keys_only=True)
             memcache.add(n, data)
     else:
         n = C_AREA_KEY %(username, area_name)
         data = memcache.get(n)
         if data is None:
-            #user_key = db.Key.from_path('User', username)
-            data = models.AreaOfInterest.all(keys_only=True).filter('owner =', username).filter('name', area_name.decode('utf-8')).get() #FIXME - Is why is there an '='  in owner =' but not for other string matches?
+            #user_key = ndb.Key.from_path('User', username)
+            #data = models.AreaOfInterest.all(keys_only=True).filter('owner =', username).filter('name', area_name.decode('utf-8')).get() #FIXME - Is why is there an '='  in owner =' but not for other string matches?
+            data = models.AreaOfInterest.query(models.AreaOfInterest.owner == username, models.AreaOfInterest.name == area_name.decode('utf-8')).fetch(keys_only=True)
             #print ("get_area_userkey for user: ", username, data, )
             memcache.add(n, data)
     return data
@@ -761,14 +772,14 @@ def get_cell_from_key(cell_key): #TODO - Does not really add anything different 
      
     n = C_CELL_KEY %(cell_key)
     #print "get_cell_from_key() ",
-    data = unpack(memcache.get(n))
+    data = memcache.get(n)
     if data is None:
         #data = models.LandsatCell.get()
-        data = models.LandsatCell.get(cell_key)
+        data = cell_key.get() #models.LandsatCell.get_by_id(cell_key)
         if data is None:
             logging.error("cache: get_cell_from_key() No Cell for key %s", cell_key)
         else:
-            memcache.add(n, pack(data))
+            memcache.add(n, data)
     return data
     
 def get_cells(area_key):
@@ -785,63 +796,48 @@ def get_all_cells(): #FIXME - Doesn't work - too much data returned.
     n = C_CELLS_ALL
     data = unpack(memcache.get(n))
     if data is None:
-        data = models.LandsatCell.all() #TODO This is a big load from DB.
+        data = models.LandsatCell.all() #TODO This is a big load from ndb.
         memcache.add(n, pack(data))
     return data
-
-#following_key = db.Key.from_path('User', user_key, 'UserFollowingAreasIndex', user_key)
-        #following = models.UserFollowingAreasIndex.from_path(kind, id_or_name, parent=None, namespace=None)
-        #following_key = db.Key.from_path('User', thisuser, 'UserFollowingAreasIndex', thisuser)
-        #following = models.UserFollowingAreasIndex.get_by_key_name(user_key, None)
-#        following = models.UserFollowingAreasIndex.get(following_key)
 
 
 
 def get_journal(username, journal_name):
-    n = C_JOURNAL %(username, journal_name)
-    data = unpack(memcache.get(n))
-    if data is None:
-        journal_key = get_journal_key(username, journal_name)
-        if journal_key:
-            data = db.get(journal_key)
-        memcache.add(n, pack(data))
-
-    return data
+    return models.Journal.get_journal(username, journal_name) # refactor to remove this call
+    
+    '''
+    user_key = ndb.Key('User', username)
+    journal_key = ndb.Key('Journal', journal_name, parent=user_key)
+    print 'journal_key', journal_key
+    return journal_key.get()
+   '''
 
 def get_journal_key(username, journal_name):
     n = C_JOURNAL_KEY %(username, journal_name)
     data = memcache.get(n)
     if data is None:
-        user_key = db.Key.from_path('User', username)
-        data = models.Journal.all(keys_only=True).ancestor(user_key).filter('name', journal_name.decode('utf-8')).get()
+        user_key = ndb.Key('User', username)
+        data = ndb.Key('Journal', journal_name, parent=user_key)
         memcache.add(n, data)
-
     return data
 
 def get_entry(username, journal_name, entry_id, entry_key=None):
     n = C_ENTRY %(username, journal_name, entry_id)
     data = memcache.get(n)
     if data is None:
-        if not entry_key:
-            entry_key = get_entry_key(username, journal_name, entry_id)
-
-        entry = get_by_key(entry_key)
-        # try async queries here
-        content = get_by_key(entry.content_key)
+        entry, content, blobs = models.Entry.get_entry(username, journal_name, entry_id, entry_key=None)
 
         if entry.blobs:
-            blobs = pack(db.get(entry.blob_keys))
+            blobs = pack(ndb.get_multi(entry.blob_keys))
         else:
             blobs = []
-
         data = (pack(entry), pack(content), blobs)
         memcache.add(n, data)
-
-    entry, content, blobs = data
-    entry = unpack(entry)
-    content = unpack(content)
-    blobs = unpack(blobs)
-
+    else:
+        entry, content, blobs = data
+        entry = unpack(entry)
+        content = unpack(content)
+        blobs = unpack(blobs)
     return entry, content, blobs
 
 def get_entry_render(username, journal_name, entry_id):
@@ -859,74 +855,3 @@ def get_entry_render(username, journal_name, entry_id):
 
     return data
 
-def get_blog_entries_page(page):
-    n = C_BLOG_ENTRIES_PAGE %page
-    data = unpack(memcache.get(n))
-    if data is None:
-        if page < 1:
-            page = 1
-
-        entries = get_blog_entries_keys_page(page)
-        data = [get_by_key(i) for i in entries]
-        memcache.add(n, pack(data))
-
-    return data
-
-# returns all blog entry keys sorted by descending date
-def get_blog_entries_keys():
-    n = C_BLOG_ENTRIES_KEYS
-    data = memcache.get(n)
-    if data is None:
-        # todo: fix limit to 1000 most recent blog entries
-        data = models.BlogEntry.all(keys_only=True).filter('draft', False).order('-date').fetch(1000)
-        memcache.add(n, data)
-
-    return data
-
-# returns blog entry keys of given page
-def get_blog_entries_keys_page(page):
-    n = C_BLOG_ENTRIES_KEYS_PAGE %page
-    data = memcache.get(n)
-    if data is None:
-        entries = get_blog_entries_keys()
-        data = entries[(page  - 1) * models.BlogEntry.ENTRIES_PER_PAGE:page * models.BlogEntry.ENTRIES_PER_PAGE]
-        memcache.add(n, data)
-
-        if not data:
-            logging.warning('Page %i requested from blog, but only %i entries, %i pages.', page, len(entries), len(entries) / models.BlogEntry.ENTRIES_PER_PAGE + 1)
-
-    return data
-
-# called when a new blog entry is posted, and we must clear all the entry and page cache
-def clear_blog_entries_cache():
-    keys = [C_BLOG_ENTRIES_KEYS, C_BLOG_COUNT, C_BLOG_TOP]
-
-    # add one key per page for get_blog_entries_page and get_blog_entries_keys_page
-    for p in range(1, get_blog_count() / models.BlogEntry.ENTRIES_PER_PAGE + 2):
-        keys.extend([C_BLOG_ENTRIES_PAGE %p, C_BLOG_ENTRIES_KEYS_PAGE %p])
-
-    memcache.delete_multi(keys)
-
-def get_blog_count():
-    n = C_BLOG_COUNT
-    data = memcache.get(n)
-    if data is None:
-        try:
-            data = models.Config.get_by_key_name('blog_count').count
-        except:
-            data = 0
-
-        memcache.add(n, data)
-
-    return data
-
-def get_blog_top():
-    n = C_BLOG_TOP
-    data = memcache.get(n)
-    if data is None:
-        keys = get_blog_entries_keys()[:25]
-        blogentries = db.get(keys)
-        data = utils.render('blog-top.html', {'top': blogentries})
-        memcache.add(n, data)
-
-    return data

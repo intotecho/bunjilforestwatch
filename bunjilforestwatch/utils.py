@@ -204,7 +204,7 @@ def google_upload(token, path, content, entryid=None):
 	ms = gdata.data.MediaSource(file_handle=f, content_type='text/html', content_length=len(content), file_name=file_name)
 
 	if not entryid:
-		j_folder = google_folder(docs_service, 'journalr')
+		j_folder = google_folder(docs_service, 'appbfw')
 		dest_folder = google_folder(docs_service, file_dir, j_folder)
 
 		entry = docs_service.Upload(ms, file_name, folder_or_uri=dest_folder)

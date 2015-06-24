@@ -7,16 +7,16 @@
 			<ul class="breadcrumb">
 				<li><a href="{{ "user"|url(username) }}">{{ username }}</a></li>
                 <li>Journal</li>
-				<li class="active"><a href="{{ journal|journal_url }}">{{ journal }}</a></li>
+				<li class="active"><a href="{{ journal|journal_url }}">{{ journal.key.string_id() }}</a></li>
 			</ul>
 	
 	</div>
 	<div class="row well well-sm">
-        <h2>Journal <a href="{{ journal|journal_url }}">{{ journal }}</a></h2>
-		<div class="col-xs-4">
-			<a href="{{ "new-entry"|url(journal) }}" class="btn btn-primary">New Entry</a>
+        <h2>Journal <a href="{{ journal|journal_url }}">{{ journal.key.string_id()  }}</a></h2>
+		<div class="col-md-4">
+			<a href="{{ "new-entry"|url(journal) }}" class="btn btn-primary">Add New Entry</a>
 		</div>
-        <div class="col-xs-6">
+        <div class="col-md-6">
 	         <table class="table table-condensed">
 	           <tbody>
                     <tr><td>Journal type</td><td>{{ journal.journal_type }}</td></tr>
