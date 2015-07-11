@@ -3,6 +3,7 @@
     
 {% block head%}
 <title>Bunjil Forest Watch View Map</title>
+{% include "includes/head_scripts.html" %}
 
 <style type="text/css">
 
@@ -363,16 +364,12 @@ body {
        <small>template message text to replace</small>
     </div>
 </div>
-
-
 {%endblock jobs_template %}
 
 {% block footer_js%}
 
-
+{% include "includes/project_scripts.html" %}
 {% include "includes/map_scripts.html" %}
-<script type="text/javascript" src="/static/js/base-maps.js" ></script>
-<script type="text/javascript" src="/static/js/view-maps.js" ></script>
 
 {% endblock footer_js %}
 
