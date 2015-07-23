@@ -133,15 +133,29 @@ class User(ndb.Model):
 class UserFollowersIndex(ndb.Model): #An User has a list of followers (other users) in an UserFollowersIndex(key=user)
 	users = ndb.StringProperty(repeated=True)
 
-class UserFollowingIndex(ndb.Model):#A User has a list of other users they follow in a UserFollowingAreasIndex(key=area)
+class UserFollowingIndex(ndb.Model):#A User has a list of other users they follow in a UserFollowingIndex(key=area)
 	users = ndb.StringProperty(repeated=True)
 
 class AreaFollowersIndex(ndb.Model):  #An Area has a list of users in an AreaFollowersIndex(key=user)
 	users = ndb.StringProperty(repeated=True)
 	
+	@staticmethod
+	def get_key (area_name_decoded):
+		return ndb.Key('AreaOfInterest', area_name_decoded, 'AreaFollowersIndex', area_name_decoded)
+	
 
-class UserFollowingAreasIndex(ndb.Model): #A User has a list of areas in a UserFollowingAreasIndex(key=area)
+class UserFollowingAreasIndex(ndb.Model): #A User has a list of areas in a UserFollowingAreasIndex(key=area). Adding a list of area keys.
 	areas = ndb.StringProperty(repeated=True)
+	area_keys = ndb.KeyProperty(kind='AreaOfInterest', repeated=True)
+
+	@staticmethod
+	def get_key(username):
+		return ndb.Key('User', username, 'UserFollowingAreasIndex', username)
+
+	@staticmethod # returns a list of area names that the user follows.
+	def get_by_username(username):
+		return UserFollowingAreasIndex.get_key(username).get()
+	
 
 class AreaOfInterest(ndb.Model):
 
@@ -199,6 +213,18 @@ class AreaOfInterest(ndb.Model):
 	def __unicode__(self):
 		return unicode(self.name)
 
+	def summary_dictionary(self): # main parameters included for list of areas.
+		return {
+				'id': self.key.urlsafe(), 			# unique id for this area.
+				'url': self.url(), 						# url to view area
+				'tasks_url': self.tasks_url(),   # url to view tasks for this area
+				'name': self.key.string_id(), 
+				'owner': self.owner.string_id(), 
+				'created_date': self.created_date, 
+				'follower_count': self.followers_count,
+				'share' : self.share
+		}
+
 	@property
 	def pages(self):
 		if self.entry_count == 0:
@@ -212,6 +238,14 @@ class AreaOfInterest(ndb.Model):
 		else:
 			#return webapp2.uri_for('view-area', username=self.key.parent().name(),  area_name= self.name)
 			return webapp2.uri_for('view-area', area_name= self.name)
+
+	def tasks_url(self, page=1):
+		if page > 1:
+			#return webapp2.uri_for('view-area', username=self.key.parent().name(), area_name= self.name, page=page)
+			return webapp2.uri_for('view-obstasks', area_name= self.name,  page=page)
+		else:
+			#return webapp2.uri_for('view-area', username=self.key.parent().name(),  area_name= self.name)
+			return webapp2.uri_for('view-obstasks', area_name= self.name)
 
 	@property
 	def shared_str(self):
@@ -243,7 +277,7 @@ class AreaOfInterest(ndb.Model):
 	def CellList(self):
 		cell_list = []
 		for cell_key in self.cells:
-			cell = cache.get_cell_from_key(cell_key)
+			cell = cell_key.get()
 			if cell is not None:
 				celldict = cell.Cell2Dictionary()
 				if celldict is not None:
@@ -322,7 +356,7 @@ class AreaOfInterest(ndb.Model):
 		#cell_list = []
 		cell_count = 0
 		for cell_key in self.cells:
-			cell = cache.get_cell_from_key(cell_key)
+			cell = cell_key.get()
 			if cell is not None:
 				if cell.monitored == True:
 					cell_count += 1
@@ -359,7 +393,8 @@ class LandsatCell(ndb.Model):
 
 	'''
 	Cell2Dictionary()converts a cell object into a dictionary of the path,row, monitored 
-	and date of latest image stored in datastore for L8 collection (other collections to follow)
+	and date of latest image stored in
+	 datastore for L8 collection (other collections to follow)
 	'''	
 	def Cell2Dictionary(self):
 		#cell_list.append({"path":cell.path, "row":cell.row, "monitored":cell.monitored})
@@ -375,14 +410,21 @@ class LandsatCell(ndb.Model):
 		return celldict
 	
 	def latestObservation(self, collectionName="L8"): # query for latest observation from given imageCollection.
-		#return ndb.GqlQuery("SELECT * FROM Observation WHERE ((landsatCell = self )AND (collection = collectionName)) ORDER_BY captured ASC LIMIT 1")
-		#q = Observation.all().ancestor(self).filter('image_collection =', collectionName).order('-captured')
 		q = Observation.query(Observation.image_collection == collectionName, ancestor = self.key).order(-Observation.captured).fetch(1)
 		if q is not None and len(q) <> 0:
 			return q[0]
 		else:
 			return None
 
+	@staticmethod
+	def get_cell(path, row, area_name):
+		if area_name is not None:
+			#area_key = AreaOfInterest.query(AreaOfInterest.name == area_name.decode('utf-8')).fetch(keys_only=True)
+			cell_name=str(path*1000+row)
+			cell_key = ndb.Key('AreaOfInterest', area_name.decode('utf-8'), 'LandsatCell', cell_name)
+			return cell_key.get() #LandsatCell.get_by_id(cell_name,  parent=area_key)
+		else:
+			return LandsatCell.query().filter(LandsatCell.path == int(path)).filter(LandsatCell.row == int(row)).get()
 
 '''
 class Overlay describes a visualisation of an image asset.
@@ -633,7 +675,7 @@ class Entry(ndb.Model):
 		if not self.date.hour and not self.date.minute and not self.date.second:
 			return ''
 		else:
-			return self.date.strftime('%I:%M %p')
+			return self.date.strftime('%H:%M')
 
 	@property
 	def content_key(self):
@@ -641,7 +683,7 @@ class Entry(ndb.Model):
 
 	@property
 	def blob_keys(self):
-		return [ndb.Key.from_path('Blob', long(i), parent=self.key) for i in self.blobs]
+		return [ndb.Key('Blob', long(i), parent=self.key) for i in self.blobs]
 
 	@staticmethod
 	def get_entry_key(journal, entry_id = None):
@@ -651,12 +693,13 @@ class Entry(ndb.Model):
 
 	@staticmethod
 	def get_entry(username, journal_name, entry_id, entry_key=None):
-		journal = cache.get_journal(username, journal_name)
+		journal = Journal.get_journal(username, journal_name)
 		if not journal:
-			logging.error('Entry.get_entry(): Error no journal %s for user %s',  journal_name, username )
+			logging.error('Entry.get_entry(): Error no journal called %s for user %s',  journal_name, username )
+			assert journal
 			return None, None, None
 		if not entry_key:
-			logging.error('Entry.get_entry(): Error no entry_id %d, for user %s, journal %s', entry_id, username, journal_name )
+			#logging.debug('Entry.get_entry(): Error no entry_id %s, for user %s, journal %s', entry_id, username, journal_name )
 			entry_key = Entry.get_entry_key(journal, entry_id)  #get_entry_key(username, journal_name, entry_id)
 		if not entry_key:
 			return None, None, None
@@ -672,7 +715,7 @@ class Entry(ndb.Model):
 				blobs = []
 			return entry, content, blobs
 		else:
-			return None, None, None
+			return None, None, []
 	
 
 	@staticmethod

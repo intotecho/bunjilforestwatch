@@ -1,29 +1,5 @@
 
-.panel-tight {
-    margin-bottom: 1px;
-    margin-top: 1px;
-    margin-bottom: 1px;
-    margin-right:0px;
-    margin-left:0px;
-    padding:3px;
-    padding-left:0px;
-    padding-right:0px;
-    padding-top:1px;
-    padding-bottom:1px;
-    border-top:1px;
-    border-bottom:1px;
-}
 
-.panel-success > .panel-footer {
-    color: #468847;
-    background-color: #dff0d8;
-    border-color: #d6e9c6;
-    margin:0px;
-}
-.panel-heading > .table, .panel-heading > .table th {
-    margin:0px 0px 0px 0px;
-    border: 0px;
-}
 .slider {
     margin-top:7px;
     margin-left:0px;

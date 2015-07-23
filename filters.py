@@ -145,7 +145,7 @@ def pluralize(value, ext='s'):
 def date(value, fmt):
 	return value.strftime(fmt)
 
-# filesizeformat in jinja 2.6 is broken, use this from their current github
+    # filesizeformat in jinja 2.6 is broken, use this from their current github
 def filesizeformat(value, binary=False):
 	"""Format the value like a 'human-readable' file size (i.e. 13 kB,
 	4.1 MB, 102 Bytes, etc).  Per default decimal prefixes are used (Mega,

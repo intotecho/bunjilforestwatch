@@ -1,12 +1,12 @@
 <!-- Included by index-user.html -->
-
+<!-- 
    {% for j in other_areas %}
          <div class="accordion" id="accordion-areas">
                 <div class="accordion-group">
                     <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#o_{{  j.key.urlsafe() }}">{{ j }}</a>
+                        <a class="accordion-toggle" data-toggle="collapse" href="#o_{{  j.id }}">{{ j.name }}</a>
                     </div>
-                    <div id="o_{{  j.key.urlsafe()  }}" class="accordion-body collapse ">
+                    <div id="o_{{  j.id }}" class="accordion-body collapse ">
                         <div class="accordion-inner">
                             <div class="container-fluid">
                                 <div class="row">
@@ -14,13 +14,12 @@
                                            <pre class="table-myareabackground">
                                                 <table class="table table-condensed  ">
                                                     <tbody>
-                                                        <tr><td><a href="{{ j|area_url }}">view area</a></td></tr>
-                                                        <tr><td><a href="{{ j|area_tasks_url}}">view tasks</a></td><td>
+                                                        <tr><td><a href="{{ j.url }}">view area</a></td></tr>
+                                                        <tr><td><a href="{{ j.tasks_url}}">view tasks</a></td><td>
                                                         <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
                                                         <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
                                                         <tr><td>followers</td><td>{{ j.follower_count }}</td></tr>
-                                                        
-                                                            <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j }}" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a></td></tr>
+                                                        <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j.name }}" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a></td></tr>
                                                     </tbody>        
                                                </table>
                                              </pre> 
@@ -31,3 +30,34 @@
                     </div>
                 </div>
         </div>    {% endfor %}
+       -->
+ 
+ <div class="panel-group" id='accordion-otherareas'>
+	 {% for j in other_areas %}
+	     <div class="panel panel-default">
+	       <div class="panel-heading">
+	          <h4 class="panel-title">
+	           <a data-toggle="collapse" data-parent="#accordion-otherareas" href="#o_{{  j.id }}">{{ j.name }}</a>
+	           </h4>
+	       </div>
+	       <div id="o_{{  j.id }}" class="panel-collapse collapse">
+	           <div class="panel-body">
+	               <div class="container-fluid">
+	                   <div class="row">
+	                       <div class=" panel-tight">
+	                              <div class="table-myareabackground">
+	                                           <a href="{{ j.url }}">view area</a></br>
+	                                           <a href="{{ j.tasks_url}}">view tasks</a></br>
+	                                           created {{ j.created_date|sdate }}</br>
+	                                           by {{ j.owner}}</br>
+	                                            <a href="{{ "user"|url(user.name) }}/follow/{{ j.name }}" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a>
+	                                            Area has {{ j.follower_count }} follower {{ j.follower_count|pluralize }}
+	                                </div> 
+	                       </div>
+	                   </div>
+	               </div>
+	           </div>
+	       </div>
+	      </div>
+	 {% endfor %}
+</div>   

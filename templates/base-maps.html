@@ -3,7 +3,6 @@
     
 {% block head%}
 <title>Bunjil Forest Watch View Map</title>
-{% include "includes/head_scripts.html" %}
 
 <style type="text/css">
 
@@ -83,12 +82,13 @@ body {
 }
 </style>
 
-{% endblock  head%} 
-
-{% block breadcrumbs %}{% endblock breadcrumbs %} 
-
+<!-- base_maps.html endblock head-->
+{% endblock  head%}
+{% block breadcrumbs %}
+<!-- base_maps.html  breadcrumbs-->
+{% endblock breadcrumbs %} 
 {% block content %}
-
+<!-- base_maps.html start content-->
 <div id='area_json'   class='django-template'>{{ area_json}}</div>
 <div id='celllist'         class='django-template'>{{ celllist }}</div>
 <div id='obslist'         class='django-template'>{{ obslist }}</div>
@@ -224,21 +224,24 @@ body {
                         </div>
                     </div>
                 </div>
-				 <div id="dialog-new-cells" class="popover"  style='display:none'>
-				     <div class="arrow"></div>
+				 <div id="dialog-new-cells" class='popover popover-success popover-lg' data-toggle="popover-x"  data-target='#myPopover1' data-placement="right" style='display:none'>
+				     <div id='myPopover1' class="arrow"></div>
 			         <h3 class="popover-title">Calculating New Cells</h3>
 			         <div class="popover-content">
-			                The square white cells on the map are the outlines of Landsat images overlapping your area.<br/>
-			                A selection of these are highlighted with a bolder line.<br/>
-			                These cells will be <b>Monitored</b> for new images.<br/> 
-			                To change which cells are monitored open the <a id='close-dialog-new-cells-open-accordion'><i>Landsat Cells</i></a>
-			                panel on the left. <a id='close-dialog-new-cells' >Close</a><br/>
+		                     Your new area's border is shown in yellow.	         
+			                 Bunjil is calculating which Landsat images overlap this area. When finished their outlines will show as white square outlines<br/><br/>
+                             Bunjil selects the most important cells for <b>monitoring</b> and highlights these in a bolder white outline.<br/><br/>
+                             If you want to change which cells are monitored open the <a id='close-dialog-new-cells-open-accordion'><i>Landsat Cells</i></a>
+			                 panel on the left.
 			         </div>
+			          <div class="popover-footer">
+                           <button id='close-dialog-new-cells' class="btn btn-sm btn-default">Close </button>
+                      </div>
 			     </div>
 				
 				 <div class="accordion-group">
                     <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#map_panel"> Map Coordinates </a>
+                        <a class="accordion-toggle" data-toggle="collapse" href="#map_panel"> Map View</a>
                     </div>
                     <div id="map_panel" class="accordion-body collapse">
                         <div class="accordion-inner">
@@ -367,9 +370,8 @@ body {
 {%endblock jobs_template %}
 
 {% block footer_js%}
-
 {% include "includes/project_scripts.html" %}
 {% include "includes/map_scripts.html" %}
-
+<script type="text/javascript" src="/static/js/base-maps.js" defer ></script>
 {% endblock footer_js %}
 

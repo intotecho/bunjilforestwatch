@@ -6,6 +6,31 @@ img[src*="gstatic.com/"],img[src*="googleapis.com/"] {
     max-width: none;!important
 }
 
+.panel-tight {
+    margin-bottom: 1px;
+    margin-top: 1px;
+    margin-bottom: 1px;
+    margin-right:0px;
+    margin-left:0px;
+    padding:3px;
+    padding-left:0px;
+    padding-right:0px;
+    padding-top:1px;
+    padding-bottom:1px;
+    border-top:1px;
+    border-bottom:1px;
+}
+
+.panel-success > .panel-footer {
+    color: #468847;
+    background-color: #dff0d8;
+    border-color: #d6e9c6;
+    margin:0px;
+}
+.panel-heading > .table, .panel-heading > .table th {
+    margin:0px 0px 0px 0px;
+    border: 0px;
+}
 
 /* bootstrap customisaitons - must be loaded after bootstrap.min.css to override*/
 .alert {
@@ -418,14 +443,13 @@ iframe { /* retain video aspect ratio */
 
 #dialog-new-cells {
     font-size: 11pt;
-	bottom: 0; 
+	/*bottom: 0; 
     right:0; 
     left: auto; 
     top: auto; 
-    bottom: 0; 
     height: auto;
     min-height: 100% !important;
-	width: 200%;
+	width: 200%;*/ 
 }
 .cell-panel{
 	font-size: 8pt;
@@ -456,6 +480,7 @@ iframe { /* retain video aspect ratio */
     font-size: 8pt;
     font-style: italic; 
 }
+
 .cell-panel-unselected {
     font-size: 8pt;
 }
