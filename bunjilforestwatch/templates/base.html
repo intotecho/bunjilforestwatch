@@ -10,14 +10,24 @@
  
 <link rel='stylesheet' type='text/css' href='/static/css/bootstrap-social.css'>
 <link rel="stylesheet" href="/static/css/wbpreview-theme.css"> <!-- Theme for the messages -->
+
+{% block head_scripts %}
+<!-- base.html head_scripts -->
 {% include "includes/head_scripts.html" %}
+{% endblock head_scripts %}
 
 {% block head %}
+<!-- base.html block head -->
+{% endblock %}
 
- {% endblock %}
 {% block map_head %} {% endblock %}
+<!-- base.html end <head> -->
 </head>
+<!-- base.html start here <body> -->
+
 <body>
+<!-- base.html start <body> -->
+
 	{% if show_navbar %}
 	<div class="container" >
 		<nav role="navigation" class="navbar navbar-default navbar-margin">
@@ -159,6 +169,7 @@
 {% block footer_js%}
  {% include "includes/project_scripts.html" %} 
 {% endblock footer_js %}
+
  {% if google_analytics %}   
          <script>
          (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

@@ -200,55 +200,32 @@ function initialize() {
     var jobid = -1;
 
     
-    $('#close-dialog-new-cells').click(function(){
-        $('#dialog-new-cells').modalPopover('hide').style.display = 'none';;
+    $('#close-dialog-new-cells').click(function(){    
+        $('#dialog-new-cells').popoverX('hide');
     }); 
 
     $('#close-dialog-new-cells-open-accordion').click(function(){
         $('#cell_panel_title').collapse('show');       //open  cell_panel_title
-        $('#dialog-new-cells').modalPopover('hide').style.display = 'none';;
+        $('#dialog-new-cells').popoverX('hide');
    }); 
     
     if(cellarray.length == 0) { // Then fetch the overlapping cells from server.
         console.log("Init: Fetching Overlapping Cells for Area");
         var url = area_json['properties']['area_url'] + '/getcells';
         
-        //$('#cell_panel_title').collapse('show');       //open  cell_panel_title to set height.
+        $('#cell_panel_title').collapse('show');       //open  cell_panel_title to set height.
         
-        $('#dialog-new-cells').modalPopover({
+        $('#dialog-new-cells').popoverX({
             target: '#cell_panel_t'  //container
         });
-        $('#dialog-new-cells').modalPopover('show');
+        $('#dialog-new-cells').popoverX('show');
         setTimeout(function() {
-            $('#dialog-new-cells').modalPopover('hide');
-        }, 20000);
-
-        
-        //console.log( "url: ", url);
-
+            $('#dialog-new-cells').popoverX('hide');
+        }, 80000);
+		
         prompt = "<h6><small>Calculating Cells</small></h6><img src='/static/img/ajax-loader.gif' class='ajax-loader'/>";
         jobid = addJob(prompt, 'gray');
-       /*
-        bootbox.dialog({
-            message: new_cell_list_instructions_str,
-            title: "Next Steps",
-            closeButton: true,
-            timeOut : 2000,
-            buttons: {
-              success: {
-              label: "Continue ...",
-              className: "btn-success",
-              callback: function() {
-                  bootbox.hideAll();
-              }
-            }
-          }
-        })
-        
-        window.setTimeout(function(){
-            bootbox.hideAll();
-         }, 10000); // 10 seconds expressed in milliseconds
-         */
+      
         $.get(url).done(function(data) {
                         
             var getCellsResult = jQuery.parseJSON(data);
@@ -384,10 +361,12 @@ function initialize() {
             container: 'body',
             title: 'Manage Area',  
             placement: 'bottom',
+            footer: "OK",
             content:  "The square white cells overlapping your area are the outlines of Landsat images<br/><br/>" + 
-            "Selected cells are highlighted with a bolder line.<br/><br/>" + 
-            "You can change which cells are monitored with the controls below.<br/><br/>" + 
-            "You can also change the default view and sharing settings for your area.<br/><br/>" 
+            "Monitored cells are highlighted with a bolder line.<br/><br/>" + 
+            "Change which cells are monitored with the <a id='close-dialog-new-cells-open-accordion'><i>Landsat Cells</i></a> controls below.<br/><br/>" + 
+            "Change the default view for your area with the Map panel.<br/><br/>" +
+            "Change whether your area can be seen by other users with the sharing controls under Area.<br/><br/>" 
             });
         
         $('#save-view').popover({ 
@@ -504,9 +483,6 @@ function initialize() {
                     });
             }     
         );//delete-are-you-sure handler
-
-     
-
 };//initialize
 
 function httpgetActionUrl(action)
@@ -544,17 +520,7 @@ function drawLandsatCells(cellarray) {
             75, 
             "Each Landsat image covers one of these cells.", 
             layerslider_callback ); //create slider.
-    /*
-    createLandsatGridOverlay(map_under_lhs, 0.75, true, cellarray);
-    addLayer( map_under_lhs.landsatGridOverlay.name,
-             'Landsat Cell Overlay',
-             'brown',  
-             75, 
-             "Cells show the outline of Landsat images on overlay.", 
-             layerslider_callback ); //create slider.
-  */
 }
-
 
 
 // update_map_panel updates the panel div based on values of the map after bounds changed event.

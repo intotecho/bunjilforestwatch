@@ -3,7 +3,7 @@ from __future__ import with_statement
 LANSAT_CELL_AREA = (185*170) # sq.km  http://iic.gis.umn.edu/finfo/land/landsat2.htm
 
 import logging
-
+import urllib
 logging.basicConfig(level=logging.DEBUG)
 
 from django.utils import html # used for entry.html markup
@@ -260,7 +260,7 @@ class MainPage(BaseHandler):
             journals = cache.get_journals(user_key)
             areas = cache.get_areas(user_key) # areas created by this user.
             following_areas = cache.get_following_areas(user_key)
-            other_areas = cache.get_other_areas(self.session['user']['name'], user_key)
+            other_areas = cache.get_other_areas_list(user_key)
 
             following = cache.get_by_keys(cache.get_following(self.session['user']['name']), 'User') # for journal not areas
             followers = cache.get_by_keys(cache.get_followers(self.session['user']['name']), 'User') # for journal not areas
@@ -1771,17 +1771,17 @@ class ViewJournal(BaseHandler):
     #FIXME: Pagination for view-journals does not work.
     def get(self, username, journal_name):
         page = int(self.request.get('page', 1))
-        journal= cache.get_journal(username, journal_name)
-
-        logging.info('ViewJournal journal_name %s %s', journal_name, journal)
+        journal= models.Journal.get_journal(username, journal_name.decode('utf-8'))
         
         if username != self.session['user']['name']:
             self.error(403)
             return
 
         if not journal:
+            logging.error('ViewJournal() cannot find journa %s', journal_name)
             self.error(404)
         else:
+            logging.debug('ViewJournal journal_name %s %s', journal_name, journal)
             self.render('view-journal.html', {
                 'username': username,
                 'journal': journal,
@@ -2110,10 +2110,10 @@ class FollowAreaHandler(BaseHandler):
             unop = 'del'
             #print 'following'
 
-        xg_on = ndb.create_transaction_options(xg=True)
+        #xg_on = ndb.create_transaction_options(xg=True)
 
         def txn(userfollowingareas_key, areafollowers_key, area, op):
-            tu, ar = ndb.get([userfollowingareas_key, areafollowers_key])
+            tu, ar = ndb.get_multi([userfollowingareas_key, areafollowers_key])
             #print("FollowAreaHandler() adding key=", userfollowingareas_key)
             if not tu:
                 logging.error("FollowAreaHandler() user not found: %s", userfollowingareas_key)
@@ -2127,54 +2127,62 @@ class FollowAreaHandler(BaseHandler):
                 area.followers_count = 0
                 
             if op == 'add':
-                if userfollowingareas_key.name() not in ar.users:
-                    ar.users.append(userfollowingareas_key.name())
+                if userfollowingareas_key.string_id() not in ar.users:
+                    ar.users.append(userfollowingareas_key.string_id())
                     changed.append(ar)
-                if areafollowers_key.name() not in tu.areas:
-                    tu.areas.append(areafollowers_key.name())
+                if areafollowers_key.string_id() not in tu.areas:
+                    tu.areas.append(areafollowers_key.string_id())
+                    tu.area_keys.append(area.key)
                     changed.append(tu)
                     area.followers_count += 1
                     changed.append(area)
             elif op == 'del':
-                if userfollowingareas_key.name() in ar.users:
-                    ar.users.remove(userfollowingareas_key.name())
+                if userfollowingareas_key.string_id() in ar.users:
+                    ar.users.remove(userfollowingareas_key.string_id())
                     changed.append(ar)
-                if areafollowers_key.name() in tu.areas:
+                if areafollowers_key.string_id() in tu.areas:
                     area.followers_count -= 1
                     changed.append(area)
-                    tu.areas.remove(areafollowers_key.name())
+                    tu.areas.remove(areafollowers_key.string_id())
+                    try:
+                        tu.area_keys.remove(area.key)
+                    except:
+                        logging.error("FollowAreaHandler() area.key %s not in area_keys",  area.key)
                     changed.append(tu)
 
-            changed.put()
-
+            ndb.put_multi(changed)
+            
             return tu, ar
         
-        following_key = ndb.Key.from_path('User', thisuser, 'UserFollowingAreasIndex', thisuser)
-        followers_key = ndb.Key.from_path('AreaOfInterest', area_name.decode('utf-8'), 'AreaFollowersIndex', area_name.decode('utf-8'))
+        following_key = models.UserFollowingAreasIndex.get_key(thisuser) #ndb.Key('User', thisuser, 'models.UserFollowingAreasIndex', thisuser)
+        followers_key = models.AreaFollowersIndex.get_key(area_name.decode('utf-8')) #ndb.Key('AreaOfInterest', area_name.decode('utf-8'), 'models.AreaFollowersIndex', area_name.decode('utf-8'))
 
-        areas_following, followers,  = ndb.run_in_transaction_options(xg_on, txn, following_key, followers_key, area, op)
+        areas_following, followers,  = ndb.transaction( lambda: txn(following_key, followers_key, area, op), xg=True)
 
         if op == 'add':
             self.add_message('success', 'You are now following area <em>%s</em>.' %area_name.decode('utf-8'))
-            models.Activity.create(cache.get_by_key(self.session['user']['key']), models.ACTIVITY_FOLLOWING, area)
-
+            models.Activity.create(cache.get_user(self.session['user']['name']), models.ACTIVITY_FOLLOWING, area.key)
+ 
             ########### create a journal for each followed area - should be in above txn and a function call as duplicated ##############
             name = "Observations for " + area_name.decode('utf-8') # name is used by view-obstask.html to make reports.
-            journal = models.Journal(parent=ndb.Key(self.session['user']['key']), name=name)
+            
+            journal = models.Journal(parent=self.session['user']['key'], id=name)
+          
             for journal_url, journal_name, journal_type in self.session['journals']:
-                if journal.name == journal_name:
+                if journal.key.string_id == journal_name:
                     self.add_message('info', 'You already have a journal called <em>%s</em>.' %name.decode('utf-8'))
                     break
             else:
                 journal.journal_type = "observations"
+                
                 def txn2(user_key, journal):
-                    user = ndb.get(user_key)
+                    user = user_key.get()
                     user.journal_count += 1
                     ndb.put_multi([user, journal])
                     return user, journal
 
-                user, journal = ndb.run_in_transaction(txn2, self.session['user']['key'], journal)
-                cache.clear_journal_cache(ndb.Key(self.session['user']['key']))
+                user, journal = ndb.transaction(lambda: txn2(self.session['user']['key'], journal))
+                cache.clear_journal_cache(self.session['user']['key'])
                 models.Activity.create(user, models.ACTIVITY_NEW_JOURNAL, journal.key)
                 cache.set(cache.pack(user), cache.C_KEY, user.key)
                 self.add_message('success', 'Created journal <em>%s</em>.' %name.decode('utf-8'))
@@ -2261,21 +2269,32 @@ class NewEntryHandler(BaseHandler):
 
 class ViewEntryHandler(BaseHandler):
     def get(self, username, journal_name, entry_id):
-        journal_name = journal_name.decode('utf-8')
-
+ 
         if self.session['user']['name'] != username:
             self.error(403) 
             return
+
+        user = cache.get_user(username)
         
-        journal= cache.get_journal(username, journal_name)
+        journal_name = journal_name.decode('utf-8')
+
+        journal = models.Journal.get_journal(username, journal_name )
+        if journal == None:
+            logging.error("ViewEntryHandler(): Journal not found %s", journal_name)
+            return self.error(404)
 
         #logging.info('ViewEntryHandler journal_name %s %s', journal_name, journal)
-        entry, content, blobs = cache.get_entry(username, journal_name, entry_id)
+        entry, content, blobs = models.Entry.get_entry(username, journal_name, entry_id)
         if not entry:
+            logging.error("ViewEntryHandler(): Entry %s not found for user %s in journal %s ", entry_id, username, journal_name)
             self.error(404)
             return
-        user = cache.get_user(username)
 
+        if 'pdf' in self.request.GET:
+            logging.error("ViewEntryHandler(): PDF not supported.")
+            
+        
+        '''
         if 'pdf' in self.request.GET:
             pdf_blob = models.Blob.get('pdf', parent=entry)
             error = None
@@ -2304,10 +2323,11 @@ class ViewEntryHandler(BaseHandler):
                     self.add_message('danger', 'Error while converting to PDF: %s' %error)
                 else:
                     pdf_blob.put()
-
+            
             if not error:
                 self.redirect(pdf_blob.get_url(name=True))
                 return
+            '''
         if not journal:
             type = "default"
         else:
@@ -2329,6 +2349,7 @@ class ViewEntryHandler(BaseHandler):
 
 class GetUploadURL(BaseHandler):
     def get(self, username, journal_name, entry_id):
+        logging.debug('GetUploadURL()')
         #user = cache.get_by_key(self.session['user']['key'])
         user = cache.get_user(self.session['user']['name'])
         if user.can_upload() and user.name == username:
@@ -2346,7 +2367,7 @@ class GetUploadURL(BaseHandler):
 class SaveEntryHandler(BaseHandler):
     def post(self):
         username = self.request.get('username')
-        journal_name = self.request.get('journal_name')
+        journal_name = self.request.get('journal_name').decode('utf-8')
         entry_id = long(self.request.get('entry_id'))
         delete = self.request.get('delete')
 
@@ -2356,13 +2377,13 @@ class SaveEntryHandler(BaseHandler):
 
         self.redirect(webapp2.uri_for('view-entry', username=username, journal_name=journal_name, entry_id=entry_id))
 
-        entry, content, blobs = cache.get_entry(username, journal_name, entry_id)
+        entry, content, blobs =  models.Entry.get_entry(username, journal_name, entry_id)
 
         if delete == 'delete':
             journal_key = entry.key.parent()
             user_key = journal_key.parent()
 
-            def txn(user_key, journal_key, entry_key, content_key, blobs):
+            def txn_delete(user_key, journal_key, entry_key, content_key, blobs):
                 entry = ndb.get(entry_key)
                 delete = [entry_key, content_key]
                 delete.extend([i.key for i in blobs])
@@ -2417,11 +2438,11 @@ class SaveEntryHandler(BaseHandler):
                 journal.put()
                 return user, journal
 
-            user, journal = ndb.run_in_transaction(txn, user_key, journal_key, entry.key, content.key, blobs)
+            user, journal = ndb.transaction(lambda : txn_delete(user_key, journal_key, entry.key, content.key, blobs))
 
             blobstore.delete([i.get_key('blob') for i in blobs])
 
-            ndb.delete([entry, content])
+            ndb.delete([entry.key, content.key])
             counters.increment(counters.COUNTER_ENTRIES, -1)
             counters.increment(counters.COUNTER_CHARS, -entry.chars)
             counters.increment(counters.COUNTER_SENTENCES, -entry.sentences)
@@ -2463,8 +2484,9 @@ class SaveEntryHandler(BaseHandler):
             else:
                 images= []
 
-            def txn(entry_key, content_key, rm_blobs, subject, tags, images, text, markup, rendered, chars, words, sentences, date):
-                ndb.delete_multi_async(rm_blobs)
+            def txn_save(entry_key, content_key, rm_blobs, subject, tags, images, text, markup, rendered, chars, words, sentences, date):
+            
+                ndb.delete_multi_async(b.key for b in rm_blobs)
 
                 user, journal, entry  = ndb.get_multi([entry_key.parent().parent(), entry_key.parent(), entry_key])
 
@@ -2542,9 +2564,9 @@ class SaveEntryHandler(BaseHandler):
             rm_blobs = []
 
             for b in blobs:
-                bid = str(b.key.id())
-                if bid not in blob_list:
-                    b.delete()
+                bid = str(b.key)
+                if bid not in blob_list: # blob_list is list of blobs already in entry. No need so save them again. 
+                    b.key.delete()
                     rm_blobs.append(b)
 
             for b in rm_blobs:
@@ -2562,7 +2584,7 @@ class SaveEntryHandler(BaseHandler):
                 words = 0
                 sentences = 0
                 
-            user, journal, entry, content, dchars, dwords, dsentences = ndb.transaction(lambda: txn(entry.key, content.key, rm_blobs, subject, tags, images, text, markup, rendered, chars, words, sentences, newdate))
+            user, journal, entry, content, dchars, dwords, dsentences = ndb.transaction(lambda: txn_save(entry.key, content.key, rm_blobs, subject, tags, images, text, markup, rendered, chars, words, sentences, newdate))
             models.Activity.create(cache.get_user(username), models.ACTIVITY_SAVE_ENTRY, entry.key)
 
             counters.increment(counters.COUNTER_CHARS, dchars)
@@ -2596,44 +2618,44 @@ class SaveEntryHandler(BaseHandler):
 
 class UploadHandler(BaseUploadHandler):
     def post(self, username, journal_name, entry_id):
+        logging.debug("UploadHandler() username %s journal_name %s", username, urllib.unquote(journal_name))
         #print 'uploadhandler1' 
         if username != self.session['user']['name']:
-            print 'retricted' 
             self.error(403)
             return
-
-        #entry_key = cache.get_entry_key(username, journal_name, entry_id)
-        #entry = models.Entry.get_entry(username, journal_name.decode('utf-8'), entry_id)
+        user = cache.get_user(username)
+        
         uploads = self.get_uploads()
-        entry, content, blobs = cache.get_entry(username, journal_name, entry_id)
-        print 'uploadhandle2r' 
+        entry, content, blobs =  models.Entry.get_entry(username, urllib.unquote(journal_name), entry_id)
         
         blob_type = -1
         if len(uploads) == 1:
             blob = uploads[0]
-            print 'blob.content_type: ', blob.content_type
             if blob.content_type.startswith('image/'):
                 blob_type = models.BLOB_TYPE_IMAGE
 
-        blob_type = models.BLOB_TYPE_IMAGE #testing only delete this line.
+        #blob_type = models.BLOB_TYPE_IMAGE #testing only delete this line.
 
         if not entry or self.session['user']['name'] != username or blob_type == -1:
             for upload in uploads:
                 upload.delete()
             return
 
-        def txn(user_key, entry_key, blob):
-            user, entry = ndb.get([user_key, entry_key])
+        def txn(user, entry, blob):
+            #user, entry = ndb.get_multi([user_key, entry_key])
             user.used_data += blob.size
             entry.blobs.append(str(blob.key.id()))
             ndb.put_multi([user, entry, blob])
             return user, entry
 
         blob_key = models.Blob.get_blob_key(entry)
-        new_blob = models.Blob(key=blob_key, blob=blob, type=blob_type, name=blob.filename, size=blob.size)
+        print 'blob_key', blob_key
+        
+      
+        new_blob = models.Blob(key=blob_key, blob=blob.key(), type=blob_type, name=blob.filename, size=blob.size)
         new_blob.get_url()
 
-        user, entry = ndb.run_in_transaction(txn, entry_key.parent().parent(), entry_key, new_blob)
+        user, entry = ndb.transaction(lambda: txn(user, entry, new_blob))
         cache.delete([
             cache.C_KEY %user.key,
             cache.C_KEY %entry.key,
@@ -2642,7 +2664,7 @@ class UploadHandler(BaseUploadHandler):
         ])
         cache.clear_entries_cache(entry.key.parent())
 
-        self.redirect(webapp2.uri_for('upload-success', blob_id=blob_id, name=new_blob.name, size=new_blob.size, url=new_blob.get_url()))
+        self.redirect(webapp2.uri_for('upload-success', blob_id=blob.key, name=new_blob.key.string_id(), size=new_blob.size, url=new_blob.get_url()))
 
 class UploadSuccess(BaseHandler):
     def get(self):
@@ -2669,7 +2691,7 @@ class MarkupHandler(BaseHandler):
 #    def get(self):
 #        self.render('security.html')
 
-class UpdateUsersHandler(BaseHandler): #Admin Only Function
+class UpdateUsersHandler(BaseHandler): #Admin Only Function for user maintenance.
     def get(self):
         q = models.User.all(keys_only=True)
         cursor = self.request.get('cursor')
@@ -2801,7 +2823,7 @@ class DownloadJournalHandler(BaseHandler):
             self.error(403)
             return
 
-        journal= cache.get_journal(username, journal_name)
+        journal= models.Journal.get_journal(username, journal_name.decode('utf-8'))
 
         if not journal:
             self.error(404)
@@ -2846,7 +2868,7 @@ class DownloadJournalHandler(BaseHandler):
                 files.finalize(file_name)
                 pdf_blob = models.Blob(
                     key=key,
-                    blob=files.blobstore.get_blob_key(file_name),
+                    blob=files.blobstore.get_blob_key(file_name),                
                     type=models.BLOB_TYPE_PDF,
                     name='%s - %s - %s to %s' %(username, utils.deunicode(journal_name.decode('utf-8')), from_date.strftime(DATE_FORMAT), to_date.strftime(DATE_FORMAT)),
                     date=journal.last_modified,
@@ -2911,7 +2933,7 @@ class BackupHandler(BaseHandler):
         journal_name = self.request.get('journal_name')
 
         user = cache.get_user(username)
-        entry, content, blobs = cache.get_entry(username, journal_name, entry_key.id(), entry_key)
+        entry, content, blobs = models.Entry.get_entry(username, journal_name, entry_key.id(), entry_key)
         path = '%s/%s.html' %(journal_name.replace('/', '_'), entry_key.id())
         rendered = utils.render('pdf.html', {'entries': [(entry, content, [])]})
         rendered = rendered.encode('utf-8')

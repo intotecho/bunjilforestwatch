@@ -3,6 +3,12 @@
 
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 <title>Bunjil Forest Watch New Area</title>
+
+{% block head_scripts %}
+<!--new-area.html head_scripts -->
+{% include "includes/head_scripts.html" %}
+{% endblock head_scripts %}
+
 <style type="text/css"> 
       html { 
          height: 100%;
@@ -147,4 +153,6 @@
 {% endblock %}
 
 {% block footer_js%}
+{% include "includes/project_scripts.html" %}
+{% include "includes/map_scripts.html" %}
 {% endblock footer_js %}

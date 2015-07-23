@@ -22,6 +22,11 @@ indexes:
   - name: date
     direction: desc
 
+- kind: AreaOfInterest
+  properties:
+  - name: share
+  - name: owner
+
 - kind: Entry
   ancestor: yes
   properties:

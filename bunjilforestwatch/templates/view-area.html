@@ -1,22 +1,21 @@
 {% extends "base-maps.html" %} 
 {% block map_head %}
-<script>
-    
-var single_map = true; 
-var initial_dragger = "8%";
-
-</script>
-
+	<script>
+	var single_map = true; 
+	var initial_dragger = "8%";
+	</script>
 {% endblock map_head %} 
-    
+<!--  base-maps.html end head --> 
 {% block breadcrumbs %}
 <div class="container" >
-	<ul class="breadcrumb">
-		<li><a href="{{ "user"|url(username) }}">{{ username }}</a> </li>
-		<li class="active"><a href="{{ area|area_url }}">{{ area }}</a></li>
-	</ul>
-</div>
+		<ul class="breadcrumb">
+			<li><a href="{{ "user"|url(username) }}">{{ username }}</a> </li>
+			<li class="active"><a href="{{ area|area_url }}">{{ area }}</a></li>
+		</ul>
+	</div>
 {% endblock breadcrumbs%} 
+<!--  start map contents--> 
 
 {% block map_content %}
-{% endblock %}
+{% endblock map_content %}
+<!--  end map_contents--> 

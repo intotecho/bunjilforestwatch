@@ -10,15 +10,13 @@ var algorithm = 'rgb'; // ndvi
 var latest = 0;  //latest - 0
 var overlayMaps = [];
 
-
 var save_view_instructions = 
-	    "Save the current view.<br/>" +
-	    "All users will see this as the initial view when they open an observation for this area. <br/>" ;
-	    
+    "Save the current view.<br/>" +
+    "All users will see this as the initial view when they open an observation for this area. <br/>" ;
+    
 var reset_view_instructions = 
-	        "Return map to the initial view.<br/>" +
-	        "This does not update the saved view.<br/>" ;
-
+        "Return map to the initial view.<br/>" +
+        "This does not update the saved view.<br/>" ;
 
 function setActionUrl(action)
 {
@@ -37,8 +35,8 @@ function setActionUrl(action)
    url = url + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
    
    //Not working so disable the final bit.
-   return url
-};
+   return url;
+}
 
 
 function jsonStringifySelectedCell(landsat_cell)
@@ -58,9 +56,9 @@ function jsonStringifySelectedCell(landsat_cell)
    var cell_feature = { "type": "Feature",
             "geometry":   {"type": "Polygon","coordinates": cell_coords},
             "properties": {"featureName": "cell_boundary", "path": landsat_cell.path, "row": landsat_cell.row}
-                 }
+                 };
    return JSON.stringify(cell_feature);
-};
+}
 
 //modify area with new value of shared.
 function updateAreaShared(shared)
@@ -106,7 +104,7 @@ $('#reset-view').click(function(){
     map.setCenter(map_center);
 });
 
-var monitored_cells_are= 
+var monitored_cells_are = 
 	"<b>Monitored</b> cells are highlighted with a bolder outline. " + 
 	"Only <b>Monitored</b> cells generate new observation tasks which are " +
 	"sent to the area\'s followers when new images are found. <br/>";
@@ -127,28 +125,36 @@ function toggle_edit_cells_lock()
 	console.log("Edit Cells Lock: ", edit_cells_mode);
     
 	var panel = $('#edit-cells-lock');
+	panel.popover({ 
+	    html : true, 
+	    animation: true,
+	    trigger: 'hover',
+	    container: 'body',
+	    placement: 'right',
+	 });
+	
+	var popover = panel.data('bs.popover');
+	
 	if (edit_cells_mode) {
 		panel.html("<span class='glyphicon glyphicon-edit cell-panel-popover-edit'/><span class='cell-panel-info'> Editing Cells<span>");
-		panel.popover('destroy').popover({ 
-		    html : true, 
-		    animation: true,
-		    trigger: 'hover',
-		    container: 'body',
-		    title: "<span class='cell-panel-popover-edit'> Editing Monitored Cells</span>",  
-		    placement: 'right',
-		    content:  edit_cells_instructions_editing
-		    });		
+	    popover.options.content = edit_cells_instructions_editing;
+	    popover.options.title = "<span class='cell-panel-popover-edit'> Editing Monitored Cells</span>";
+		
 	}
 	else {
 		panel.html("<span class='glyphicon glyphicon-lock cell-panel-popover-locked'/><span class='cell-panel-info'> Locked (Click to edit cells)<span>");
-		panel.popover('destroy').popover({ 
-		    html : true, 
-		    animation: true,
-		    trigger: 'hover',
-		    container: 'body',
-		    title: "<span class='cell-panel-popover-locked'> Cell editing is Locked</span>",  
-		    placement: 'right',
-		    content: edit_cells_instructions_locked
-		    });
+	    popover.options.content = edit_cells_instructions_locked;
+	    popover.options.title = "<span class='cell-panel-popover-locked'> Cell editing is Locked</span>";
 	}
+
+	// Check to see if the fucntion has benn called before.
+    if ( typeof toggle_edit_cells_lock.staticPropertyinit == 'undefined' ) {
+        // It has not... perform the initialization
+        toggle_edit_cells_lock.staticPropertyinit = 0;
+        console.log("Init Edit Cells Lock");
+	}
+    else {
+    	panel.popover('show');
+    
+    }
 }

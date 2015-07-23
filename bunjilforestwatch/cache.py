@@ -35,6 +35,7 @@ C_AREAS_ALL = 'areas'
 C_AREA_ALL_LIST = 'areas_list'
 C_AREA_FOLLOWERS = 'area_followers_%s'
 C_FOLLOWING_AREAS = 'following_areas_%s'
+C_FOLLOWING_AREA_KEYS = 'following_area_keys_%s'
 C_FOLLOWING_AREAS_LIST = 'following_areas_list_%s'
 C_FOLLOWING_AREANAMES_LIST = 'following_areanames_list_%s'
 
@@ -110,7 +111,7 @@ def pack(models):
         return ndb.ModelAdapter().entity_to_pb(models).Encode()
     else:
     # A list
-        return [ndb.ModelAdapter().entity_to_pb(models).Encode(x) for x in models]
+        return [ndb.ModelAdapter().entity_to_pb(x).Encode() for x in models]
 
 def unpack(data):
     if data is None:
@@ -182,22 +183,23 @@ def get_areas(user_key):  #return all areas's owned by user.
 
     return data
 
-def get_other_areas(username, user_key): # returns list of areas user neither created nor follows.
-    #user_key = ndb.Key.from_path('User', username)
-    #print ("get_other_areas() ", username, user_key)
-
+def get_other_areas(user_key): # returns list of areas user neither created nor follows. User can select an area from this list to follow.
     n = C_OTHER_AREAS %user_key
     data = memcache.get(n)
     if data is None:
-        Area = models.AreaOfInterest
-        allareas = models.AreaOfInterest.query()
-        af = get_following_areas(user_key)
-        otherareas = [x for x in allareas if x.name not in af and  x.owner != username and x.share == x.PUBLIC_AOI ] # remove areas user created and elements in af that user follows
-        
-        data = otherareas #[(x.url(), x.name, x.owner.name) for x in otherareas]
+        all_area_keys = models.AreaOfInterest.query().filter(models.AreaOfInterest.owner != user_key).filter(models.AreaOfInterest.share == models.AreaOfInterest.PUBLIC_AOI ).fetch(keys_only=True)
+        af = get_following_area_keys(user_key) # a list of area keys.
+        other_areas_keys = [x for x in all_area_keys if x not in af] # remove areas user is following from list of all_areas
+        otherareas = ndb.get_multi(other_areas_keys)
+        data = otherareas
         memcache.add(n, data)
 
     return data
+
+def get_other_areas_list(user_key): # returns list of areas that user neither created nor follows - stripped just main properties for a list. User can select an area from this list to follow.
+    otherareas = get_other_areas(user_key)
+    return [x.summary_dictionary() for x in otherareas]
+
 
 # returns a list of user's area names
 def get_areas_list(user_key):
@@ -649,19 +651,44 @@ def get_area_followers(area_name):
         memcache.add(n, data)
     return data
 
+'''
+get_following_area_keys() given a user key, returns a list of area keys that the user follows.
+'''
+
+def get_following_area_keys(user_key): 
+    n = C_FOLLOWING_AREA_KEYS %user_key
+    data = memcache.get(n)
+    if data is None:
+        following = models.UserFollowingAreasIndex.get_by_username(user_key.id()) 
+        data = []
+        if not following:
+            logging.debug("get_following_area_keys(): %s not following any areas", user_key.string_id()) 
+        else:
+            data = following.area_keys
+        memcache.add(n, data)
+        logging.debug("get_following_area_keys() reloaded: %s ", user_key.string_id())
+
+    return data
+
+
+'''
+get_following_areas() given a user key, returns a UserFollowingAreasIndex entity that contains a list the names of areas that the user follows.
+
+'''
+
 def get_following_areas(user_key): 
     n = C_FOLLOWING_AREAS %user_key
     data = memcache.get(n)
     if data is None:
-        following_key = ndb.Key('User', user_key.id(), 'UserFollowingAreasIndex', user_key.id())
-
-        following = models.UserFollowingAreasIndex.get_by_id(following_key.id())
+        #following_key = models.UserFollowingAreasIndex.get_key(user_key.id())
+        #following = models.UserFollowingAreasIndex.get_by_id(following_key)
+        following = models.UserFollowingAreasIndex.get_by_username(user_key.id()) 
         data = []
         if not following:
-            logging.debug("get_following_areas(): %s not following any areas", user_key.string_id())
+            logging.debug("get_following_areas(): %s not following any areas", user_key.string_id()) 
         else:
             following_areas = following.areas
-            allareas = models.AreaOfInterest.all()  #TODO: This is inefficient. Give each user model a list.
+            allareas = models.AreaOfInterest.query()  #TODO: This is inefficient. Give each user model a list.
             data = [x for x in allareas if x.name in following_areas]
         memcache.add(n, data)
         
@@ -706,7 +733,7 @@ def get_area(username, area_name):
         #area_key = get_area_key(username, area_name)
         data = models.AreaOfInterest.get_by_id(area_name.decode('utf-8'))
         #data = models.AreaOfInterest.query(models.AreaOfInterest.name == area_name.decode('utf-8')).fetch()
-        if data  is None:
+        if data is None:
             logging.error("get_area() no area found for %s %s", username, area_name)
             return None
         memcache.add(n, data)
@@ -734,25 +761,17 @@ def get_area_key(username, area_name):
     return data
 
 
-def get_cell(path, row, area_name):
-    
+def get_cell(path, row, area_name):    
     n = C_CELL %(path, row, area_name)
     data = unpack(memcache.get(n))
     if data is None:  
-        
-        if area_name is not None:
-            area_key = get_area_key(None, area_name)
-            cell_name=str(path*1000+row)
-            data = models.LandsatCell.get_by_key_name (cell_name,  area_key)
-        else:
-            data = models.LandsatCell.all().filter('path =', int(path)).filter('row =', int(row)).get()
-             
+        data = models.LandsatCell.get_cell(path, row, area_name)
         if data is None:
             logging.error("cache:get_cell() did not find cell object %d %d for area %s", path, row, area_key)
         else:
             memcache.add(n, pack(data))
     return data
-
+'''
 def get_cell_from_keyname(cell_name, area): #TODO - Does not really add anything different to the generic cache.get_by_key()
      
     n = C_CELL_NAME %(cell_name, area)
@@ -765,9 +784,8 @@ def get_cell_from_keyname(cell_name, area): #TODO - Does not really add anything
             logging.error("cache:get_cell_from_keyname() Missing Cell Object %s", cell_name)
         else:
             memcache.add(n, pack(data))
-    return data
-    
-       
+    return data  
+   
 def get_cell_from_key(cell_key): #TODO - Does not really add anything different to the generic cache.get_by_key()
      
     n = C_CELL_KEY %(cell_key)
@@ -781,7 +799,8 @@ def get_cell_from_key(cell_key): #TODO - Does not really add anything different 
         else:
             memcache.add(n, data)
     return data
-    
+  '''
+  
 def get_cells(area_key):
     n = C_CELLS %area_key
     data = unpack(memcache.get(n))
@@ -802,10 +821,10 @@ def get_all_cells(): #FIXME - Doesn't work - too much data returned.
 
 
 
+    '''
 def get_journal(username, journal_name):
     return models.Journal.get_journal(username, journal_name) # refactor to remove this call
     
-    '''
     user_key = ndb.Key('User', username)
     journal_key = ndb.Key('Journal', journal_name, parent=user_key)
     print 'journal_key', journal_key
@@ -822,23 +841,25 @@ def get_journal_key(username, journal_name):
     return data
 
 def get_entry(username, journal_name, entry_id, entry_key=None):
+    return models.Entry.get_entry(username, journal_name, entry_id, entry_key=None)
+    '''
     n = C_ENTRY %(username, journal_name, entry_id)
     data = memcache.get(n)
     if data is None:
         entry, content, blobs = models.Entry.get_entry(username, journal_name, entry_id, entry_key=None)
 
-        if entry.blobs:
-            blobs = pack(ndb.get_multi(entry.blob_keys))
+        if entry and content:
+            data = (pack(entry), pack(content), blobs)
+            memcache.add(n, data)
         else:
-            blobs = []
-        data = (pack(entry), pack(content), blobs)
-        memcache.add(n, data)
+            return None, None, []
     else:
         entry, content, blobs = data
         entry = unpack(entry)
         content = unpack(content)
-        blobs = unpack(blobs)
+        #blobs = unpack(blobs)
     return entry, content, blobs
+    '''
 
 def get_entry_render(username, journal_name, entry_id):
     n = C_ENTRY_RENDER %(username, journal_name, entry_id)
