@@ -25,4 +25,7 @@ photothumb.db
 *.bak
 *.json
 /settings - Copy.py
-/lib/*
+lib/*
+lib2/*
+eeold/*
+notused/*
