@@ -2,15 +2,16 @@
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 {% block content %}
 <div class="container">
+    {% if show_navbar == True %} 
     <div>
         <p>
             <ul class="breadcrumb">
                 <li><a href="{{ "user"|url(username) }}">{{ username.name }}</a> </li>
                 <li class="active">observation tasks</li>
             </ul>
-    </p>
-    
+         </p>
      </div>
+    {% endif %}
     {% if user2view != None %}        
         <h3>Recent Observation Tasks</h3>
         <p>Tasks for <a href="{{ "user"|url(username) }}">{{ username }}</a> </h3>
@@ -28,6 +29,7 @@
     {% endfor %}
     <div>
     
+    {% if show_navbar == True %}
      <ul class="pagination">
             <li class="prev"><a href="{{ tasks| obstasks_url(user2view, area_name, 0) }}">first</a></li>
             {% if page == 1 %}
@@ -48,6 +50,7 @@
 
             <li class="next"><a href="{{ tasks |obstasks_url(user2view, area_name,pages) }}">last</a></li>
         </ul>
+         {% endif %}
     </div>  
  
     {% else %}

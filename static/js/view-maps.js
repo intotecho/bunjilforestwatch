@@ -122,39 +122,39 @@ var edit_cells_instructions_locked =
 function toggle_edit_cells_lock()
 {
 	edit_cells_mode = ! edit_cells_mode; //toggle editing.
-	console.log("Edit Cells Lock: ", edit_cells_mode);
     
-	var panel = $('#edit-cells-lock');
-	panel.popover({ 
-	    html : true, 
-	    animation: true,
-	    trigger: 'hover',
-	    container: 'body',
-	    placement: 'right',
-	 });
-	
-	var popover = panel.data('bs.popover');
-	
-	if (edit_cells_mode) {
-		panel.html("<span class='glyphicon glyphicon-edit cell-panel-popover-edit'/><span class='cell-panel-info'> Editing Cells<span>");
-	    popover.options.content = edit_cells_instructions_editing;
-	    popover.options.title = "<span class='cell-panel-popover-edit'> Editing Monitored Cells</span>";
+	var panel = $('#edit-cells-lock'); 
+	if (panel.length) //only exists if user is owner...
+	{
+		console.log("Edit Cells Lock: ", edit_cells_mode);
+		panel.popover({ 
+		    html : true, 
+		    animation: true,
+		    trigger: 'hover',
+		    container: 'body',
+		    placement: 'right',
+		 });
 		
-	}
-	else {
-		panel.html("<span class='glyphicon glyphicon-lock cell-panel-popover-locked'/><span class='cell-panel-info'> Locked (Click to edit cells)<span>");
-	    popover.options.content = edit_cells_instructions_locked;
-	    popover.options.title = "<span class='cell-panel-popover-locked'> Cell editing is Locked</span>";
-	}
-
-	// Check to see if the fucntion has benn called before.
-    if ( typeof toggle_edit_cells_lock.staticPropertyinit == 'undefined' ) {
-        // It has not... perform the initialization
-        toggle_edit_cells_lock.staticPropertyinit = 0;
-        console.log("Init Edit Cells Lock");
-	}
-    else {
-    	panel.popover('show');
-    
-    }
+		var popover = panel.data('bs.popover');
+		
+		if (edit_cells_mode) {
+			panel.html("<span class='glyphicon glyphicon-edit cell-panel-popover-edit'/><span class='cell-panel-info'> Editing Cells<span>");
+		    popover.options.content = edit_cells_instructions_editing;
+		    popover.options.title = "<span class='cell-panel-popover-edit'> Editing Monitored Cells</span>";
+			
+		}
+		else {
+			panel.html("<span class='glyphicon glyphicon-lock cell-panel-popover-locked'/><span class='cell-panel-info'> Locked (Click to edit cells)<span>");
+		    popover.options.content = edit_cells_instructions_locked;
+		    popover.options.title = "<span class='cell-panel-popover-locked'> Cell editing is Locked</span>";
+		}
+	
+	    if ( typeof toggle_edit_cells_lock.staticPropertyinit == 'undefined' ) {
+	        //console.log("First Call - Init Edit Cells Lock");
+	        toggle_edit_cells_lock.staticPropertyinit = 0;
+		}
+	    else {
+	    	panel.popover('show');    
+	    }
+	}   
 }

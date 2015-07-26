@@ -10,7 +10,7 @@ body {
     color: #0099CC ; /*Blue Hills Palette #F1F2E4 #3173Bc #294075 #2F5CC0 #3A73BC #7BACDB */
 }
 </style>
-<div class="container"'>
+<div class="container">
     <div class="row">
         <div class="col-md-8">
         </div>
@@ -25,10 +25,15 @@ body {
                        href="/login/google"> <i class="fa fa-google-plus"></i>Sign in</a>
         </div>
     </div>
-    <div class="row"'>
+    <div class='row'>
          <img src="static/images/bfw_bg.jpg" class="img-responsive" alt="Bunjil Forest Watch - background">
    </div>       
+    <div class='row'>
+            <div class='anon-maps-iframe '><iframe class='anon-maps-iframe ' src='http://localhost:8001/obs/list'></iframe></div>
+   </div>       
+    <div class='row'>
+            <div class='blog-iframe'><iframe class='blog-iframe' src='http://blog.bunjilforestwatch.net/about'></iframe></div>
+   </div>       
 </div>
-<div class='blog-iframe'><iframe class='blog-iframe' src='http://blog.bunjilforestwatch.net/about'></iframe></div>
 {% endblock %}
 

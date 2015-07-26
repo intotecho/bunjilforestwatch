@@ -1562,59 +1562,58 @@ ObservationTaskHandler() when a user clicks on a link in an obstask email they c
 class ObservationTaskHandler(BaseHandler):
     
     def get(self, task_id):
-        current_user = users.get_current_user()
-        if  not current_user:
-            abs_url  = urlparse(self.request.uri)
-            original_url = abs_url.path
-            logging.info('No user logged in. Cannot access protected url' + original_url)
-            return self.redirect(users.create_login_url(original_url))
-        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
-         
+
         obstask = models.ObservationTask.get_by_id(long(task_id)) 
-        if obstask is not None:
-            #task_owner = cache.get_user(username) #user who owns the task is passed in url, not the assigned_owner attribute of the task object.
-            #if task_owner is None:
-            #    self.add_message('danger', 'Error: Invalid task owner: ' + username)
-            #    self.redirect(webapp2.uri_for('main'))
-            #    return
-            
-            if current_user.nickname != obstask.assigned_owner:
-                self.add_message('info', "You {0!s} are not assigned to this task. Task assigned to {1!s}".format(current_user.nickname , obstask.assigned_owner.string_id()))
-
-            area      = obstask.aoi.get() 
-            cell_list  = area.CellList()
-            
-            resultstr = "New Task for {0!s} to check area {1!s}".format(user.name, area.name.encode('utf-8') )
-
-            debugstr = resultstr + " task: " + str(task_id) + " has " + str(len(obstask.observations)) + "observations"
-            obslist = []
-            for obs_key in obstask.observations:
-                obs = obs_key.get() #cache.get_by_key(obs_key) messy double cache
-                if obs is not None:
-                    obslist.append(obs.Observation2Dictionary()) # includes a list of precomputed overlays
-                else:
-                    logging.error("Missing Observation from cache")
-            
-            geojson_area = area.geojsonArea()
-            self.populate_user_session(user)
-            self.render('view-obstask.html', {
-                'username':  self.session['user']['name'],
-                'area_json' : geojson_area,
-                'area': area,
-                'owner': obstask.assigned_owner.string_id(),
-                'show_delete':False,
-                'task': obstask,
-                'show_navbar': True,
-                #'area_followers': area_followers,
-                'obslist': json.dumps(obslist),
-                'celllist':json.dumps(cell_list)
-            })
-  
-        else:
+        if obstask is None:
             self.add_message('danger', "Task not found. ObservationTaskHandler")
             resultstr = "Task not found. ObservationTaskHandler: key {0!s}".format(task_id)
             logging.error(resultstr)
-            self.response.write(resultstr)
+            return self.response.write(resultstr)
+        
+        username =  None
+        current_user = users.get_current_user()
+        if  not current_user:
+            #abs_url  = urlparse(self.request.uri)
+            #original_url = abs_url.path
+            #logging.info('No user logged in. Cannot access protected url' + original_url)
+            #return self.redirect(users.create_login_url(original_url))
+            show_nav = False
+        else:
+            user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
+            username =  self.session['user']['name']
+            show_nav = True
+            if current_user.nickname != obstask.assigned_owner:
+                self.add_message('info', "You {0!s} are not assigned to this task. Task assigned to {1!s}".format(current_user.nickname , obstask.assigned_owner.string_id()))
+            self.populate_user_session(user)
+        area      = obstask.aoi.get() 
+        cell_list  = area.CellList()
+          
+        owner = obstask.assigned_owner.string_id()
+          
+        resultstr = "New Task for {0!s} to check area {1!s}".format(owner, area.name.encode('utf-8') )
+        
+        debugstr = resultstr + " task: " + str(task_id) + " has " + str(len(obstask.observations)) + "observations"
+        obslist = []
+        for obs_key in obstask.observations:
+            obs = obs_key.get() #cache.get_by_key(obs_key) messy double cache
+            if obs is not None:
+                obslist.append(obs.Observation2Dictionary()) # includes a list of precomputed overlays
+            else:
+                logging.error("Missing Observation from cache")
+        
+        geojson_area = area.geojsonArea()
+        return self.render('view-obstask.html', {
+            'username':  username,
+            'area_json' : geojson_area,
+            'area': area,
+            'owner': owner,
+            'show_delete':False,
+            'task': obstask,
+            'show_navbar': show_nav,
+            #'area_followers': area_followers,
+            'obslist': json.dumps(obslist),
+            'celllist':json.dumps(cell_list)
+        })
 
 
 '''
@@ -1630,8 +1629,8 @@ def checkForNewInArea(area, hosturl):
     if area_followers:
         linestr += u'<p>Monitored cells ['
         new_observations = []
-        for cell_key in area.cells:
-            cell = cache.get_cell_from_key(cell_key)
+        for cell_key in area.cells: #TODO Could use cache.get_cells(area_key)
+            cell = cell_key.get()
             if cell is not None:
                 if cell.monitored:
                     linestr += u'({0!s}, {1!s}) '.format(cell.path, cell.row)
@@ -1717,11 +1716,11 @@ class CheckForNewInAllAreasHandler(BaseHandler):
 CheckForNewInAreaHandler() looks at a single area of interest and checks each monitored cell.
 It checks if there is a new image in EE since the last check.
 This function is called by admin only.
-#TODO: It could be refactored with CheckAllAreasHnadler.
+#TODO: It could be refactored with CheckAllAreasHadler.
 '''
        
 class CheckForNewInAreaHandler(BaseHandler):
-       def get(self, area_name):
+    def get(self, area_name):
         
         area = cache.get_area(None, area_name)
         logging.debug('CheckForNewInAreaHandler   check-new-area-images for area_name %s %s', area_name, area)
@@ -1802,28 +1801,18 @@ class ViewObservationTasksHandler(BaseHandler):
         a = self.request.get('area_name')
         user2view  = None if u == "" or u == "None" else u
         area_name = None if a == ""or a == "None"  else a
-
+        
         # get the logged in user.
         current_user = users.get_current_user()
         if  not current_user:
             abs_url  = urlparse(self.request.uri)
             original_url = abs_url.path
-            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
-            return self.response.write('error no login')
-
-        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
-        
-        #if 'user' not in self.session:
-        #        return self.response.write('error user')
-
-        if not registered:
-            return self.response.write('error not registered')
-        try:
-            username = self.session['user']['name']
-        except:
-            logging.error('Should never get this exception')
-            return self.response.write('error exception')
-        #print 'ViewTasks user', user, '1 ', current_user, '2 ', user2view, '3 ', current_user.nickname(), '4 ', username
+            logging.debug('No user logged in. Showing in anon mode : ' + original_url)
+            user = None
+            show_nav = False        
+        else:
+            #user = cache.get_user(self.session['user']['name']) #user from current session
+            show_nav = True
             
         if area_name:
             area = cache.get_area(None, area_name)
@@ -1859,11 +1848,8 @@ class ViewObservationTasksHandler(BaseHandler):
             obstask = cache.get_task(tasks[0]) # template needs this to get listurl to work?
             logging.info('ViewObservationTasksHandler showing %d tasks for user %s', len(obstasks), user2view) 
         
-        user = cache.get_user(self.session['user']['name']) #user from current session
-        
-        
         self.render('view-obstasks.html', {
-            'username': user,  #logged in user
+            'username': current_user,  #logged in user
             'user2view': user2view,  # or none
             'area_name': area_name, # or none
             'obstask': obstask,
@@ -1871,21 +1857,11 @@ class ViewObservationTasksHandler(BaseHandler):
             'tasks' :  tasks,
             'pages' : pages,
             'page': page,
-            'show_navbar': True,
+            'show_navbar': show_nav,
             'filter' : filter, # not used
             'pagelist': utils.page_list(page, pages)
         })
-    '''
-    def ViewObservationTasksForArea(self, area_name):
-        #page = int(self.request.get('page', 1))
-        logging.debug('ViewObservationTasksForArea')
-        return self.ViewTasks(None, area_name)
-
-    def ViewObservationTasksForUser(self, user2view):
-        #page = int(self.request.get('page', 1))
-        logging.debug('ViewObservationTasksForUser')
-        return self.ViewTasks(user2view, None)
-    '''
+  
             
     def ViewObservationTasksForAll(self):       
         #page = int(self.request.get('page', 1))
@@ -2214,7 +2190,7 @@ class FollowAreaHandler(BaseHandler):
 
 class NewEntryHandler(BaseHandler):
     def get(self, username, journal_name, images=""): #journal=None
-        #print "NewEntryHandler: ", journal_name
+        print "NewEntryHandler: ", journal_name
         if username != self.session['user']['name']:
             logging.error("NewEntryHandler missing user", username, journal_name, images)
             self.error(403)
@@ -2229,7 +2205,7 @@ class NewEntryHandler(BaseHandler):
         #    key =  ndb.Key(urlsafe=journal_name.decode('utf-8'))
         #    journal=ndb.get(key)
             
-        journal=models.Journal.get_journal(username, journal_name.decode('utf-8') )
+        journal=models.Journal.get_journal(username, journal_name)
         if journal == None:
             logging.error("NewEntryHandler(): Journal not found %s", journal)
             return self.error(404)
