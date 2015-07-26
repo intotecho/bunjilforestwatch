@@ -303,8 +303,8 @@ class AreaOfInterest(ndb.Model):
 		center = []
 		center.append(geojson.Point({'lat': self.map_center.lat, 'lng': self.map_center.lon}))
 		
-		print self.map_center
-		print center
+		#print self.map_center
+		#print center
 		
 		geojson_obj = 	{ 
 			"type": "FeatureCollection",
@@ -541,7 +541,7 @@ class ObservationTask(ndb.Model):
 	def taskurl(self):
 			username=self.assigned_owner.string_id()
 			task_id= self.key.id()
-			print 'taskurl: ', username, ' task id: ', task_id
+			#print 'taskurl: ', username, ' task id: ', task_id
 			return webapp2.uri_for('view-obstask', task_id=task_id)
 
 	

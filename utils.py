@@ -40,7 +40,7 @@ import gdata.docs.data
 import gdata.docs.service
 import gdata.gauth
 import markdown
-import rst_directive
+#import rst_directive
 import textile
 
 #env = jinja2.Environment(loader=jinja2.FileSystemLoader('templates'))
