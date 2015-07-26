@@ -92,13 +92,15 @@ body {
 <div id='area_json'   class='django-template'>{{ area_json}}</div>
 <div id='celllist'         class='django-template'>{{ celllist }}</div>
 <div id='obslist'         class='django-template'>{{ obslist }}</div>
+{% if show_navbar == True %}
 <div id='user_name' class='django-template'>{{ user.name }}</div>
 <div id='user_url'       class='django-template'>{{ "user"|url(user.name) }}</div>
+ {% endif %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-xs-2 lesspadding" style="margin: 0;">
             <h5 lesspadding>
-                <i>Manage Your Area </i><span><input id="instructions" type="button" class="btn btn-sm btn-lightgreen " rel="popover" value="?"></span>
+                <i>{{area.name}}</i><span><input id="instructions" type="button" class="btn btn-sm btn-lightgreen " rel="popover" value="?"></span>
             </h5>
                 <div class="accordion" id="accordion2">
                 <div class="accordion-group">
@@ -260,6 +262,7 @@ body {
                         </div>
                     </div>
                 </div>
+                {% if show_navbar == True %}
                <div class="accordion-group">
                     <div class="accordion-heading">
                         <a class="accordion-toggle" data-toggle="collapse" href="#ad_hoc_panel"> Create Overlay</a>
@@ -313,6 +316,7 @@ body {
                         </div>
                     </div>
                 </div>
+                {% endif %}
            </div>
            <div>
                 <br/><a  id='make_report' class="btn btn-small btn-lightblue confirm" style='width:80%' data-toggle="tooltip" title="Report a change or disturbance">Make report</a>
