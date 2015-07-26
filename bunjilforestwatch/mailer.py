@@ -117,25 +117,45 @@ To stop receiving emails you can unfollow the area or send an email to {5!s} wit
         
     except mail.InvalidEmailError:
         returnstr = 'Invalid email recipient.'
-        self.handle_error(returnstr)
+        logging.error(returnstr)    
         return returnstr
         
     except mail.MissingRecipientsError:
         returnstr = 'No recipient provided.'
-        self.handle_error('You must provide a recipient.')
+        logging.error(returnstr)    
         return returnstr
         
     except mail.MissingBodyError:
         returnstr ='No mail format provided.'
-        self.handle_error(returnstr)
+        logging.error(returnstr)    
         return returnstr
-            
+    
+    except mail.MissingSubjectError:
+        returnstr ='Missing email subject.'
+        logging.error(returnstr)    
+        return returnstr
+    
+    except mail.MissingBodyError:
+        returnstr ='Missing body.'
+        logging.error(returnstr)    
+        return returnstr
+    
+    except mail.InvalidSenderError:
+        returnstr ='Invalid sender.'
+        logging.error(returnstr)    
+        return returnstr
+
+    except mail.BadRequestError:
+        returnstr ='Invalid email rejected.'
+        logging.error(returnstr)    
+        return returnstr
+
+    except:
+        returnstr ='Error sending email.'
+        logging.error(returnstr)    
+        return returnstr
+
     returnstr = "Sent mail to user: {0!s}, with email: {1!s} from sender: {2!s} with subject: {3!s}".format(user.name, message.to, thesender, message.subject)
     logging.info(returnstr)    
     returnstr += "<br> {0!s}".format(message.html)
     return returnstr
-        
-
-
- 
-
