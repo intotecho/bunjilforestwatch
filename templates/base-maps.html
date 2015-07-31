@@ -15,7 +15,7 @@ body {
 }
 #map-left-latest, #map-left-prior, #map-left-c, #map-right-c {
     height: 100%,
-    overflow: hidden; //if content is wider than div, truncate it.
+    overflow: hidden;  / *truncate content wider than div */
 }
 
 #map-left-latest, map-left-c{
@@ -43,22 +43,70 @@ body {
     z-index: 1;
 }
 
-#dragger { // inspired by storage.googleapis.com/jlivni/presentations/lightning/styled.html
+
+/*
+#dragger, draghandle, #left-title , #right-title { /* inspired by storage.googleapis.com/jlivni/presentations/lightning/styled.html 
     height: 100%;
     width: 4px;
     position: absolute;
+    color: #ffffff;
+    font-color: #ffffff;
     background: #444;
     left: initial_dragger;
-    top: 0;
-    cursor: move;
+    cursor:e-resize;
     z-index: 3;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.75);
 }
+*/
 
-#draghandle { // inspired by storage.googleapis.com/jlivni/presentations/lightning/styled.html
-    overflow: display; 
-    top: 0px
+.drag-base { /*inspired by storage.googleapis.com/jlivni/presentations/lightning/styled.html */
+    color: #ffffff ;
+    font-color: #ffffff  ;
+    background: #444;
+    cursor:e-resize; 
+    z-index: 3;
+    position: absolute;
 }
+
+#dragger {
+    height: 100%;
+    width: 3px;
+    left: initial_dragger;
+    position: absolute;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.75);
+}
+
+#draghandle { /* inspired by storage.googleapis.com/jlivni/presentations/lightning/styled.html*/
+   /* position: absolute; */
+    top: 35px  !important;
+    left: 10px;
+    width: 0px;
+    height: 0px;
+    opacity: 0.5;
+}
+
+#left-title {  /*latest */
+    top: 15px  !important;
+    left: -46px  !important;
+    position: absolute;
+    overflow: visible;
+    width: 45px;
+    height: 20px;
+    text-align: right;
+    color: #f0f0f0 ;
+}
+
+#right-title { /*before */
+    top: 15px  !important;
+    right: -5px  !important;
+    position: relative;
+    overflow: visible;
+    width: 45px;
+    height: 20px;
+    text-align: left;
+    color: #f0f0f0 ;
+}
+
 
 .map-canvas {
 	border:2px solid gray
@@ -327,8 +375,10 @@ body {
         
         <div id="map-left-c" class="col-md-5 lesspadding map-canvas">
             <!-- Left Hand Map Element -->
-            <div id="dragger" class="ui-icon ui-icon-grip-dotted-horizontal" >
-                <div id="draghandle-c"><span id="draghandle" class="ui-icon ui-icon-grip-dotted-horizontal"></span></div>
+            <div id="dragger"       class='drag-base'>
+                <div id="right-title" class='drag-base'>before</div>
+                <div id="left-title"    class='drag-base'>latest</div>
+                <div id="draghandle" class='drag-base'><img src='/static/img/dragger.png' alt="Drag handle" height="50" width="50"> </div>
             </div>
             <div id="map-left-c-latest" >
                 <div id="map-left-latest" ></div>

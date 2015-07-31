@@ -412,17 +412,18 @@ function initialize() {
         });
         
         $('#map-left-c-prior').width(initial_dragger); // must be same value as {dragger:left} to init correctl
-        $('#draghandle-c').width('12px').height('12px');
-        $('#draghandle').width('11px').height('11px');
+        //$('#draghandle-c').width('12px').height('12px');
+        //$('#draghandle').width('11px').height('11px');
   
         $('#dragger').draggable({
             axis: 'x',
             containment: 'parent',
+            /*handle: '#draghandle',*/
+            cursor: 'col-resize',
             drag: function(e, u) {
               var left = u.position.left;
               $('#map-left-c-prior').width(left);
-              $('#draghandle-c').width('12px').height('12px');
-              $('#draghandle').width('11px').height('11px');
+              //$('#draghandle').width('11px').height('11px');
             }
         });
         
