@@ -37,7 +37,7 @@
                     </div>
                     <div id="area_description_who" class="accordion-body collapse">
                          <p>created by 
-                         <a href="{{ "user"|url(area.owner) }}" data-toggle="tooltip" title="The user who created this area.">{{area.owner}}</a></p>
+                         <a href="{{ "user"|url(area.owner.string_id()) }}" data-toggle="tooltip" title="The user who created this area.">{{area.owner.string_id()}}</a></p>
                         <div class="accordion-inner small">
                             <p>{{area.description_who }}</p>
                         </div>
