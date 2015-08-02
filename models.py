@@ -446,10 +446,24 @@ class Overlay(ndb.Model):
 			"token"          :self.token, 
 			"algorithm"     :self.algorithm,
 			"overlay_role":self.overlay_role, 
-			"parent"         : str(self.key.parent()),
-			"key"             : self.key.id()
+			"parent"         :str(self.key.parent()),
+			"key"             :self.key.urlsafe()
 		}
 		return obsdict
+
+	@staticmethod # make it static so ndb recognises the kind='Overlay'
+	def get_from_encoded_key(encoded_key):
+		ovl_key = ndb.Key(urlsafe=encoded_key)
+		if not ovl_key:
+			logging.error('Overlay:get_from_encoded_key() -  could not read key in url') 
+			return None	
+		ovl =ovl_key.get()
+		if not ovl:
+			logging.error('Overlay:get_from_encoded_key() -  no overlay from urlkey') 
+			return None
+		return ovl
+	
+
 
 '''
 class Observation (could rename to ObservationAsset) describes a Landsat satellite image.
@@ -475,11 +489,11 @@ class Observation(ndb.Model):
 	def get_from_encoded_key(encoded_key):
 		obskey = ndb.Key(urlsafe=encoded_key)
 		if not obskey:
-			logging.error('Observtion:get_from_encoded_key() -  no observation key in url') 
+			logging.error('Observation:get_from_encoded_key() -  could not read key in url') 
 			return None	
 		obs =obskey.get()
 		if not obs:
-			logging.error('Observtion:get_from_encoded_key() -  no observation key in url') 
+			logging.error('Observation:get_from_encoded_key() -  no observation found from urlkey') 
 			return None
 		return obs
 	
