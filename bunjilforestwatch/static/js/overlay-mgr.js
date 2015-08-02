@@ -23,7 +23,7 @@ function createLandsatGridOverlay(map, opacity, clickable, cellarray) {
     }
 }
    
-//find overlay mathching role and viz algorithm.
+//find overlay in obs matching role and viz algorithm.
 function findOverlay(obs, role, algorithm) {
     for (var o = 0; o < obs.overlays.length; o++) {
         var overlay = obs.overlays[o];
@@ -127,7 +127,7 @@ function displayObsOverlay(obs, role, algorithm) { //called from base-maps.html
         createObsOverlay(obs, role, algorithm);
     }
 }
-
+	
 function displayOverlay(ovl, overlayname, tooltip) { //overlay is current so add it to the map.
     
     if (ovl.overlay_role == 'latest') 

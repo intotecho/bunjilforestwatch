@@ -1486,14 +1486,8 @@ class UpdateOverlayHandler(BaseHandler):
     #This handler responds to Ajax request, hence it returns a response.write()
 
     def get(self, ovlkey, algorithm):
-        
-        ovl_key = ndb.Key(urlsafe = ovlkey)
-        
-        ovl_id = ovl_key.id()
 
-        ovl = models.Overlay.get_by_id(ovl_id)
-        print 'ovlkey=', ovlkey, 'id=', ovl_id, 'ovl=', ovl
-
+        ovl= models.Overlay.get_from_encoded_key(ovlkey)
         returnval = {}
         
         if not ovl:
@@ -1502,10 +1496,11 @@ class UpdateOverlayHandler(BaseHandler):
             logging.error(returnval['reason']) 
             return self.response.write(json.dumps(returnval))
 
-        obs = ovl.parent();
+        obs = ovl.key.parent().get();
+        
         if not obs:
             returnval['result'] = "error"
-            returnval['reason'] = "UpdateOverlayHandler() - overlay has not parent observation"
+            returnval['reason'] = "UpdateOverlayHandler() - overlay has no parent observation"
             logging.error(returnval['reason']) 
             return self.response.write(json.dumps(returnval))
         
