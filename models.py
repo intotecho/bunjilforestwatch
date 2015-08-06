@@ -5,17 +5,18 @@ import logging
 import re
 
 from google.appengine.api import images
-from google.appengine.ext import blobstore
 from google.appengine.ext import ndb
 
+import webapp2
 import cache
 import hashlib
+import geojson
+'''
 import urllib
 import utils
-import webapp2
 import ee
-import geojson
 import string
+'''
 
 class DerefModel(ndb.Model):
 	def get_key(self, prop_name):
@@ -178,7 +179,6 @@ class AreaOfInterest(ndb.Model):
 	
 	type = ndb.StringProperty()
 	wiki = ndb.StringProperty() # beware max url 500 - like to a story about this area.
-	#tags = ndb.StringProperty(repeated=True, unicode, default=None) #TODO: Caused a unicode not callable error. Not yet implemented.
 	
 	cells = ndb.KeyProperty(repeated=True, default=None) # list of Landsat cells overlapping this area - calculated on new.
 	entry_count = ndb.IntegerProperty(required=True, default=0) # reports related to this area - not used yet
@@ -213,17 +213,6 @@ class AreaOfInterest(ndb.Model):
 	def __unicode__(self):
 		return unicode(self.name)
 
-	def summary_dictionary(self): # main parameters included for list of areas.
-		return {
-				'id': self.key.urlsafe(), 			# unique id for this area.
-				'url': self.url(), 						# url to view area
-				'tasks_url': self.tasks_url(),   # url to view tasks for this area
-				'name': self.key.string_id(), 
-				'owner': self.owner.string_id(), 
-				'created_date': self.created_date, 
-				'follower_count': self.followers_count,
-				'share' : self.share
-		}
 
 	@property
 	def pages(self):
@@ -291,6 +280,18 @@ class AreaOfInterest(ndb.Model):
 			
 		return cell_list
 
+	def summary_dictionary(self): # main parameters included for list of areas.
+		return {
+				'id': self.key.urlsafe(), 			# unique id for this area.
+				'url': self.url(), 						# url to view area
+				'tasks_url': self.tasks_url(),   # url to view tasks for this area
+				'name': self.key.string_id(), 
+				'owner': self.owner.string_id(), 
+				'created_date': self.created_date, 
+				'follower_count': self.followers_count,
+				'share' : self.share
+		}
+
 	#geojsonCoordinates () returns boundary as a geojson dictionary
 	#After http://google-app-engine-samples.googlecode.com/svn-history/r4/trunk/geodatastore/jsonOutput
 	def geojsonArea(self):
@@ -312,8 +313,7 @@ class AreaOfInterest(ndb.Model):
 						"area_name" :self.name,
 						"shared" :self.shared_str,
 						"area_url" : self.url(),
-						#"created_by" : self.created_by.name,
-						#"owner" : self.owner.name,
+						'owner': self.owner.string_id(), 
 					    "area_description": {
 					           "description": self.description,
 					           "description_why": self.description_why,
@@ -796,10 +796,10 @@ class Activity(DerefModel):
 		return r
 
 	@staticmethod
-	def create(user, action, object):
-		a = Activity(user=user.name, img=user.gravatar('30'), action=action, object=object)
+	def create(user, action, activity):
+		a = Activity(user=user.name, img=user.gravatar('30'), action=action, object=activity)
 		ar = a.put()
-
+		
 		#receivers = cache.get_followers(user.name)
 		#receivers.append(user.name)
 		#a.get_result() 
@@ -859,7 +859,8 @@ class Blob(DerefExpando):
 
 	@staticmethod
 	def get_blob(username, journal_name, entry_id, entry_key=None):
-		journal = cache.get_journal(username, journal_name)
+		journal = Journal.get_journal(username, journal_name)
+
 		if not entry_key:
 			entry_key = Entry.get_entry_key(journal, entry_id)  #get_entry_key(username, journal_name, entry_id)
 		entry = entry_key.get()
