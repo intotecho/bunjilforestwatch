@@ -29,7 +29,7 @@
     {% endfor %}
     <div>
     
-    {% if show_navbar == True %}
+    {% if show_navbar %}
      <ul class="pagination">
             <li class="prev"><a href="{{ tasks| obstasks_url(user2view, area_name, 0) }}">first</a></li>
             {% if page == 1 %}

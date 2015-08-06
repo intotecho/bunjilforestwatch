@@ -14,15 +14,18 @@ from os import environ
 
 #from email.utils import parseaddr
 
+ def mail_sender():
+    if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
+        return ="chris@bunjilforestwatch.net"
+    else:    
+        return = "chris@bunjilforestwatch.net" 
+   
+
 def new_image_email(task, hosturl):
 
     thesender = []
     returnstr = ""
-    
-    if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
-        thesender ="admin@bunjilforestwatch.net"
-    else:    
-        thesender = "admin@bunjilforestwatch.net" 
+    thesender =mail_sender()
     
     if task is None:
         returnstr = "new_image_email: no task to send"
@@ -158,4 +161,79 @@ To stop receiving emails you can unfollow the area or send an email to {5!s} wit
     returnstr = "Sent mail to user: {0!s}, with email: {1!s} from sender: {2!s} with subject: {3!s}".format(user.name, message.to, thesender, message.subject)
     logging.info(returnstr)    
     returnstr += "<br> {0!s}".format(message.html)
+    return returnstr
+
+
+def new_user_email(user):
+
+    thesender = []
+    returnstr = ""
+    thesender = mail_sender() 
+   
+    if user is None:
+        returnstr = "new_user_email: no user assigned to send"
+        logging.error(returnstr)
+        return returnstr
+    
+    
+    subject = "A new user {0!s} has signed in email: {1!s} ".format(user.name, user.email)
+    
+    try: 
+
+        message = mail.EmailMessage(sender=thesender, subject=subject)
+        message.to = thesender
+        
+        message.body = """
+
+BUNJIL FOREST WATCH NEW USER !!!
+
+A new user {0!s} has signed in email: {1!s} "
+
+""".format(user.name, user.email)
+
+        message.send()
+        
+    except mail.InvalidEmailError:
+        returnstr = 'Invalid email recipient.'
+        logging.error(returnstr)    
+        return returnstr
+        
+    except mail.MissingRecipientsError:
+        returnstr = 'No recipient provided.'
+        logging.error(returnstr)    
+        return returnstr
+        
+    except mail.MissingBodyError:
+        returnstr ='No mail format provided.'
+        logging.error(returnstr)    
+        return returnstr
+    
+    except mail.MissingSubjectError:
+        returnstr ='Missing email subject.'
+        logging.error(returnstr)    
+        return returnstr
+    
+    except mail.MissingBodyError:
+        returnstr ='Missing body.'
+        logging.error(returnstr)    
+        return returnstr
+    
+    except mail.InvalidSenderError:
+        returnstr ='Invalid sender.'
+        logging.error(returnstr)    
+        return returnstr
+
+    except mail.BadRequestError:
+        returnstr ='Invalid email rejected.'
+        logging.error(returnstr)    
+        return returnstr
+
+    except:
+        returnstr ='Error sending email.'
+        logging.error(returnstr)    
+        return returnstr
+
+    returnstr = "Sent mail to user: {0!s}, with email: {1!s} from sender: {2!s} with subject: {3!s}".format(user.name, message.to, thesender, message.subject)
+    logging.info(returnstr)    
+    returnstr += "<br> {0!s}".format(message.body)
     return returnstr

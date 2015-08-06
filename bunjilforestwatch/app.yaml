@@ -42,15 +42,13 @@ handlers:
 
 - url: /obs/*
   script: main.app
-  login: required
-
+  
 - url: /admin/.*
   script: main.app
   login: admin
 
 - url: /tasks/.*
   script: main.app
-  login: required
-
+  
 - url: /.*
   script: main.app

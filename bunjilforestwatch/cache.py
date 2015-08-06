@@ -103,15 +103,15 @@ def delete_item(key):
 def flush():
     memcache.flush_all()
 
-def pack(models):
-    if models is None:
+def pack(data_models):
+    if data_models is None:
         return None
-    elif isinstance(models, ndb.Model):
+    elif isinstance(data_models, ndb.Model):
     # Just one instance
-        return ndb.ModelAdapter().entity_to_pb(models).Encode()
+        return ndb.ModelAdapter().entity_to_pb(data_models).Encode()
     else:
     # A list
-        return [ndb.ModelAdapter().entity_to_pb(x).Encode() for x in models]
+        return [ndb.ModelAdapter().entity_to_pb(x).Encode() for x in data_models]
 
 def unpack(data):
     if data is None:
@@ -383,11 +383,10 @@ def get_obstasks_keys(username=None, areaname=None):
             else:
                 #data = models.ObservationTask.all(keys_only=True).filter('aoi =', area_key).order('-created_date').fetch(200)
                 data = models.ObservationTask.query(models.ObservationTask.aoi == area_key).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
-                logging.debug("get_obstasks_keys for % area %s %s", area.shared_str, areaname, area_key)
+                logging.debug("get_obstasks_keys for %s area %s %s", area.shared_str, areaname, area_key)
                 if len(data) == 0:
                     logging.info("get_obstasks_keys() area %s has no tasks", areaname)
         else:
-            #data = models.ObservationTask.all(keys_only=True).filter('share =', models.AreaOfInterest.PUBLIC_AOI).order('-created_date').fetch(200)
             data = models.ObservationTask.query(models.ObservationTask.share == models.AreaOfInterest.PUBLIC_AOI).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
             logging.debug("get_obstasks_keys() loading cache for all tasks")
         memcache.add(n, data)
@@ -441,11 +440,11 @@ def get_obstask_render(task_key):
     n = C_OBSTASK_RENDER %(task_key)
     data = memcache.get(n)
     if data is None:
-        task = obstask = get_task(task_key)  #FIXME Must be typesafe
+        obstask = get_task(task_key)  #FIXME Must be typesafe
         obslist = []  #FIXME obslist won't be loaded if task is in the cache.
         if obstask is not None:
             area = obstask.aoi.get() 
-            cell_list = area.CellList()  
+            #cell_list = area.CellList()  
             
             resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.assigned_owner.string_id(), area.name.encode('utf-8') )
             resultstr += "{0!s} Task assigned to: {1!s}<br>".format(obstask.shared_str(), obstask.assigned_owner.string_id())
@@ -465,7 +464,6 @@ def get_obstask_render(task_key):
         data = utils.render('obstask-render.html', {
             'obstask': obstask,
             'obslist': obslist,
-            'obstask': obstask,
             'resultstr': debugstr,
             'area' :  area.name.encode('utf-8'),
             'created_date' : obstask.created_date.strftime("%Y-%m-%d"),
@@ -680,8 +678,6 @@ def get_following_areas(user_key):
     n = C_FOLLOWING_AREAS %user_key
     data = memcache.get(n)
     if data is None:
-        #following_key = models.UserFollowingAreasIndex.get_key(user_key.id())
-        #following = models.UserFollowingAreasIndex.get_by_id(following_key)
         following = models.UserFollowingAreasIndex.get_by_username(user_key.id()) 
         data = []
         if not following:
@@ -730,14 +726,11 @@ def get_area(username, area_name):
     n = C_AREA %(username, area_name)
     data = memcache.get(n)
     if data is None:
-        #area_key = get_area_key(username, area_name)
         data = models.AreaOfInterest.get_by_id(area_name.decode('utf-8'))
-        #data = models.AreaOfInterest.query(models.AreaOfInterest.name == area_name.decode('utf-8')).fetch()
         if data is None:
             logging.error("get_area() no area found for %s %s", username, area_name)
             return None
         memcache.add(n, data)
-    #logging.debug("get_area() returns: %s", data )
     return data
 
 
@@ -753,10 +746,7 @@ def get_area_key(username, area_name):
         n = C_AREA_KEY %(username, area_name)
         data = memcache.get(n)
         if data is None:
-            #user_key = ndb.Key.from_path('User', username)
-            #data = models.AreaOfInterest.all(keys_only=True).filter('owner =', username).filter('name', area_name.decode('utf-8')).get() #FIXME - Is why is there an '='  in owner =' but not for other string matches?
             data = models.AreaOfInterest.query(models.AreaOfInterest.owner == username, models.AreaOfInterest.name == area_name.decode('utf-8')).fetch(keys_only=True)
-            #print ("get_area_userkey for user: ", username, data, )
             memcache.add(n, data)
     return data
 
@@ -771,35 +761,6 @@ def get_cell(path, row, area_name):
         else:
             memcache.add(n, pack(data))
     return data
-'''
-def get_cell_from_keyname(cell_name, area): #TODO - Does not really add anything different to the generic cache.get_by_key()
-     
-    n = C_CELL_NAME %(cell_name, area)
-    #print "get_cell_from_key() ", n
-    data = unpack(memcache.get(n))
-    if data is None:
-        #data = models.LandsatCell.get()
-        data = models.LandsatCell.get_by_key_name( u'key_name', cell_name)
-        if data is None:
-            logging.error("cache:get_cell_from_keyname() Missing Cell Object %s", cell_name)
-        else:
-            memcache.add(n, pack(data))
-    return data  
-   
-def get_cell_from_key(cell_key): #TODO - Does not really add anything different to the generic cache.get_by_key()
-     
-    n = C_CELL_KEY %(cell_key)
-    #print "get_cell_from_key() ",
-    data = memcache.get(n)
-    if data is None:
-        #data = models.LandsatCell.get()
-        data = cell_key.get() #models.LandsatCell.get_by_id(cell_key)
-        if data is None:
-            logging.error("cache: get_cell_from_key() No Cell for key %s", cell_key)
-        else:
-            memcache.add(n, data)
-    return data
-  '''
   
 def get_cells(area_key):
     n = C_CELLS %area_key
@@ -819,18 +780,6 @@ def get_all_cells(): #FIXME - Doesn't work - too much data returned.
         memcache.add(n, pack(data))
     return data
 
-
-
-    '''
-def get_journal(username, journal_name):
-    return models.Journal.get_journal(username, journal_name) # refactor to remove this call
-    
-    user_key = ndb.Key('User', username)
-    journal_key = ndb.Key('Journal', journal_name, parent=user_key)
-    print 'journal_key', journal_key
-    return journal_key.get()
-   '''
-
 def get_journal_key(username, journal_name):
     n = C_JOURNAL_KEY %(username, journal_name)
     data = memcache.get(n)
@@ -841,26 +790,8 @@ def get_journal_key(username, journal_name):
     return data
 
 def get_entry(username, journal_name, entry_id, entry_key=None):
-    return models.Entry.get_entry(username, journal_name, entry_id, entry_key=None)
-    '''
-    n = C_ENTRY %(username, journal_name, entry_id)
-    data = memcache.get(n)
-    if data is None:
-        entry, content, blobs = models.Entry.get_entry(username, journal_name, entry_id, entry_key=None)
-
-        if entry and content:
-            data = (pack(entry), pack(content), blobs)
-            memcache.add(n, data)
-        else:
-            return None, None, []
-    else:
-        entry, content, blobs = data
-        entry = unpack(entry)
-        content = unpack(content)
-        #blobs = unpack(blobs)
-    return entry, content, blobs
-    '''
-
+    return models.Entry.get_entry(username, journal_name, entry_id, entry_key)
+    
 def get_entry_render(username, journal_name, entry_id):
     n = C_ENTRY_RENDER %(username, journal_name, entry_id)
     data = memcache.get(n)

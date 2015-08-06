@@ -273,9 +273,7 @@ function initialize() {
         drawingManager  = createDrawingManager(map_over_lhs)
         
         google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-                    //if (event.type == google.maps.drawing.OverlayType.CIRCLE) {
-                    //  var radius = event.overlay.getRadius();
-                    href = user_url + '/journal/Observations for ' + area_json['properties']['area_name'] + '/new';
+                    href = '/' + area_json['properties']['owner'] + '/journal/Observations for ' + area_json['properties']['area_name'] + '/new';
                     window.location.href = href; //+ mapobj.id;
                 });
      });

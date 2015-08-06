@@ -7,19 +7,8 @@ import urllib
 logging.basicConfig(level=logging.DEBUG)
 
 from django.utils import html # used for entry.html markup
-
-
-#import sqlbuilder
-#from models import ObservationTask
-
-#from models import Overlay
 import models
 import eeservice
-import ndb
-
-#from eeservice import EE_CREDENTIALS
-import oauth2client.client  # pylint: disable=g-bad-import-order
-
 import ee
 import mailer
 import base64
@@ -32,12 +21,13 @@ from google.appengine.api import files
 from google.appengine.api import taskqueue
 from google.appengine.api import users
 from google.appengine.ext import blobstore
+from google.appengine.ext import ndb
 from google.appengine.ext.webapp import blobstore_handlers
 from webapp2_extras import sessions
-
 from google.appengine.api import memcache
 from apiclient.discovery import build
-from oauth2client.appengine import OAuth2Decorator
+#from oauth2client.appengine import OAuth2Decorator
+#from oauth2client.appengine import AppAssertionCredentials
 
 import settings
 import secrets
@@ -50,25 +40,16 @@ decorator = OAuth2Decorator(
     user_agent='bunjilfw')
 '''
 import httplib2
-from google.appengine.api import memcache
-from oauth2client.appengine import AppAssertionCredentials
-
-#import ftclient
-
 import json
 import webapp2
-
-
 import cache
 import counters
-import facebook
-import filters
+#import facebook
+#import filters
 import twitter
 import utils
 from urlparse import urlparse
 
-
-#from google.appengine.ext.webapp.util import login_required
 
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
@@ -177,7 +158,7 @@ class BaseHandler(webapp2.RequestHandler):
             'token': user.token,
             'role' : user.role
         }
-        print 'user: ', user
+        #print 'user: ', user
         #user_key =  user.key
         #user_key = ndb.Key(urlsafe = self.session['user']['key'])
         user_key =  self.session['user']['key']
@@ -197,8 +178,7 @@ class BaseHandler(webapp2.RequestHandler):
     def process_credentials(self, name, email, source, uid):
 
         User = models.User
-        #user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
-
+ 
         if source == models.USER_SOURCE_GOOGLE:
             user = User.query(
                           User.google_id == uid).get()
@@ -221,6 +201,8 @@ class BaseHandler(webapp2.RequestHandler):
         for k in ['user', 'journals', 'areas']:
             if k in self.session:
                 del self.session[k]
+    
+
 
 class BaseUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     session_store = None
@@ -336,16 +318,6 @@ class GoogleLogin(BaseHandler):
             self.redirect(webapp2.uri_for('main'))
 
               
-    def get2(self, protected_url): 
-        current_user = users.get_current_user()
-        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())
-        if not registered:
-            self.redirect(webapp2.uri_for('register'))
-        else:
-            #if protected_url == None:
-            #self.redirect(webapp2.uri_for('main'))
-            #else:
-            self.redirect(protected_url)
                         
 class FacebookLogin(BaseHandler):
     def get(self):
@@ -423,6 +395,8 @@ class Register(BaseHandler):
                         del self.session['register']
                         self.populate_user_session(user)
                         counters.increment(counters.COUNTER_USERS)
+                        mailer.new_user_email(user) #mail to admin 
+
                         if role == 'local':
                             self.add_message('Success', '%s, Welcome to Bunjil Forest Watch. Now create a new area that you want monitored.' %user)
                             self.redirect(webapp2.uri_for('new-area'))
@@ -438,10 +412,10 @@ class Register(BaseHandler):
         else:
             self.redirect(webapp2.uri_for('main'))
 
-class NewUserHandler(BaseHandler):
+class NewUserHandler(BaseHandler): #NOT CALLED !!! see Register
   
     def get(self):
-  
+        logging.critical('NewUserHandler should not be called')
         if 'role' in self.request.GET:
             role = self.request.get('role')
         else:
@@ -452,6 +426,7 @@ class NewUserHandler(BaseHandler):
         }) 
 
     def post(self):
+        logging.critical('NewUserHandler should not be called')
         if 'register' in self.session:
             errors = {}
 
@@ -489,6 +464,7 @@ class NewUserHandler(BaseHandler):
                         del self.session['register']
                         self.populate_user_session(user)
                         counters.increment(counters.COUNTER_USERS)
+                        mailer.new_user_email(user) 
                         if role == 'local':
                             self.add_message('Success', '%s, Welcome to Bunjil Forest Watch. Now create a new area that you want monitored.' %user)
                             self.redirect(webapp2.uri_for('new-area'))
@@ -499,7 +475,6 @@ class NewUserHandler(BaseHandler):
             else:
                 username = ''
                 email = self.session['register']['email']
-
             self.render('register.html', {'username': username, 'email': email, 'errors': errors})
         else:
             self.redirect(webapp2.uri_for('main'))
@@ -508,7 +483,7 @@ class NewUserHandler(BaseHandler):
 class Logout(BaseHandler):
     def get(self):
         self.logout()
-        self.redirect(webapp2.uri_for('main'))
+        self.redirect(users.create_logout_url(webapp2.uri_for('main')))
 
 class GoogleSwitch(BaseHandler):
     def get(self):
@@ -1799,6 +1774,7 @@ class ViewObservationTasksHandler(BaseHandler):
         
         # get the logged in user.
         current_user = users.get_current_user()
+        print 'current_user: ', current_user
         if  not current_user:
             abs_url  = urlparse(self.request.uri)
             original_url = abs_url.path
@@ -2202,7 +2178,7 @@ class NewEntryHandler(BaseHandler):
             
         journal=models.Journal.get_journal(username, journal_name)
         if journal == None:
-            logging.error("NewEntryHandler(): Journal not found %s", journal)
+            logging.error("NewEntryHandler(): Journal not found: %s", journal_name)
             return self.error(404)
         
         entry_key = models.Entry.get_entry_key(journal)
@@ -2265,40 +2241,7 @@ class ViewEntryHandler(BaseHandler):
             logging.error("ViewEntryHandler(): PDF not supported.")
             
         
-        '''
-        if 'pdf' in self.request.GET:
-            pdf_blob = models.Blob.get('pdf', parent=entry)
-            error = None
-
-            # either no cached entry, or it's outdated
-            if not pdf_blob or pdf_blob.date < entry.last_edited:
-                if pdf_blob:
-                    pdf_blob.blob.delete()
-
-                file_name = files.blobstore.create(mime_type='application/pdf')
-                subject = content.subject if content.subject else filters.jdate(entry.date)
-                with files.open(file_name, 'a') as f:
-                    error = utils.convert_html(f, subject, [(entry, content, blobs)])
-                files.finalize(file_name)
-                pdf_blob = models.Blob(
-                    key_name='pdf',
-                    parent=entry,
-                    blob=files.blobstore.get_blob_key(file_name),
-                    type=models.BLOB_TYPE_PDF,
-                    name='%s - %s - %s' %(username, utils.deunicode(journal_name), subject),
-                    date=entry.last_edited,
-                )
-
-                if error:
-                    pdf_blob.blob.delete()
-                    self.add_message('danger', 'Error while converting to PDF: %s' %error)
-                else:
-                    pdf_blob.put()
-            
-            if not error:
-                self.redirect(pdf_blob.get_url(name=True))
-                return
-            '''
+     
         if not journal:
             type = "default"
         else:
