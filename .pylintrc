@@ -18,6 +18,11 @@ profile=no
 # path. You may set this option multiple times.
 ignore=.svn
 ignore= lib\
+ignore= notused\
+ignore= keys\
+ignore= .git\
+ignore= static\
+ignore= templates\
 
 # Pickle collected data for later comparisons.
 persistent=no
