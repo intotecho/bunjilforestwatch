@@ -14,11 +14,11 @@ from os import environ
 
 #from email.utils import parseaddr
 
- def mail_sender():
+def mail_sender():
     if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
-        return ="chris@bunjilforestwatch.net"
+        return "chris@bunjilforestwatch.net"
     else:    
-        return = "chris@bunjilforestwatch.net" 
+        return "chris@bunjilforestwatch.net" 
    
 
 def new_image_email(task, hosturl):
