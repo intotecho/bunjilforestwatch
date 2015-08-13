@@ -10,6 +10,14 @@ builtins:
 - deferred: on
 - remote_api: off
 
+skip_files:
+- ^(.*/)?#.*#$
+- ^(.*/)?.*~$
+- ^(.*/)?.*\.py[co]$
+- ^(.*/)?.*/RCS/.*$
+- ^(.*/)?\..*$
+- ^(.*/)?.*/notused/.*$
+
 libraries:
 - name: jinja2
   version: latest
@@ -42,6 +50,8 @@ handlers:
 
 - url: /obs/*
   script: main.app
+  login: optional
+  secure: always
   
 - url: /admin/.*
   script: main.app
@@ -49,6 +59,8 @@ handlers:
 
 - url: /tasks/.*
   script: main.app
-  
+
 - url: /.*
   script: main.app
+  secure: always
+  
