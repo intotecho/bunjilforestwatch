@@ -44,7 +44,7 @@ import json
 import webapp2
 import cache
 import counters
-#import facebook
+import facebook
 #import filters
 import twitter
 import utils
