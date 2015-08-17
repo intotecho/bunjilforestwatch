@@ -434,20 +434,23 @@ def get_obstasks_page(page, username=None, areaname=None):
             memcache.add(n, data)
     return data
 
+'''
+    get_obstask_render()
 
-#Renders an ObservationTask into an HTML row.
-def get_obstask_render(task_key):
+    Renders an ObservationTask into an HTML row.
+    Page won't be updated more than once if task already in the cache - unless reload is true.
+'''
+
+def get_obstask_render(task_key, reload=False):
     n = C_OBSTASK_RENDER %(task_key)
     data = memcache.get(n)
-    if data is None:
-        obstask = get_task(task_key)  #FIXME Must be typesafe
-        obslist = []  #FIXME obslist won't be loaded if task is in the cache.
+    if data is None or reload == True:
+        obstask = get_task(task_key)
+        obslist = []  
         if obstask is not None:
             area = obstask.aoi.get() 
-            #cell_list = area.CellList()  
-            
             resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.assigned_owner.string_id(), area.name.encode('utf-8') )
-            resultstr += "{0!s} Task assigned to: {1!s}<br>".format(obstask.shared_str(), obstask.assigned_owner.string_id())
+            resultstr += "{0!s} Task assigned to: <i>{1!s}</i><br>".format(obstask.shared_str(), obstask.assigned_owner.string_id())
             resultstr += "Status <em>{0!s}</em>. ".format(obstask.status)
             if obstask.priority != None:
                 resultstr += "Priority <em>{0:d}.</em> ".format(obstask.priority)

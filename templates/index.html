@@ -27,13 +27,23 @@ body {
     </div>
     <div class='row'>
          <img src="static/images/bfw_bg.jpg" class="img-responsive" alt="Bunjil Forest Watch - background">
+    </div>       
+   <div class="row">
+      <div class="col-md-6">
+        <h4>Latest Observations</h4>
+      </div>
+    </div>
+    <div class='row'>
+	 {% if obstasks %}        
+	    {% for e in obstasks %}
+	       <div class="well">
+	      {{ e|safe }}
+	       </div>
+	    {% endfor %}
+	 {% endif %}
    </div>       
     <div class='row'>
-            
-            <div class='anon-maps-iframe '><iframe class='anon-maps-iframe ' src='https://localhost:8001/obs/list'></iframe></div>
-   </div>       
-    <div class='row'>
-            <div class='blog-iframe'><iframe class='blog-iframe' src='https://blog.bunjilforestwatch.net/about'></iframe></div>
+            <h4><a href='http://blog.bunjilforestwatch.net/about'>Learn More</a></h4>
    </div>       
 </div>
 {% endblock %}
