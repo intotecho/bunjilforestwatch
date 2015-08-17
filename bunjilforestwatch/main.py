@@ -104,7 +104,7 @@ class BaseHandler(webapp2.RequestHandler):
         
         if 'bunjilforestwatch' in self.request.url:
             ga = secrets.GOOGLE_ANALYTICS_PROD
-            self.add_message("info", "Production")
+            #self.add_message("info", "Production")
    
         context['google_analytics'] = ga
                    
@@ -264,9 +264,33 @@ class MainPage(BaseHandler):
                 'show_navbar': True
             })
         else:
+            # not logged in
+            tasks  = cache.get_obstasks_keys(None, None) # list of all task keys #TODO is it needed? 
+            obstasks = cache.get_obstasks_page(0, None, None) # rendered page of tasks (0 or latest only) 
+            
+            if obstasks == None or len(obstasks)  == 0 :
+                logging.info('ViewObservationTasksHandler - no tasks!') 
+                obstask = None
+                obstasks = None
+                pages =  0
+                tasks = None
+            else:
+                #logging.debug('ViewObservationTasks: user:%s, area:%s, page:%d', user2view, area_name, page) # Move here to XSS sanitise user2view
+                obstask = cache.get_task(tasks[0]) # template needs this to get listurl to work?
+                #logging.info('ViewObservationTasksHandler showing %d tasks for user %s', len(obstasks), user2view) 
+           
             self.render('index.html', {
-                        'show_navbar': False           
-                                      }) # not logged in.
+                            'obstask': obstask,
+                            'obstasks': obstasks,
+                            'tasks' :  tasks,
+                            'show_navbar': False           
+                            #'username': current_user,  #logged in user
+                            #'user2view': user2view,  # or none
+                            #'area_name': area_name, # or none
+                            #'pages' : pages,
+                            #'page': page,
+                            #'pagelist': utils.page_list(page, pages)
+            }) 
 
 class ViewAreas(BaseHandler):
 
@@ -337,7 +361,7 @@ class FacebookLogin(BaseHandler):
         self.redirect(webapp2.uri_for('main'))
 
             
-class Register(BaseHandler):
+class RegisterUserHandler(BaseHandler):
     USERNAME_RE = re.compile("^[a-z0-9][a-z0-9_]+$")
 
     def get(self):
@@ -358,13 +382,20 @@ class Register(BaseHandler):
                 #print 'options ' + role
             if not role:
                 role = "unknown"
+ 
+            current_user = users.get_current_user()
+            if  current_user:
+                email=current_user.email()
+            else:
+                email = None
+
             if 'submit' in self.request.POST:
                 username = self.request.get('username')
                 lusername = username.lower()
-                email = self.request.get('email')
+                #email = self.request.get('email')
                 #lusers = models.User.all(keys_only=True).filter('lname', lusername).get()
                 existing_user = models.User.get_by_id(lusername) #.fetch(keys_only=True) 
-                if not Register.USERNAME_RE.match(lusername):
+                if not RegisterUserHandler.USERNAME_RE.match(lusername):
                     if username and username[0] == '_':
                         errors['username'] = 'Username cannot begin with a dash.'
                     else:    
@@ -374,16 +405,17 @@ class Register(BaseHandler):
                 else:
                     source = self.session['register']['source']
                     uid = self.session['register']['uid']
-
+                    '''
                     if not email:
                         errors['email'] = 'You must have an email to use this service.'
                         email = None
-
+                    '''
+                        
                     user = models.User.get_or_insert(username,
                         role=role,
                         name=username,
                         lname=lusername,
-                        email=email,
+                        email=email, 
                         facebook_id=uid if source == models.USER_SOURCE_FACEBOOK else None,
                         google_id=uid if source == models.USER_SOURCE_GOOGLE else None,
                         token=base64.urlsafe_b64encode(os.urandom(30))[:32],
@@ -412,7 +444,7 @@ class Register(BaseHandler):
         else:
             self.redirect(webapp2.uri_for('main'))
 
-class NewUserHandler(BaseHandler): #NOT CALLED !!! see Register
+class NewUserHandler(BaseHandler): #NOT CALLED !!! see RegisterUserHandler
   
     def get(self):
         logging.critical('NewUserHandler should not be called')
@@ -436,7 +468,7 @@ class NewUserHandler(BaseHandler): #NOT CALLED !!! see Register
                 email = self.request.get('email')
                 lusers = models.User.all(keys_only=True).filter('lname', lusername).get()
 
-                if not Register.USERNAME_RE.match(lusername):
+                if not RegisterUserHandler.USERNAME_RE.match(lusername):
                     errors['username'] = 'Username may only contain alphanumeric characters or dashes and cannot begin with a dash.'
                 elif lusername in RESERVED_NAMES or lusers:
                     errors['username'] = 'Username is already taken.'
@@ -1595,14 +1627,16 @@ def checkForNewInArea(area, hosturl):
     area_followers  = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key) 
     linestr = u'<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
     obstask_cachekeys = []
- 
+    
     if area_followers:
+        monitored_cells = 0
         linestr += u'<p>Monitored cells ['
         new_observations = []
         for cell_key in area.cells: #TODO Could use cache.get_cells(area_key)
             cell = cell_key.get()
             if cell is not None:
                 if cell.monitored:
+                    monitored_cells += 1
                     linestr += u'({0!s}, {1!s}) '.format(cell.path, cell.row)
                     obs = eeservice.checkForNewObservationInCell(area, cell, "LANDSAT/LC8_L1T_TOA")
                     if obs is not None :
@@ -1610,8 +1644,8 @@ def checkForNewInArea(area, hosturl):
                         new_observations.append(obs.key)
             else:
                 logging.error (u"CheckForNewInAreaHandler() in area:{0!s} no cell returned from key:{1!s} ".format(area.name, cell_key))
-        if new_observations == []:
-            linestr += u'] Area has no monitored cells!</p>'
+        if monitored_cells == 0:
+            linestr += u'] Monitoring disabled for Area. Edit area cells to monitor</p>'
         else:
             linestr += u']</p>'
                 
@@ -1621,19 +1655,16 @@ def checkForNewInArea(area, hosturl):
             priority = 0
             for user_key in area_followers.users:
                 user = cache.get_user(user_key)
-                #print user_key
-                #userkey=ndb.Key(urlsafe=user_key) #cache.get_user(user_key)  
-                #user = models.User.get_by_id( userkey.id())
-                #user = user_key.get() #cache.get_user(user_key)  
+             
                 new_task.assigned_owner = user.key
-                new_task.name = user.name + u"'s task with priority " + str(priority) + " for " + area.name
+                new_task.name = "Latest images for " + area.name + "."
+                #new_task.descr = user.name + u"'s task with priority " + str(priority) + " for " + area.name
                 new_task.priority = priority
                 priority += 1
                 new_task.put()
-                mailer.new_image_email(new_task, hosturl) 
-                linestr += "<p>Created task with " + str(len(new_observations)) +" observations.</p>"
-                
-                #taskurl = "/obs/" + user.name + "/" + new_task.key)
+                mailer.new_image_email(new_task, hosturl)
+                num_obs = len(new_observations)
+                linestr += "<p>Created task with " + str(num_obs) + " observations for " + user.name + ".</p>"
                 taskurl = new_task.taskurl()
                 linestr += u'<a href=' + taskurl + ' target="_blank">' + taskurl.encode('utf-8') + '</a>'
             
@@ -1693,12 +1724,13 @@ class CheckForNewInAreaHandler(BaseHandler):
     def get(self, area_name):
         
         area = cache.get_area(None, area_name)
-        logging.debug('CheckForNewInAreaHandler   check-new-area-images for area_name %s %s', area_name, area)
         if not area:
             area = cache.get_area(None, area_name)
-            logging.error('CheckForNewInAreaHandler: Area not found! %s', area_name)
+            logging.error('CheckForNewInAreaHandler: Area not found!')
             return self.error(404)
-
+        else:
+            logging.debug('CheckForNewInAreaHandler   check-new-area-images for area_name %s', area_name)
+            
         initstr = u"<h1>Check area for new observations</h1>"
         initstr += u"<p>The area must have at least one cell selected for monitoring and at least one follower for a observation task to be created.</p>"
         initstr += u"<p>If an observation task is created, the first follower of the area receives an email with an observation task.</p>"
@@ -1709,7 +1741,7 @@ class CheckForNewInAreaHandler(BaseHandler):
             return self.response.write(initstr) 
             
 
-        returnstr = initstr + checkForNewInArea(area)
+        returnstr = initstr + checkForNewInArea(area, self.request.headers.get('host', 'no host'))
         return self.response.write(returnstr.encode('utf-8')) 
 
 '''
@@ -2945,7 +2977,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/feeds/<feed>', handler=FeedsHandler, name='feeds'),
     webapp2.Route(r'/following/<username>', handler=FollowingHandler, name='following'),
 
-    webapp2.Route(r'/register', handler=Register, name='register'),
+    webapp2.Route(r'/register', handler=RegisterUserHandler, name='register'),
     webapp2.Route(r'/new/user', handler=NewUserHandler, name='new-user'),
     #webapp2.Route(r'/login/google/<protected_url>', handler=GoogleLogin, name='login-google'),
     webapp2.Route(r'/login/google', handler=GoogleLogin, name='login-google'),

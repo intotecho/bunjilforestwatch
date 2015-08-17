@@ -367,7 +367,11 @@ body {
                 {% endif %}
            </div>
            <div>
+                {% if user  %}
                 <br/><a  id='make_report' class="btn btn-small btn-lightblue confirm" style='width:80%' data-toggle="tooltip" title="Report a change or disturbance">Make report</a>
+                 {% else%}
+                <br/><a  id='sign_in'  class="btn btn-small btn-lightblue confirm" style='width:80%' data-toggle="tooltip" title="Sign-in to  report a change or disturbance">Sign in to report changes</a>
+                 {% endif %}
            </div> 
          </div>
         

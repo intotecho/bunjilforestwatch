@@ -269,15 +269,23 @@ function initialize() {
     }); //get_overlay_btn.click
 
     $('#make_report').click(function(){
-
         drawingManager  = createDrawingManager(map_over_lhs)
-        
+        $('#make_report').popoverX({
+            target: '#cell_panel_t'  //container
+            content: 'sign in'
+        });
         google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
                     href = '/' + area_json['properties']['owner'] + '/journal/Observations for ' + area_json['properties']['area_name'] + '/new';
                     window.location.href = href; //+ mapobj.id;
                 });
      });
-    
+
+    $('#sign_in').click(function(){
+        $('#make_report').popoverX({
+            target: '#cell_panel_t'  //container
+        });
+     });
+   
     //Change the text in the drop-down button when a selection is changed.
     $('#algorithm-visual').click(function(e){
            $("#algorithm:first-child").text("RGB");
