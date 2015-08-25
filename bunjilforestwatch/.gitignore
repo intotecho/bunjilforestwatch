@@ -1,23 +1,29 @@
-*.py[cod]
-*.swp
+# Specifiy Files 
 secrets.py
-keys/
 .secrets/
+
+# Folders 
+build/*
+source/*
+keys/*
+.metadata/*
+PIL/*
+ee/*
+lib/*
+notused/*
+.svn/*
+
+# File Extensions
 *.zip
 *.p1
 *.p12
 *.pem
 *.PEM
-PIL/*
-ee/*
-.metadata/*
-.svn/*
-photothumb.db
+*.db
 *.bak
 *.json
-lib/*
-notused/*
-
+*.py[cod]
+*.swp
 
 # Packages
 *.egg
@@ -37,6 +43,7 @@ __pycache__
 
 # Installer logs
 pip-log.txt
+*.log
 
 # Unit test / coverage reports
 .coverage
