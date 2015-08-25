@@ -1662,7 +1662,11 @@ def checkForNewInArea(area, hosturl):
                 new_task.priority = priority
                 priority += 1
                 new_task.put()
-                mailer.new_image_email(new_task, hosturl)
+                try:
+                    mailer.new_image_email(new_task, hosturl)
+                except:
+                    logging.errror("Error sending new_image_email()")
+                    
                 num_obs = len(new_observations)
                 linestr += "<p>Created task with " + str(num_obs) + " observations for " + user.name + ".</p>"
                 taskurl = new_task.taskurl()
@@ -2193,22 +2197,26 @@ class FollowAreaHandler(BaseHandler):
 
 class NewEntryHandler(BaseHandler):
     def get(self, username, journal_name, images=""): #journal=None
-        print "NewEntryHandler: ", journal_name
-        if username != self.session['user']['name']:
-            logging.error("NewEntryHandler missing user", username, journal_name, images)
-            self.error(403)
-            return
+        images = self.request.GET.get('sat_image', '')
+        print "NewEntryHandler: ", journal_name, images
+        ownername = username
+        author = self.session['user']['name'] # current user
+        if author != ownername:
+            logging.info("NewEntryHandler: non-owner %s creating entry in journal %s of %s", author,  journal_name, ownername)
+            #self.error(403)
+            #return
 
-        user=cache.get_user( self.session['user']['name'])
+        user=cache.get_user(author)
         if not user:
             logging.error("NewEntryHandler(): User not found")
             return self.error(404)
 
-        #if journal == None:
-        #    key =  ndb.Key(urlsafe=journal_name.decode('utf-8'))
-        #    journal=ndb.get(key)
-            
-        journal=models.Journal.get_journal(username, journal_name)
+        owner=cache.get_user(ownername)
+        if not owner:
+            logging.error("NewEntryHandler(): Owner not found")
+            return self.error(404)
+                    
+        journal=models.Journal.get_journal(author, journal_name)
         if journal == None:
             logging.error("NewEntryHandler(): Journal not found: %s", journal_name)
             return self.error(404)
@@ -2230,21 +2238,21 @@ class NewEntryHandler(BaseHandler):
             ndb.put_multi([user, journal, entry, content])
             return user, journal
                 
-        user, journal = ndb.transaction(lambda: txn(user, journal, entry, content))
+        user, journal = ndb.transaction(lambda: txn(user, journal, entry, content), xg=True)
         # move this to new entry saving for first time
         models.Activity.create(user, models.ACTIVITY_NEW_ENTRY, entry.key)
 
         counters.increment(counters.COUNTER_ENTRIES)
         cache.clear_entries_cache(journal.key)
         cache.set_keys([user, journal, entry, content])
-        cache.set(cache.pack(journal), cache.C_JOURNAL, username, journal_name)
+        cache.set(cache.pack(journal), cache.C_JOURNAL, owner, journal_name)
 
         if user.facebook_token and user.facebook_enable:
             taskqueue.add(queue_name='retry-limit', url=webapp2.uri_for('social-post'), params={'entry_key': entry_key, 'network': models.USER_SOURCE_FACEBOOK, 'username': user.name})
         if user.twitter_key and user.twitter_enable:
             taskqueue.add(queue_name='retry-limit', url=webapp2.uri_for('social-post'), params={'entry_key': entry_key, 'network': models.USER_SOURCE_TWITTER, 'username': user.name})
 
-        self.redirect(webapp2.uri_for('view-entry', username=username, journal_name=journal_name, entry_id=entry_key.integer_id()))
+        self.redirect(webapp2.uri_for('view-entry', username=owner, journal_name=journal_name, entry_id=entry_key.integer_id()))
 
 class ViewEntryHandler(BaseHandler):
     def get(self, username, journal_name, entry_id):
