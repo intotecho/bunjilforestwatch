@@ -1,25 +1,20 @@
-# Specifiy Files 
 secrets.py
-.secrets/
-
-# Folders 
 build/*
 source/*
 keys/*
+.secrets/
 .metadata/*
 PIL/*
 ee/*
 lib/*
 notused/*
-.svn/*
-
-# File Extensions
 *.zip
 *.p1
 *.p12
 *.pem
 *.PEM
-*.db
+.svn/*
+*/photothumb.db
 *.bak
 *.json
 *.py[cod]
@@ -43,7 +38,6 @@ __pycache__
 
 # Installer logs
 pip-log.txt
-*.log
 
 # Unit test / coverage reports
 .coverage
@@ -58,3 +52,4 @@ nosetests.xml
 .project
 .pydevproject
 /Git Bash.lnk
+/npm-debug.log
