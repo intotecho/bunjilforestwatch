@@ -78,11 +78,11 @@ body {
 
 #draghandle { /* inspired by storage.googleapis.com/jlivni/presentations/lightning/styled.html*/
    /* position: absolute; */
-    top: -35px  !important;
-    left: 10px;
+    top: 5px  !important;
+    left: -24px;
     width: 0px;
     height: 0px;
-    opacity: 0.5;
+    opacity: 0.3;
 }
 
 #left-title {  /*latest */
@@ -94,6 +94,7 @@ body {
     height: 20px;
     text-align: right;
     color: #f0f0f0 ;
+    opacity: 0.7;
 }
 
 #right-title { /*before */
@@ -105,6 +106,7 @@ body {
     height: 20px;
     text-align: left;
     color: #f0f0f0 ;
+    opacity: 0.7;
 }
 
 
@@ -367,10 +369,40 @@ body {
                 {% endif %}
            </div>
            <div>
+                <br/>
                 {% if user  %}
-                <br/><a  id='make_report' class="btn btn-small btn-lightblue confirm" style='width:80%' data-toggle="tooltip" title="Report a change or disturbance">Make report</a>
+                    <div>
+	                    <a  id='make-report' class="btn btn-small btn-lightblue confirm" style='width:80%' data-toggle="popover-x" data-target='#make-report-popover' data-placement="right" >Make report</a>
+	                     <div id="make-report-popover" class='popover popover-info' data-toggle="popover-x" >
+	                         <div class="arrow" ></div>
+	                         <h3 class="popover-title">Report a change or disturbance</h3>
+	                         <div class="popover-content">
+	                                 If you see a change in the image, make a report.<br/>
+	                                 First drop a pin on the map where you see the disturbance.
+	                                 Then click Next.
+	                         </div>
+	                          <div class="popover-footer">
+	                               <button id='make-report-popover-next' class="btn btn-sm btn-default">Next</button>
+	                               <button id='make-report-popover-close' class="btn btn-sm btn-info">Close</button>
+	                          </div>
+	                       </div>
+                       </div>
                  {% else%}
-                <br/><a  id='sign_in'  class="btn btn-small btn-lightblue confirm" style='width:80%' data-toggle="tooltip" title="Sign-in to  report a change or disturbance">Sign in to report changes</a>
+                <br/>
+                    <div>
+                     <a  id='sign-in'  class="btn btn-small btn-lightblue confirm" style='width:80%' data-toggle="popover-x" data-target='#sign-in-popover' data-placement="right" >Report changes</a>
+                     <div id="sign-in-popover" class='popover popover-info' data-toggle="popover-x" >
+	                     <div class="arrow" ></div>
+	                     <h3 class="popover-title">Report a change or disturbance</h3>
+	                     <div class="popover-content">
+	                             <a href = '/login/google'><i>Sign in</i></a> to make a report.<br/>
+	                     </div>
+	                      <div class="popover-footer">
+	                           <button id='do-popover-sign-in' class="btn btn-sm btn-default">Sign in</button>
+	                           <button id='close-popover-sign-in' class="btn btn-sm btn-info">Close</button>
+	                      </div>
+                       </div>
+                      </div>
                  {% endif %}
            </div> 
          </div>
