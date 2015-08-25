@@ -81,6 +81,7 @@ PIPELINE_JS = {
             'js/view-maps.js',
             'js/overlay-mgr.js ',
             'js/site.js '
+            'js/drawing-tools.js',
         ),
         'output_filename': 'js/main.js'
     },
@@ -92,7 +93,6 @@ PIPELINE_JS = {
             'js/vendor/bootstrap-modal-popover.js',
             'js/vendor/custom-tile-overlay.js',
             'js/vendor/draggable-object.js',
-            'js/vendor/drawing-tools.js',
             'js/vendor/GeoJSON.js',
             'js/vendor/jquery.nouislider.min.js',
             'js/vendor/polygon-outliner.js',
