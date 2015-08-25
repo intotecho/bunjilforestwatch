@@ -3,12 +3,14 @@ var area_json_str;
 var lhs_offset_top =0;
 var lhs_offset_left =0;
 var border_latlngs = [];
+var drawingManager = null;
 
 google.maps.event.addDomListener(window, 'load', initialize); 
 
 function initialize() {
 
 	user_url    = $('#user_url').text();
+	user_name = $('#user_name').text();
 	area_json_str = $('#area_json').text();
 	if (area_json_str !== "") {
 		area_json = jQuery.parseJSON( area_json_str);
@@ -268,24 +270,45 @@ function initialize() {
         
     }); //get_overlay_btn.click
 
-    $('#make_report').click(function(){
-        drawingManager  = createDrawingManager(map_over_lhs)
-        $('#make_report').popoverX({
-            target: '#cell_panel_t'  //container
-            content: 'sign in'
-        });
-        google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-                    href = '/' + area_json['properties']['owner'] + '/journal/Observations for ' + area_json['properties']['area_name'] + '/new';
-                    window.location.href = href; //+ mapobj.id;
-                });
+    function complete_report(drawingManager, event) {
+    	href = '/' + user_name + '/journal/Observations for ' + area_json['properties']['area_name'] + '/new?sat_image=' + observations[0].image_id
+    	window.location.href = href; //+ mapobj.id;
+    	console.log(event);
+    }
+    
+    $('#make-report').click(function(){
+    	console.log("make report");
+        $('#make-report-popover').popoverX('show');
+        if (drawingManager  ==null){
+        	drawingManager  = createDrawingManager(map_over_lhs); //FIXME Don't draw more than one.
+        	google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+        		complete_report(drawingManager, event);
+             });
+        }
+     });
+    
+     $('#make-report-popover-close').click(function(){
+        $('#make-report-popover').popoverX('hide');
      });
 
-    $('#sign_in').click(function(){
-        $('#make_report').popoverX({
-            target: '#cell_panel_t'  //container
-        });
+     $('#make-report-popover-next').click(function(){
+         $('#make-report-popover').popoverX('hide');
+      });
+
+    $('#sign-in').click(function(){
+        $('#sign-in-popover').popoverX('show');
      });
    
+    $('#close-popover-sign-in').click(function(){
+        $('#sign-in-popover').popoverX('hide');
+     });
+   
+    $('#do-popover-sign-in').click(function(){
+    	console.log("do sign-in");
+        $('#sign-in-popover').popoverX('hide');
+    	window.location.href = "/login/google";
+     });
+    
     //Change the text in the drop-down button when a selection is changed.
     $('#algorithm-visual').click(function(e){
            $("#algorithm:first-child").text("RGB");
@@ -421,11 +444,12 @@ function initialize() {
         //$('#draghandle-c').width('12px').height('12px');
         //$('#draghandle').width('11px').height('11px');
   
-        $('#dragger').draggable({
+        $('#dragger').udraggable({
             axis: 'x',
             containment: 'parent',
+            helper: "$('#draghandle')",
             /*handle: '#draghandle',*/
-            cursor: 'col-resize',
+            /*cursor: 'col-resize',*/
             drag: function(e, u) {
               var left = u.position.left;
               $('#map-left-c-prior').width(left);

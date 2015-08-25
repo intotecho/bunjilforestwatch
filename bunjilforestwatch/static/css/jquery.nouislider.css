@@ -5,6 +5,7 @@
     margin-left:0px;
     margin-right:0px;
     min-width:20px;
+    touch-action:  cross-slide-x
     /*width:50%*/
 }
 

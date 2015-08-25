@@ -456,6 +456,31 @@ iframe { /* retain video aspect ratio */
     min-height: 100% !important;
 	width: 200%;*/ 
 }
+
+#sign-in-popover{
+    font-size: 11pt;
+    width: 200px;
+    /*bottom: 0; 
+    right:0; 
+    left: auto; 
+    top: auto; 
+    height: auto;
+    min-height: 100% !important;
+    width: 200%;*/ 
+}
+
+#make-report-popover{
+    font-size: 11pt;
+    width: 200px;
+    /*bottom: 0; 
+    right:0; 
+    left: auto; 
+    top: auto; 
+    height: auto;
+    min-height: 100% !important;
+    width: 200%;*/ 
+}
+
 .cell-panel{
 	font-size: 8pt;
 }

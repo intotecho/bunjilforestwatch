@@ -1,23 +1,24 @@
-*.py[cod]
-*.swp
 secrets.py
-keys/
+build/*
+source/*
+keys/*
 .secrets/
+.metadata/*
+PIL/*
+ee/*
+lib/*
+notused/*
 *.zip
 *.p1
 *.p12
 *.pem
 *.PEM
-PIL/*
-ee/*
-.metadata/*
 .svn/*
-photothumb.db
+*/photothumb.db
 *.bak
 *.json
-lib/*
-notused/*
-
+*.py[cod]
+*.swp
 
 # Packages
 *.egg
@@ -51,3 +52,4 @@ nosetests.xml
 .project
 .pydevproject
 /Git Bash.lnk
+/npm-debug.log

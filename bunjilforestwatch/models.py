@@ -313,7 +313,7 @@ class AreaOfInterest(ndb.Model):
 						"area_name" :self.name,
 						"shared" :self.shared_str,
 						"area_url" : self.url(),
-						'owner': self.owner.string_id(), 
+						'owner': self.owner.string_id(), #area owner. 
 					    "area_description": {
 					           "description": self.description,
 					           "description_why": self.description_why,

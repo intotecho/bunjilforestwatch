@@ -17,6 +17,9 @@ skip_files:
 - ^(.*/)?.*/RCS/.*$
 - ^(.*/)?\..*$
 - ^(.*/)?.*/notused/.*$
+- ^(.*/)?.*/build/.*$
+- ^(.*/)?.*/source/.*$
+- ^(.*/)?.*\.db$
 
 libraries:
 - name: jinja2
