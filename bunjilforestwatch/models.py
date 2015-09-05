@@ -1,23 +1,17 @@
-from __future__ import with_statement
+""" Modles.py intro
+etc.....
+"""
 
+from __future__ import with_statement
 import datetime
 import logging
 import re
-
 from google.appengine.api import images
 from google.appengine.ext import ndb
-
 import webapp2
-import cache
+
 import hashlib
 import geojson
-'''
-import urllib
-import utils
-import ee
-import string
-'''
-
 class DerefModel(ndb.Model):
 	def get_key(self, prop_name):
 		#return getattr(self.__class__, prop_name).get_value_for_datastore(self)
@@ -41,8 +35,11 @@ USER_SOCIAL_NETWORKS = [
 	USER_SOURCE_TWITTER,
 ]
 
-#registered User builds on google user.
 class User(ndb.Model):
+	""" ndb.User builds on google user
+	
+	"""
+
 	name = ndb.StringProperty(required=True, indexed=False)
 	lname = ndb.StringProperty(indexed=True)
 	email = ndb.StringProperty()
@@ -50,13 +47,17 @@ class User(ndb.Model):
 	last_active = ndb.DateTimeProperty(auto_now=True)
 	token = ndb.StringProperty(required=True, indexed=False)
 	
-	areas_observing = ndb.KeyProperty(repeated=True, default=None) # list of areas we watch - Not Used
-	areas_subscribing = ndb.KeyProperty(repeated=True,  default=None) # list of areas I subscribe to  (only for local)
+	areas_observing = ndb.KeyProperty(repeated=True, default=None) 
+	""" list of areas we watch - Not Used
+	"""
+	areas_subscribing = ndb.KeyProperty(repeated=True, default=None) # list of areas I subscribe to  (only for local)
 	
-	role = ndb.StringProperty(required=True, choices=set(["volunteer", "local", "admin", "viewer"]))	#roles for bunjil app users. 
-
-# not required
-	first_entry =ndb.DateTimeProperty()
+	role = ndb.StringProperty(required=True, choices=set(["volunteer", "local", "admin", "viewer"]))	
+	"""roles for bunjil app users are either volunteer, local, admin or viewer. 
+	"""
+	
+	# not required
+	first_entry = ndb.DateTimeProperty()
 	last_entry = ndb.DateTimeProperty()
 	entry_days = ndb.IntegerProperty(required=True, default=0)
 
@@ -65,7 +66,9 @@ class User(ndb.Model):
 	uid = ndb.StringProperty()
 
 	google_id = ndb.StringProperty()
-	allowed_data = ndb.IntegerProperty(required=True, default=50 * 2 ** 20) # 50 MB default
+	allowed_data = ndb.IntegerProperty(required=True, default=50 * 2 ** 20) 
+	""" allowed_data has a 50 MB default
+	"""
 	used_data = ndb.IntegerProperty(required=True, default=0)
 
 	areas_count = ndb.IntegerProperty(required=True, default=0)
@@ -83,7 +86,7 @@ class User(ndb.Model):
 	twitter_secret = ndb.StringProperty(indexed=False)
 
 
-# not really required
+	# not really required
 	def count(self):
 		if self.entry_count and self.last_entry and self.first_entry:
 			self.entry_days = (self.last_entry - self.first_entry).days + 1
@@ -131,13 +134,21 @@ class User(ndb.Model):
 		return [i for i in USER_SOURCE_CHOICES if getattr(self, '%s_id' %i)]
 
 
-class UserFollowersIndex(ndb.Model): #An User has a list of followers (other users) in an UserFollowersIndex(key=user)
+class UserFollowersIndex(ndb.Model): 
+	""" UserFollowersIndex - A User has a list of followers (other users) in an UserFollowersIndex(key=user).
+
+	"""
 	users = ndb.StringProperty(repeated=True)
 
-class UserFollowingIndex(ndb.Model):#A User has a list of other users they follow in a UserFollowingIndex(key=area)
+class UserFollowingIndex(ndb.Model):
+	"""UserFollowingIndex - A User has a list of other users they follow in a UserFollowingIndex(key=area)
+
+	"""
 	users = ndb.StringProperty(repeated=True)
 
-class AreaFollowersIndex(ndb.Model):  #An Area has a list of users in an AreaFollowersIndex(key=user)
+class AreaFollowersIndex(ndb.Model):  
+	"""AreaFollowersIndex - An Area has a list of users in an AreaFollowersIndex(key=user)
+	"""
 	users = ndb.StringProperty(repeated=True)
 	
 	@staticmethod
@@ -145,7 +156,10 @@ class AreaFollowersIndex(ndb.Model):  #An Area has a list of users in an AreaFol
 		return ndb.Key('AreaOfInterest', area_name_decoded, 'AreaFollowersIndex', area_name_decoded)
 	
 
-class UserFollowingAreasIndex(ndb.Model): #A User has a list of areas in a UserFollowingAreasIndex(key=area). Adding a list of area keys.
+class UserFollowingAreasIndex(ndb.Model): 
+	"""UserFollowingAreasIndex - A User has a list of areas in a UserFollowingAreasIndex(key=area). Adding a list of area keys.
+	moving from list of string to list of keys
+	"""
 	areas = ndb.StringProperty(repeated=True)
 	area_keys = ndb.KeyProperty(kind='AreaOfInterest', repeated=True)
 
@@ -161,42 +175,59 @@ class UserFollowingAreasIndex(ndb.Model): #A User has a list of areas in a UserF
 class AreaOfInterest(ndb.Model):
 
 	ENTRIES_PER_PAGE = 5 #TODO Move to Settings.py
-	MAX_AREAS = 24       #TODO Move to Settings.py
+	MAX_AREAS = 24	   #TODO Move to Settings.py
 	
-	PUBLIC_AOI = 0		#Everyone can see and follow this area.share
-	UNLISTED_AOI = 1    #Anyone with the link can see and follow this area.share
-	PRIVATE_AOI = 2 		#Only the owner can see or follow this area.share
+	PUBLIC_AOI = 0		
+	"""Everyone can see and follow this area.share
+	"""
+	
+	UNLISTED_AOI = 1	
+	"""Anyone with the link can see and follow this area.share
+	"""
+	
+	
+	PRIVATE_AOI = 2		 
+	"""Only the owner can see or follow this area.share
+	"""
 	
 	# Area Description
 	name = ndb.StringProperty(required=True)
 	#description = ndb.StringProperty(multiline=True) # text might be better type as it is not indexed.
-	description = ndb.TextProperty()        # What? text type is longer but is not indexed.
+	description = ndb.TextProperty()		# What? text type is longer but is not indexed.
 	description_why = ndb.TextProperty() # text type is longer but is not indexed.
 	description_who = ndb.TextProperty() # #who looks after this area?
 	description_how = ndb.TextProperty() # text type is longer but is not indexed.
 	
-	threats = ndb.TextProperty()      # text type is longer but is not indexed.
+	threats = ndb.TextProperty()	  # text type is longer but is not indexed.
 	
 	type = ndb.StringProperty()
 	wiki = ndb.StringProperty() # beware max url 500 - like to a story about this area.
 	
-	cells = ndb.KeyProperty(repeated=True, default=None) # list of Landsat cells overlapping this area - calculated on new.
-	entry_count = ndb.IntegerProperty(required=True, default=0) # reports related to this area - not used yet
+	cells = ndb.KeyProperty(repeated=True, default=None) 
+	"""list of Landsat cells overlapping this area - calculated on new.
+	"""
+	entry_count = ndb.IntegerProperty(required=True, default=0) 
+	"""reports related to this area - not used yet
+	"""
 	
 	max_latlon = ndb.GeoPtProperty(required=True, default=None)
 	min_latlon = ndb.GeoPtProperty(required=True, default=None)
 
-	#Geometry of area boundary
-	ft_link =  ndb.StringProperty() #link to a fusion table.
-	ft_docid =  ndb.StringProperty() #link to a fusion table.
-
+	ft_link =  ndb.StringProperty() 
+	"""link to a fusion table defining the Geometry of area boundary.
+	"""
+	
+	ft_docid =  ndb.StringProperty() 
+	"""A fusion table's document id.
+	"""
+	
 	coordinates = ndb.GeoPtProperty(repeated=True, default=None) # When a fusion table is provided in boundary_ft, this is the convexHull of the FT.
 	boundary_fc = ndb.TextProperty(required = True) # ee.FeatureCollection or park boundary in JSON string format
 	bound = ndb.FloatProperty(repeated=True, default=None)
 	
 	# Parameters for viewing Area
 	map_center = ndb.GeoPtProperty(required=True, default=None)
-	map_zoom    = ndb.IntegerProperty(required=True, default=1)
+	map_zoom	= ndb.IntegerProperty(required=True, default=1)
 	
 	#User (subscriber) who created AOI 
 	created_by = ndb.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)  #set automatically when created. never changes.
@@ -282,8 +313,8 @@ class AreaOfInterest(ndb.Model):
 
 	def summary_dictionary(self): # main parameters included for list of areas.
 		return {
-				'id': self.key.urlsafe(), 			# unique id for this area.
-				'url': self.url(), 						# url to view area
+				'id': self.key.urlsafe(),			 # unique id for this area.
+				'url': self.url(),						 # url to view area
 				'tasks_url': self.tasks_url(),   # url to view tasks for this area
 				'name': self.key.string_id(), 
 				'owner': self.owner.string_id(), 
@@ -292,8 +323,10 @@ class AreaOfInterest(ndb.Model):
 				'share' : self.share
 		}
 
-	#geojsonCoordinates () returns boundary as a geojson dictionary
-	#After http://google-app-engine-samples.googlecode.com/svn-history/r4/trunk/geodatastore/jsonOutput
+	"""
+	geojsonArea() returns boundary as a geojson dictionary
+	After http://google-app-engine-samples.googlecode.com/svn-history/r4/trunk/geodatastore/jsonOutput
+	"""
 	def geojsonArea(self):
 
 		coords = []
@@ -302,50 +335,46 @@ class AreaOfInterest(ndb.Model):
 			coords.append(p)
 		
 		center = []
-		center.append(geojson.Point({'lat': self.map_center.lat, 'lng': self.map_center.lon}))
-		
-		#print self.map_center
-		#print center
-		
-		geojson_obj = 	{ 
+		center.append(geojson.Point((self.map_center.lat, self.map_center.lon)))
+		geojson_obj =	 { 
 			"type": "FeatureCollection",
 			"properties": {
 						"area_name" :self.name,
 						"shared" :self.shared_str,
 						"area_url" : self.url(),
 						'owner': self.owner.string_id(), #area owner. 
-					    "area_description": {
-					           "description": self.description,
-					           "description_why": self.description_why,
-					           "description_who": self.description_who,
-					           "description_how": self.description_how,
-					           "wiki": self.wiki,
-					           "threats": self.threats
-					    },
+						"area_description": {
+							   "description": self.description,
+							   "description_why": self.description_why,
+							   "description_who": self.description_who,
+							   "description_how": self.description_how,
+							   "wiki": self.wiki,
+							   "threats": self.threats
+						},
 						"fusion_table": {
-		           			"ft_link": self.ft_link,
-		           		 	"ft_docid": self.ft_docid,
-		           		  	"boundary_fc": self.boundary_fc
-		    		     }
+							   "ft_link": self.ft_link,
+								"ft_docid": self.ft_docid,
+								 "boundary_fc": self.boundary_fc
+						 }
 			},
-		    "features": [
-			      { "type": "ViewPort",
-				        "geometry": center, 
-				        "properties": {
-				        	"name": "map_center", 
-				        	"map_zoom" :self.map_zoom
-				        }
-			      },
-			      { "type": "Feature",
-				        "geometry": {
+			"features": [
+				  { "type": "ViewPort",
+						"geometry": center, 
+						"properties": {
+							"name": "map_center", 
+							"map_zoom" :self.map_zoom
+						}
+				  },
+				  { "type": "Feature",
+						"geometry": {
 									   "type": "Polygon", 
 									   "coordinates" : coords,
 						 },
-				         "properties": {
-				           	"name": "boundary"
-			             }
+						 "properties": {
+							   "name": "boundary"
+						 }
 			  }
-	    	]
+			]
 		}
 		geojson_str = geojson.dumps(geojson_obj)
 		logging.debug("area geojson: %s",  geojson_str)
@@ -375,16 +404,16 @@ Each cell has a different schedule when new images arrive.
 
 Note that multiple LandsatCell objects for the same Landsat Cell(p,r) can be created, one for each parent area to which it belongs.
 
-The normal name for a Cell is a Swath.                
+The normal name for a Cell is a Swath.				
 '''
 class LandsatCell(ndb.Model):
 	#constants - not changed once created. Created when AOI is created. 
-	path = ndb.IntegerProperty(required=True, default=0)     # Landsat Path
-	row  = ndb.IntegerProperty(required=True, default=0)     # Landsat Row
+	path = ndb.IntegerProperty(required=True, default=0)	 # Landsat Path
+	row  = ndb.IntegerProperty(required=True, default=0)	 # Landsat Row
 	aoi = ndb.KeyProperty(kind=AreaOfInterest) #key to area that includes this cell
 	
 	#center = ndb.GeoPtProperty(required=False, default=None) # Geographic Center of Cell - not set or used.
-	#bound = ndb.ListProperty(float, default=None)            # Geographic Boundary of Cell- not set or used
+	#bound = ndb.ListProperty(float, default=None)			# Geographic Boundary of Cell- not set or used
 	
 	overlap = ndb.FloatProperty(required = False) #What proportion of this cell overlaps the AOI (>0, <=1). 
 	image_id = ndb.StringProperty(required =False) # An ID of a Landsat image for this cell (may not be latest)
@@ -435,19 +464,19 @@ Note that the Overlay is an asset in the earth engine that has a limited expiry 
 If the tiles returned are 404 then it is necessary to recreate the overlay.
 '''
 class Overlay(ndb.Model):
-	map_id    = ndb.StringProperty(required=False, default=None) 	# RGB Map Overlay Id generated in GEE - 
-	token	  = ndb.StringProperty(required=False, default=None) 	# RGB Map Overlay Token might have expired.
+	map_id	= ndb.StringProperty(required=False, default=None)	 # RGB Map Overlay Id generated in GEE - 
+	token	  = ndb.StringProperty(required=False, default=None)	 # RGB Map Overlay Token might have expired.
 	algorithm = ndb.StringProperty(required=False)				#identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
-	overlay_role      = ndb.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
+	overlay_role	  = ndb.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
 	
 	def Overlay2Dictionary(self):		
 		obsdict = {
-			"map_id"        :self.map_id, 
-			"token"          :self.token, 
-			"algorithm"     :self.algorithm,
+			"map_id"		:self.map_id, 
+			"token"		  :self.token, 
+			"algorithm"	 :self.algorithm,
 			"overlay_role":self.overlay_role, 
-			"parent"         :str(self.key.parent()),
-			"key"             :self.key.urlsafe()
+			"parent"		 :str(self.key.parent()),
+			"key"			 :self.key.urlsafe()
 		}
 		return obsdict
 
@@ -472,15 +501,15 @@ An Observation contains a list of zero or more Overlays, each Overlay is a visua
 
 The main use is the captured date. Once this observation has been actioned, it becomes the latest, against which future observations are base-lined for change detection.
 This allows the app to redraw the overlay computed by earth engine on a new browser session without recalculating it - providing the overlay token has not expired.
-In which case, app will need to regenerate the observation.    
+In which case, app will need to regenerate the observation.	
 
 Some Observations have no image_id as they are composites of many images.
 '''
 
 class Observation(ndb.Model):
 	image_collection = ndb.StringProperty(required=False)			#identifies the ImageCollection name, not an EE object.
-	image_id  = ndb.StringProperty(required=False)           		# LANDSAT Image ID of Image - key to query EE.
-	captured  = ndb.DateTimeProperty(required=False) 				# sysdate or date Image was captured - could be derived by EE from collection+image_id.
+	image_id  = ndb.StringProperty(required=False)				   # LANDSAT Image ID of Image - key to query EE.
+	captured  = ndb.DateTimeProperty(required=False)				 # sysdate or date Image was captured - could be derived by EE from collection+image_id.
 	obs_role  = ndb.StringProperty(required=False)		#Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'. 
 	overlays  = ndb.KeyProperty(repeated=True, default=None) # list of keys to overlays (visualisations of this observation asset) 
 	#landsatCell = ndb.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead. 
@@ -500,11 +529,11 @@ class Observation(ndb.Model):
 	def Observation2Dictionary(self):		
 		obsdict = {
 			"image_collection":self.image_collection, 
-			"image_id" : self.image_id, 	
+			"image_id" : self.image_id,	 
 			"captured" : self.captured.strftime("%Y-%m-%d @ %H:%M"), 
-			"obs_role" : self.obs_role, 	# ex 'latest'
+			"obs_role" : self.obs_role,	 # ex 'latest'
 			"encoded_key"   : self.key.urlsafe(),
-            "overlays"  : []
+			"overlays"  : []
 		}
 		#obsdict['encoded_key'] = self.key.urlsafe()
 		for ovl_key in self.overlays:
@@ -530,7 +559,7 @@ class ObservationTask(ndb.Model):
 
 	observations = ndb.KeyProperty(repeated=True) #key to observations related to this task. E.g if two images are in the same path and published at same time.
 
-	#people - 	Expected to be a user  who is one of the area's followers. volunteering to follow the AOI
+	#people -	 Expected to be a user  who is one of the area's followers. volunteering to follow the AOI
 	assigned_owner = ndb.KeyProperty(kind=User) #, collection_name='assigned_owner') # user who is currently assigned the the task
 	#original_owner = ndb.KeyProperty(kind=User) #, collection_name='original_user') # user originally assigned the the task - 
 	
@@ -765,11 +794,11 @@ ACTIVITY_CHOICES = [
 ]
 
 ACTIVITY_ACTION = {
-	ACTIVITY_NEW_JOURNAL: 	'created a new journal',
-	ACTIVITY_NEW_ENTRY: 	'started a new journal entry',
-	ACTIVITY_FOLLOWING: 	'started following',
-	ACTIVITY_SAVE_ENTRY: 	'updated a journal entry',
-	ACTIVITY_NEW_AREA: 		'created a new area of interest',
+	ACTIVITY_NEW_JOURNAL:	 'created a new journal',
+	ACTIVITY_NEW_ENTRY:	 'started a new journal entry',
+	ACTIVITY_FOLLOWING:	 'started following',
+	ACTIVITY_SAVE_ENTRY:	 'updated a journal entry',
+	ACTIVITY_NEW_AREA:		 'created a new area of interest',
 	ACTIVITY_NEW_OBS: 'created a new observation',
 	ACTIVITY_NEW_REPORT: 'created a new report',
 	ACTIVITY_NEW_FEEDBACK: 'created new feedback',
@@ -875,7 +904,7 @@ class Blob(DerefExpando):
 				blobs = []
 			return entry, content, blobs
 		else:
-			return None        
+			return None		
 	
 		#handmade_key = ndb.Key('Blob', 1, parent=entry_key)
 		#blob_id = ndb.allocate_ids(handmade_key, 1)[0]
