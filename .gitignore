@@ -1,24 +1,42 @@
 secrets.py
+package.json
+Makefile
+.jshintrc
+.jshintignore
+.pylintrc
+.project
+.pydevproject
+
+# Documentation Building
 build/*
 source/*
+out/*
+ut/*
+
 keys/*
-.secrets/
-.metadata/*
 PIL/*
 ee/*
 lib/*
 notused/*
-*.zip
+.svn/*
+.settings/*
+.secrets/
+.metadata/*
+*/photothumb.db
+*.bak
+*.BAT
+*.bat
+*.json
+*.lnk
+*.LNK
+*.log
 *.p1
 *.p12
 *.pem
 *.PEM
-.svn/*
-*/photothumb.db
-*.bak
-*.json
 *.py[cod]
 *.swp
+*.zip
 
 # Packages
 *.egg
@@ -53,3 +71,4 @@ nosetests.xml
 .pydevproject
 /Git Bash.lnk
 /npm-debug.log
+/Git Shell sc.lnk
