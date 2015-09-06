@@ -1,9 +1,9 @@
 
 # Bunjil Forest Watch
 ----
-* Application: http://www.bunjilforestwatch.net
-* Blog:        http://blog.bunjilforestwatch.net
-* Jira:        http://bunjilforestwatch.atlassian.net (Issues Tracking)
+* Application: {@link http://www.bunjilforestwatch.net}
+* Blog:        {@link http://blog.bunjilforestwatch.net}
+* Jira:        {@link http://bunjilforestwatch.atlassian.net (Issues Tracking)}
 * Contact:     chris [at] bunjilforestwatch.net (Chris Goodman, Developer)
 
 # APPLICATION NOTES
