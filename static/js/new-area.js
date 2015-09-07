@@ -1,3 +1,11 @@
+/**
+ * @name new-area
+ * @version 1.0
+ * @author Chris Goodman 
+ * @copyright (c) 2012-2015 Chris Goodman 
+ * @fileoverview Shows a map and allows user to create a new area.
+ */
+
 var map;
 var map_initialised = false
 
@@ -298,8 +306,7 @@ function initialize_map() {
                 map.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()+360));
             }
             if (map_center.lng() > 180) { 
-                map_center.lng() -= 360;
-                map.setCenter(map_center);
+                map.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng() - 360));
             }
          });
       };

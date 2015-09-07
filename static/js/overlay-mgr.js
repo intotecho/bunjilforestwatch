@@ -13,6 +13,7 @@ var pendingUrls = [];
 var maxPendingUrls = 0;
 
 function createLandsatGridOverlay(map, opacity, clickable, cellarray) { 
+	"use strict"
     if (map.landsatGridOverlay === undefined){
         var landsatGridOverlay = new LandsatGridOverlay(map, opacity, clickable, cellarray);
         landsatGridOverlay.name = "grid" ;
@@ -25,6 +26,7 @@ function createLandsatGridOverlay(map, opacity, clickable, cellarray) {
    
 //find overlay in obs matching role and viz algorithm.
 function findOverlay(obs, role, algorithm) {
+	"use strict"
     for (var o = 0; o < obs.overlays.length; o++) {
         var overlay = obs.overlays[o];
         if ((overlay.overlay_role == role) && (overlay.algorithm == algorithm)) {
@@ -88,7 +90,7 @@ function updateOverlay(ovl, overlayname, tooltip) {
 }
 
 function createObsOverlay(obs, role, algorithm) {
-	
+	"use strict"
 	var httpget_url = 'overlay/create/'  + obs.encoded_key + '/' + role + '/' + algorithm; 
 	
 	var prompt  = "Creating " + role + " "  + algorithm + " overlay";
@@ -103,7 +105,7 @@ function createObsOverlay(obs, role, algorithm) {
 
 
 function displayObsOverlay(obs, role, algorithm) { //called from base-maps.html
-
+	"use strict"
     var ovl = findOverlay(obs, role, algorithm);
     
     if (ovl !== null) {
@@ -129,7 +131,7 @@ function displayObsOverlay(obs, role, algorithm) { //called from base-maps.html
 }
 	
 function displayOverlay(ovl, overlayname, tooltip) { //overlay is current so add it to the map.
-    
+	"use strict"
     if (ovl.overlay_role == 'latest') 
     	createImageOverlay("show", map_under_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'red');
     else if (ovl.overlay_role == 'prior') {	
@@ -142,6 +144,7 @@ function displayOverlay(ovl, overlayname, tooltip) { //overlay is current so add
  
 
 function layerslider_callback(layer_id, val) {
+	"use strict"
     console.log("layerslider_callback : " + layer_id + ", " + val);
     
     var id = findOverlayLayer(layer_id, overlayMaps);
@@ -295,6 +298,7 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
 
 
 function findOverlayLayer(layer_id, overlayMaps){
+	"use strict"
     for (var i=0; i < overlayMaps.length; i++) {
         if (overlayMaps[i].name == layer_id)
             return i;
@@ -315,7 +319,8 @@ function removeFromMap(map, overlay_id)
 
 function removeJob(job_id)
 {
-  var panel = $("#jobs_table");
+	"use strict"
+	var panel = $("#jobs_table");
     //console.log("panel", panel);
     console.log("removeJob id:", job_id);
     var jobid = "#" + job_id;
@@ -341,6 +346,7 @@ function updateJob(job_id, text, colour)
 
 function addJob(text, colour)
 {
+	"use strict"
     var newDiv = $("#JobTemplate").clone();
     if (newDiv === 'undefined') {
     	console.log("missing JobTemplate template div in HTML");

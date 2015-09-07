@@ -1,25 +1,54 @@
-/*******************************************************************************
- * Copyright (c) 2014 Chris Goodman GPLv2 Creative Commons License to share
- * See also https://developers.google.com/maps/documentation/javascript/examples/overlay-hideshow
- ******************************************************************************/
-//var landsat_overlays = []; //empty array of cell overlays. TODO move to this.
+/**
+ * @name landsat-grid.js
+ * @version 1.0
+ * @author Chris Goodman 
+ * @copyright (c) 2014 Chris Goodman GPLv2 Creative Commons License to share
+ * @fileoverview Display the outlines of landsat swathes in a grid on the map.
+ *  * See also https://developers.google.com/maps/documentation/javascript/examples/overlay-hideshow
+ */
 
-var LANDSAT_GRID_FT = '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8';// https://www.google.com/fusiontables/DataSource?docid=1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8
-var COUNTRY_GRID_FT = '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ'; // https://www.google.com/fusiontables/data?docid=1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ
-var MAPS_API_KEY = 'AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I';    // #Google Maps API public key
+/**
+ * @global 
+ * @summary {@link https://www.google.com/fusiontables/DataSource?docid=1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8}
+ */
+var LANDSAT_GRID_FT = '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8';
+/**
+ * @global 
+ * @summary {@link https://www.google.com/fusiontables/data?docid=1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ }
+ */
+var COUNTRY_GRID_FT = '1foc3xO9DyfSIF6ofvN0kp2bxSfSeKog5FbdWdQ'; 
+/**
+ * @global 
+ * @summary Google Maps API public key
+ */
+var MAPS_API_KEY = 'AIzaSyDxcijg13r2SNlryEcmi_XXxZ9sO4rpr8I';
 
+/**
+ * @global 
+ * @summary panel used to display info about the selected cell. Client may set this.
+ */
 
-var landsatgrid_panel = '#cell_panel'; // panel used to display info about the selected cell. Client may set this.
+var landsatgrid_panel = '#cell_panel';
+
+/**
+ * @global 
+ */
 var edit_cells_mode = true; // toggled by initialise to false.
 
-/* LandsatGridOverlay(map, opacity, clickable, cellarray)
- * 
- * clickable;  For /new-area, we want it to be visible but non-interactive. 
+/** 
+ * @decr   Call the parent constructor, making sure (using Function#call) that "this" is
+  set correctly during the call
+ * @param {Googlemap } map 
+ * @param {Number} opacity
+ * @param {Boolean} clickable;  Is the overlay clickable? 
+ * For /new-area, we want it to be visible but non-interactive. 
  *			   For /view-area, we want to be able to click on grid cells.
+ * @param  cellarray an array of cells containing the geometry of the cells.
+ * 
  */
+
 function LandsatGridOverlay(map, opacity, clickable, cellarray) {
-  // Call the parent constructor, making sure (using Function#call) that "this" is
-  // set correctly during the call
+  "use strict"
   this.map = map;
   this.cellarray = cellarray;
   this.opacity = opacity;
@@ -36,13 +65,25 @@ function LandsatGridOverlay(map, opacity, clickable, cellarray) {
   google.maps.OverlayView.call(this);
 }
 
-//Create a LandsatGridOverlay.prototype object that inherits from Overlay.prototype.
-//LandsatGridOverlay.prototype = Overlay.create(LandsatGridOverlay.prototype); // See note below
 
+
+/** Create a LandsatGridOverlay.prototype object that inherits from Overlay.prototype.
+ * @global   
+ */
 LandsatGridOverlay.prototype = new google.maps.OverlayView();
 
-//Set the "constructor" property to refer to Overlay
+/** 
+ * Set the "constructor" property to refer to Overlay
+ * @global   
+ */
+
 LandsatGridOverlay.prototype.constructor = google.maps.OverlayView;
+
+/** @decr   Create a LandsatGridOverlay.prototype object that inherits from Overlay.prototype.
+ * LandsatGridOverlay.prototype = Overlay.create(LandsatGridOverlay.prototype); // See note below
+ * LandsatGridOverlay(map, opacity, clickable, cellarray)
+ * 
+ */
 
 LandsatGridOverlay.prototype.initialize = function () {
     console.log( "LandsatGridOverlay() initialising");
@@ -80,6 +121,9 @@ LandsatGridOverlay.prototype.initialize = function () {
 	});
 }
 
+/** hide a LandsatGridOverlay
+ * 
+ */
 LandsatGridOverlay.prototype.hide = function () {
 	this.visible = false;
 	//make each cell hidden
@@ -88,6 +132,9 @@ LandsatGridOverlay.prototype.hide = function () {
 	}
 }
 
+/** show a LandsatGridOverlay
+ * 
+ */
 LandsatGridOverlay.prototype.show = function () {
 	//this.initialize();
 	this.visible = true;
@@ -97,8 +144,8 @@ LandsatGridOverlay.prototype.show = function () {
 	}
 }
 
-/*
- * op from 0 (totally transparent so invisible) to 100 (non transparent).
+/** setOpacity 
+ * op from 0 (totally transparent so invisible) to 100 (non transparent or opaque).
  */
 LandsatGridOverlay.prototype.setOpacity = function (op) {
 	console.log("LandsatGridOverlay::setOpacity(): " + op);
@@ -115,7 +162,10 @@ LandsatGridOverlay.prototype.setOpacity = function (op) {
 	google.maps.event.trigger(this.map,'resize');
 }
 	
-// return the cells within a RADIUS of the map center.
+
+/** 
+ * @returns the cells within a RADIUS of the map center.
+ */
 function queryLandsatFusionTableRadius(map) {
 	
 	var map_center = map.getCenter();
@@ -148,7 +198,13 @@ function queryLandsatFusionTableRadius(map) {
 	return url;
 }
 
-// return cells that overlap the RECTANGLE or AOI bounds - not used.
+
+/**
+ * @param map
+ * @param latlngbounds 
+ * @returns cells that overlap the RECTANGLE or AOI bounds - not used.
+ * 
+ */
 function queryLandsatFusionTableBounds(map, latlngbounds) {
 	var url = [ 'https://www.googleapis.com/fusiontables/v1/query?' ];
 	url.push('sql=');
@@ -166,6 +222,15 @@ function queryLandsatFusionTableBounds(map, latlngbounds) {
 	return url;
 }
 
+
+/**
+ * @descr Filter the global landsat grid to just the matching cells passed in cellarray.
+ * @param map
+ * @param cellarray
+ * @returns url
+ * 
+ */
+
 function queryLandsatFusionTableCellArray(map, cellarray) {
 	
 	var url = [ 'https://www.googleapis.com/fusiontables/v1/query?' ];
@@ -173,10 +238,11 @@ function queryLandsatFusionTableCellArray(map, cellarray) {
 
 	var cellnames = []; // Construct a query of FT WHERE name IN cellnames
 
-	for (var i = 0; i < cellarray.length; i++) {
-		cellnames.push("'" + cellarray[i].path + '_' + cellarray[i].row + "' ");
-	};
-
+	if (cellarray !== null) {
+		for (var i = 0; i < cellarray.length; i++) {
+			cellnames.push("'" + cellarray[i].path + '_' + cellarray[i].row + "' ");
+		};
+	}
 	var query = 'SELECT name, geometry, description FROM ' + LANDSAT_GRID_FT
 			+ " WHERE name IN (" + cellnames + ")";
 
@@ -189,7 +255,13 @@ function queryLandsatFusionTableCellArray(map, cellarray) {
 }
 
 
-//This is the callback that creates the Landsat Grid.
+
+/**
+ * This is the callback that creates the Landsat Grid and draws it on the map.
+ * @param data
+ * @param landsatGridOverlay
+ * 
+ */
 function createLandsatGrid(data, landsatGridOverlay) {
     
 	"use strict";
@@ -274,8 +346,10 @@ function createLandsatGrid(data, landsatGridOverlay) {
 	landsatGridOverlay.initialized = true;
 }
 
-/*
- * polygon2LatLngCoordinates() creates an array of GoogleLatLngs from a Polygon.
+/**
+ * @descr polygon2LatLngCoordinates() creates an array of GoogleLatLngs from a Polygon.
+ * @param polygon
+ * @returns newCoordinates a geojson array
  */
 function polygon2LatLngCoordinates(polygon) {
 	"use strict";
@@ -291,6 +365,14 @@ function polygon2LatLngCoordinates(polygon) {
 
 
 //Get Landsat_cell
+/**
+ * @descr getCellArrrayCell() returns the selected cell json object from cellarray.
+ * @param selectedPath
+ * @param selectedRow
+ * @param cellarray 
+ * @returns a cell 
+ */
+
 function getCellArrrayCell(selectedPath, selectedRow, cellarray) {
 	if (cellarray != null) {
 		for (var i = 0; i < cellarray.length; i++) {
@@ -305,7 +387,14 @@ function getCellArrrayCell(selectedPath, selectedRow, cellarray) {
 	return null;
 }
 
-//Used in initial drawing of grid 
+/**
+ * isMonitored returns true if the cell is monitored.
+ * @param selectedPath
+ * @param selectedRow
+ * @param cellarray
+ * @returns bool
+ */
+
 function isMonitored(selectedPath, selectedRow, cellarray) {
 	if (cellarray != null) {
 		for (var i = 0; i < cellarray.length; i++) {
@@ -321,8 +410,13 @@ function isMonitored(selectedPath, selectedRow, cellarray) {
 }
 
 
+/**
+ * @descr monitor_cell() changes the cell style and sets state to monitored according to the isMonitored parameter.
+ * @param landsat_cell
+ * @param {bool} isMonitored
+ * @returns {bool} isMonitored
+ */
 
-//monitor_cell() returns true if the cell overlay has isMonitored set.
 function monitor_cell(landsat_cell, isMonitored) {
 	
 	landsat_cell.Monitored = isMonitored;
@@ -341,6 +435,9 @@ function monitor_cell(landsat_cell, isMonitored) {
 	return isMonitored;
 }
 
+/*
+ * event handler increases opacity when mouse is over cell.
+ */
 function landsatGrid_mouseover(e) {
 
 	if (this.Monitored) {
@@ -359,6 +456,10 @@ function landsatGrid_mouseover(e) {
 	update_cell_panel(this.parent);
 }
 
+/*
+ * event handler decreases opacity when mouse is over cell.
+ */
+
 function landsatGrid_mouseout(e) {
 	this.setOptions({
 		fillOpacity : 0
@@ -369,6 +470,11 @@ function landsatGrid_mouseout(e) {
 	update_cell_panel(this.parent);
 }
 
+/**
+ * Event handler remembers the last clicked cell and call cellSelected()
+ * behaviour of {@link cellSelected()} will depend on user context. Eg are cells locked for editing.
+ * @param e
+ */
 function landsatGrid_click(e) {
 	
 	this.parent.selectedPath = this.path;
@@ -376,6 +482,11 @@ function landsatGrid_click(e) {
 	cellSelected(this);
 }
 
+/**
+ * Event handler is called when zooming in on the overlay.
+ * The grid is hidden if zoomed to far out.
+ * @param e
+ */
 function landsatGrid_zoom(e) {
 	// needs work
 	if (e.zoom() < 6) {
@@ -386,11 +497,14 @@ function landsatGrid_zoom(e) {
 	console.log(e.zoom());
 }
 
-
+/**
+ * Fetch Outline and status of this Landsat Cell
+ * Calls /selectcell/ to get the status
+ * @todo: Check it works for special chars in area name.
+ * @param landsat_cell - the selected cell.
+ */
 function cellSelected(landsat_cell)
 {
-  // Fetch Outline and status of this Landsat Cell
-  //TODO: Check it works for special chars in area name.
 
   var cell = getCellArrrayCell(landsat_cell.path, landsat_cell.row, cellarray);
   var div_id = '#cell-panel-' + cell.index;
@@ -454,6 +568,10 @@ function cellSelected(landsat_cell)
   });
 }
 
+/**
+ * 
+ * @param landsatGridOverlay
+ */
 function update_cell_panel(landsatGridOverlay) {
 
 	var panel = $(landsatgrid_panel);

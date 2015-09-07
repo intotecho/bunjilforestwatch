@@ -1,7 +1,10 @@
-/*******************************************************************************
-Copyright (c) 2013
-Licences: Creative Commons Attribution 
-******************************************************************************/
+/**
+ * @name base=drawing-tools.js
+ * @version 1.0
+ * @author Chris Goodman 
+ * @copyright (c) Copyright (c) 2013 Licences: Creative Commons Attribution 
+ * @fileoverview Displays the google Drawing Manager tool bar on a map with minor customisations.
+ */
 
 function createDrawingManager(map) {
 	var drawingManager = new google.maps.drawing.DrawingManager({
