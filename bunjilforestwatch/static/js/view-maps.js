@@ -78,6 +78,34 @@ function updateAreaShared(shared)
 			  return error;
 		});
 }
+/**
+* instructions depend on the view_mode
+*/
+$('#instructions').popover({ 
+    html : true, 
+    animation: true,
+    trigger: 'hover',
+    container: 'body',
+    title: 'Manage Area',  
+    placement: 'bottom',
+    footer: "OK",
+    content:  (view_mode === "view-area") 
+    ? 
+	"<p>" +
+    "The square white cells overlapping your area are the outlines of Landsat images<br/><br/>" + 
+    "Monitored cells are highlighted with a bolder line.<br/><br/>" + 
+    "Change which cells are monitored with the <a id='close-dialog-new-cells-open-accordion'><i>Landsat Cells</i></a> controls below.<br/><br/>" + 
+    "Change the default view for your area with the Map panel.<br/><br/>" +
+    "Change whether your area can be seen by other users with the sharing controls under Area.<br/><br/>" 
+    :
+	"<p>" +
+    "Your mission is to check for forest changes by comparing the latest images with older images.<br><br>" + 
+    "Swipe left to see the latest and swipe right to see previous images.<br><br>" +
+    "If you see a distrurbance, make a report. Otherwise click 'No change' to close your task<br><br>" +
+    "Click 'about' in the menu for more info</p>"
+    });
+
+var instructions_str = 
 
 $('#save-view').click(function(){
 	

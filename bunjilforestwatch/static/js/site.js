@@ -1,6 +1,16 @@
+/**
+ * @name site.js
+ * @version 1.0
+ * @author Chris Goodman 
+ * @copyright (c) 2015 Licences: Creative Commons Attribution 
+ * @fileoverview tools use throughout the site - loaded on every page.
+ e.g timeouts for the toaster messages.
+ */
+
 // speech support
 $(function() {
-	if(document.createElement('input').webkitSpeech != undefined)
+	"use strict"
+	if(document.createElement('input').webkitSpeech !== undefined)
 	{
 		$(".post-speech").before('\
 						<div class="form-group"> \
