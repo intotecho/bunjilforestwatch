@@ -1,4 +1,5 @@
 /**
+
  * @name landsat-grid.js
  * @version 1.0
  * @author Chris Goodman 
@@ -11,6 +12,8 @@
  * @global 
  * @summary {@link https://www.google.com/fusiontables/DataSource?docid=1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8}
  */
+
+
 var LANDSAT_GRID_FT = '1kSWksPYW7NM6QsC_wnCuuXO7giU-5ycxJb2EUt8';
 /**
  * @global 
@@ -86,7 +89,8 @@ LandsatGridOverlay.prototype.constructor = google.maps.OverlayView;
  */
 
 LandsatGridOverlay.prototype.initialize = function () {
-    console.log( "LandsatGridOverlay() initialising");
+   "use strict"
+   console.log( "LandsatGridOverlay() initialising");
 	if (this.initialized) {
 		return;
 	}
@@ -99,12 +103,12 @@ LandsatGridOverlay.prototype.initialize = function () {
 	//this.map.overlayMapTypes.insertAt(0, self);  //what's this for?
 		
 	var url;
-	//if server sent a cellarray use that to query fusion table.
-	//else query a radius around the current map bounds.
+	/*if server sent a cellarray use that to query fusion table.
+	else query a radius around the current map bounds.*/
 	if (this.cellarray === null) {
 		url = queryLandsatFusionTableRadius(this.map);
 	} else {
-		url = queryLandsatFusionTableCellArray(this.map, cellarray);
+		url = queryLandsatFusionTableCellArray(this.map, this.cellarray);
 	}
 	var tmpLandsatGridOverlay = this;
 	
@@ -125,6 +129,7 @@ LandsatGridOverlay.prototype.initialize = function () {
  * 
  */
 LandsatGridOverlay.prototype.hide = function () {
+	"use strict"
 	this.visible = false;
 	//make each cell hidden
 	for (var i = 0; i < this.landsat_overlays.length; i++ ) {
@@ -136,6 +141,7 @@ LandsatGridOverlay.prototype.hide = function () {
  * 
  */
 LandsatGridOverlay.prototype.show = function () {
+	"use strict"
 	//this.initialize();
 	this.visible = true;
 	//make each cell visible
@@ -148,6 +154,7 @@ LandsatGridOverlay.prototype.show = function () {
  * op from 0 (totally transparent so invisible) to 100 (non transparent or opaque).
  */
 LandsatGridOverlay.prototype.setOpacity = function (op) {
+	"use strict"
 	console.log("LandsatGridOverlay::setOpacity(): " + op);
 	this.opacity = op;
 	//set opacity of each cell 
@@ -168,6 +175,7 @@ LandsatGridOverlay.prototype.setOpacity = function (op) {
  */
 function queryLandsatFusionTableRadius(map) {
 	
+	"use strict"
 	var map_center = map.getCenter();
 
 	var map_distance = google.maps.geometry.spherical.computeDistanceBetween(
@@ -206,6 +214,7 @@ function queryLandsatFusionTableRadius(map) {
  * 
  */
 function queryLandsatFusionTableBounds(map, latlngbounds) {
+	"use strict"
 	var url = [ 'https://www.googleapis.com/fusiontables/v1/query?' ];
 	url.push('sql=');
 
@@ -232,6 +241,7 @@ function queryLandsatFusionTableBounds(map, latlngbounds) {
  */
 
 function queryLandsatFusionTableCellArray(map, cellarray) {
+	"use strict"
 	
 	var url = [ 'https://www.googleapis.com/fusiontables/v1/query?' ];
 	url.push('sql=');
@@ -241,7 +251,7 @@ function queryLandsatFusionTableCellArray(map, cellarray) {
 	if (cellarray !== null) {
 		for (var i = 0; i < cellarray.length; i++) {
 			cellnames.push("'" + cellarray[i].path + '_' + cellarray[i].row + "' ");
-		};
+		}
 	}
 	var query = 'SELECT name, geometry, description FROM ' + LANDSAT_GRID_FT
 			+ " WHERE name IN (" + cellnames + ")";
@@ -254,6 +264,14 @@ function queryLandsatFusionTableCellArray(map, cellarray) {
 	return url;
 }
 
+/** Don't want to make a function inside a loop 
+ * 
+ * @param event
+ */
+function update_map_cursor_evt(event) {
+	"use strict";
+	update_map_cursor(landsat_cell, event.latLng, '#map_panel_cursor');               
+}
 
 
 /**
@@ -287,7 +305,7 @@ function createLandsatGrid(data, landsatGridOverlay) {
 			// colour as checkerboard (both are odd) or (both are even).
 			var cell_colour;
 
-			if ((selectedPath % 2) == (selectedRow % 2)) {
+			if ((selectedPath % 2) === (selectedRow % 2)) {
 				cell_colour = '#F0FFFF';
 			} 
 			else {
@@ -309,11 +327,11 @@ function createLandsatGrid(data, landsatGridOverlay) {
 			});
 			
 			// add non standard new attributes
-			landsat_cell['path']   = selectedPath;
-			landsat_cell['row']    = selectedRow;
-			landsat_cell['parent'] = landsatGridOverlay;
+			landsat_cell.path   = selectedPath;
+			landsat_cell.row    = selectedRow;
+			landsat_cell.parent = landsatGridOverlay;
 			
-			if (isMonitored(selectedPath, selectedRow, landsatGridOverlay.cellarray) == "true") {		
+			if (isMonitored(selectedPath, selectedRow, landsatGridOverlay.cellarray) === "true") {		
 				monitor_cell(landsat_cell, true);		
 			} else {
 				monitor_cell(landsat_cell, false);
@@ -332,9 +350,7 @@ function createLandsatGrid(data, landsatGridOverlay) {
 			google.maps.event.addListener(landsat_cell, 'zoom',
 					landsatGrid_zoom);
 			
-			google.maps.event.addListener(landsat_cell, 'mousemove', function (event) {
-			        update_map_cursor(landsat_cell, event.latLng, '#map_panel_cursor');               
-			});
+			google.maps.event.addListener(landsat_cell, 'mousemove', function(event){	update_map_cursor(landsat_cell, event.latLng, '#map_panel_cursor');  });
 
 			landsat_cell.setMap(landsatGridOverlay.map);
 		
@@ -354,7 +370,7 @@ function createLandsatGrid(data, landsatGridOverlay) {
 function polygon2LatLngCoordinates(polygon) {
 	"use strict";
 	var newCoordinates = [];
-	var coordinates = polygon['coordinates'][0];
+	var coordinates = polygon.coordinates[0];
 	for ( var i in coordinates) {
 		newCoordinates.push(new google.maps.LatLng(coordinates[i][1],
 				coordinates[i][0]));
@@ -374,16 +390,18 @@ function polygon2LatLngCoordinates(polygon) {
  */
 
 function getCellArrrayCell(selectedPath, selectedRow, cellarray) {
-	if (cellarray != null) {
+	"use strict"
+	if (cellarray !== null) {
 		for (var i = 0; i < cellarray.length; i++) {
-			if ((cellarray[i].path == selectedPath)
-					&& (cellarray[i].row == selectedRow)) {
+			if ((cellarray[i].path === selectedPath)
+					&& (cellarray[i].row === selectedRow)) {
 				return cellarray[i];
 			}
 		}
 		console.log("getLansatCell(): missing cell %d, %d", 
 								selectedPath, selectedRow);
 	}
+	console.log("getLansatCell(): missing cellarray!");
 	return null;
 }
 
@@ -396,10 +414,11 @@ function getCellArrrayCell(selectedPath, selectedRow, cellarray) {
  */
 
 function isMonitored(selectedPath, selectedRow, cellarray) {
-	if (cellarray != null) {
-		for (var i = 0; i < cellarray.length; i++) {
-			if ((cellarray[i].path == selectedPath)
-					&& (cellarray[i].row == selectedRow)) {
+	"use strict"
+	if (cellarray !== null) {
+		for (var i = 0, len = cellarray.length; i < len; i++) {
+			if ((cellarray[i].path === selectedPath)
+					&& (cellarray[i].row === selectedRow)) {
 				return cellarray[i].monitored;
 			}
 		}
@@ -409,7 +428,6 @@ function isMonitored(selectedPath, selectedRow, cellarray) {
 	return false;
 }
 
-
 /**
  * @descr monitor_cell() changes the cell style and sets state to monitored according to the isMonitored parameter.
  * @param landsat_cell
@@ -418,10 +436,11 @@ function isMonitored(selectedPath, selectedRow, cellarray) {
  */
 
 function monitor_cell(landsat_cell, isMonitored) {
+	"use strict"
 	
 	landsat_cell.Monitored = isMonitored;
 		
-	if (isMonitored == true) {
+	if (isMonitored === true) {
 		landsat_cell.setOptions({
 			strokeWeight : 4
 		
@@ -435,11 +454,15 @@ function monitor_cell(landsat_cell, isMonitored) {
 	return isMonitored;
 }
 
-/*
+/**
+ * @param e
  * event handler increases opacity when mouse is over cell.
  */
 function landsatGrid_mouseover(e) {
-
+	"use strict";
+	var this_target = event.currentTarget
+	/* @todo replace this with this_target */
+	
 	if (this.Monitored) {
 		this.setOptions({
 			fillOpacity : 0.3 * this.parent.opacity
@@ -461,6 +484,7 @@ function landsatGrid_mouseover(e) {
  */
 
 function landsatGrid_mouseout(e) {
+	"use strict";
 	this.setOptions({
 		fillOpacity : 0
 	})
@@ -470,17 +494,6 @@ function landsatGrid_mouseout(e) {
 	update_cell_panel(this.parent);
 }
 
-/**
- * Event handler remembers the last clicked cell and call cellSelected()
- * behaviour of {@link cellSelected()} will depend on user context. Eg are cells locked for editing.
- * @param e
- */
-function landsatGrid_click(e) {
-	
-	this.parent.selectedPath = this.path;
-	this.parent.selectedRow = this.row;	
-	cellSelected(this);
-}
 
 /**
  * Event handler is called when zooming in on the overlay.
@@ -488,7 +501,8 @@ function landsatGrid_click(e) {
  * @param e
  */
 function landsatGrid_zoom(e) {
-	// needs work
+	"use strict";
+	/* @todo  needs work */
 	if (e.zoom() < 6) {
 		landsat_cell.hidden();
 	} else {
@@ -505,12 +519,12 @@ function landsatGrid_zoom(e) {
  */
 function cellSelected(landsat_cell)
 {
-
-  var cell = getCellArrrayCell(landsat_cell.path, landsat_cell.row, cellarray);
+  "use strict";
+  var cell = getCellArrrayCell(landsat_cell.path, landsat_cell.row, landsat_cell.parent.cellarray);
   var div_id = '#cell-panel-' + cell.index;
-  var httpget_url = "/selectcell/" + area_json['properties']['area_name'] + "/" + jsonStringifySelectedCell(landsat_cell)
+  var httpget_url = "/selectcell/" + area_json.properties.area_name + "/" + jsonStringifySelectedCell(landsat_cell)
   
-  console.log( "cellSelected() %d %d %s %s %s", landsat_cell.path, landsat_cell.row, div_id, (edit_cells_mode == true)?"editing cells":"locked", httpget_url);
+  console.log( "cellSelected() %d %d %s %s %s", landsat_cell.path, landsat_cell.row, div_id, (edit_cells_mode === true)?"editing cells":"locked", httpget_url);
   
   //var panel = $("#cell_panel");
   var panel = $(div_id);
@@ -522,7 +536,7 @@ function cellSelected(landsat_cell)
   //panel.collapse('show').css('overflow', 'scroll');
   //panel.empty();
   
-  if (edit_cells_mode == false) {
+  if (edit_cells_mode === false) {
 	  update_cell_panel(landsat_cell.parent);
 	  return;
   }
@@ -534,12 +548,12 @@ function cellSelected(landsat_cell)
 	  	  // store toggled cell.
 	  	  var celldict = jQuery.parseJSON(data);
 		  console.log(celldict);
-		  if (celldict['result'] == "ok") { 
-			  var cell = getCellArrrayCell(celldict.path, celldict.row, cellarray);
+		  if (celldict.result === "ok") { 
+			  var cell = getCellArrrayCell(celldict.path, celldict.row,  landsat_cell.parent.cellarray);
 			  if (cell !== null) {
-				  cell['LC8_latest_capture'] = celldict.LC8_latest_capture;
+				  cell.LC8_latest_capture = celldict.LC8_latest_capture;
 				  cell.monitored  = celldict.monitored;
-				  if (celldict.monitored == "true") {
+				  if (celldict.monitored === "true") {
 					  monitor_cell(landsat_cell, true);
 				  }
 				  else {
@@ -549,7 +563,7 @@ function cellSelected(landsat_cell)
 			  else {
 				  console.log('cell not found!');
 			  }
-		      if (celldict.monitored == "true") {
+		      if (celldict.monitored === "true") {
 			            console.log( "Now Monitoring: " + celldict.path  + ", " +  celldict.row)
 		      }
 		      else {
@@ -558,7 +572,7 @@ function cellSelected(landsat_cell)
 		      update_cell_panel(landsat_cell.parent);
 		  }
 		  else {
-		      console.log( "Error: " + celldict['result']);
+		      console.log( "Error: " + celldict.result);
 		  }             
   }).error(function( jqxhr, textStatus, error ) {
 		  var err = textStatus + ', ' + error;
@@ -568,39 +582,52 @@ function cellSelected(landsat_cell)
   });
 }
 
+
+/**
+ * Event handler remembers the last clicked cell and call cellSelected()
+ * behaviour of {@link cellSelected()} will depend on user context. Eg are cells locked for editing.
+ * @param e
+ */
+function landsatGrid_click(e) {
+	"use strict";
+	this.parent.selectedPath = this.path;
+	this.parent.selectedRow = this.row;	
+	cellSelected(this);
+}
+
 /**
  * 
  * @param landsatGridOverlay
  */
 function update_cell_panel(landsatGridOverlay) {
-
+	"use strict";
 	var panel = $(landsatgrid_panel);
 	panel.addClass('cell-panel'); 
 	panel.empty();
 
 	var panel_str = ""	
-	monitored_cells_count= 0;
+	var monitored_cells_count= 0;
 	
 	var cellarray = landsatGridOverlay.cellarray;
-	if (cellarray != null) {
+	if (cellarray !== null) {
 		for (var i = 0; i < cellarray.length; i++) {
 	
 			var path = cellarray[i].path
             var row  = cellarray[i].row;
 			var monitored = cellarray[i].monitored;
-			var hover = ((path == landsatGridOverlay.hoverPath)
-					&& (row == landsatGridOverlay.hoverRow));
-			var selected = ((path == landsatGridOverlay.selectedPath)
-					&& (row == landsatGridOverlay.selectedRow));
+			var hover = ((path === landsatGridOverlay.hoverPath)
+					&& (row === landsatGridOverlay.hoverRow));
+			var selected = ((path === landsatGridOverlay.selectedPath)
+					&& (row === landsatGridOverlay.selectedRow));
 			
 			panel_str += "<div id=cell-panel-" + i + " class=";
 			
 			if (selected) {
 					panel_str += "'cell-panel-selected '";
 			}
-			else
+			else {
 				panel_str += "'cell-panel-unselected '";
-				
+			}	
 			if (hover) { //draw the Cell(n,n) in hover style.
 				panel_str += "><span class='cell-panel-hover' data-toggle='tooltip' title='Landsat Cell (Path, Row)'>Cell(";	
 			}
@@ -610,20 +637,20 @@ function update_cell_panel(landsatGridOverlay) {
 			
 			panel_str += path  + ", " +  row + ") </span>";  //end of hover div
 			   
-    		if (monitored == "true") {
+    		if (monitored === "true") {
     			panel_str += "<span class='cell-panel-monitored data-toggle='tooltip' title='Regular observation tasks will be sent for this cell'> Monitoring </span>";
     			monitored_cells_count += 1;
     		}
-    		else
+    		else {
     			panel_str += "<span class='cell-panel-unmonitored' data-toggle='tooltip' title='No observation tasks will be created from this cell'> Unmonitored </span>";
-    		
+    		}
             if (cellarray[i].LC8_latest_capture !== "none") {
             	var datestr =  cellarray[i].LC8_latest_capture.substr(0,  cellarray[i].LC8_latest_capture.indexOf('@')); 
             	panel_str += "<span class='cell-panel-date' data-toggle='tooltip' title='Most Recent Image mm-dd'><a href='#'> " + datestr.substring(5) + "</a>"; //remove initial '2015-'
             }
 			panel_str += "<br></div>"; // end-row
 		}
-		if (monitored_cells_count == 0) {
+		if (monitored_cells_count === 0) {
 			panel_str += "<div class='cell-panel-warn'>You won't receive any notifications as no cells monitored!</div>" 
 			panel.parent().collapse('show');
 		}

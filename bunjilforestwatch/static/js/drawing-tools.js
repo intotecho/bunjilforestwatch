@@ -7,6 +7,7 @@
  */
 
 function createDrawingManager(map) {
+	"use strict";
 	var drawingManager = new google.maps.drawing.DrawingManager({
 	    drawingMode: google.maps.drawing.OverlayType.MARKER,
 	    drawingControl: true,
@@ -44,4 +45,4 @@ function createDrawingManager(map) {
 	  });
 	  drawingManager.setMap(map);
 	  return drawingManager;
-};
+}

@@ -6,6 +6,14 @@
 
 {% block head_scripts %}
 <!--new-area.html head_scripts -->
+{% block map_head %}
+    <script>
+    var single_map = true; 
+    var view_mode =  "view-area"; 
+    var initial_dragger = "100%";
+    </script>
+{% endblock map_head %} 
+
 {% include "includes/head_scripts.html" %}
 {% endblock head_scripts %}
 
@@ -35,7 +43,8 @@
    		  <input id="searchbox_id" class="controls" type="text" placeholder="Search by place name"  style='display:none''>
  
      		<!--Sidebar content <div class="control-group"> -->
-     		<h4>Create a new Area</h4>
+     		<h4>Create a new Area<span><input id="instructions" class="img-responsive"   rel="popover"  type=image  src="/static/img/question-mark.png" ></span> 
+     		</h4>
    			<form id="new_area_form" class="form-vertical" method="POST">
 				<fieldset>
 					   <!--  NAME -->
@@ -148,10 +157,10 @@
 		</div>
 	</div>
 </div>
-{% include "includes/map_scripts.html" %}
-<script type="text/javascript" src="/static/js/new-area.js"></script>      
+    {% include "includes/project_scripts.html" %}
+    {% include "includes/map_scripts.html" %}
+    <script type="text/javascript" src="/static/js/new-area.js" defer></script>      
 {% endblock %}
 
 {% block footer_js%}
-{% include "includes/project_scripts.html" %}
 {% endblock footer_js %}

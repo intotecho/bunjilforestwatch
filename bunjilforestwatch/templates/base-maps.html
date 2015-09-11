@@ -450,18 +450,18 @@ body {
 {% endblock layer_template %}
 
 {%block jobs_template %}
-<!--TEMPLATE DIV  does not display till added by addLayer() call. -->
-<div class="row addjobdiv" id='JobTemplate' >
-        <a id='tcross_id' class="close">&times;</a> 
-      <div id='tlabel_id'class="col-xs-11" style='margin: 0'>
-       <small>template message text to replace</small>
-    </div>
-</div>
+	<!--TEMPLATE DIV  does not display till added by addLayer() call. -->
+	<div class="row addjobdiv" id='JobTemplate' >
+	        <a id='tcross_id' class="close">&times;</a> 
+	      <div id='tlabel_id'class="col-xs-11" style='margin: 0'>
+	       <small>template message text to replace</small>
+	    </div>
+	</div>
 {%endblock jobs_template %}
 
 {% block footer_js%}
-{% include "includes/project_scripts.html" %}
-{% include "includes/map_scripts.html" %}
-<script type="text/javascript" src="/static/js/base-maps.js" defer ></script>
+    {% include "includes/project_scripts.html" %}
+    {% include "includes/map_scripts.html" %}
+    <script type="text/javascript" src="/static/js/base-maps.js" defer ></script>
 {% endblock footer_js %}
 
