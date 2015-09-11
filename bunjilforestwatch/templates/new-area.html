@@ -1,11 +1,8 @@
 {% extends "base.html" %}
 {% block head %}
-
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-<title>Bunjil Forest Watch New Area</title>
-
+<title>Bunjil Forest Watch - New Area</title>
 {% block head_scripts %}
-<!--new-area.html head_scripts -->
 {% block map_head %}
     <script>
     var single_map = true; 
@@ -24,13 +21,17 @@
       }
       body { height: 100%; margin: 0; padding: 0 }
       #map-canvas { height: 100%; }
+
+    #searchbox_id {
+        width:200px;
+    }
 </style>
 
 {% endblock %}
 {% block content %}
-<!-- <div> -->
+
 <!-- NO BREADCRUMBS REQUIRED FOR THIS PAGE -->
-<!-- </div> -->
+
 <div id='area_json'   class='django-template'>{{ area_json}}</div>
 <div id='celllist'         class='django-template'>{{ celllist }}</div>
 <div id='latlng'         class='django-template'>{{ latlng}}</div>
@@ -39,9 +40,9 @@
     
 <div class="container">
 	<div class="row">
-   		<div class="col-md-3 lesspadding" >
-   		  <input id="searchbox_id" class="controls" type="text" placeholder="Search by place name"  style='display:none''>
- 
+   		<div id ='new-map-control-panel' class="col-md-9 lesspadding" >
+   
+   		    <!-- <input id="searchbox_id" class="controls" type="text" placeholder="Search by place name"  style='display:none''> -->
      		<!--Sidebar content <div class="control-group"> -->
      		<h4>Create a new Area<span><input id="instructions" class="img-responsive"   rel="popover"  type=image  src="/static/img/question-mark.png" ></span> 
      		</h4>
@@ -107,10 +108,14 @@
                             </div>
 	                </div>
 	                    
-    				   <!--  BOUNDARY SELECTION  -->
+    				   <!--  DEFINE AREA -- BOUNDARY SELECTION  -->
     				   <div>
 						<fieldset class='control-label map-panel-controls'>
+	                    
+	                     <input id="searchbox_id" class="controls" type="text" placeholder="Enter a place name near your area">
+    
 	                    <legend class='control-label'>How will you enter your area's boundary? <span style="color: #ff0000">*</span></legend>
+
 	                     <div class="radio">
 	                        <label><input type="radio" name="opt-fusion" value="is-drawmap">Draw my area on a map</label>
 	                    </div>
