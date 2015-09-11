@@ -18,14 +18,15 @@ var lhs_offset_left =0;
 var border_latlngs = [];
 var drawingManager = null;
 var initial_dragger = "90%";
-var cellarray = null;
+/* var cellarray = null; not a global*/
+
 
 function drawLandsatCells(cellarray) {
 	"use strict";
 	/* global createLandsatGridOverlay */
 	/* global map_over_lhs */
-
 	/* global layerslider_callback */
+    /* global addLayer */
 
     createLandsatGridOverlay(map_over_lhs, 0.5, true, cellarray);
     addLayer( map_over_lhs.landsatGridOverlay.name,
@@ -33,12 +34,13 @@ function drawLandsatCells(cellarray) {
             'gray',  
             75, 
             "Each Landsat image covers one of these cells.", 
-            layerslider_callback ); //create slider.
+            layerslider_callback );
 }
 
 function update_map_panel(map, panel) {
 	"use strict";
 	/* global map_over_lhs */
+	/* global map_under_lhs */
     var htmlString = "<span class=divider small><strong>zoom:</strong>   " + map.getZoom() + " <br/>";
     //htmlString += "<strong>center:</strong><br>";
     htmlString += "Center(" + map_under_lhs.getCenter().lat().toFixed(3) + ",  " + map_under_lhs.getCenter().lng().toFixed(3) + ")</span>";
@@ -72,7 +74,6 @@ function initialize() {
 		alert("missing area data");
 		return;
 	}
-	//var center_coords = area_json.features['features'][0]['geometry'][0]['coordinates'];  // init global.
 	var center_coords = area_json.features[0].geometry[0].coordinates;  // init global.
     var map_center = new google.maps.LatLng(center_coords[0], center_coords[1]);
 	var map_zoom = area_json.features[0].properties.map_zoom;  // init global.
@@ -105,7 +106,10 @@ function initialize() {
             scaleControl: true,
             scaleControlOptions: {position: google.maps.ControlPosition.BOTTOM_RIGHT}
         }
-    /* global map_under_lhs*/ 
+    /* global map_under_lhs */ 
+    /* global map_under_lhs */ 
+    /* global map_rhs */ 
+    /* global single_map*/ 
     map_under_lhs      = new google.maps.Map(document.getElementById("map-left-prior"), mapOptions_prior);
     map_over_lhs    = new google.maps.Map(document.getElementById("map-left-latest"), mapOptions_latest);
     map_rhs               = new google.maps.Map(document.getElementById("map-right"), mapOptions_prior);
@@ -149,6 +153,7 @@ function initialize() {
     $('#shared_form input').on('change', function() {
         var selection = $('input[name=opt-sharing]:checked', '#shared_form').val();
         console.log("share returned: ", selection);
+        /* global updateAreaShared */
         updateAreaShared(selection); //ajax call
         $('#area_sharing_heading').html("Sharing: updating ...");
     });
@@ -241,8 +246,9 @@ function initialize() {
     areaBoundary_rhs.setMap(map_rhs);
 
     areaBoundary_over_lhs.name = "boundary" ;
+    /* global overlayMaps */ 
     overlayMaps.push(areaBoundary_over_lhs);
-    
+    /* global addLayer */
     addLayer(areaBoundary_over_lhs.name, 
     		area_json.properties.area_name + " Border", 
     		"yellow",  
@@ -282,6 +288,7 @@ function initialize() {
         }, 80000);
 		
         var prompt = "<h6><small>Calculating Cells</small></h6><img src='/static/img/ajax-loader.gif' class='ajax-loader'/>";
+        /* global addJob */
         jobid = addJob(prompt, 'gray');
       
         $.get(url).done(function(data) {
@@ -294,6 +301,7 @@ function initialize() {
          
                 var plurals = (cellarray.length === 1)? ' cell covers': ' cells cover';
                 var plurals_mon = (getCellsResult.monitored_count === 1)? ' cell selected': ' cells selected';
+                /* global updateJob */
                 updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area. " + getCellsResult.monitored_count + plurals_mon + '</p>', 'black');
                 drawLandsatCells(cellarray);
             }            
@@ -315,23 +323,35 @@ function initialize() {
     }
     
     var observations = jQuery.parseJSON($('#obslist').text());
+    /* global displayObsOverlay */
     for (var i=0; i < observations.length; i++) {        
         displayObsOverlay(observations[i], 'latest', 'rgb'); //LHS overlay(s)
         displayObsOverlay(observations[i], 'prior', 'rgb'); //RHS overlays(s)        
      }
  
     // View button will fetch Latest Overlay Image of selected (last clicked) cell on LHS.
+    /* global requestAdHocOverlay */
     $('#get_overlay_btn').click(function(){
         requestAdHocOverlay();
         
     }); //get_overlay_btn.click
 
     function complete_report(drawingManager, event) {
-    	var href = '/' + user_name + '/journal/Observations for ' + area_json.properties.area_name + '/new?sat_image=' + observations[0].image_id
+    	
+    	var href = '/' 
+    				+ user_name 
+    				+ '/journal/Observations for ' 
+    				+ area_json.properties.area_name; 
+    				 
+    				
+    	if (view_mode ===  "view-obstask") {
+    		href 	+= '/new?sat_image=' 
+    				+ observations[0].image_id;
+    	}
     	window.location.href = href; //+ mapobj.id;
     	console.log(event);
     }
-    
+    /* global createDrawingManager */
     $('#make-report').click(function(){
     	console.log("make report");
         $('#make-report-popover').popoverX('show');
@@ -368,54 +388,54 @@ function initialize() {
     //Change the text in the drop-down button when a selection is changed.
     $('#algorithm-visual').click(function(e){
            $("#algorithm:first-child").text("RGB");
-           algorithm = 'rgb';
+           //algorithm = 'rgb';
            e.preventDefault();
         });
         $('#algorithm-ndvi').click(function(e){
            $("#algorithm:first-child").text("NDVI");
-           algorithm = 'ndvi';
+           //algorithm = 'ndvi';
            e.preventDefault();
         });
         $('#algorithm-change').click(function(e){
            $("#algorithm:first-child").text("Change");
-           algorithm = 'change';
+           //algorithm = 'change';
            e.preventDefault();
         });
         
         $('#latest').click(function(e){
             $("#latest:first-child").text("Latest  ");
-            latest = 0;
+            //latest = 0;
             e.preventDefault();
         });
         $('#latest-1').click(function(e){
             $("#latest:first-child").text("Latest-1");
-            latest = 1;
+            //latest = 1;
             e.preventDefault();
         });
         $('#latest-2').click(function(e){
             $("#latest:first-child").text("Latest-2");
-            latest = 2;
+            //latest = 2;
             e.preventDefault();
         });
         $('#latest-3').click(function(e){
             $("#latest:first-child").text("Latest-3");
-            latest = 3;
+            //latest = 3;
             e.preventDefault();
         });
         
         $('#satellite').click(function(e){
             $("#satellite:first-child").text("L8");
-            satellite = 'l8';
+            //satellite = 'l8';
             e.preventDefault();
         });
         $('#satellite-l7').click(function(e){
             $("#satellite:first-child").text("L7");
-            satellite = 'l7';
+            //satellite = 'l7';
             e.preventDefault();
         });
         $('#satellite-both').click(function(e){
             $("#satellite:first-child").text("Both");
-            satellite = 'l78';
+            //satellite = 'l78';
             e.preventDefault();
         });
         
@@ -439,7 +459,8 @@ function initialize() {
                 //google.maps.event.trigger(mapStyled, 'resize');
             }).resize();
 
-         
+        //var save_view_instructions = 
+           
         $('#save-view').popover({ 
             html : true, 
             animation: true,
@@ -447,9 +468,12 @@ function initialize() {
             container: 'body',
             title: 'Save View',  
             placement: 'bottom',
-            content: save_view_instructions
+            content:  "Save the current view.<br/>" +
+            "All users will see this as the initial view when they open an observation for this area. <br/>"
             });
-        
+
+        //var reset_view_instructions = 
+            
         $('#reset-view').popover({ 
             html : true, 
             animation: true,
@@ -457,7 +481,8 @@ function initialize() {
             container: 'body',
             title: 'Reset View',  
             placement: 'bottom',
-            content: reset_view_instructions
+            content: "Return map to the initial view.<br/>" +
+            "This does not update the saved view.<br/>"
             });
         
         
@@ -526,14 +551,15 @@ function initialize() {
                 //console.log('show');
             }
         })
-    
+
+        /* global toggle_edit_cells_lock */ 
         $('#edit-cells-lock').click(function(e){
             toggle_edit_cells_lock();
         });
         toggle_edit_cells_lock();  // call during init to draw div
         
         $('#delete_area_id').click(function(e) {
-            
+            	/* global bootbox */
                 bootbox.dialog({
                       message: "<b>Warning!</b> Deleting this area cannot be undone.<br/>Data contained with the area will also be deleted.<br/>Volunteers who follow this area will be notified.",
                       title: "Delete Area <b>" + area_json.properties.area_name + "</b> - Are You Sure?",
@@ -572,6 +598,7 @@ function httpgetActionUrl(action)
 	var satellite = $("#satellite:first-child").text().trim();
 	var algorithm = $("#algorithm:first-child").text().trim();
 	var latest_str= $("#latest:first-child").text().trim();
+	var latest;
 	switch (latest_str) {
 		case "Latest-1":
 		    latest = 1;
@@ -586,8 +613,6 @@ function httpgetActionUrl(action)
 			latest = 0;
 	}    
 	    
-	console.log('latest =', latest. latest_str);
-	
 	var path = map_over_lhs.landsatGridOverlay.selectedPath;
 	var row  = map_over_lhs.landsatGridOverlay.selectedRow;
 	

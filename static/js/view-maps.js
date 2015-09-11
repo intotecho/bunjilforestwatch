@@ -10,14 +10,8 @@ var algorithm = 'rgb'; // ndvi
 var latest = 0;  //latest - 0
 var overlayMaps = [];
 
-var save_view_instructions = 
-    "Save the current view.<br/>" +
-    "All users will see this as the initial view when they open an observation for this area. <br/>" ;
-    
-var reset_view_instructions = 
-        "Return map to the initial view.<br/>" +
-        "This does not update the saved view.<br/>" ;
 
+/* not used
 function setActionUrl(action)
 {
    // action can be 'overlay' or 'download' strip the old action and append the new action.
@@ -32,11 +26,9 @@ function setActionUrl(action)
           url = url.substring(0, url.indexOf("/action")); //strip the last action.
     }
 
-   url = url + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
-   
-   //Not working so disable the final bit.
-   return url;
+   return url + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
 }
+*/
 
 
 function jsonStringifySelectedCell(landsat_cell)
@@ -81,7 +73,7 @@ function updateAreaShared(shared)
 /**
 * instructions depend on the view_mode
 */
-$('#instructions').popover({ 
+$('#instructions').popoverX({ 
     html : true, 
     animation: true,
     trigger: 'hover',
