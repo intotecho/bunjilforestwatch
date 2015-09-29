@@ -60,6 +60,26 @@ function update_map_cursor(map, pnt, panel) {
     $(panel).html(htmlString); 
 }
 
+/**
+ * Called after Make Report when an area has been marked and user clicks next.
+ * @param drawingManager
+ * @param event
+ */
+function complete_report(drawingManager, event) {
+	'use strict';
+	var href = '/' 
+				+ user_name 
+				+ '/journal/Observations for ' 
+				+ area_json.properties.area_name; 
+				 
+				
+	if (view_mode ===  "view-obstask") {
+		href 	+= '/new?sat_image=' 
+				+ observations[0].image_id;
+	}
+	window.location.href = href; //+ mapobj.id;
+	console.log(event);
+}
 
 function initialize() {
 	"use strict";
@@ -273,7 +293,7 @@ function initialize() {
         $('#dialog-new-cells').popoverX('hide');
    }); 
     
-    if(cellarray.length === 0) { // Then fetch the overlapping cells from server.
+   if(cellarray.length === 0) { // Then fetch the overlapping cells from server.
         console.log("Init: Fetching Overlapping Cells for Area");
         var url = area_json.properties.area_url + '/getcells';
         
@@ -336,27 +356,12 @@ function initialize() {
         
     }); //get_overlay_btn.click
 
-    function complete_report(drawingManager, event) {
-    	
-    	var href = '/' 
-    				+ user_name 
-    				+ '/journal/Observations for ' 
-    				+ area_json.properties.area_name; 
-    				 
-    				
-    	if (view_mode ===  "view-obstask") {
-    		href 	+= '/new?sat_image=' 
-    				+ observations[0].image_id;
-    	}
-    	window.location.href = href; //+ mapobj.id;
-    	console.log(event);
-    }
-    /* global createDrawingManager */
+     /* global createDrawingManager */
     $('#make-report').click(function(){
     	console.log("make report");
         $('#make-report-popover').popoverX('show');
         if (drawingManager  === null){
-        	drawingManager  = createDrawingManager(map_over_lhs); //FIXME Don't draw more than one.
+        	drawingManager  = createDrawingManager(map_over_lhs, google.maps.drawing.OverlayType.MARKER); //FIXME Don't draw more than one.
         	google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
         		complete_report(drawingManager, event);
              });

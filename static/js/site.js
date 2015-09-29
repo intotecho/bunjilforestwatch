@@ -2,43 +2,19 @@
  * @name site.js
  * @version 1.0
  * @author Chris Goodman 
- * @copyright (c) 2015 Licences: Creative Commons Attribution 
  * @fileoverview tools use throughout the site - loaded on every page.
- e.g timeouts for the toaster messages.
+ * e.g timeouts for the toaster messages.
  */
 
-// speech support
-$(function() {
-	"use strict"
-	if(document.createElement('input').webkitSpeech !== undefined)
-	{
-		$(".post-speech").before('\
-						<div class="form-group"> \
-							<label class="control-label" for="speech">speech</label> \
-							<div class="controls"> \
-								<input class="input-lg" rows=10 id="speech" name="speech" type="text" x-webkit-speech /> \
-								<span class="help-inline">click the mic icon and your speech will be added below</span> \
-							</div> \
-						</div> \
-		');
 
-		$("#speech").bind('webkitspeechchange', function() {
-			text = $("#text");
-			speech = $("#speech").val() + ".";
-			$("#speech").val('');
-			speech = speech.substr(0, 1).toUpperCase() + speech.substr(1);
-			if(text.val() != "")
-				text.val(text.val() + " " + speech);
-			else
-				text.val(speech);
-		});
-	}
-});
-
-// delete enabled/disable
+/**
+ *  Delete enabled/disable 
+ *  Used in entry.html to delete an entry
+ *  @todo could reuse for deleting an area.
+ */
 $(function() {
 	$("#sure").click(function() {
-		if($(this).attr('checked') == 'checked')
+		if($(this).attr('checked') === 'checked')
 		{
 			$("#delete").removeClass('disabled');
 			$("#delete").removeAttr('disabled');
@@ -55,6 +31,7 @@ $(function() {
 
 function filesizeformat(size)
 {
+	"use strict";
 	if(size >= 1024 * 1024)
 		return (size / (1024 * 1024)).toFixed(1) + ' MB';
 	else
@@ -62,8 +39,8 @@ function filesizeformat(size)
 }
 
 // local commands
-
 $(function() {
+	"use strict";
 	$('.dropdown-toggle').dropdown();
 	$('.alert').alert();
 	$('a[rel=tooltip], .show-tooltip').tooltip();
@@ -71,6 +48,7 @@ $(function() {
 
 
 $(document).ready(function() {
+	"use strict";
 	$('[data-toggle=offcanvas]').click(function() {
 	    $('.row-offcanvas').toggleClass('active');
 	  });
@@ -78,24 +56,28 @@ $(document).ready(function() {
 
 //fadeout and slide up bootstrap .alert messages after 10 seconds.
 window.setTimeout(function() {
+	"use strict";
     $(".alert-info").fadeTo(1500, 0).slideUp(1500, function(){
         $(this).remove(); 
     });
 }, 15000);
 
 window.setTimeout(function() {
+	"use strict";
     $(".alert-warning").fadeTo(1500, 0).slideUp(1500, function(){
         $(this).remove(); 
     });
 }, 15000);
 
 window.setTimeout(function() {
+	"use strict";
     $(".alert-error").fadeTo(1500, 0).slideUp(1500, function(){
         $(this).remove(); 
     });
 }, 15000);
 
 window.setTimeout(function() {
+	"use strict";
     $(".alert-success").fadeTo(1500, 0).slideUp(1500, function(){
         $(this).remove(); 
     });

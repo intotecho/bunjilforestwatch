@@ -6,6 +6,10 @@ img[src*="gstatic.com/"],img[src*="googleapis.com/"] {
     max-width: none;!important
 }
 
+/* A dotted underline for popup hyperlinks in <a class="popup"> */
+a[class ="popup"] {
+   text-decoration: none; border-bottom: 1px dotted ;
+}
 .panel-tight {
     margin-bottom: 1px;
     margin-top: 1px;
@@ -78,10 +82,6 @@ textarea {
     height: 600px;
 }
 
-
-.chewy-font {
-  font-family: 'Chewy', cursive;
-}
 
 .bs-example{
     margin: 20px;
@@ -367,16 +367,7 @@ iframe { /* retain video aspect ratio */
     border-bottom-width: 1px;
 }
 
-/*
-.controls {
-        margin-top: 16px;
-        border: 1px solid transparent;
-        border-radius: 2px 0 0 2px;
-        box-sizing: border-box;
-        -moz-box-sizing: border-box;
-        outline: none;
- }
- */
+
 .boxshadow-controls {
 	    margin-top: 16px;
         border: 1px solid transparent;
