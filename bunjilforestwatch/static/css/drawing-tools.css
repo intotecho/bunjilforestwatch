@@ -1,8 +1,14 @@
 
 /* Map styles. */
-#map-canvas-c {
+
+
+
+.map-canvas {
   width: 96%;
   margin-left:2%; /* must be (100-width)/2 */
+
+}
+#map-canvas-c {
   position: relative;
   z-index: 0;
   display:inline-block;
@@ -54,13 +60,13 @@
 
 /* Panel styles. */
 #geojson-panel {
-  float: left;
-  width: 35%;
-  height: 200px;
+  /*float: left; */
+  width: 90%;
+  min-height: 600px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   outline: 1px solid rgba(0,0,0,0.2);
   z-index: 100;
-  border: black dashed 1px;
+  border: #101D62 1px;
 }
 
 #panel-content {
