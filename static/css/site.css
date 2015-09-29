@@ -10,6 +10,7 @@ img[src*="gstatic.com/"],img[src*="googleapis.com/"] {
 a[class ="popup"] {
    text-decoration: none; border-bottom: 1px dotted ;
 }
+
 .panel-tight {
     margin-bottom: 1px;
     margin-top: 1px;

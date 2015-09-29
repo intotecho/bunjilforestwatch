@@ -208,66 +208,62 @@ function zoom_here(map, event) {
 	}
 }
 
+function save_map_mode() {
+	"use strict";
+	
+	// Display div for next instruction.
+	$('#save-area-form').show();
+	$('#move-map-form').show();
+	$('#drag-map-form').hide();
+    $('#mark-map-form').hide();
+    
+    // Turn of Draging Mode but keep markers
+    var map = initialize_map.map;
+    map.drawingTools.stopDrawCenterPointMarker(map);    
+}
 
 function drop_pin_mode(map, event) {
 	"use strict";
-    event.preventDefault();
-    $('#drop-pin-mode').addClass('btn-default').removeClass('btn-primary');
-    $('#move-map-mode').addClass('btn-primary').removeClass('btn-default');
-
+    if (typeof(event) !== 'undefined') {
+		event.preventDefault();
+	}
+	
     // Display div for next instruction.
-    $('#drop-pin-label').hide();
-    $('#drop-pin-help').hide();
-    $('#move-map-help').show();
-    $('#move-map-label').show();
-
+    $('#mark-map-form').show();
+    $('#move-map-form').show();
+    $('#drag-map-form').hide();
+    $('#save-area-form').hide();
+    
     // Call drawing-tools to set map drawing mode to drop pin
-    map.drawingTools.drawCenterPointMarker(map);    
+    map.drawingTools.drawCenterPointMarker(save_map_mode);    
 }
 
-function move_map_mode(map, event) {
+function move_map_mode(event) {
 	"use strict";
-	event.preventDefault();
-    $('#move-map-mode').addClass('btn-default').removeClass('btn-primary');
-    $('#drop-pin-mode').addClass('btn-primary').removeClass('btn-default');
-
+	if (typeof(event) !== 'undefined') {
+		event.preventDefault();
+	}
     // Display div for next instruction.
-    $('#drop-pin-label').show();
-    $('#drop-pin-help').show();
-    $('#move-map-help').hide();
-    $('#move-map-label').hide();
+    $('#drag-map-form').show();
+    $('#mark-map-form').hide();
+    $('#save-area-form').hide();
+    $('#move-map-form').hide();
     
-    // Turn of Draging Mode byt keep markers
-    map.drawingTools.stopDrawCenterPointMarker(map);    
-    
+    // Turn of Dragging Mode
+    var map = initialize_map.map;
+    map.drawingTools.stopDrawCenterPointMarker();
+    // Remove Marker
+    map.drawingTools.removeCenterPointMarker(); 
 }
+
 
 function scroll_to_target(scroll_target) {
-
 	"use strict";
 	var t = $("html,body");
-	var html = $("html");
-	var body = $("body");
-	
-	console.log('before animate' + t.scrollTop());
-	console.log('before html' + html.scrollTop());
-	console.log('before body ' + body.scrollTop());
 	t.animate(
-		    { scrollTop: scroll_target.offset().top}, 1000 
-		    /*
-		     * ,
-		    {
-		        complete : function(){
-		        	console.log('after animate' + t.scrollTop());
-		    		console.log('before html' + html.scrollTop());
-		    		console.log('before body ' + body.scrollTop());
-		        	}
-		    }
-		    */
+		    { scrollTop: scroll_target.offset().top}, 3000 
 		);
 }
-
-
 
 /**
  * initialize_map.initialized  ensures it may be called repeatedly.
@@ -297,7 +293,6 @@ function initialize_map(place) {
 	
 	initialize_map.map = map;   // don't do this more than once.
 	map.drawingOverlay = null; // no user drawn shape yet. 
-	//map.drawingManager  = createDrawingManager(map, google.maps.drawing.OverlayType.POLYGON);
 
 	var mapContainer = document.getElementById('map-canvas-c');
 	var dropContainer = document.getElementById('drop-container');
@@ -307,7 +302,7 @@ function initialize_map(place) {
 	
 	/* global DrawingTools */
 	map.drawingTools = new DrawingTools(map, mapContainer, dropContainer, geoJsonPanel, geoJsonInput, downloadLink);
-
+	
 	$('#zoom-here').click(function(event) {
 		zoom_here(map, event);
 		});
@@ -317,11 +312,11 @@ function initialize_map(place) {
 	});
 
 	$('#move-map-mode').click(function(event) {
-		move_map_mode(map, event);
+		move_map_mode(event);
 	});
 
 	/*function to add the polygon coordinates to the form data prior to submit.*/ 
-	$('#createarea_id').click(function(){ 
+	$('#save-area').click(function(){ 
 		createArea(map);
 	});		
 
@@ -349,7 +344,7 @@ function initialize_map(place) {
 		var layerID = parseInt($(this).attr('id'));
 
 		if ($(this).is(':checked')){
-			if(layerID === 0)
+			if(layerID === 'landsat-grid')
 			{
 				createLandsatGridOverlay(map, 0.5, false, null);
 			}
@@ -369,11 +364,15 @@ function initialize_map(place) {
 		}
 	});
 
-	google.maps.event.addListener(map, 'idle', function() {
-		var scroll_target = $('#scroll-to-here');
+	var scroll_target = $('#scroll-to-here');
+	if (typeof map.scroll_once  === 'undefined') {
+		map.scroll_once = true;
 		scroll_to_target(scroll_target);
+	}
+
+	google.maps.event.addListener(map, 'idle', function() {
 		
-		//This is needed so the fusion tables query works
+		// Normalize longitude. This is needed so the fusion tables query works
 		var map_center = map.getCenter();
 		if (map_center.lng() < -180) { 
 			map.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()+360));
@@ -497,63 +496,109 @@ function addSearchBox(map)
  * Pre-Checks if all inputs are provided to enable create button
  * This occurs as user is entering details so should not be intrusive
  */
-
 function pre_checkform_next_area(event) {
 	"use strict";
+	var validations = [];
 	var problems = "";
 	var area_name =  $('#area_name').val();
 	var shared = $('input[name=opt-sharing]:checked', '#new_area_form').val();
-	var self_monitor = $('input[name=self-monitor]:checked', '#new_area_form').val();
-	var request_volunteers = $('input[name=request-volunteers]:checked', '#new_area_form').val();
+	var self_monitor = $('input[name=self-monitor]', '#new_area_form');
+	var request_volunteers = $('input[name=request-volunteers]', '#new_area_form');
 	var accept = $('input[name=accept]:checked', '#new_area_form').val();
 
 	// form validation
 	if ((null === area_name) || (area_name === "")) {
-		problems += 'Give your area a short name<br/><br/>';
+		validations.push({'name':'#area-name-validation', 'value':'Give your area a short name.'});
 	}
+	else {
+		if (checkform_next_area.clicked) { 
+			$('#area-name-validation').hide();
+		}
+	}
+	
 	if(shared === undefined) {
-			problems += 'Choose public, private or inlisted.<br/><br/>';
+		validations.push({'name':'#sharing-validation', 'value':'Choose public, private or unlisted.'});
 	}
-	if((self_monitor === undefined) && (request_volunteers === undefined)) {
-		problems += 'Either choose to monitor your self or request volunteers.<br/><br/>';
+	else {
+		if (checkform_next_area.clicked) { 
+			$('#sharing-validation').hide();
+		}
 	}
+		
+	if((shared === 'private') && (request_volunteers.val() !== undefined)) {
+		self_monitor.prop("checked", true).prop('disabled', true);
+		request_volunteers.prop("checked", false).prop('disabled', true);
+	}
+	else {
+		self_monitor.prop('disabled', false);
+		request_volunteers.prop('disabled', false);
+	}
+
+	if((self_monitor.prop("checked") !== true) && (request_volunteers.prop("checked") !== true)) {
+		validations.push({'name':'#monitoring-validation', 'value':'Either self-monitor or request volunteers.'});
+	}
+	else {
+		if (checkform_next_area.clicked) { 
+			$('#monitoring-validation').hide();
+		}
+	}
+	
 	if(accept !== "true") {
-		problems += 'To register an area you must agree to investigate reports in your area.<br/><br/>';
+		validations.push({'name':'#accept-validation', 'value':'To register an area you must agree to investigate reports in your area.'});
 	}
-	if(area_name === '@'){ //test code
+	else {
+		$('#accept-validation').hide();
+	}
+
+	if(area_name[0] === '@'){ //test code
 		$('#map-row').show();
 		var target = $('#map-find');
 		target.show();
 		initialize_map(null);
 		return "";
 	}
-	if (problems.length > 0) {
+	
+	if (validations.length > 0) {
 		$('#next-area').addClass('btn-default').removeClass('btn-primary');
 	}
 	else {
 		$('#next-area').removeClass('btn-default').addClass('btn-primary');
+		$('#form-errors').html(' ');
 	}
-	return problems;
+	return validations;
 }
-
 	
 /**
  * Checks if all inputs are provided to enable create button
+ * This occurs when user clicks Next,
+ * Calls pre-checks()
  */
+
 function checkform_next_area(event) {
 	"use strict";	
 	event.preventDefault();
-
-	var problems = pre_checkform_next_area(event);
+	checkform_next_area.clicked = true;
 	
-	$('#form-errors').html(problems);
-	if (problems.length === 0) {
+	var validations = pre_checkform_next_area(event);
+	var error_count = validations.length; // issues to fix
+	if(error_count > 0) {
+		var str = "Fix these issues: ";
+		for (var p=0; p < error_count ; p++) {
+			//str += (validations[p].value + '<br/>');
+			$(validations[p].name).show();
+		}
+		var msg = 'Fix the issue' + ((error_count  === 1) ? ' ':'s ') + 'above, then click <i>Next</i>.';
+		$('#form-errors').html(msg);
+	}
+	else {
+		$('#form-errors').html(' ');
 		$('#map-row').show();
 		var target = $('#map-find');
 		target.show();
 		initialize_map(null);
 	}
-}	
+}
+checkform_next_area.clicked = false;
 
 /**
  * Stop ENTER generating a submit form.
@@ -596,7 +641,7 @@ function initialize_new() {
 	"use strict";
 
 	var searchBox = addSearchBox();
-    
+	$(window).scrollTop(0);
     /* Radio Button Handler - Select Fusion or Draw Map */
 
 	$('#new_area_form input').on('change', pre_checkform_next_area);
