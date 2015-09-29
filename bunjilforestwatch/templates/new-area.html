@@ -1,171 +1,390 @@
-{% extends "base.html" %}
-{% block head %}
+{% extends "base.html" %} {% block head %}
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 <title>Bunjil Forest Watch - New Area</title>
-{% block head_scripts %}
-{% block map_head %}
-    <script>
-    var single_map = true; 
-    var view_mode =  "view-area"; 
-    var initial_dragger = "100%";
-    </script>
-{% endblock map_head %} 
+{% block head_scripts %} {% block map_head %}
+<script type="text/javascript">
+	var single_map = true;
+	var view_mode = "view-area";
+	var initial_dragger = "100%";
+</script>
+{% endblock map_head %} {% include "includes/head_scripts.html" %} {% endblock head_scripts %}
+<link rel="stylesheet" href="/static/css/drawing-tools.css">
 
-{% include "includes/head_scripts.html" %}
-{% endblock head_scripts %}
+<style type="text/css">
+html {
+	/* height: 100%;
+	 min-height: 500px; */
+	overflow-y: scroll; /* show scroll bar */
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
 
-<style type="text/css"> 
-      html { 
-         height: 100%;
-         overflow-y:scroll /* show scroll bar */
-      }
-      body { height: 100%; margin: 0; padding: 0 }
-      #map-canvas { height: 100%; }
+body {
+	/*height: 100%;
+    min-height: 500px; */
+	margin: 0;
+	padding: 0;
+	font-family: 'Verdana', sans-serif !important;
+	font-size: 15px;
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+	overflow-y: scroll;
+	background: url('/static/images/bfw_border.jpg') no-repeat center center
+		fixed;
+	-webkit-background-size: cover;
+	-moz-background-size: cover;
+	-o-background-size: cover;
+	background-size: cover;
+}
 
-    #searchbox_id {
-        width:200px;
-    }
+.btn-form-ctrl {
+	margin-left: 15px;
+}
+
+.space-above-form {
+	height: 25px; /* clear for bg image */
+}
+
+.container {
+	/* background-color: rgba(248, 246, 229, 0.83); /* #fafaeb; */
+	background: -webkit-linear-gradient(top, rgba(248, 246, 229, 0.90),
+		rgba(248, 246, 229, 1)); /* For Safari 5.1 to 6.0 */
+	background: -o-linear-gradient(top, rgba(248, 246, 229, 0.90),
+		rgba(248, 246, 229, 1)); /* For Opera 11.1 to 12.0 */
+	background: -moz-linear-gradient(top, rgba(248, 246, 229, 0.90),
+		rgba(248, 246, 229, 1)); /* For Firefox 3.6 to 15 */
+	background: linear-gradient(top, rgba(248, 246, 229, 0.90),
+		rgba(248, 246, 229, 1)); /* Standard syntax (must be last) */
+	color: #FCFCF8;
+}
+
+.checkbox label,#accept,.radio label {
+	color: hsl(227, 68%, 58%);
+	font-weight: bold;
+}
+
+.control-label {
+	color: hsla(227, 50%, 60%, 1);
+}
+
+.help-block {
+	color: hsla(227, 10%, 55%, 1);
+	font-size: 13px;
+}
+
+#form-errors {
+	color: #FF0000;
+	font-size: 15px;
+}
+
+hr {
+	border-top: 1px solid rgba(54, 105, 194, 0.1);
+}
+
+legend {
+	color: #234196; /*    color: #333; */
+	text-align: center;
+}
+
+#searchbox_id {
+	width: 80%;
+}
+
+.asterix {
+	color: #CC0000;
+	data-toggle: tooltip;
+}
 </style>
 
-{% endblock %}
-{% block content %}
+{% endblock %} {% block content %}
 
 <!-- NO BREADCRUMBS REQUIRED FOR THIS PAGE -->
 
-<div id='area_json'   class='django-template'>{{ area_json}}</div>
-<div id='celllist'         class='django-template'>{{ celllist }}</div>
-<div id='latlng'         class='django-template'>{{ latlng}}</div>
+<div id='area_json' class='django-template'>{{ area_json}}</div>
+<div id='celllist' class='django-template'>{{ celllist }}</div>
+<div id='latlng' class='django-template'>{{ latlng}}</div>
 <div id='user_name' class='django-template'>{{ user.name }}</div>
-<div id='user_url'       class='django-template'>{{ "user"|url(user.name) }}</div>
-    
-<div class="container">
-	<div class="row">
-   		<div id ='new-map-control-panel' class="col-md-9 lesspadding" >
-   
-   		    <!-- <input id="searchbox_id" class="controls" type="text" placeholder="Search by place name"  style='display:none''> -->
-     		<!--Sidebar content <div class="control-group"> -->
-     		<h4>Create a new Area<span><input id="instructions" class="img-responsive"   rel="popover"  type=image  src="/static/img/question-mark.png" ></span> 
-     		</h4>
-   			<form id="new_area_form" class="form-vertical" method="POST">
-				<fieldset>
-					   <!--  NAME -->
-					<div class="map-panel-controls">
-						<label class="control-label map-panel-controls" for="name" data-toggle="tooltip"
-						title="Choose a short unique name that will identify the area to others">
-						Name: <span style="color: #ff0000">*</span></label>
-						<input class="map-panel-controls" id="area_name" name="name" placeholder="Give your area a short name" type="text"/>
-					</div>
-                    <!--  DESCRIPTION  -->
-	               <div class="accordion-group">
-	                    <div class="accordion-heading">
-	                        <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_panel">Area Description</a>
-	                    </div>
-	                    <div id="area_descr_panel" class="accordion-body collapse in" data-toggle="collapse">
-	                        <div class="accordion-inner">
-						        <div class="accordion" id="inner_accordion">            
-						                <div class="accordion-group">
-						                    <div class="accordion-heading">
-						                        <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_what">Area Description</a>
-						                    </div>
-						                    <div id="area_descr_what" class="accordion-body collapse in" >
-						                        <div class="accordion-inner small" >
-                                                        <textarea rows="3" class="map-panel-controls" id="area_descr_what" name="description-what" placeholder="Tell volunteers  a little about the area or park are you protecting. You can enter a link to a wiki page" form="new_area_form"></textarea>
-						                        </div>
-						                    </div>
-						                </div>
-						                <div class="accordion-group">
-						                    <div class="accordion-heading">
-						                        <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_why"> Why's this area important?</a>
-						                    </div>
-						                    <div id="area_descr_why" class="accordion-body collapse ">
-						                        <div class="accordion-inner small">
-								                        <textarea rows="3" class="map-panel-controls" id="area_descr_why" name="description-why" placeholder="Explain why it's important to monitor this area" form="new_area_form"></textarea>
-						                        </div>
-						                    </div>
-						                </div>
-						                 <div class="accordion-group">
-                                            <div class="accordion-heading">
-                                                <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_who"> Who's monitoring it?</a>
-                                            </div>
-                                            <div id="area_descr_who" class="accordion-body collapse ">
-                                                <div class="accordion-inner small">
-                                                        <textarea rows="3" class="map-panel-controls" id="area_descr_who" name="description-who" placeholder="Who is going to act on reports of disturbances in this area" form="new_area_form"></textarea>
-                                                </div>
-                                            </div>
-                                        </div>
-						            </div>
-	                                <div class="accordion-group">
-                                            <div class="accordion-heading">
-                                                <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_how"> How's it protected?</a>
-                                            </div>
-                                            <div id="area_descr_how" class="accordion-body collapse ">
-                                                <div class="accordion-inner small">
-                                                        <textarea rows="3" class="map-panel-controls" id="area_descr_how" name="description-how" placeholder="How is this area protected? For example, Is it a national park or a native area? " form="new_area_form"></textarea>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                            </div>
-	                </div>
-	                    
-    				   <!--  DEFINE AREA -- BOUNDARY SELECTION  -->
-    				   <div>
-						<fieldset class='control-label map-panel-controls'>
-	                    
-	                     <input id="searchbox_id" class="controls" type="text" placeholder="Enter a place name near your area">
-    
-	                    <legend class='control-label'>How will you enter your area's boundary? <span style="color: #ff0000">*</span></legend>
+<div id='user_url' class='django-template'>{{ "user"|url(user.name) }}</div>
 
-	                     <div class="radio">
-	                        <label><input type="radio" name="opt-fusion" value="is-drawmap">Draw my area on a map</label>
-	                    </div>
-	                     <div class="radio" >
-	                        <label><input type="radio" name="opt-fusion" value="is-fusion">Area's boundary is in a fusion table</label>
-	                    </div>
-	                    </fieldset>
-                    </div>
-                    <!--  CREATE BUTTON  -->
-                    <div class="control-group">
-                        <input id = "createarea_id" type="button" class="btn btn-lightgreen map-panel-controls" value="Create Area"  style='display:none'>
-                    </div>
-                    <div class="control-group">
-                        <input id="reset_id" type="button" class="btn btn-small btn-lightred map-panel-oops-button"  value="Oops! Restart" data-toggle="tooltip" title="Clear all the markers on the map"  style='display:none'>
-                    <div class="controls">
-                        <input id="coordinates_id" name="coordinates" type="hidden" value="undefined">
-                    </div>  
-                    
-                    <div class="map-panel-fusiontable" id="fusiontable-form-c" style='display:none'>
-                        <label class="control-label map-panel-controls" for="boundary_ft" data-toggle="tooltip"
-                        title="If your area's boundary is already in a fusion table, link to it here.">
-                        Fusion Table Id: <span style="color: #ff0000">*</span></label>
-                        <input class="map-panel-controls"  id="boundary_ft" name="boundary_ft" type="text"/>
-                    </div>
-                    <div id="boundary-instructions" style='display:none'>
-                                <placeholder>
-                    </div>
-                    <!--  LANDSAT GRID -->
-					<div>
-						<input type="checkbox" id="0" class="layer" unchecked/>
-						<label for="0">Show Landsat Grid </label>
+<div class="space-above-form"></div>
+
+<div class="container">
+	<div class="row" id=new-form>
+		<form id="new_area_form" class="form-horizontal" action="" method="POST">
+			<fieldset>
+
+				<!-- Form Name -->
+				<legend>
+					Register your forest area
+					<!-- <span class="glyphicon glyphicon-question-sign" ></span> -->
+				</legend>
+
+				<!-- Area Name -->
+				<div class="form-group">
+					<label class="col-md-4 control-label" for="area_name"><span class='asterix' title="This field is required">*</span>Area
+						Name </label>
+					<div class="col-md-5">
+						<input id="area_name" name="area_name" type="text" placeholder="Give your area a short name" class="form-control input-md"
+							required="true"> <span class="help-block">Choose a unique name to identify your area</span>
 					</div>
-                    <!--  MAP DIVIDER ?-->
-					<div id="map_panel" class="control-group" name="panel" >
-						<p class="divider"></p>
-			      	</div>
-			    </div>
-				</fieldset>
-			</form>	
+				</div>
+				<hr />
+
+				<!-- Public or Private  -->
+				<div class="form-group">
+					<label class="col-md-4 control-label" for="opt-sharing"><span class='asterix' title="This field is required">*</span>Public
+						or Private? </label>
+					<div class="col-md-6">
+
+						<div class="radio">
+							<label for="private"> <input type="radio" name="opt-sharing" id="private" value="private"> Private
+							</label>
+						</div>
+						<span class="help-block">Only you can see and monitor this area. Volunteers can't see it and won't be able to help
+							you monitor. See <a href="http://bunjilforestwatch.net/privacy">Privacy</a>
+						</span>
+
+						<div class="radio">
+							<label for="unlisted"> <input type="radio" name="opt-sharing" id="unlisted" value="unlisted"> Unlisted
+							</label>
+						</div>
+						<span class="help-block">Only people with the link can see or follow this area</span>
+
+						<div class="radio">
+							<label for="public"> <input type="radio" name="opt-sharing" id="public" value="shared"> Public
+							</label>
+						</div>
+						<span class="help-block">Everyone can see and follow this area.</span>
+					</div>
+				</div>
+				<hr />
+
+				<!-- Monitoring Options  -->
+				<div class="form-group">
+					<label class="col-md-4 control-label" for="opt-monitoring">Monitoring Options</label>
+					<div class="col-md-6">
+						<div class="checkbox">
+							<label for="self-monitor"> <input type="checkbox" name="self-monitor" checked="checked" id="self-monitor"
+								value="self-monitor"> Self-monitor
+							</label> <span class="help-block">Notify me when there are new images of my area. I have time and bandwidth to review
+								images</span>
+						</div>
+						<div class="checkbox">
+							<label for="request-volunteers"> <input type="checkbox" checked="checked" name="request-volunteers"
+								id='request-volunteers' value="request-volunteers"> Community monitoring
+							</label> <span class="help-block">Ask Volunteers to help monitor my area. I don't have the ability to monitor images for
+								changes.</span>
+						</div>
+					</div>
+				</div>
+				<hr />
+
+				<!-- Undertaking -->
+				<div class="form-group">
+					<label class="col-md-4 control-label" for="accept"><span class='asterix'
+						title="You must agree to investigate disturbances to request volunteers">*</span>Undertaking</label>
+					<div class="col-md-6">
+						<label id='accept' class="checkbox-inline" for="accept"> <input type="checkbox" name="accept" id="accept"
+							value="true"> I agree to investigate disturbances reported by volunteers
+						</label>
+					</div>
+				</div>
+				<hr />
+
+				<!-- Next Area Button -->
+				<div class="form-group">
+					<label class="col-md-4 control-label" for="next-area"></label>
+					<div class="col-md-4">
+						<div id='form-errors' class="help-block"></div>
+						<button id="next-area" name="next-area" class="btn btn-default btn-form-ctrl">Next</button>
+					</div>
+				</div>
+				<hr />
+
+			</fieldset>
+		</form>
+	</div>
+	<div class="row" id='scroll-to-here'></div>
+	<div class="row" id='map-find' style='display: none'>
+		<!-- Find Area -->
+		<form id="new_area_form" class="form-horizontal" action="" method="POST">
+			<fieldset>
+				<legend>
+					Locate Area
+					<!-- <span class="glyphicon glyphicon-question-sign" ></span> -->
+					<p class="help-block">
+						You must tell us how to locate your area on the map. <br /> If your forest is near you now click <i>Use My Location </i>,
+						or enter a place name near your forest to zoom to that place.
+					</p>
+				</legend>
+
+
+
+				<label class="col-md-4 control-label" for="searchinput">Find Area</label>
+				<div class="col-md-5">
+					<input id="searchbox_id" name="searchinput" type="search" placeholder="Enter name of a place near your area"
+						class="form-control input-md">
+					<p class="help-block"></p>
+				</div>
+				<!-- Zoom Here -->
+				<div class="form-group">
+					<label class="col-md-4 control-label" for="zoom-here"></label>
+					<div class="col-md-5">
+						<button id="zoom-here" name="zoom-here" class="btn btn-default btn-form-ctrl">Use My Location</button>
+						<p id='zoom-here-help' class="help-block">Use the location of your browser.</p>
+					</div>
+				</div>
+				<!-- DRAWING MODE BUTTONS PLACE-MARK and MOVE-MAP-->
+				<div class="form-group">
+					<label id='move-map-label' class="col-md-4 control-label" for="drop-pin">Click to place mark</label> <label
+						id='drop-pin-label' class="col-md-4 control-label " style='display: none' for="drop-pin">Click to move map</label>
+					<div class="col-md-8">
+						<div class="btn-group btn-form-ctrl" role="group" aria-label=".ss..">
+							<button id="drop-pin-mode" name="drop-pin" class="btn btn-primary ">Place mark</button>
+							<button id="move-map-mode" name="move-map" class="btn btn-default">Move Map</button>
+						</div>
+						<div id='drop-pin-help' class="help-block" data-toggle='tooltip' title='How to Zoom'>
+							<p>
+								<a class="popup" id="zoom-help">Zoom</a> and <a class="popup" id="drag-help">Drag</a> the map so it shows your area.
+							</p>
+						</div>
+						<div id='move-map-help' class="help-block" data-toggle='tooltip' title='How to place a mark' style='display: none'>
+							<p>Click on the map to place a marker over your area.</p>
+						</div>
+					</div>
+				</div>
+			</fieldset>
+		</form>
+	</div>
+	<div class="row" id='map-row' style='display: none'>
+		<!-- MAP APPEARS HERE -->
+		<div id="map-canvas-c">
+			<div id="drop-container">
+				<div id="drop-silhouette"></div>
+			</div>
+			<div id="map-canvas"></div>
 		</div>
-	    <!--  MAP  -->
-		<div class="col-md-9 lesspadding" id="map-canvas-c" >
-   			   <div id="map-canvas" > </div>
+		<!--  LANDSAT GRID -->
+		<div>
+			<input type="checkbox" id="0" class="layer" checked="unchecked" /> <label for="0">Show Grid </label>
 		</div>
 	</div>
-</div>
-    {% include "includes/project_scripts.html" %}
-    {% include "includes/map_scripts.html" %}
-    <script type="text/javascript" src="/static/js/new-area.js" defer></script>      
-{% endblock %}
+	
+	<!--  GeoJSON -->
+      <div id='geojson-panel'>
+          <div id="panel-content">
+              <div id="panel-title">GeoJSON Editor</div>
+              <hr />
+              <div id="geojson-controls">
+                  <button onclick="document.getElementById('geojson-input').select();">Select All</button>
+                  <a id="download-link" href="data:;base64," download="geojson_area.json"><button>Download</button></a>
+              </div>
+              <textarea id="geojson-input" placeholder="Drag and drop GeoJSON onto the map or begin editing here." cols="" rows=""></textarea>
+          </div>
+      </div>
+    
+	<!--  DESCRIPTION  -->
+	<div class="accordion-group">
+		<div class="accordion-heading">
+			<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_panel">Description</a>
+		</div>
+		<div id="area_descr_panel" class="accordion-body collapse" data-toggle="collapse">
+			<div class="accordion-inner">
+				<div class="accordion" id="inner_accordion">
+					<div class="accordion-group">
+						<div class="accordion-heading">
+							<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_what">Area Description</a>
+						</div>
+						<div id="area_descr_what" class="accordion-body collapse in">
+							<div class="accordion-inner small">
+								<textarea rows="3" class="map-panel-controls" id="area_descr_what" name="description-what"
+									placeholder="Tell volunteers  a little about the area or park are you protecting. You can enter a link to a wiki page"
+									form="new_area_form" cols=""></textarea>
+							</div>
+						</div>
+					</div>
+					<div class="accordion-group">
+						<div class="accordion-heading">
+							<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_why"> Why's this area important?</a>
+						</div>
+						<div id="area_descr_why" class="accordion-body collapse ">
+							<div class="accordion-inner small">
+								<textarea rows="3" class="map-panel-controls" id="area_descr_why" name="description-why"
+									placeholder="Explain why it's important to monitor this area" form="new_area_form" cols=""></textarea>
+							</div>
+						</div>
+					</div>
+					<div class="accordion-group">
+						<div class="accordion-heading">
+							<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_who"> Who's monitoring it?</a>
+						</div>
+						<div id="area_descr_who" class="accordion-body collapse ">
+							<div class="accordion-inner small">
+								<textarea rows="3" class="map-panel-controls" id="area_descr_who" name="description-who"
+									placeholder="Who is going to act on reports of disturbances in this area" form="new_area_form" cols=""></textarea>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="accordion-group">
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_how"> How's it protected?</a>
+					</div>
+					<div id="area_descr_how" class="accordion-body collapse ">
+						<div class="accordion-inner small">
+							<textarea rows="3" class="map-panel-controls" id="area_descr_how" name="description-how"
+								placeholder="How is this area protected? For example, Is it a national park or a native area? " form="new_area_form"
+								cols=""></textarea>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 
-{% block footer_js%}
-{% endblock footer_js %}
+	<!--  DEFINE AREA -- BOUNDARY SELECTION  -->
+	<div>
+		<fieldset class='control-label map-panel-controls'>
+			
+			<legend class='control-label'>
+				How will you enter your area's boundary? <span style="color: #ff0000">*</span>
+			</legend>
+			<input id="searchbox_id" class="controls" type="text" placeholder="Enter a place name near your area">
+
+			<div class="radio">
+				<label><input type="radio" name="opt-fusion" value="is-drawmap">Draw my area on a map</label>
+			</div>
+			<div class="radio">
+				<label><input type="radio" name="opt-fusion" value="is-fusion">Area's boundary is in a fusion table</label>
+			</div>
+		</fieldset>
+	</div>
+
+	<!--  NEXT BUTTON  -->
+	<div class="control-group">
+		<input id="createarea_id" type="button" class="btn btn-lightgreen map-panel-controls" value="Create Area"
+			style='display: none'>
+	</div>
+	<div class="control-group">
+		<input id="reset_id" type="button" class="btn btn-small btn-lightred map-panel-oops-button" value="Oops! Restart"
+			data-toggle="tooltip" title="Clear all the markers on the map" style='display: none'>
+		<div class="controls">
+			<input id="coordinates_id" name="coordinates" type="hidden" value="undefined">
+		</div>
+
+		<div class="map-panel-fusiontable" id="fusiontable-form-c" style='display: none'>
+			<label class="control-label map-panel-controls" for="boundary_ft" data-toggle="tooltip"
+				title="If your area's boundary is already in a fusion table, link to it here."> Fusion Table Id: <span
+				style="color: #ff0000">*</span></label> <input class="map-panel-controls" id="boundary_ft" name="boundary_ft" type="text" />
+		</div>
+		<div id="boundary-instructions" style='display: none'></div>
+	</div>
+	<fieldset></fieldset>
+	<form action=""></form>
+</div>
+
+<div></div>
+{% include "includes/project_scripts.html" %} {% include "includes/map_scripts.html" %}
+<script type="text/javascript" src="/static/js/new-area.js" defer></script>
+{% endblock %} {% block footer_js%} {% endblock footer_js %}
+<div></div>
