@@ -11,6 +11,11 @@ a[class ="popup"] {
    text-decoration: none; border-bottom: 1px dotted ;
 }
 
+.nopadding {
+   padding: 0 !important;
+   margin: 0 !important;
+}
+
 .panel-tight {
     margin-bottom: 1px;
     margin-top: 1px;

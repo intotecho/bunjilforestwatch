@@ -8,6 +8,24 @@
   margin-left:2%; /* must be (100-width)/2 */
 
 }
+
+
+.full-size{  
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+#map-canvas{  /* this lives inside map-canvas */
+  border: 2px solid rgba(54, 105, 194, 0.1); 
+   position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
 #map-canvas-c {
   position: relative;
   z-index: 0;
@@ -21,14 +39,6 @@
     margin-top:75%;
 }
 
-#map-canvas{
-  border: 2px solid rgba(54, 105, 194, 0.1); 
-	position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-}
 
 #drop-container {
   display: none;
@@ -62,7 +72,7 @@
 #geojson-panel {
   /*float: left; */
   width: 90%;
-  min-height: 600px;
+ height:100%;
   box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   outline: 1px solid rgba(0,0,0,0.2);
   z-index: 100;
@@ -71,7 +81,7 @@
 
 #panel-content {
   padding: 8.5px;
-  height: 200px;
+  height: 100%;
 }
 
 #geojson-controls {
@@ -79,21 +89,25 @@
 }
 
 #geojson-input {
-  height: 100px;
+  height: 100%;
   width: 100%;
   -webkit-box-sizing: border-box; /* <=iOS4, <= Android  2.3 */
   -moz-box-sizing: border-box; /* FF1+ */
   box-sizing: border-box; /* Chrome, IE8, Opera, Safari 5.1*/
-  border: none;
-  resize: none;
+  resize: true;
   background-color: #F1F1F1;
-   border: blue1px;
+  border: 1px rgb(3, 3, 54);
+  color: rgb(3, 3, 54);
+   font-size: 14px;
 }
 
+
+
+
 #panel-title {
-  font-size: 20px;
-  line-height: 24px;
-  color: #DD4B39;
+  font-size: 18px;
+  line-height: 20px;
+  color: rgb(3, 3, 54);
 }
 
 .subtitle {
