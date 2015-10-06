@@ -41,7 +41,7 @@ function hideDropPanel(e) {
  */
 function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, geoJsonInput_p, downloadLink_p) {
 	"use strict";
-	// Initialise the map.
+	// Initialize the map.
 	this.mapContainer = mapContainer_p;
 	this.dropContainer = dropContainer_p;
 	this.geoJsonPanel = geoJsonPanel_p;
@@ -55,6 +55,7 @@ function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, ge
 		draggable : true
 	});
 	this.map = map_p;
+	
 	this.map.mode = "none";
 	this.bindDataLayerListeners();
 
@@ -91,21 +92,23 @@ function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, ge
 	
 	// Set up events for changing the geoJson input.
 	google.maps.event.addDomListener(this.geoJsonInput, 'input',
-			this.refreshDataFromGeoJson);
+			this.refreshDataFromGeoJson.bind(this));
 	google.maps.event.addDomListener(this.geoJsonInput, 'input',
-			this.refreshDownloadLinkFromGeoJson);
+			this.refreshDownloadLinkFromGeoJson.bind(this));
 
 	// Set up events for styling.
 	google.maps.event.addDomListener(window, 'resize', this.resizeGeoJsonInput);
 }
 
+DrawingTools.drawingTools = null;
+
 //Apply listeners to refresh the GeoJson display on a given data layer.
 DrawingTools.prototype.bindDataLayerListeners = function () {
 	"use strict";
-	this.map.data.addListener('addfeature', this.refreshGeoJsonFromData);
+	this.map.data.addListener('addfeature', this.refreshGeoJsonFromData.bind(this));
 	this.map.data.addListener('addfeature', this.fitMapToGeoJsonFromData);
-	this.map.data.addListener('removefeature', this.refreshGeoJsonFromData);
-	this.map.data.addListener('setgeometry', this.refreshGeoJsonFromData);
+	this.map.data.addListener('removefeature', this.refreshGeoJsonFromData.bind(this));
+	this.map.data.addListener('setgeometry', this.refreshGeoJsonFromData.bind(this));
 }
 
 
@@ -125,7 +128,7 @@ DrawingTools.prototype.drawCenterPointMarker  = function (stop_handler) {
 	this.map.data.setMap(null);
 	this.map.data = newData;
 	this.bindDataLayerListeners();
-	this.setGeoJsonValidity(true, this.geoJsonInput);
+	this.setGeoJsonValidity(true, null);
 	//this.map.setOptions({
 	//		disableDefaultUI: true // no drawing controls
 	//});
@@ -136,21 +139,28 @@ DrawingTools.prototype.drawCenterPointMarker  = function (stop_handler) {
 
 DrawingTools.prototype.stopDrawCenterPointMarker=function () {
 	"use strict";
+	var map = this.map;
 	
-	this.map.data.setOptions({
+	map.data.setOptions({
 		drawingMode: null
 	});
-	this.map.setOptions({
+	
+	map.setOptions({
 		disableDefaultUI: false// no drawing controls
 	});
-	this.map.mode = 'none';
+	
+	map.data.toGeoJson(function(geoJson) {
+		map.drawingTools.area_location = geoJson;
+	});
+	
+	map.mode = 'none';
 }
 
 DrawingTools.prototype.removeCenterPointMarker=function () {
 	"use strict";
 	this.map.data.setMap(null);
 	this.bindDataLayerListeners();
-	this.setGeoJsonValidity(true, this.geoJsonInput);
+	this.setGeoJsonValidity(true, null);
 }
 
 
@@ -162,10 +172,13 @@ DrawingTools.prototype.refreshGeoJsonFromData = function (e) {
 	var map = this.map;  //context of this about to change in next call.
 	map.data.toGeoJson(function(geoJson) {
 		map.drawingTools.geoJsonInput.value = JSON.stringify(geoJson, null, 2);
-		map.drawingTools.refreshDownloadLinkFromGeoJson();
+		map.drawingTools.refreshDownloadLinkFromGeoJson.bind(this);
+		if (map.mode === 'drawCenterPointMarker') {
+			map.drawingTools.area_location = geoJson;
+		};
 	});
 	
-	if (map	.mode === 'drawCenterPointMarker') {
+	if (map.mode === 'drawCenterPointMarker') {
 		map.drawingTools.stopDrawCenterPointMarker();
 	};
 }
@@ -184,9 +197,12 @@ DrawingTools.prototype.fitMapToGeoJsonFromData = function (e) {
 //Replace the data layer with a new one based on the inputted geoJson.
 DrawingTools.prototype.refreshDataFromGeoJson = function () {
 	"use strict";
+	
+	var map = this.map;
+	
 	var newData = new google.maps.Data({
-		map : this.map,
-		style : this.map.data.getStyle(),
+		map : map,
+		style : map.data.getStyle(),
 		controls : [ 'Point', 'Polygon' ],
 		drawingMode: 'Point'
 	});
@@ -196,9 +212,10 @@ DrawingTools.prototype.refreshDataFromGeoJson = function () {
 	} catch (error) {
 		newData.setMap(null);
 		if (this.geoJsonInput.value !== "") {
-			this.setGeoJsonValidity(false, this.geoJsonInput);
+			this.setGeoJsonValidity(false, error.message);
+			//console.log(error.message);
 		} else {
-			this.setGeoJsonValidity(true, this.geoJsonInput);
+			this.setGeoJsonValidity(true, null);
 		}
 		return;
 	}
@@ -207,25 +224,25 @@ DrawingTools.prototype.refreshDataFromGeoJson = function () {
 	this.map.data = newData;
 	this.bindDataLayerListeners();
 
-	this.setGeoJsonValidity(true, this.geoJsonInput);
-
+	this.setGeoJsonValidity(true, null);
 }
 
 // Refresh download link.
 DrawingTools.prototype.refreshDownloadLinkFromGeoJson = function () {
 	"use strict";
 	this.downloadLink.href = "data:;base64," + btoa(this.geoJsonInput.value);
+	this.downloadLink.download= "test_geojson.json";
 }
 
-
-
 // Display the validity of geoJson.
-DrawingTools.prototype.setGeoJsonValidity = function (newVal) {
+DrawingTools.prototype.setGeoJsonValidity = function (newVal, message) {
 	"use strict";
 	if (!newVal) {
 		this.geoJsonInput.className = 'invalid';
+		$('#someElement').prop('tooltipText', messsage);
 	} else {
 		this.geoJsonInput.className = '';
+		this.refreshDownloadLinkFromGeoJson();
 	}
 }
 

@@ -49,6 +49,7 @@ body {
 	height: 25px; /* clear for bg image */
 }
 
+
 .container {
 	/* background-color: rgba(248, 246, 229, 0.83); /* #fafaeb; */
 	background: -webkit-linear-gradient(top, rgba(248, 246, 229, 0.90),
@@ -74,9 +75,9 @@ body {
 }
 
 #subform-find-help {
-	background: #F1F2ED;
+	background: rgba(250, 233, 125, 0.22);
 	width: 100%;
-	boder:
+	padding-left: 20px;
 }
 
 .subform-control-label {
@@ -107,11 +108,19 @@ hr {
 legend {
 	color: #234196; /*    color: #333; */
 	text-align: center;
+	border-bottom: 0;
+	font-size: 24px;
 }
 
 .framing-help {
 	color: #234196; /*    color: #333; */
 	text-align: center;
+}
+
+.framing-sub-help {
+	color: hsla(227, 10%, 55%, 1);
+	text-align: center;
+	font-size: 13px;
 }
 
 #searchbox_id {
@@ -146,8 +155,14 @@ legend {
 			Register your forest area
 			<!-- <span class="glyphicon glyphicon-question-sign" ></span> -->
 		</legend>
-
-		<div class="row map-canvas">
+		<div class='framing-help'>
+			If you live or work near a forest and want to protect it then register it for monitoring.<br />
+		</div>
+		<div class='framing-sub-help'>
+			Volunteers don't have to register a forest. They can <a href='/'>help others monitor their forests</a>.
+		</div>
+		<hr />
+		<div class="row ">
 			<!-- Area Name -->
 			<div class="form-group">
 				<label class="col-md-4 control-label" for="area_name"><span class='asterix' title="This field is required">*</span>
@@ -160,13 +175,16 @@ legend {
 			</div>
 			<hr />
 
+            <div class="controls">
+                <input id="geojson_toserver" name="geojson_toserver" type="hidden" value="undefined">
+            </div>
 			<!-- Public or Private  -->
 			<div class="form-group  ">
 				<label class="col-md-4 control-label" for="opt-sharing"><span class='asterix' title="This field is required">*</span>Public
 					or Private? </label>
 				<div class="col-md-6">
 					<div class="radio">
-						<label for="private"> <input type="radio" name="opt-sharing" id="private" value="private"> Private
+						<label for="private"> <input type="radio" name="opt-sharing"  value="private"> Private
 						</label>
 					</div>
 					<span class="help-block">Only you can see and monitor this area. Volunteers can't see it and won't be able to help
@@ -174,13 +192,13 @@ legend {
 					</span>
 
 					<div class="radio">
-						<label for="unlisted"> <input type="radio" name="opt-sharing" id="unlisted" value="unlisted"> Unlisted
+						<label for="unlisted"> <input type="radio" name="opt-sharing" value="unlisted"> Unlisted
 						</label>
 					</div>
 					<span class="help-block">Only people with the link can see or follow this area</span>
 
 					<div class="radio">
-						<label for="public"> <input type="radio" name="opt-sharing" id="public" value="shared"> Public
+						<label for="public"> <input type="radio" name="opt-sharing" value="shared"> Public
 						</label>
 					</div>
 					<span class="help-block">Everyone can see and follow this area.</span>
@@ -249,7 +267,7 @@ legend {
 			<div class="row">
 				<div class="col-md-1"></div>
 				<div class="col-md-6">
-					<label class="subform-control-label">Need help fining your area?</label>
+					<label class="subform-control-label">Need help finding your area?</label>
 				</div>
 				<div class="col-md-5"></div>
 			</div>
@@ -285,20 +303,55 @@ legend {
 				<div class="row" id='drag-map-form'>
 					<div class="col-md-1 "></div>
 					<div class="col-md-2 form-group">
-						<button id="drop-pin-mode" name="drop-pin" class="btn btn-primary">
+						<button id="drop-pin-mode" name="drop-pin" class="btn btn-primary" data-toggle="popover-x"
+							data-target='#zoom-more-popover' data-placement="top">
 							Place mark <span class="glyphicon glyphicon glyphicon-map-marker" style='color: #FA7063'></span>
 						</button>
+						<div id="zoom-more-popover" class='popover popover-info' data-toggle="popover-x">
+							<div class="arrow"></div>
+							<h3 class="popover-title">Zoom in closer!</h3>
+							<div class="popover-content">
+								To place a mark accurately you must zoom in more.<br /> <b>Double Click</b> near your area on the map to zoom in more.<br />
+								Or use the zoom slider on the left side of the map.
+							</div>
+							<div class="popover-footer">
+								<button id='zoom-more-popover-close' class="btn btn-sm btn-info">Close</button>
+							</div>
+						</div>
 					</div>
 					<div class="col-md-7 form-group">
-						<label id='move-map-label' style='text-align: left' class'="control-label"> <a class="popup" id="zoom-help"
-							data-toggle="tooltip" title="How to Zoom">Zoom</a> and <a class="popup" id="drag-help" data-toggle="tooltip"
-							title="How to Drag"> Drag</a> the map so it shows your area. Then click <i>Place Mark</i>
+						<label id='move-map-label' style='text-align: left' class="control-label"> <a class="popup" id="zoom-help"
+							data-trigger='hover click' data-toggle="popover-x" data-target='#zoom-help-popover' data-placement="bottom">Zoom</a> and
+							<a class="popup" id="drag-help" data-trigger='hover click' data-toggle="popover-x" data-target='#drag-help-popover'>
+								Drag</a> the map so it shows your area. Then click <i>Place Mark</i>
 						</label>
+						<div id="zoom-help-popover" class='popover popover-info'>
+							<div class="arrow"></div>
+							<h3 class="popover-title">Zooming</h3>
+							<div class="popover-content">
+								To zoom in more <b>Double Click</b> near your area on the map.<br /> Or use the zoom slider on the left side of the map.
+							</div>
+							<div class="popover-footer">
+								<button id='zoom-help-popover-close' class="btn btn-sm btn-info">Close</button>
+							</div>
+						</div>
+						<div id="drag-help-popover" class='popover popover-info'>
+							<div class="arrow"></div>
+							<h3 class="popover-title">Moving the Map</h3>
+							<div class="popover-content">
+								To drag the map <b>Click and Hold </b> the mouse over the map.<br /> Or use the arrows on the top left corner of the
+								map.
+							</div>
+							<div class="popover-footer">
+								<button id='drag-help-popover-close' class="btn btn-sm btn-info">Close</button>
+							</div>
+						</div>
+
 					</div>
 				</div>
 
 				<div class="row">
-                        <div class='col-md-1'></div>
+					<div class='col-md-1'></div>
 					<!-- MARKING-MAP-->
 					<div id=mark-map-form>
 						<div class="col-md-8 form-group">
@@ -317,143 +370,168 @@ legend {
 					</div>
 
 					<!-- MOVE MAP LINK -->
-					<div class="col-md-3 form-group" id='move-map-form'>
-						<a id="move-map-mode">Move Map<span class="glyphicon glyphicon glyphicon-hand-up"></span></a>
+                    <div class="form-group" id='move-map-form'>
+					<div class="col-md-2" >
+						<a id="move-map-mode" >Move Map<span class="glyphicon glyphicon glyphicon-hand-up"></span></a>  
 					</div>
+                    <div class="col-md-1" >
+                        <img id='advanced' src="/static/img/gear-icon.png" alt="Advanced" style="width: 20px; height: 20px">
+                    </div>
 				</div>
 			</fieldset>
 		</form>
 	</div>
 
-
-	<div class="row" id='map-row' style='display: none'>
+	<div class="row" id='map-row' class='full-size' style='display: none'>
 		<!-- MAP APPEARS HERE -->
-		<div id="map-canvas-c" class='map-canvas'>
-			<div id="drop-container">
-				<div id="drop-silhouette"></div>
+        <div id='map-column' class='col-md-12 nopadding' class='map-canvas'>
+			<div id='map-canvas-c' class='map-canvas'>
+				<div id="drop-container">
+					<div id="drop-silhouette"></div>
+				</div>
+				<div id="map-canvas"></div>
 			</div>
-			<div id="map-canvas"></div>
+	</div>	
+	<div id=geojson-column class='col-md-3 nopadding' style='display: none'>
+		<!--  GeoJSON -->
+		<div id='geojson-editor'  class='full-size' >
+			<div id='geojson-panel'  class='full-size'>
+				<div id="panel-content" class='full-size'>
+					<div id="panel-title">GeoJSON Editor</div>
+					<div id="geojson-controls" class='help-block'>
+						<button onclick="document.getElementById('geojson-input').select();">Select All</button>				
+				        <a id="download-link" href="data:;base64," download="my_area.json" class="btn btn-sm btn-default">Download<span class="glyphicon glyphicon glyphicon-download-alt" style='color: #FA7063'></span></a>
+                		 
+                        <a id="errors-link" href="data:;base64," download="my_area.json" class="btn btn-sm btn-default" data-toggle="popover-x"
+                            data-target='#syntax-errors-popover' data-placement="top">Validate</span></a>
+						  <div id="syntax-errors-popover" class='popover popover-info' data-toggle="popover-x">
+                            <div class="arrow"></div>
+                            <h3 class="popover-title">Syntax Error</h3>
+                            <div class="popover-content">
+                                To place a mark accurately you must zoom in more.<br /> <b>Double Click</b> near your area on the map to zoom in more.<br />
+                                Or use the zoom slider on the left side of the map.
+                            </div>
+                            <div class="popover-footer">
+                                <button id='syntax-errors-popover-close' class="btn btn-sm btn-info">Close</button>
+                            </div>
+                        </div>	
+						
+					</div  style='width:inherit' >
+					<textarea id="geojson-input"  class='invalid'  placeholder="Drag and drop GeoJSON onto the map. Your coordinates appear here."  rows="25" style='width:inherit' ></textarea>
+				</div>
+			</div>
 		</div>
-		<!--  LANDSAT GRID -->
-		<div>
+	</div>	
+	   </div>
+	   <!--  LANDSAT GRID -->
+    	<div>
 			<input type="checkbox" id="landsat-grid" class="layer" /> <label for="0">Show Grid </label>
 		</div>
-	</div>
 
-	<!--  GeoJSON -->
-	<div class='row' id='advanced' style='display: none'>
-		<div id='geojson-panel'>
-			<div id="panel-content">
-				<div id="panel-title">Advanced Editor (GeoJSON )</div>
-				<hr />
-				<div id="geojson-controls">
-					<button onclick="document.getElementById('geojson-input').select();">Select All</button>
-					<a id="download-link" href="data:;base64," download="geojson_area.json"><button>Download</button></a>
-				</div>
-				<textarea id="geojson-input" placeholder="Drag and drop GeoJSON onto the map or begin editing here." cols="" rows=""></textarea>
-			</div>
+
+
+
+
+
+<div class='row' id='description-row'>
+	<!--  DESCRIPTION  -->
+	<div class="accordion-group">
+		<div class="accordion-heading">
+			<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_panel">Description</a>
 		</div>
-	</div>
-	<div class='row' id='advanced'>
-		<!--  DESCRIPTION  -->
-		<div class="accordion-group">
-			<div class="accordion-heading">
-				<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_panel">Description</a>
-			</div>
-			<div id="area_descr_panel" class="accordion-body collapse" data-toggle="collapse">
-				<div class="accordion-inner">
-					<div class="accordion" id="inner_accordion">
-						<div class="accordion-group">
-							<div class="accordion-heading">
-								<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_what">Area Description</a>
-							</div>
-							<div id="area_descr_what" class="accordion-body collapse in">
-								<div class="accordion-inner small">
-									<textarea rows="3" class="map-panel-controls" id="area_descr_what" name="description-what"
-										placeholder="Tell volunteers  a little about the area or park are you protecting. You can enter a link to a wiki page"
-										form="new_area_form" cols=""></textarea>
-								</div>
-							</div>
+		<div id="area_descr_panel" class="accordion-body collapse" data-toggle="collapse">
+			<div class="accordion-inner">
+				<div class="accordion" id="inner_accordion">
+					<div class="accordion-group">
+						<div class="accordion-heading">
+							<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_what">Area Description</a>
 						</div>
-						<div class="accordion-group">
-							<div class="accordion-heading">
-								<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_why"> Why's this area important?</a>
-							</div>
-							<div id="area_descr_why" class="accordion-body collapse ">
-								<div class="accordion-inner small">
-									<textarea rows="3" class="map-panel-controls" id="area_descr_why" name="description-why"
-										placeholder="Explain why it's important to monitor this area" form="new_area_form" cols=""></textarea>
-								</div>
-							</div>
-						</div>
-						<div class="accordion-group">
-							<div class="accordion-heading">
-								<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_who"> Who's monitoring it?</a>
-							</div>
-							<div id="area_descr_who" class="accordion-body collapse ">
-								<div class="accordion-inner small">
-									<textarea rows="3" class="map-panel-controls" id="area_descr_who" name="description-who"
-										placeholder="Who is going to act on reports of disturbances in this area" form="new_area_form" cols=""></textarea>
-								</div>
+						<div id="area_descr_what" class="accordion-body collapse in">
+							<div class="accordion-inner small">
+								<textarea rows="3" class="map-panel-controls" id="area_descr_what" name="description-what"
+									placeholder="Tell volunteers  a little about the area or park are you protecting. You can enter a link to a wiki page"
+									form="new_area_form" cols=""></textarea>
 							</div>
 						</div>
 					</div>
 					<div class="accordion-group">
 						<div class="accordion-heading">
-							<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_how"> How's it protected?</a>
+							<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_why"> Why's this area important?</a>
 						</div>
-						<div id="area_descr_how" class="accordion-body collapse ">
+						<div id="area_descr_why" class="accordion-body collapse ">
 							<div class="accordion-inner small">
-								<textarea rows="3" class="map-panel-controls" id="area_descr_how" name="description-how"
-									placeholder="How is this area protected? For example, Is it a national park or a native area? " form="new_area_form"
-									cols=""></textarea>
+								<textarea rows="3" class="map-panel-controls" id="area_descr_why" name="description-why"
+									placeholder="Explain why it's important to monitor this area" form="new_area_form" cols=""></textarea>
 							</div>
+						</div>
+					</div>
+					<div class="accordion-group">
+						<div class="accordion-heading">
+							<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_who"> Who's monitoring it?</a>
+						</div>
+						<div id="area_descr_who" class="accordion-body collapse ">
+							<div class="accordion-inner small">
+								<textarea rows="3" class="map-panel-controls" id="area_descr_who" name="description-who"
+									placeholder="Who is going to act on reports of disturbances in this area" form="new_area_form" cols=""></textarea>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="accordion-group">
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" href="#area_descr_how"> How's it protected?</a>
+					</div>
+					<div id="area_descr_how" class="accordion-body collapse ">
+						<div class="accordion-inner small">
+							<textarea rows="3" class="map-panel-controls" id="area_descr_how" name="description-how"
+								placeholder="How is this area protected? For example, Is it a national park or a native area? " form="new_area_form"
+								cols=""></textarea>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
-	<!--  DEFINE AREA - BOUNDARY SELECTION  -->
-	<div>
-		<fieldset class='control-label map-panel-controls' style='display: none'>
-
-			<legend class='control-label'>
-				How will you enter your area's boundary? <span style="color: #ff0000">*</span>
-			</legend>
-			<div class="radio">
-				<label><input type="radio" name="opt-fusion" value="is-drawmap">Draw my area on a map</label>
-			</div>
-			<div class="radio">
-				<label><input type="radio" name="opt-fusion" value="is-fusion">Area's boundary is in a fusion table</label>
-			</div>
-		</fieldset>
-	</div>
-
-	<!--  NEXT BUTTON  -->
-	<div class="control-group">
-		<input id="createarea_id" type="button" class="btn btn-lightgreen map-panel-controls" value="Create Area"
-			style='display: none'>
-	</div>
-	<div class="control-group">
-		<input id="reset_id" type="button" class="btn btn-small btn-lightred map-panel-oops-button" value="Oops! Restart"
-			data-toggle="tooltip" title="Clear all the markers on the map" style='display: none'> <span
-			class="glyphicon  glyphicon-erase" style='color: #FA7063'></span>
-		<div class="controls">
-			<input id="coordinates_id" name="coordinates" type="hidden" value="undefined">
-		</div>
-
-		<div class="map-panel-fusiontable" id="fusiontable-form-c" style='display: none'>
-			<label class="control-label map-panel-controls" for="boundary_ft" data-toggle="tooltip"
-				title="If your area's boundary is already in a fusion table, link to it here."> Fusion Table Id: <span
-				style="color: #ff0000">*</span></label> <input class="map-panel-controls" id="boundary_ft" name="boundary_ft" type="text" />
-		</div>
-		<div id="boundary-instructions" style='display: none'></div>
-	</div>
-	<form action=""></form>
-
-	{% include "includes/project_scripts.html" %} {% include "includes/map_scripts.html" %}
-	<script type="text/javascript" src="/static/js/new-area.js" defer></script>
-	{% endblock %} {% block footer_js%} {% endblock footer_js %}
-	<div></div>
 </div>
+<!--  DEFINE AREA - BOUNDARY SELECTION  -->
+<div>
+	<fieldset class='control-label map-panel-controls' style='display: none'>
+
+		<legend class='control-label'>
+			How will you enter your area's boundary? <span style="color: #ff0000">*</span>
+		</legend>
+		<div class="radio">
+			<label><input type="radio" name="opt-fusion" value="is-drawmap">Draw my area on a map</label>
+		</div>
+		<div class="radio">
+			<label><input type="radio" name="opt-fusion" value="is-fusion">Area's boundary is in a fusion table</label>
+		</div>
+	</fieldset>
+</div>
+
+<!--  NEXT BUTTON  -->
+<div class="control-group">
+	<input id="createarea_id" type="button" class="btn btn-lightgreen map-panel-controls" value="Create Area" style='display: none'>
+</div>
+<div class="control-group">
+	<input id="reset_id" type="button" class="btn btn-small btn-lightred map-panel-oops-button" value="Oops! Restart"
+		data-toggle="tooltip" title="Clear all the markers on the map" style='display: none'> <span
+		class="glyphicon  glyphicon-erase" style='color: #FA7063'></span>
+	<div class="controls">
+		<input id="coordinates_id" name="coordinates" type="hidden" value="undefined">
+	</div>
+
+	<div class="map-panel-fusiontable" id="fusiontable-form-c" style='display: none'>
+		<label class="control-label map-panel-controls" for="boundary_ft" data-toggle="tooltip"
+			title="If your area's boundary is already in a fusion table, link to it here."> Fusion Table Id: <span
+			style="color: #ff0000">*</span></label> <input class="map-panel-controls" id="boundary_ft" name="boundary_ft" type="text" />
+	</div>
+	<div id="boundary-instructions" style='display: none'></div>
+</div>
+<form action=""></form>
+
+{% include "includes/project_scripts.html" %} {% include "includes/map_scripts.html" %}
+<script type="text/javascript" src="/static/js/new-area.js" defer></script>
+{% endblock %} {% block footer_js%} {% endblock footer_js %}
+<div></div>
+<div></div>

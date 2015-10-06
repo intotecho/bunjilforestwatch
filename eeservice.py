@@ -736,8 +736,7 @@ TODO: Could add the latest observation here. First sort in reverse date order.#o
 '''
 #TODO: There is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query.
 def getLandsatCells(area):
-    #print 'getLandsatCells'
-
+    
     # Test if area already has cellList
     if len(area.cells) != 0 :
         logging.error("getLandsatCells assumes area has no cells, but it does!") #TODO - turn into an assert.
@@ -745,27 +744,40 @@ def getLandsatCells(area):
         #TODO: Instead of returning, delete the cells in the exisitng area.cellLists,  and replace them.
         return False;
     
-    # Get the area's boundary and convert to a FeatureCollection.    
-    boundary_polygon = []
-    for geopt in area.coordinates:
-        boundary_polygon.append([geopt.lon, geopt.lat])
-        
-    cw_feat = ee.Geometry.Polygon(boundary_polygon)
-    feat = cw_feat.buffer(0, 1e-10)   
-    boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1}) 
-    park_boundary = ee.FeatureCollection(boundary_feature)
-
-    park_geom= park_boundary.geometry()
-    park_area = park_geom.area(10).getInfo()
+    # Get the area's boundary or location and convert to a FeatureCollection.    
+    park_geom = None
+    if len(area.coordinates) == 0:            
+        #cw_feat = ee.Geometry(area.area_location_feature)
+        #feat = cw_feat.buffer(0, 1e-8)   
+        #boundary_feature = ee.Feature(cw_feat, {'name': 'area_location', 'fill': 1})
+        park_geom = ee.Geometry(area.area_location_feature) 
+    else:    
+        boundary_polygon = []
+        for geopt in area.coordinates:
+            boundary_polygon.append([geopt.lon, geopt.lat])
+            
+        cw_feat = ee.Geometry.Polygon(boundary_polygon)
+        feat = cw_feat.buffer(0, 1e-10)   
     
+        boundary_feature = ee.Feature(feat, {'name': 'area_boundary', 'fill': 1}) 
+        park_boundary = ee.FeatureCollection(boundary_feature)
+        park_geom = boundary_feature.geometry()
+
+    
+    park_area = park_geom.area(10).getInfo()
+    print park_geom.getInfo(), park_area
+    
+    if park_area < 10 : # no boundary defined.
+        park_area = 10
+        
     # Get an imageCollection of all L7 images from recent years that overlap the area, load just the image metadata ['features'].
     end_date   = datetime.datetime.today()
     start_date = end_date - datetime.timedelta(weeks = 104) # last 2 years.
-    boundCollection = ee.ImageCollection('LANDSAT/LE7_L1T').filterBounds(park_boundary).filterDate(start_date, end_date) #.sort('system:time_start', False )
+    boundCollection = ee.ImageCollection('LANDSAT/LE7_L1T').filterBounds(park_geom).filterDate(start_date, end_date) #.sort('system:time_start', False )
     features = boundCollection.getInfo()['features']
     
+    print features
     #Find one of each cell (p,r) in collection. Calculate and store how much of the park the cell overlaps and add it to a tmp list.
-    
     cellList = [] #local array of unique cells will be later stored in area.cellList.
     
     for image_info in features:
@@ -785,8 +797,6 @@ def getLandsatCells(area):
                 continue
             overlap = overlap_area/park_area 
            
-            #cellnames.append(cell_name)
-            #cell = models.LandsatCell(parent=area.key(), key_name=cell_name, aoi=area.key(), path=p, row=r, monitored=False , overlap=overlap, image_id=image_id)
             cell = models.LandsatCell(parent=area.key, id=cell_name, aoi=area.key, path=p, row=r, monitored=False , overlap=overlap, image_id=image_id)
             cellList.append(cell)
             
@@ -812,7 +822,7 @@ def getLandsatCells(area):
                 new_overlap_area  = new_overlap_geom.area(10).getInfo()
                 new_overlap = new_overlap_area/park_area
 
-                cell.monitored = True if (new_overlap > 0.01) else False # If overlap is above arbitrary threshold (1%) default is to monitor cell, user can change later.
+                cell.monitored = True if ((new_overlap > 0.01) or (len(area.coordinates) == 0)) else False # If overlap is above arbitrary threshold (1%) default is to monitor cell, user can change later.
                 if cell.monitored:
                     remaining_geom = remaining_geom.difference(new_overlap_geom)
                     remaining_area = remaining_geom.area(10).getInfo()

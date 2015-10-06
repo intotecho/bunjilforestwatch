@@ -810,7 +810,7 @@ class NewAreaHandler(BaseHandler):
 
     #@decorator.oauth_aware
     def post(self):
-        name = self.request.get('name')
+        name = self.request.get('area_name')
         descr = self.request.get('description')
         boundary_ft = self.request.get('boundary_ft')
         park_boundary_fc = None
@@ -843,13 +843,13 @@ class NewAreaHandler(BaseHandler):
     
         if boundary_ft is None or boundary_ft is "":
             ### User Drew a Polygon ###
-            coordinate_geojson_str = self.request.get('coordinates').decode('utf-8')
+            new_area_geojson_str = self.request.get('geojson_toserver').decode('utf-8')
             try:
-                geojsonBoundary = geojson.loads(coordinate_geojson_str)
-                logging.debug("NewAreaHandler() coordinate_geojson_str: %s ", coordinate_geojson_str)
+                geojsonBoundary = geojson.loads(new_area_geojson_str)
+                logging.debug("NewAreaHandler() new_area_geojson_str: %s ", new_area_geojson_str)
         
             except Exception, e:
-                logging.error("NewAreaHandler() Error parsing coordinate_geojson_str: %s ", coordinate_geojson_str)
+                logging.error("NewAreaHandler() Error parsing new_area_geojson_str: %s ", new_area_geojson_str)
                 logging.error("NewAreaHandler() Exception : {0!s}".format(e)) 
                 self.add_message('danger', 'Error reading coordinates' )
                 return self.render('new-area.html', {
@@ -864,6 +864,9 @@ class NewAreaHandler(BaseHandler):
             tmax_lon = -180
             tmin_lon = +180
             logging.debug("geojsonBoundary: %s",  geojsonBoundary)
+            
+            area_location_geojson = None
+            
             for item in geojsonBoundary['features']:
                 if item['properties']['featureName']=="boundary":
                     pts=item['geometry']['coordinates']
@@ -889,20 +892,37 @@ class NewAreaHandler(BaseHandler):
                     #logging.debug("zoom: %s, center_pt: %s, type(center_pt) %s", zoom, center_pt, type(center_pt) )
                     center = ndb.GeoPt(float(center_pt[0]), float(center_pt[1]))
                     #be good to add a bounding box too.
-
+                if item['properties']['featureName']=="area_location": # get the view settings to display the area.
+                    area_location_geojson = item['geometry']
+                    area_location_coords = item['geometry']['coordinates']
+                    #print area_location_geojson
+                    
             maxlatlon = ndb.GeoPt(float(tmax_lat), float(tmax_lon))
             minlatlon = ndb.GeoPt(float(tmin_lat), float(tmin_lon))
-            polypoints = []
-            for geopt in coords:
-                polypoints.append([geopt.lon, geopt.lat])
-            cw_geom = ee.Geometry.Polygon(polypoints)
-            ccw_geom = cw_geom.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
-            feat = ee.Feature(ccw_geom, {'name': name, 'fill': 1})
-
-            total_area = ccw_geom.area().getInfo()/1e6 #area in sq km
-
-            park_boundary_fc = ee.FeatureCollection(feat)
-          
+        
+        
+            if area_location_geojson <> None:
+                geom= ee.Geometry(area_location_geojson)
+                feat = ee.Feature(geom, {'fill': 1})
+                park_boundary_fc = ee.FeatureCollection(feat) # so far just a point
+                area_location = ndb.GeoPt(float(area_location_geojson['coordinates'][1]), float(area_location_geojson['coordinates'][0]))
+            else:
+                area_location = ndb.GeoPt(0,0)
+                  
+            if len(coords) > 0:
+                polypoints = []
+                for geopt in coords:
+                    polypoints.append([geopt.lon, geopt.lat])
+                cw_geom = ee.Geometry.Polygon(polypoints)
+                ccw_geom = cw_geom.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+                feat = ee.Feature(ccw_geom, {'name': name, 'fill': 1})
+    
+                total_area = ccw_geom.area().getInfo()/1e6 #area in sq km
+    
+                park_boundary_fc = ee.FeatureCollection(feat)
+            else:
+                # no boundary defined yet
+                total_area = 0
         else:
             ### User Provided a Fusion Table ###
             #Test the fusion table
@@ -982,14 +1002,13 @@ class NewAreaHandler(BaseHandler):
                                     description_why=self.request.get('description-why').decode('utf-8'), 
                                     description_who=self.request.get('description-who').decode('utf-8'), 
                                     description_how=self.request.get('description-how').decode('utf-8'), 
+                                    area_location=area_location,
                                     coordinates=coords, boundary_fc= fc_info, ft_link=ftlink, ft_docid = boundary_ft,
                                     map_center = center, map_zoom = zoom, 
                                     max_latlon = maxlatlon,min_latlon = minlatlon, 
                                     owner=self.session['user']['key'] )
         
-        #xg_on = ndb.create_transaction_options(xg=True)
         try:
-            #user, area = ndb.transaction(xg_on, txn, self.session['user']['key'], area)
             user, area = ndb.transaction(lambda: txn(self.session['user']['key'], area), xg=True)
             activity = models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key)
             self.add_message('success', 'Created your new area of interest: %s covering about %d sq.km'  %(area.name, total_area ) )

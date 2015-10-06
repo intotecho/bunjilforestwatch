@@ -220,9 +220,12 @@ class AreaOfInterest(ndb.Model):
 	ft_docid =  ndb.StringProperty() 
 	"""A fusion table's document id.
 	"""
+	## Geometry
+	area_location = ndb.GeoPtProperty(required=False, default=None) #make this required.
 	
 	coordinates = ndb.GeoPtProperty(repeated=True, default=None) # When a fusion table is provided in boundary_ft, this is the convexHull of the FT.
 	boundary_fc = ndb.TextProperty(required = True) # ee.FeatureCollection or park boundary in JSON string format
+
 	bound = ndb.FloatProperty(repeated=True, default=None)
 	
 	# Parameters for viewing Area
@@ -267,6 +270,10 @@ class AreaOfInterest(ndb.Model):
 			#return webapp2.uri_for('view-area', username=self.key.parent().name(),  area_name= self.name)
 			return webapp2.uri_for('view-obstasks', area_name= self.name)
 
+	@property
+	def area_location_feature(self):
+		return { "type": "Point", "coordinates": [self.area_location.lon, self.area_location.lat], "properties": {"featureName": "area_location"} }
+	
 	@property
 	def shared_str(self):
 		if self.share == self.PUBLIC_AOI:
