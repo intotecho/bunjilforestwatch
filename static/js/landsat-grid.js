@@ -190,7 +190,7 @@ function queryLandsatFusionTableRadius(map) {
 	distance = (distance > 2800000) ? 2800000 : distance; // clip the view
 															// area to 2000km.
 
-	console.log(radius, map_distance, distance);
+	console.log('landsat-grid: ', radius, map_distance, distance);
 
 	// script = document.createElement('script');
 	var url = [ 'https://www.googleapis.com/fusiontables/v1/query?' ];

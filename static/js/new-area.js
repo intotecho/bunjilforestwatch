@@ -28,73 +28,116 @@ var fusion_table_instructions=
 	"<li>The fusion table must either be public or shared with this bunjil's service account. </li>";
 
 /**
- * called when user clicks Create Area.
- * pulls data from the form and validates it. 
- * pulls boundary from the map or fusion table 
- * sends new area request to server.
+ * Called when user clicks Create Area.
+ * Pulls data from the form and validates it. 
+ * Pulls boundary from the map or fusion table. 
+ * Sends new area request to server.
  * @param map
  */
 function createArea(map)
 {
 	"use strict";
-	var problems = "";
+	//var problems = "";
 	var area_name =  $('#area_name').val();
-	var area_descr =  $('#area_descr').val();
-	var area_boundary_ft =  $('#boundary_ft').val();
+	//var area_descr = "test_descr"; // $('#area_descr').val();
+	//var area_boundary_ft =  $('#boundary_ft').val();
 
+	var shared = $('input[name=opt-sharing]:checked', '#new_area_form').val();
+	var self_monitor = $('input[name=self-monitor]', '#new_area_form').val();
+	var request_volunteers = $('input[name=request-volunteers]', '#new_area_form').val();
+	var accept = $('input[name=accept]:checked', '#new_area_form').val();
+	var area_boundary_ft =  $('#boundary_ft').val();
+	var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
+
+	
 	// get and send the viewing parameters of the map
 	var unwrapped_mapcenter = map.getCenter(); // can exceed 90lat or 180 lon
 	var mapcenter = new google.maps.LatLng(unwrapped_mapcenter.lat(), unwrapped_mapcenter.lng()); //wrapped.
 	var mapzoom = map.getZoom();
 	
-	
-	var newArea = { "type": "FeatureCollection",
-					"features": [
-			             { "type": "Feature",
-			            	 "geometry":   {"type": "Point", "coordinates": [mapcenter.lat(), mapcenter.lng()]},
-			            	 "properties": {"featureName": "mapview", "zoom": mapzoom }
-			             }
-			             /*
-			             { "type": "Feature",
-			            	 "geometry":   {"type": "Polygon","coordinates": location_feature.geometry},
-			            	 "properties": {"featureName": "boundary"}
-			             }
-			             */
-			          ],
-					 "boundary_ft": area_boundary_ft
-		}// End newArea
+	var new_area_geojson = { "type": "FeatureCollection",
+				"properties": {
+					"area_name":area_name,
+					"shared" :	shared,
+					"self_monitor" : self_monitor,
+					"request_volunteers" : request_volunteers,
+					"accept" : accept,
+					
+					// "area_url" : 'server sets',
+					// 'owner': 'server sets' 
+					
+					"area_description": {
+						   "description": 	  $('#area_descr_what').val(),
+						   "description_why": $('#area_descr_why').val(),
+						   "description_who": $('#area_descr_who').val(),
+						   "description_how": $('#area_descr_how').val(),
+						   "wiki": "",
+						   "threats": ""
+					},
+					"fusion_table": {
+						   //"ft_link": server sets,
+							//"ft_docid": server sets,
+							 "boundary_ft": $('#boundary_ft').val()
+					 }
+				},
+				"features": [
+		             { "type": "Feature",
+		            	 "geometry":   {"type": "Point", "coordinates": [mapcenter.lng(), mapcenter.lat()]},
+		            	 "properties": {"featureName": "mapview", "zoom": mapzoom }
+		             }
+		             /*//added below
+		             { "type": "Feature",
+		            	 "geometry":   {"type": "Polygon","coordinates": location_feature.geometry},
+		            	 "properties": {"featureName": "boundary"}
+		             }
+		             */
+		          ],
+				 "boundary_ft": area_boundary_ft
+	}; // End new_area_geojson
 
 	if (map.drawingTools.area_location !== null) {
 		var location_feature = map.drawingTools.area_location.features[0];
 		location_feature.properties.featureName = 'area_location';
-		newArea.features.push(location_feature);
+		new_area_geojson.features.push(location_feature);
 	}
 	else {
-		console.log('Error: no location set')
+		console.log('Error: no location set');
 	}
 
-	var toServer = JSON.stringify(newArea);
-	document.getElementById("geojson_toserver").value = toServer;
-	
-	//var formData = new FormData($("#new_area_form")[0]);
-	//formData.append("coordinates_id", toServer);
-	
-	$("#new_area_form").submit();
+	var data_to_post = JSON.stringify(new_area_geojson);
 
+	//document.getElementById("geojson_toserver").value = toServer;
+	//$("#new_area_form").submit();
+	
+	$.ajax({
+	      type: "POST",
+	      url: "/new/area",
+	      data: 'new_area_geojson_str='+ data_to_post,
+	      success: function() {
+	    	  $("#update-area-form").show(); //ask user for more info to enrich area.    	  
+	      },
+	      error: function(e) {
+	    	  alert(e); //ask user for more info to enrich area.    	  
+	      }	      
+	    });
+	    return false;
 } /* end-of-createArea*/       
 
 
+/**
+ * After submitting the location name and sharing options, ask user for more details
+ * @param map
+ */
 
-function createEnhancedArea(map)
+function updateArea(map)
 {
 	"use strict";
 	var problems = "";
 	var area_name =  $('#area_name').val();
 	var area_descr =  $('#area_descr').val();
 	var area_boundary_ft =  $('#boundary_ft').val();
-	
 	var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
-
+	
 	if ((null === area_descr) || (area_descr === "")) {
 		if (problems.length > 0) {
 			problems += 'Giving  your area an optional description helps others know why it should be monitored.<br/><br/>';
@@ -132,10 +175,10 @@ function createEnhancedArea(map)
 	var unwrapped_mapcenter = map.getCenter(); // can exceed 90lat or 180 lon
 	var mapcenter = new google.maps.LatLng(unwrapped_mapcenter.lat(), unwrapped_mapcenter.lng()); //wrapped.
 	var mapzoom = map.getZoom();
-	var newArea;
+	var new_area_geojson;
 	var boundaryPoints= '';
 	if(selection === 'is-drawmap')  {
-		newArea = { "type": "FeatureCollection",
+		new_area_geojson = { "type": "FeatureCollection",
 					"features": [
 			             { "type": "Feature",
 			            	 "geometry":   {"type": "Point", "coordinates": [mapcenter.lat(), mapcenter.lng()]},
@@ -147,23 +190,23 @@ function createEnhancedArea(map)
 			             }
 			          ],
 					 "boundary_ft": area_boundary_ft
-		}// End newArea
+		}// End new_area_geojson
 		map.data.forEach(function(feature, map_p){
 			feature.properties.featureName = "boundary";
-			newArea.features.append(feature);
+			new_area_geojson.features.append(feature);
 		});
 	}  
 	else {
-		newArea = { 
+		new_area_geojson = { 
 				"boundary_ft": area_boundary_ft
 		}
 	}
 
-	var toServer = JSON.stringify(newArea);
+	var toServer = JSON.stringify(new_area_geojson);
 	document.getElementById("coordinates_id").value = toServer;
 	$("#new_area_form").submit();
 
-} /* end-of-createArea*/       
+} /* end-of-updateArea*/       
 
 function drop_marker(map, position, name) {
 	"use strict";
@@ -260,29 +303,7 @@ function zoom_here(map, event) {
 	}
 }
 
-function save_map_mode() {
-	"use strict";
-	
-	// Display div for next instruction.
-	$('#save-area-form').show();
-	$('#move-map-form').show();
-	$('#drag-map-form').hide();
-    $('#mark-map-form').hide();
-    
-    // Turn of Draging Mode but keep markers
-    var map = initialize_map.map;
-    map.drawingTools.stopDrawCenterPointMarker(map); 
-    var locn_string = map.drawingTools.geoJsonInput.value;
-    /*
-    try {
-        map.drawingTools.area_location = JSON.parse(locn_string);
-    }
-    catch(error) {
-    	console.log('Error: '+ error + 'parsing string: ' + locn_string);
-    	map.drawingTools.area_location = null;
-    }
-    */
-}
+
 
 function drop_pin_mode(map, event) {
 	"use strict";
@@ -292,7 +313,7 @@ function drop_pin_mode(map, event) {
 		event.preventDefault();
 	}
 	*/
-    console.log(map.getZoom());
+    //console.log(map.getZoom());
 	if(map.getZoom() < 7) {
 			//too far out 
 		 	$('#zoom-more-popover').show();
@@ -313,43 +334,27 @@ function drop_pin_mode(map, event) {
     map.drawingTools.drawCenterPointMarker(save_map_mode);    
 }
 
-function move_map_mode(event) {
-	"use strict";
-	if (typeof(event) !== 'undefined') {
-		event.preventDefault();
-	}
-    // Display div for next instruction.
-    $('#drag-map-form').show();
-    $('#mark-map-form').hide();
-    $('#save-area-form').hide();
-    $('#move-map-form').hide();
-    
-    // Turn of Dragging Mode
-    var map = initialize_map.map;
-    map.drawingTools.stopDrawCenterPointMarker();
-    // Remove Marker
-    map.drawingTools.removeCenterPointMarker(); 
-}
+
 
 
 function scroll_to_target(scroll_target) {
 	"use strict";
 	var t = $("html,body");
 	t.animate(
-		    { scrollTop: scroll_target.offset().top}, 3000 
+		    { scrollTop: scroll_target.offset().top}, 800 
 		);
 }
 
 
-
-/**
- * Display or Hide the GeoJson editor alongside the map
- */
-function toggle_advanced() { 
+function resizeEditor() {
 	"use strict";
-	$('#geojson-column').show();
-	$('#map-column').toggleClass('col-md-9').toggleClass('col-md-12');
-}	
+	var row_height = $('#map-canvas-c').height();
+	var height = row_height - $('#geojson-controls').height() - 8 + "px";
+	$('.CodeMirror').height(height);	
+}
+
+
+
 
 /**
  * initialize_map.initialized  ensures it may be called repeatedly.
@@ -417,7 +422,7 @@ function initialize_map(place, center_prm) {
 
 	$('#zoom-help-popover-close').click(function(event) {
 	 	event.preventDefault();
-	 	$('#zoom-help-popover').popoverX('hide')
+	 	$('#zoom-help-popover').popoverX('hide');
 	});
 
 	
@@ -446,6 +451,10 @@ function initialize_map(place, center_prm) {
 		createArea(map);
 	});		
 
+	$('#update-area').click(function(event){ 
+		event.preventDefault();
+		updateArea(map);
+	});		
 	
 	$('#advanced').click(function(event){ 
 		toggle_advanced();
@@ -516,6 +525,118 @@ function initialize_map(place, center_prm) {
 	return map;
 }
 initialize_map.map = null;
+
+function move_map_mode(event) {
+	"use strict";
+	if (typeof(event) !== 'undefined') {
+		event.preventDefault();
+	}
+    // Display div for next instruction.
+    $('#drag-map-form').show();
+    $('#mark-map-form').hide();
+    $('#save-area-form').hide();
+    $('#move-map-form').hide();
+    
+    // Turn of Dragging Mode
+    var map = initialize_map.map;
+    map.drawingTools.stopDrawCenterPointMarker();
+    // Remove Marker
+    map.drawingTools.removeCenterPointMarker(); 
+}
+
+function save_map_mode() {
+	"use strict";
+	
+	// Display div for next instruction.
+	$('#save-area-form').show();
+	$('#move-map-form').show();
+	$('#drag-map-form').hide();
+    $('#mark-map-form').hide();
+    
+    // Turn of Draging Mode but keep markers
+    var map = initialize_map.map;
+    map.drawingTools.stopDrawCenterPointMarker(map); 
+    var locn_string = map.drawingTools.geoJsonInput.value;
+    /*
+    try {
+        map.drawingTools.area_location = JSON.parse(locn_string);
+    }
+    catch(error) {
+    	console.log('Error: '+ error + 'parsing string: ' + locn_string);
+    	map.drawingTools.area_location = null;
+    }
+    */
+}
+function initialize_geojson_editor()
+{
+	"use strict";
+	/* global CodeMirror */
+	if (typeof initialize_map.editor === 'undefined') {
+		initialize_map.editor = CodeMirror.fromTextArea(document.getElementById('geojson-input'),  {
+		    lineNumbers: true,
+		    indentUnit: 0,
+		    tabSize: 0,
+		    scrollbarStyle: 'overlay',
+		    mode: "application/json",
+		    gutters: ["CodeMirror-lint-markers"],
+	        theme: 'midnight', //eclipse',
+	        autofocus: (window === window.top),
+	        lint: true,
+		    lintWith: CodeMirror.jsonValidator,
+		    lintOnChange: true,
+	        matchBrackets: true
+		  }); 	
+
+		$('#select-all').click(function (e){
+			initialize_map.editor.execCommand('selectAll');		
+		});
+		
+		$('#download-area').click(function (e){
+			  var link = $('#download-link'); 
+			  link.download = name;
+			  link.click();
+		});
+		
+		function downloadURI(uri, name) {
+			}
+		
+		initialize_map.editor.on("changes", function (editor, changes) {
+			  /*
+			  var change = changes[0];	
+			  var from = change.from;
+			  var text = change.text.join("\n");
+			  var removed = change.removed.join("\n");
+			  var to =  editor.posFromIndex(editor.indexFromPos(from) + text.length);
+			  var before = editor.getRange({ line: 0, ch: 0 }, from);
+			  var after = editor.getRange(to, { line: editor.lineCount() + 1, ch: 0 });
+			  console.log("after change", before, removed, text, after);
+			  */
+			
+			  initialize_map.map.drawingTools.refreshDataFromGeoJson();
+			  return true;
+		});
+		
+		google.maps.event.addDomListener(window, 'resize', resizeEditor);
+		resizeEditor();
+	}
+}
+
+/**
+ * Display or Hide the GeoJson editor alongside the map
+ */
+function toggle_advanced() { 
+	"use strict";
+
+	var map_column = $('#map-column');
+	map_column.toggleClass('col-md-9').toggleClass('col-md-12');
+	if (map_column.hasClass('col-md-12')) {
+		$('#geojson-column').hide();
+	}
+	else {
+		$('#geojson-column').show();
+		initialize_geojson_editor();
+	}
+}	
 
 
 /**
@@ -588,7 +709,58 @@ function addSearchBox(map)
 
 	return searchBox;
 }
+
+
+var BJTEST = BJTEST || {};
+
+BJTEST.subns = (function() {
+	"use strict";
 	
+    var internalState = "Message";
+
+    var privateMethod = function() {
+        // Do private stuff, or build internal.
+        return internalState;
+    };
+    
+    var initAdvancedMap = function() {
+		var area_name =  $('#area_name').val();
+		var shared = $('input[name=opt-sharing]:checked', '#new_area_form').val();
+		var self_monitor = $('input[name=self-monitor]', '#new_area_form');
+		var request_volunteers = $('input[name=request-volunteers]', '#new_area_form');
+		var accept = $('input[name=accept]:checked', '#new_area_form').val();
+
+		$('#map-row').show();
+		if (area_name.length < 3) {
+			area_name = 'Test Area ' + Math.floor((Math.random() * 999) + 1);
+    		$('#area_name').val(area_name);
+		}
+
+		if(typeof shared === 'undefined') {
+			$('input[value=shared]', '#new_area_form').prop('checked', true);
+			shared = 'shared';
+		}
+
+		$('#area_descr').val('A test area created by initAdvancedMap()');
+
+		$('#accept').prop('checked', true);
+
+		var target = $('#map-find');
+		target.show();
+		
+		var center_pt =  new google.maps.LatLng(-33.8, 151.47); //Blue Mountains NP.
+		
+		initialize_map(null, center_pt);
+		drop_pin_mode(initialize_map.map, null);
+		toggle_advanced();
+		return "";
+    }
+    
+    return {
+        isTesting: true,
+        initAdvancedMap: initAdvancedMap
+    };
+})();
 
 
 /**
@@ -664,25 +836,13 @@ function pre_checkform_next_area(event) {
 		initialize_map(null, null);
 		return "";
 	}
+	
+	if(area_name[0] === '#'){ //test code
+		$('update-area-form').show();
+	}
+	
 	if(area_name[0] === '!'){ //test code
-		$('#map-row').show();
-		target = $('#map-find');
-		area_name = 'Test Area ' + Math.floor((Math.random() * 999) + 1);
-		$('#area_name').val(area_name);
-		$('#area_descr').val('A test area');
-		$('#accept').prop('checked', true);
-		
-		if(shared === undefined) {
-			$('input[value=shared]', '#new_area_form').prop('checked', true);
-			shared = 'shared';
-		}
-		
-		target.show();
-		var center_pt =  new google.maps.LatLng(-33.8, 151.47); //Blue Mountains NP.
- 		initialize_map(null, center_pt);
-		toggle_advanced();
-		drop_pin_mode(initialize_map.map, null);
-		return "";
+		BJTEST.subns.initAdvancedMap();
 	}
 	
 	if (validations.length > 0) {
@@ -783,6 +943,9 @@ function initialize_new() {
 		$('#map-canvas').css('height', (h - offsetTop));	        
 	}).resize();   
     ***/
+	
+	/* If Testing GeoJson panel*/
+	$('#area_name').val('!');
 }
 
 google.maps.event.addDomListener(window, 'load', initialize_new);
