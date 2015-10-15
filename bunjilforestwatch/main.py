@@ -810,9 +810,28 @@ class NewAreaHandler(BaseHandler):
 
     #@decorator.oauth_aware
     def post(self):
-        name = self.request.get('area_name')
-        descr = self.request.get('description')
-        boundary_ft = self.request.get('boundary_ft')
+        new_area_geojson_str = self.request.get('new_area_geojson_str').decode('utf-8')
+        username = self.session['user']['name']
+        logging.debug("NewAreaHandler() new_area_geojson_str: %s ", new_area_geojson_str)
+        
+        try:
+            new_area = geojson.loads(new_area_geojson_str)
+        
+        except Exception, e:
+            logging.error("NewAreaHandler() Error parsing new_area_geojson_str: %s ", new_area_geojson_str)
+            logging.error("NewAreaHandler() Exception : {0!s}".format(e)) 
+            self.add_message('danger', 'Error reading new area data' )
+            return self.render('new-area.html', {
+                'username': username,
+                'latlng':  '8.2, 22.2',
+            })    
+         
+        name = new_area['properties']['area_name'] #self.request.get('area_name')
+        descr = new_area['properties']['area_description']['description'] #self.request.get('description')
+        boundary_ft = new_area['properties']['fusion_table']['boundary_f']#self.request.get('boundary_ft')
+        shared = new_area['properties']['shared'] #self.request.get('area_name')
+        print new_area
+        #print shared
         park_boundary_fc = None
         total_area = 0
         coords = []
@@ -843,20 +862,23 @@ class NewAreaHandler(BaseHandler):
     
         if boundary_ft is None or boundary_ft is "":
             ### User Drew a Polygon ###
-            new_area_geojson_str = self.request.get('geojson_toserver').decode('utf-8')
-            try:
-                geojsonBoundary = geojson.loads(new_area_geojson_str)
-                logging.debug("NewAreaHandler() new_area_geojson_str: %s ", new_area_geojson_str)
+            #new_area_geojson_str = self.request.get('geojson_toserver').decode('utf-8')
+            #try:
+            #    geojsonBoundary = geojson.loads(new_area_geojson_str)
+            #    logging.debug("NewAreaHandler() new_area_geojson_str: %s ", new_area_geojson_str)
         
-            except Exception, e:
-                logging.error("NewAreaHandler() Error parsing new_area_geojson_str: %s ", new_area_geojson_str)
-                logging.error("NewAreaHandler() Exception : {0!s}".format(e)) 
-                self.add_message('danger', 'Error reading coordinates' )
-                return self.render('new-area.html', {
-                    'username': name,
-                    'latlng':  '8.2, 22.2',
-                })    
-           
+            #except Exception, e:
+            #    logging.error("NewAreaHandler() Error parsing new_area_geojson_str: %s ", new_area_geojson_str)
+            #    logging.error("NewAreaHandler() Exception : {0!s}".format(e)) 
+            #    self.add_message('danger', 'Error reading coordinates' )
+            #    return self.render('new-area.html', {
+            #        'username': name,
+            #        'latlng':  '8.2, 22.2',
+            #    })    
+            
+            for f in new_area['features']:
+                if f['name'] == 'boundary':
+                    geojsonBoundary = f 
             pts = []
             center_pt = []
             tmax_lat = -90
@@ -890,7 +912,7 @@ class NewAreaHandler(BaseHandler):
                     zoom=item['properties']['zoom']
                     center_pt=item['geometry']['coordinates']
                     #logging.debug("zoom: %s, center_pt: %s, type(center_pt) %s", zoom, center_pt, type(center_pt) )
-                    center = ndb.GeoPt(float(center_pt[0]), float(center_pt[1]))
+                    center = ndb.GeoPt(float(center_pt[1]), float(center_pt[0]))
                     #be good to add a bounding box too.
                 if item['properties']['featureName']=="area_location": # get the view settings to display the area.
                     area_location_geojson = item['geometry']
@@ -978,8 +1000,8 @@ class NewAreaHandler(BaseHandler):
                 ftlink = 'https://www.google.com/fusiontables/DataSource?docid=' + boundary_ft
 
             except Exception, e : 
-                logging.error("Exception reading fusion table %s", e)
-                self.add_message('danger', "Error reading fusion table.  Exception: {0!s}".format(e)) 
+                logging.error("Exception: {0!s} reading fusion table: {1!s}".format(e, ftlink) )
+                self.add_message('danger', "Error reading fusion table: {0!s}".format(e)) 
                 return self.redirect(webapp2.uri_for('new-area'))
             self.add_message('warning', "Fusion Tables are still experimental - Please reports any bugs") 
 

@@ -7,6 +7,8 @@
  *               minor customisations.
  */
 
+/* global CodeMirror */
+/* global initialize_map */
 
 function showDropPanel(e) {
 	"use strict";
@@ -88,7 +90,7 @@ function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, ge
 		console.log("drop drop-container " + event.target);
 		handleDrop(event, initialize_map.map);
 	});
-	//this.refreshDataFromGeoJson();
+	this.refreshDataFromGeoJson();
 	
 	// Set up events for changing the geoJson input.
 	google.maps.event.addDomListener(this.geoJsonInput, 'input',
@@ -97,7 +99,7 @@ function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, ge
 			this.refreshDownloadLinkFromGeoJson.bind(this));
 
 	// Set up events for styling.
-	google.maps.event.addDomListener(window, 'resize', this.resizeGeoJsonInput);
+	//google.maps.event.addDomListener(window, 'resize', this.resizeGeoJsonInput);
 }
 
 DrawingTools.drawingTools = null;
@@ -171,7 +173,11 @@ DrawingTools.prototype.refreshGeoJsonFromData = function (e) {
 	//console.log(e);
 	var map = this.map;  //context of this about to change in next call.
 	map.data.toGeoJson(function(geoJson) {
-		map.drawingTools.geoJsonInput.value = JSON.stringify(geoJson, null, 2);
+		var txt = JSON.stringify(geoJson, null, 2);
+		var editor = initialize_map.editor;
+		if (typeof editor !== 'undefined') {
+			initialize_map.editor.setValue(txt);
+		}
 		map.drawingTools.refreshDownloadLinkFromGeoJson.bind(this);
 		if (map.mode === 'drawCenterPointMarker') {
 			map.drawingTools.area_location = geoJson;
@@ -188,10 +194,14 @@ DrawingTools.prototype.refreshGeoJsonFromData = function (e) {
 DrawingTools.prototype.fitMapToGeoJsonFromData = function (e) {
 	"use strict";
 	//console.log(e);
-	var map = this.map;  //context of this about to change in next call.
-	map.data.forEach(function(feature, map_p){
-		fitMapBoundsTofeature(feature);			
-	});
+	var map = initialize_map.map;  //context of this about to change in next call.
+	if( typeof map !== 'undefined') {
+		if( typeof map.data !== 'undefined') {
+			map.data.forEach(function(feature, map_p){
+				fitMapBoundsTofeature(feature);		
+			});
+		}
+	}
 }
 
 //Replace the data layer with a new one based on the inputted geoJson.
@@ -206,19 +216,24 @@ DrawingTools.prototype.refreshDataFromGeoJson = function () {
 		controls : [ 'Point', 'Polygon' ],
 		drawingMode: 'Point'
 	});
-	try {
-		var userObject = JSON.parse(this.geoJsonInput.value);
-		var newFeatures = newData.addGeoJson(userObject);
-	} catch (error) {
-		newData.setMap(null);
-		if (this.geoJsonInput.value !== "") {
-			this.setGeoJsonValidity(false, error.message);
-			//console.log(error.message);
-		} else {
-			this.setGeoJsonValidity(true, null);
+	var editor = initialize_map.editor;
+	if (typeof editor !== 'undefined') {
+		var value = editor.getValue();
+		try {
+			//var userObject = JSON.parse(this.geoJsonInput.value);
+			var userObject = JSON.parse(value);
+			var newFeatures = newData.addGeoJson(userObject);
+		} catch (error) {
+			newData.setMap(null);
+			if (value !== "") {
+				this.setGeoJsonValidity(false, error.message);
+				console.log(error.message);
+			} else {
+				this.setGeoJsonValidity(true, null);
+			}
+			return;
 		}
-		return;
-	}
+	}		
 	// No error means GeoJSON was valid!
 	this.map.data.setMap(null);
 	this.map.data = newData;
@@ -230,18 +245,27 @@ DrawingTools.prototype.refreshDataFromGeoJson = function () {
 // Refresh download link.
 DrawingTools.prototype.refreshDownloadLinkFromGeoJson = function () {
 	"use strict";
-	this.downloadLink.href = "data:;base64," + btoa(this.geoJsonInput.value);
-	this.downloadLink.download= "test_geojson.json";
+
+	var editor = initialize_map.editor;
+	if (typeof editor !== 'undefined') {
+		var value = editor.getValue();
+		this.downloadLink.download = 'area_' + $('#area_name').val() + ".json";		
+		this.downloadLink.href = "data:;base64," + btoa(value);
+	}	
 }
 
 // Display the validity of geoJson.
 DrawingTools.prototype.setGeoJsonValidity = function (newVal, message) {
 	"use strict";
 	if (!newVal) {
-		this.geoJsonInput.className = 'invalid';
-		$('#someElement').prop('tooltipText', messsage);
-	} else {
-		this.geoJsonInput.className = '';
+		//this.geoJsonInput.className = 'invalid';
+		if (typeof message === undefined){
+			message = 'setGeoJsonValidity() no message';
+		}
+		$('#errors-link').prop('tooltipText', message);
+	} 
+	else {
+		//this.geoJsonInput.className = '';
 		this.refreshDownloadLinkFromGeoJson();
 	}
 }
@@ -273,11 +297,12 @@ function handleDrop(e, map) {
 			reader.onload = function(e) {
 				var filename = this.file.name;
 				try {
-					console.log('result' + e.target.result);
+					console.log('handleDrop() result: ' + e.target.result);
 					map.data.addGeoJson(JSON.parse(e.target.result));
 				}
 				catch(error)  {
-					alert('Error parsing GeoJson in file: ' + filename + ': ' + error);
+					//alert('Error parsing GeoJson in file: ' + filename + ': ' + error);
+					console.log('Error parsing GeoJson in file: ' + filename + ': ' + error);
 				}
 			};
 			reader.onerror = function(e) {
@@ -334,7 +359,7 @@ function fitMapBoundsTofeature(feature) {
 					var point = polygon.getAt(pt)
 					//console.log('extend to point ' + point.toString());
 					//if (bounds.contains(point) === false) {
-						console.log('poly point is type' + typeof(point));
+						//console.log('poly point is type' + typeof(point));
 						bounds.extend(point);
 					//}
 				}
@@ -344,12 +369,12 @@ function fitMapBoundsTofeature(feature) {
 		case "Point": 
 			console.log('Extending map to fit ' + type);
 			pt = geometry.get();
-			console.log('point is type' + typeof(pt));
+			//console.log('point is type' + typeof(pt));
 			bounds.extend(pt);
 			break;
 
 		case "MultiPoint":
-			console.log('Extending map to fit ' + type);
+			//console.log('Extending map to fit ' + type);
             var points = geometry.getArray();
             for (var mp = 0; mp < points.length; mp++) {
     			bounds.extend(points[mp]);
@@ -360,10 +385,11 @@ function fitMapBoundsTofeature(feature) {
 			console.log('Extending to geometry of type ' + type + ' not implemented.');
 			return;
 	}
+	/*
 	console.log( 'now  bounds     ' + bounds.toString());
 	console.log( 'old nw ' + old_ne.toString());
 	console.log( 'old sw ' + old_sw.toString());
-	
+	*/	
 	if(( bounds.getNorthEast().equals(old_ne) === false) || ( bounds.getSouthWest().equals(old_sw) === false )) {
 		console.log('fitting Map to new bounds ' + bounds.toString());
 		initialize_map.map.fitBounds(bounds);
@@ -371,13 +397,75 @@ function fitMapBoundsTofeature(feature) {
 }
 
 
-/*
+
 //Styling related functions.
+/*
 DrawingTools.prototype.resizeGeoJsonInput = function () {
 	"use strict";
-	var geoJsonInputRect = this.map.drawingTools.geoJsonInput.getBoundingClientRect();
-	var panelRect = this.geoJsonPanel.getBoundingClientRect();
-	this.geoJsonInput.style.height = panelRect.bottom - geoJsonInputRect.top - 8
+
+	var geoJsonInputRect = initialize_map.map.drawingTools.geoJsonInput.getBoundingClientRect();
+	var panelRect = initialize_map.map.drawingTools.geoJsonPanel.getBoundingClientRect();
+	var height = panelRect.bottom - geoJsonInputRect.top - 4
 			+ "px";
-}
+
+	initialize_map.map.drawingTools.geoJsonInput.style.height = height;
+};
+
 */
+
+
+function geojson_validate(editor, changeObj) { /* not used */
+	'use strict';
+    var err = geojsonhint.hint(editor.getValue());
+    editor.clearGutter('error');
+
+    if (err instanceof Error) {
+        handleError(err.message);
+        return callback({
+            'class': 'icon-circle-blank',
+            title: 'invalid JSON',
+            message: 'invalid JSON'});
+    } else if (err.length) {
+        handleErrors(err);
+        return callback({
+            'class': 'icon-circle-blank',
+            title: 'invalid GeoJSON',
+            message: 'invalid GeoJSON'});
+    } else {
+        var zoom = changeObj.from.ch === 0 &&
+            changeObj.from.line === 0 &&
+            changeObj.origin === 'paste';
+
+        var gj = JSON.parse(editor.getValue());
+
+        try {
+            return callback(null, gj, zoom);
+        } catch(e) {
+            return callback({
+                'class': 'icon-circle-blank',
+                title: 'invalid GeoJSON',
+                message: 'invalid GeoJSON'});
+        }
+    }
+
+    function handleError(msg) {
+        var match = msg.match(/line (\d+)/);
+        if (match && match[1]) {
+            editor.clearGutter('error');
+            editor.setGutterMarker(parseInt(match[1], 10) - 1, 'error', makeMarker(msg));
+        }
+    }
+
+    function handleErrors(errors) {
+        editor.clearGutter('error');
+        errors.forEach(function(e) {
+            editor.setGutterMarker(e.line, 'error', makeMarker(e.message));
+        });
+    }
+
+    function makeMarker(msg) {
+        return d3.select(document.createElement('div'))
+            .attr('class', 'error-marker')
+            .attr('message', msg).node();
+    }
+}

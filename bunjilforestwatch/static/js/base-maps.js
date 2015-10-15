@@ -15,7 +15,6 @@ var area_json;
 var area_json_str;
 var lhs_offset_top =0;
 var lhs_offset_left =0;
-var border_latlngs = [];
 var drawingManager = null;
 var initial_dragger = "90%";
 /* var cellarray = null; not a global*/
@@ -81,6 +80,94 @@ function complete_report(drawingManager, event) {
 	console.log(event);
 }
 
+/**
+ * Collect the Boundary coordinates from the area and convert to a Google Maps object.
+ * @param border_latlngs
+ * @TODO: Note that Border of AOI does not adjust opacity on both overlays yet.
+*/
+function displayAreaBoundary() {
+	
+    var boundary_coords_str = '<p class="divider small">'
+    var coords_arr   =  area_json.features[1].geometry.coordinates;  // init global.
+    var border_latlngs = [];
+
+    if  (coords_arr.length == 0 ) {        
+    	var area_location = area_json.features[2].geometry.coordinates;  // init global.
+        var latlng = new google.maps.LatLng(area_location[1], area_location[0] );
+
+        var marker_under_lhs = new google.maps.Marker({
+    	    position: latlng,
+    	    title: area_json.properties.area_name 
+    	});
+        var marker_over_lhs = new google.maps.Marker({
+    	    position: latlng,
+    	    title: area_json.properties.area_name 
+    	});
+
+    	// add the marker to the maps
+    	marker_under_lhs.setMap(map_under_lhs);
+    	marker_over_lhs.setMap(map_over_lhs);
+    }
+    else {
+	    for (var j=0; j < coords_arr.length; j++)
+	    {
+	        var latlng = new google.maps.LatLng(coords_arr[j].lat, coords_arr[j].lng );
+	        //console.logprint parseInt(coords_arr[j].lat. parseInt(coords_arr[j].lng
+	        border_latlngs.push(latlng);
+	        boundary_coords_str += latlng.toUrlValue(5) + '<br>';
+	    }
+	  
+	    boundary_coords_str += '</p>' //fill the accordion.html
+	    //console.log(boundary_coords_str);
+	    $('#boundary_panel').html(boundary_coords_str);
+	 
+		var areaBoundary_over_lhs = new google.maps.Polygon({
+	                paths: border_latlngs,
+	                strokeColor: '#FFFF00',
+	                strokeOpacity: 0.5,
+	                strokeWeight: 2,
+	                fillColor: '#000000',
+	                fillOpacity: 0.05
+	    });
+	    
+	    var areaBoundary_under_lhs= new google.maps.Polygon({
+	                paths: border_latlngs,
+	                strokeColor: '#FFFF00',
+	                strokeOpacity: 0.5,
+	                strokeWeight: 2,
+	                fillColor: '#000000',
+	                fillOpacity: 0.05
+	    });
+	    
+	    var areaBoundary_rhs = new google.maps.Polygon({
+	        paths: border_latlngs,
+	        strokeColor: '#FFFF00',
+	        strokeOpacity: 0.5,
+	        strokeWeight: 2,
+	        fillColor: '#000000',
+	        fillOpacity: 0.05
+	    });
+	    
+	    
+	    areaBoundary_over_lhs.setMap(map_over_lhs);
+	    areaBoundary_under_lhs.setMap(map_under_lhs);
+	    areaBoundary_rhs.setMap(map_rhs);
+	
+	    areaBoundary_over_lhs.name = "boundary";
+	    
+	    /* global overlayMaps */ 
+	    overlayMaps.push(areaBoundary_over_lhs);
+	    
+	    /* global addLayer */
+	    addLayer(areaBoundary_over_lhs.name, 
+	    		area_json.properties.area_name + " Border", 
+	    		"yellow",  
+	    		50, 
+	    		"Boundary of Area " + area_json.properties.area_name, 
+	    		layerslider_callback);
+    }  
+}
+
 function initialize() {
 	"use strict";
 	
@@ -94,8 +181,8 @@ function initialize() {
 		alert("missing area data");
 		return;
 	}
-	var center_coords = area_json.features[0].geometry[0].coordinates;  // init global.
-    var map_center = new google.maps.LatLng(center_coords[0], center_coords[1]);
+	var center_coords = area_json.features[0].geometry.coordinates;  // init global.
+    var map_center = new google.maps.LatLng(center_coords[1], center_coords[0] );
 	var map_zoom = area_json.features[0].properties.map_zoom;  // init global.
      
     var mapOptions_latest = {
@@ -213,72 +300,12 @@ function initialize() {
             //map_rhs.setCenter(map_center);
     });
 
-    //Collect the Boundary coordinates from the area and convert to a Google Maps object.
-    
-    
-    var boundary_coords_str = '<p class="divider small">'
-    var coords_arr   =  area_json.features[1].geometry.coordinates;  // init global.
-
-    //console.log(coords_arr);
-    
-    for (var j=0; j < coords_arr.length; j++)
-    {
-        var latlng = new google.maps.LatLng(coords_arr[j].lat, coords_arr[j].lng );
-        //console.logprint parseInt(coords_arr[j].lat. parseInt(coords_arr[j].lng
-        border_latlngs.push(latlng);
-        boundary_coords_str += latlng.toUrlValue(5) + '<br>';
-    }
-  
-    boundary_coords_str += '</p>' //fill the accordion.html
-    //console.log(boundary_coords_str);
-    $('#boundary_panel').html(boundary_coords_str);
-    
-    //TODO: Note that Border of AOI does not adjust opacity on both overlays yet.
-    var areaBoundary_over_lhs = new google.maps.Polygon({
-                paths: border_latlngs,
-                strokeColor: '#FFFF00',
-                strokeOpacity: 0.5,
-                strokeWeight: 2,
-                fillColor: '#000000',
-                fillOpacity: 0.05
-    });
-    
-    var areaBoundary_under_lhs= new google.maps.Polygon({
-                paths: border_latlngs,
-                strokeColor: '#FFFF00',
-                strokeOpacity: 0.5,
-                strokeWeight: 2,
-                fillColor: '#000000',
-                fillOpacity: 0.05
-    });
-    
-    var areaBoundary_rhs = new google.maps.Polygon({
-        paths: border_latlngs,
-        strokeColor: '#FFFF00',
-        strokeOpacity: 0.5,
-        strokeWeight: 2,
-        fillColor: '#000000',
-        fillOpacity: 0.05
-    });
-    
-    areaBoundary_over_lhs.setMap(map_over_lhs);
-    areaBoundary_under_lhs.setMap(map_under_lhs);
-    areaBoundary_rhs.setMap(map_rhs);
-
-    areaBoundary_over_lhs.name = "boundary" ;
-    /* global overlayMaps */ 
-    overlayMaps.push(areaBoundary_over_lhs);
-    /* global addLayer */
-    addLayer(areaBoundary_over_lhs.name, 
-    		area_json.properties.area_name + " Border", 
-    		"yellow",  
-    		50, 
-    		"Boundary of Area " + area_json.properties.area_name, 
-    		layerslider_callback);
-      
+    displayAreaBoundary(); // draw area's boundary or area_location marker
+     
     /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
      *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
-     */    
+     */ 
+    
     var cellarray = jQuery.parseJSON($('#celllist').text()); 
   
     var jobid = -1;

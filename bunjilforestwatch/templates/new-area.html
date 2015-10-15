@@ -2,6 +2,9 @@
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 <title>Bunjil Forest Watch - New Area</title>
 {% block head_scripts %} {% block map_head %}
+
+<link rel="stylesheet" href="/static/css/site.css">
+
 <script type="text/javascript">
 	var single_map = true;
 	var view_mode = "view-area";
@@ -13,6 +16,9 @@
 %}
 
 <link rel="stylesheet" href="/static/css/drawing-tools.css">
+<link rel="stylesheet" href="/static/css/codemirror.css">
+<link rel="stylesheet" href="/static/css/simplescrollbars.css">
+<link rel="stylesheet" href="/static/css/lint.css">
 
 <style type="text/css">
 html {
@@ -32,7 +38,7 @@ body {
 	font-family: 'Verdana', "sans-serif !important";
 	font-size: 15px;
 	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-	overflow-y: scroll;
+	overflow-y: none;
 	background: url("/static/images/bfw_border.jpg") no-repeat center center
 		fixed;
 	-webkit-background-size: cover;
@@ -63,6 +69,7 @@ body {
 	color: hsla(227, 10%, 55%, 1);
 	padding-left: 30px;
 	padding-right: 30px;
+	overflow-y: auto;
 }
 
 .checkbox label,#accept,.radio label {
@@ -135,8 +142,145 @@ legend {
 #mark-map-form,#save-area-form,#move-map-form {
 	display: none;
 }
-</style>
 
+
+.CodeMirror-gutters {
+    background:#fff;
+}
+
+
+/* 
+ * Midnight Theme 
+ * Based on the theme at http://bonsaiden.github.com/JavaScript-Garden
+ */
+
+/*<!--breakpoint-->*/
+.breakpoints {width: .8em;}
+.breakpoint { color: #822; }
+
+/*<!--match-->*/
+span.CodeMirror-matchhighlight { background: #494949 }
+.CodeMirror-focused span.CodeMirror-matchhighlight { background: #314D67; !important }
+
+/*<!--activeline-->*/
+.activeline {background: #253540 !important;}
+
+.cm-s-midnight.CodeMirror {
+    /*background: #0F192A; color: #D1EDFF; */
+    /*background: #101D62; color: #F1F2ED;*/
+    background: #08113F; color: #F1F2ED;
+}
+
+.CodeMirror {border-top: 1px solid black; border-bottom: 1px solid black;}
+
+.cm-s-midnight div.CodeMirror-selected {background: #314D67 !important;}
+.cm-s-midnight .CodeMirror-gutters {background: #101D62; border-right: 1px solid;}
+.cm-s-midnight .CodeMirror-linenumber {color: #F1F2E4;}
+.cm-s-midnight .CodeMirror-cursor {
+    border-left: 1px solid #F8F8F0 !important;
+}
+
+.cm-s-midnight span.cm-comment {color: #428BDD;}
+.cm-s-midnight span.cm-atom {color: #AE81FF;}
+.cm-s-midnight span.cm-number {color: #D1EDFF;}
+
+.cm-s-midnight span.cm-property, .cm-s-tropicaleve span.cm-attribute {color: #A6E22E;}
+.cm-s-midnight span.cm-keyword {color: #E83737;}
+.cm-s-midnight span.cm-string {color: #97FF9F}     /* color: #97FF9F */
+
+.cm-s-midnight span.cm-variable {color: #FFAA3E;}
+.cm-s-midnight span.cm-variable-2 {color: #FFAA3E;}
+.cm-s-midnight span.cm-def {color: #4DD;}
+.cm-s-midnight span.cm-error {background: #F92672; color: #F8F8F0;}
+.cm-s-midnight span.cm-bracket {color: #D1EDFF;}
+.cm-s-midnight span.cm-tag {color: #008;}
+.cm-s-midnight span.cm-link {color: #AE81FF;}
+
+.cm-s-midnight .CodeMirror-matchingbracket {
+  text-decoration: underline;
+  color: white !important;
+}
+
+.typ { color: #FFAA3E; }
+.atn { color: #606; }
+.atv { color: #080; }
+.dec { color: #606; }
+
+/*
+ * CodeMirror & Markers -------------------------------------------------------
+ */
+.right .CodeMirror {
+    position:absolute;
+    bottom:0;
+    right:0;
+    left:0;
+    top:0;
+    height:auto !important;
+    background:#fff;
+    font-family: 'm_1regular', monospace;
+    line-height:1.5em;
+}
+
+.error-marker {
+    width:10px;
+    height:1.5em;
+    background:#EAB;
+    transition:all 100ms;
+    -webkit-transition:all 100ms;
+}
+
+.error-marker:hover {
+    background:#D68;
+}
+
+.error-marker:before {
+    opacity:0;
+    pointer-events:none;
+    content:attr(message);
+    transition:all 100ms;
+    -webkit-transition:all 100ms;
+    content:attr(message);
+    width:300px;
+    font-size:10px;
+    padding:5px;
+    border:1px solid #000;
+    position:absolute;
+    background:#fff;
+    z-index:999;
+}
+
+.error-marker:hover:before {
+    opacity:1;
+    margin-left:35px;
+}
+
+.right .edit-pane .CodeMirror-linenumber {
+    color:#666;
+    font-size:75%;
+}
+
+/* placeholder addon */
+      .CodeMirror { 
+        /*border: 1px solid silver; 
+        height: 100%;*/ 
+        padding:0;
+       } 
+      .CodeMirror-empty { outline: 1px solid #c22; }
+      .CodeMirror-empty.CodeMirror-focused { outline: none; }
+      .CodeMirror pre.CodeMirror-placeholder { color: #999; }
+
+.extended-content-container {
+    width: 100%;
+    margin-left: -5%;
+    padding: 0;
+}
+/*
+.extended-content {
+    width:100%;
+}
+*/
+
+</style>
 
 <!-- NO BREADCRUMBS REQUIRED FOR THIS PAGE -->
 
@@ -364,7 +508,7 @@ legend {
 							<button id="save-area" name="move-map" class="btn btn-primary">Save Area</button>
 						</div>
 						<div class="col-md-6 form-group">
-							<label class="control-label"> If your mark is over your area Click <i>Save area</i>
+							<label class="control-label"> If mark is over your area click <i>Save area</i>
 							</label>
 						</div>
 					</div>
@@ -382,7 +526,8 @@ legend {
 		</form>
 	</div>
 
-	<div class="row" id='map-row' class='full-size' style='display: none'>
+	<div class="row" id='map-row' style='display: none'>
+
 		<!-- MAP APPEARS HERE -->
         <div id='map-column' class='col-md-12 nopadding' class='map-canvas'>
 			<div id='map-canvas-c' class='map-canvas'>
@@ -392,48 +537,33 @@ legend {
 				<div id="map-canvas"></div>
 			</div>
 	</div>	
-	<div id=geojson-column class='col-md-3 nopadding' style='display: none'>
+	<div id='geojson-column' class='col-md-3 nopadding' style='display: none height=100%'>
+
 		<!--  GeoJSON -->
-		<div id='geojson-editor'  class='full-size' >
-			<div id='geojson-panel'  class='full-size'>
-				<div id="panel-content" class='full-size'>
-					<div id="panel-title">GeoJSON Editor</div>
+		<div id='geojson-editor' class ='extended-content-container'>
+			<div id='geojson-panel' >
+				
 					<div id="geojson-controls" class='help-block'>
-						<button onclick="document.getElementById('geojson-input').select();">Select All</button>				
+                        <div id="panel-title">Edit GeoJSON</div>
+                        <a id="select-all" class="btn btn-sm btn-default">Select All</a>
 				        <a id="download-link" href="data:;base64," download="my_area.json" class="btn btn-sm btn-default">Download<span class="glyphicon glyphicon glyphicon-download-alt" style='color: #FA7063'></span></a>
-                		 
-                        <a id="errors-link" href="data:;base64," download="my_area.json" class="btn btn-sm btn-default" data-toggle="popover-x"
-                            data-target='#syntax-errors-popover' data-placement="top">Validate</span></a>
-						  <div id="syntax-errors-popover" class='popover popover-info' data-toggle="popover-x">
-                            <div class="arrow"></div>
-                            <h3 class="popover-title">Syntax Error</h3>
-                            <div class="popover-content">
-                                To place a mark accurately you must zoom in more.<br /> <b>Double Click</b> near your area on the map to zoom in more.<br />
-                                Or use the zoom slider on the left side of the map.
-                            </div>
-                            <div class="popover-footer">
-                                <button id='syntax-errors-popover-close' class="btn btn-sm btn-info">Close</button>
-                            </div>
-                        </div>	
-						
-					</div  style='width:inherit' >
-					<textarea id="geojson-input"  class='invalid'  placeholder="Drag and drop GeoJSON onto the map. Your coordinates appear here."  rows="25" style='width:inherit' ></textarea>
-				</div>
+					</div>
+					<textarea id="geojson-input"  placeholder="Drag GeoJSON to map"  ></textarea>
 			</div>
 		</div>
 	</div>	
-	   </div>
-	   <!--  LANDSAT GRID -->
-    	<div>
-			<input type="checkbox" id="landsat-grid" class="layer" /> <label for="0">Show Grid </label>
-		</div>
+
+ </div>
+
+
+          <!--  LANDSAT GRID -->
+        <div>
+            <input type="checkbox" id="landsat-grid" class="layer" /> <label for="0">Show Grid </label>
+        </div>
 
 
 
-
-
-
-<div class='row' id='description-row'>
+<div class='row' id='update-area-form' style='display:none'>
 	<!--  DESCRIPTION  -->
 	<div class="accordion-group">
 		<div class="accordion-heading">
@@ -531,7 +661,17 @@ legend {
 <form action=""></form>
 
 {% include "includes/project_scripts.html" %} {% include "includes/map_scripts.html" %}
-<script type="text/javascript" src="/static/js/new-area.js" defer></script>
+
+<script src="/static/js/vendor/codemirror.js"></script>  <!-- geojson editor -->
+<script src="/static/js/vendor/javascript.js"></script> <!-- Context highlighting for json in editor -->
+<script src="/static/js/vendor/simplescrollbars.js"></script> <!-- for editor -->
+<script src="/static/js/vendor/placeholder.js"></script> <!-- for editor -->
+
+<script src="/static/js/vendor/lint.js"></script>  <!-- addon for editor -->
+<script src="/static/js/vendor/geojsonhint.js"></script>  <!-- parses geojson-->
+<script src="/static/js/vendor/jsonlint-min.js"></script> <!-- parses json can remove min to debug-->
+<script src="/static/js/geojson-lint.js"></script>    <!-- addon connects lint to editor -->
+
+<script src="/static/js/new-area.js"></script>
+
 {% endblock %} {% block footer_js%} {% endblock footer_js %}
-<div></div>
-<div></div>

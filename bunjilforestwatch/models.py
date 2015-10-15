@@ -331,7 +331,7 @@ class AreaOfInterest(ndb.Model):
 		}
 
 	"""
-	geojsonArea() returns boundary as a geojson dictionary
+	geojsonArea() returns area as a geojson dictionary
 	After http://google-app-engine-samples.googlecode.com/svn-history/r4/trunk/geodatastore/jsonOutput
 	"""
 	def geojsonArea(self):
@@ -341,8 +341,18 @@ class AreaOfInterest(ndb.Model):
 			p = {'lat': c.lat, 'lng': c.lon}
 			coords.append(p)
 		
-		center = []
-		center.append(geojson.Point((self.map_center.lat, self.map_center.lon)))
+		#center = []
+		#center.append(geojson.Point((self.map_center.lat, self.map_center.lon)))
+		center = [self.map_center.lon, self.map_center.lat]
+			
+		#area_locn = []
+		if self.area_location == None:
+			area_locn = geojson.Point(0, 0)
+			locn_defined = False
+		else:	
+			area_locn = [self.area_location.lon, self.area_location.lat]
+			locn_defined = True
+
 		geojson_obj =	 { 
 			"type": "FeatureCollection",
 			"properties": {
@@ -360,27 +370,43 @@ class AreaOfInterest(ndb.Model):
 						},
 						"fusion_table": {
 							   "ft_link": self.ft_link,
-								"ft_docid": self.ft_docid,
-								 "boundary_fc": self.boundary_fc
+							   "ft_docid": self.ft_docid,
+							   "boundary_fc": self.boundary_fc
 						 }
 			},
 			"features": [
-				  { "type": "ViewPort",
-						"geometry": center, 
+				  { "type": "Feature",
+						"geometry": {
+							"type": "Point", 
+							"coordinates" : center,
+						 }, 
 						"properties": {
 							"name": "map_center", 
 							"map_zoom" :self.map_zoom
 						}
 				  },
+					
 				  { "type": "Feature",
 						"geometry": {
-									   "type": "Polygon", 
-									   "coordinates" : coords,
+							"type": "Polygon", 
+						   	"coordinates" : coords,
 						 },
 						 "properties": {
 							   "name": "boundary"
 						 }
-			  }
+			  	  },
+						
+				  { "type": "Feature",
+						"geometry": {
+							"type": "Point", 
+							"coordinates" : area_locn,
+						 }, 
+						"properties": {
+							"name": "area_location",
+							"descr" :'user specified locn of area',
+							"defined": locn_defined 
+						}
+				  }
 			]
 		}
 		geojson_str = geojson.dumps(geojson_obj)
