@@ -2,6 +2,23 @@
 Fix from http://stackoverflow.com/questions/16708324/google-maps-infowindow-close-button-hidden 
 TODO: Should test to see if this is still required**/
 
+html {
+    overflow-y: scroll; /* show scroll bar */
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    margin: 0;
+    padding: 63px 0px 0px 0px;
+    font-family: 'Verdana', "sans-serif !important";
+    font-size: 15px;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    overflow: hidden; 
+}
+ 
+
 img[src*="gstatic.com/"],img[src*="googleapis.com/"] {
     max-width: none;!important
 }
@@ -42,17 +59,46 @@ a[class ="popup"] {
     border: 0px;
 }
 
-/* bootstrap customisaitons - must be loaded after bootstrap.min.css to override*/
-.alert {
-  padding: 2px 35px 2px 14px;  /* tighten up the message window */
-  margin-bottom: 6px;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-  background-color: #fcf8e3;
-  border: 1px solid #fbeed5;
-  -webkit-border-radius: 4px;
-  -moz-border-radius: 4px;
-  border-radius: 4px;
+.space-behind-form {
+    height: 0px; /* clear for bg image */
+    padding-top: 65px;
 }
+
+.toast-top-center {
+  top: 35px;
+}
+
+#toaster-container {
+    position:fixed;
+    top: 35px;
+    z-index:2000;
+    padding-top: 0px;
+    padding-left: 30px;
+    padding-right: 30px;
+    overflow-y: auto;
+    background: transparent;
+}
+
+.toast-top-full-width {
+  top: 35px;
+}
+
+#toaster {
+	float: center;
+    z-index:100;
+    max-height: 100px;
+    overflow-y: auto;
+    overflow-x: visible;
+    background: transparent;
+    opacity: 0.85;
+}
+
+/* tiqhten up the bootstrap alert - must be loaded after bootstrap.min.css */
+.alert {
+  padding: 2px 35px 2px 14px;    
+  margin-bottom: 6px;
+}
+
 
 textarea {
 	height: 200px;

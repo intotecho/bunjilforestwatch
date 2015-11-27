@@ -6,10 +6,6 @@
  * @fileoverview Shows a map and allows user to create a new area.
  */
 
-var bunjil = function() {
-	
-}; //my global variable.
-
 var draw_boundary_instructions = 
 	"<li><b>How to draw a boundary</b></li>" + 
 	"<li>Drag  the map so that its center is roughly over your area. " + 
@@ -27,6 +23,7 @@ var fusion_table_instructions=
 	"<li><b>How to import a fusion table</b></li>" + 
 	"<li>The fusion table must either be public or shared with this bunjil's service account. </li>";
 
+
 /**
  * Called when user clicks Create Area.
  * Pulls data from the form and validates it. 
@@ -34,26 +31,42 @@ var fusion_table_instructions=
  * Sends new area request to server.
  * @param map
  */
-function createArea(map)
+
+function createArea(map, is_update)
 {
 	"use strict";
-	//var problems = "";
 	var area_name =  $('#area_name').val();
-	//var area_descr = "test_descr"; // $('#area_descr').val();
-	//var area_boundary_ft =  $('#boundary_ft').val();
 
 	var shared = $('input[name=opt-sharing]:checked', '#new_area_form').val();
 	var self_monitor = $('input[name=self-monitor]', '#new_area_form').val();
 	var request_volunteers = $('input[name=request-volunteers]', '#new_area_form').val();
 	var accept = $('input[name=accept]:checked', '#new_area_form').val();
-	var area_boundary_ft =  $('#boundary_ft').val();
-	var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
 
 	
 	// get and send the viewing parameters of the map
 	var unwrapped_mapcenter = map.getCenter(); // can exceed 90lat or 180 lon
 	var mapcenter = new google.maps.LatLng(unwrapped_mapcenter.lat(), unwrapped_mapcenter.lng()); //wrapped.
 	var mapzoom = map.getZoom();
+	
+	var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
+	var boundary_type = "none"; 
+	var area_boundary_ft =  $('#boundary_ft').val();
+	
+	if (typeof selection === 'undefined') {
+		boundary_type = 'none'; 
+	} 
+	else if(selection === 'is-fusion') {
+		boundary_type = 'fusion';   
+		if ((null === area_boundary_ft  )|| (area_boundary_ft === "" )) {
+			//problems += 'Please provide a fusion table id.<br/><br/>';
+		}
+	}
+	else if(selection === 'is-drawmap')  {
+		boundary_type = 'geojson';
+		if (map.drawingOverlay === null) {
+			//problems += 'Please mark out the boundary of your area or provide a fusion table id.<br/><br/>';
+		}
+	}    
 	
 	var new_area_geojson = { "type": "FeatureCollection",
 				"properties": {
@@ -62,7 +75,7 @@ function createArea(map)
 					"self_monitor" : self_monitor,
 					"request_volunteers" : request_volunteers,
 					"accept" : accept,
-					
+					"boundary_type": "none", //{How is boundary defined? none, fusion, geojson} 
 					// "area_url" : 'server sets',
 					// 'owner': 'server sets' 
 					
@@ -77,7 +90,7 @@ function createArea(map)
 					"fusion_table": {
 						   //"ft_link": server sets,
 							//"ft_docid": server sets,
-							 "boundary_ft": $('#boundary_ft').val()
+							 "boundary_ft": area_boundary_ft
 					 }
 				},
 				"features": [
@@ -91,8 +104,8 @@ function createArea(map)
 		            	 "properties": {"featureName": "boundary"}
 		             }
 		             */
-		          ],
-				 "boundary_ft": area_boundary_ft
+		          ]
+				
 	}; // End new_area_geojson
 
 	if (map.drawingTools.area_location !== null) {
@@ -101,26 +114,43 @@ function createArea(map)
 		new_area_geojson.features.push(location_feature);
 	}
 	else {
-		console.log('Error: no location set');
+		console.log('createArea() Error: no location set');
 	}
 
 	var data_to_post = JSON.stringify(new_area_geojson);
 
-	//document.getElementById("geojson_toserver").value = toServer;
-	//$("#new_area_form").submit();
-	
-	$.ajax({
-	      type: "POST",
-	      url: "/new/area",
-	      data: 'new_area_geojson_str='+ data_to_post,
-	      success: function() {
-	    	  $("#update-area-form").show(); //ask user for more info to enrich area.    	  
-	      },
-	      error: function(e) {
-	    	  alert(e); //ask user for more info to enrich area.    	  
-	      }	      
-	    });
-	    return false;
+	if(is_update) {
+		//replace the entire area with this update".
+		$.ajax({
+		      type: "PUT",
+		      url: "area",
+		      data: 'new_area_geojson_str='+ data_to_post,
+		      success: function() {
+		    	  alert('Area Updated OK');
+		      },
+		      error: function(requestObject, error, errorThrown) {
+	 	            alert(errorThrown);
+	 	            console.log(error, errorThrown);
+		      }
+		    });
+	}
+	else {
+		//create a new area
+		$.ajax({
+		      type: "POST",
+		      url: "area",
+		      data: 'new_area_geojson_str='+ data_to_post,
+		      success: function() {
+	 	          addToasterMessage('alert-success','Area created OK');
+		    	  init_boundary_form();
+		      },
+		      error: function(requestObject, error, errorThrown) {
+	 	            console.log('Error ' + requestObject.status + ' ' + requestObject.statusText + ' ' + requestObject.responseText );
+	 	            addToasterMessage('alert-danger','Error ' + requestObject.status + ' ' + requestObject.statusText + ' ' + requestObject.responseText);
+		      }
+		    });
+	}   
+	return false; //don't call more event handlers
 } /* end-of-createArea*/       
 
 
@@ -128,7 +158,7 @@ function createArea(map)
  * After submitting the location name and sharing options, ask user for more details
  * @param map
  */
-
+/*
 function updateArea(map)
 {
 	"use strict";
@@ -156,7 +186,7 @@ function updateArea(map)
 	else {
 		problems += 'Please select either fusion table or draw map.<br/><br/>';
 	}
-	/* global bootbox */
+	
 	if (problems.length > 0) {
 		bootbox.dialog({
 			message: problems,
@@ -188,9 +218,8 @@ function updateArea(map)
 			            	 "geometry":   {"type": "Polygon","coordinates": boundaryPoints},
 			            	 "properties": {"featureName": "boundary"}
 			             }
-			          ],
-					 "boundary_ft": area_boundary_ft
-		}// End new_area_geojson
+			       ]
+		}; // End new_area_geojson
 		map.data.forEach(function(feature, map_p){
 			feature.properties.featureName = "boundary";
 			new_area_geojson.features.append(feature);
@@ -206,7 +235,8 @@ function updateArea(map)
 	document.getElementById("coordinates_id").value = toServer;
 	$("#new_area_form").submit();
 
-} /* end-of-updateArea*/       
+}        
+*/
 
 function drop_marker(map, position, name) {
 	"use strict";
@@ -389,7 +419,6 @@ function initialize_map(place, center_prm) {
 			zoom: init_zoom,
 			overviewMapControl: true,
 			mapTypeId: google.maps.MapTypeId.HYBRID
-			//drawingMode: 'Point',
 	};
 	var map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
 	
@@ -445,15 +474,19 @@ function initialize_map(place, center_prm) {
 		move_map_mode(event);
 	});
 
+	$('#clear-map').click(function(event) {
+		clear_map(event);
+	});
+
 	/*function to add the polygon coordinates to the form data prior to submit.*/ 
 	$('#save-area').click(function(event){ 
 		event.preventDefault();
-		createArea(map);
+		createArea(map, false);
 	});		
 
 	$('#update-area').click(function(event){ 
 		event.preventDefault();
-		updateArea(map);
+		updateArea(map, true);
 	});		
 	
 	$('#advanced').click(function(event){ 
@@ -462,36 +495,19 @@ function initialize_map(place, center_prm) {
 
 	//Checkbox to show/hide overlays  		
 	/* global createLandsatGridOverlay */
-	$('.layer').click(function(){
-		var layerID = parseInt($(this).attr('id'));
+	$('#landsat-grid').click(function(){
 
 		if ($(this).is(':checked')){
-			if(layerID === 'landsat-grid')
-			{
+				
 				createLandsatGridOverlay(map, 0.5, false, null);
-			}
 		} 
 		else {
-			if(layerID === 0) {
-				createLandsatGridOverlay(map, 0, true, null);
-			}
+				deleteLandsatGridOverlay(map, 0, true, null);
 		}
+	
 	});
 
 	google.maps.event.addListener(map, 'bounds_changed', function() {
-		var z = map.getZoom();
-		console.log('zoom: ' + z);
-		if (z <= 0) {
-			map.setZoom(1);
-		}
-		if (z > 6) {
-			//console.log ("Show Landsat Grid");
-			createLandsatGridOverlay(map, 0.5, false, null);
-			$('#drop-pin-mode').removeClass('btn-default').addClass('btn-primary');
-		}
-		else {
-			$('#drop-pin-mode').addClass('btn-default').removeClass('btn-primary');
-		}
 	});
 
 	var scroll_target = $('#scroll-to-here');
@@ -510,17 +526,28 @@ function initialize_map(place, center_prm) {
 		if (map_center.lng() > 180) { 
 			map.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng() - 360));
 		}
+		
+		var z = map.getZoom();
+		//console.log('zoom: ' + z);
+		if (z <= 0) {
+			map.setZoom(1);
+		}
+		deleteLandsatGridOverlay(map, 0, true, null);
+		if (z > 6) {
+			
+			if( $('#landsat-grid').is(':checked') == true) {
+				createLandsatGridOverlay(map, 0.5, false, null);
+			};
+			$('#drop-pin-mode').removeClass('btn-default').addClass('btn-primary');
+		}
+		else {
+			$('#drop-pin-mode').addClass('btn-default').removeClass('btn-primary');
+		}
 	});
 	if (place !== null){
 		zoomToPlace(map, place);
 	}
-	/*
-	$(window).resize(function () {
-		var h = $(window).height();
-		var offsetTop = 60; // Calculate the top offset
-		$('#map-column').css('height', (h - offsetTop));	        
-	}).resize();   
-	*/
+	
 	
 	return map;
 }
@@ -540,10 +567,24 @@ function move_map_mode(event) {
     // Turn of Dragging Mode
     var map = initialize_map.map;
     map.drawingTools.stopDrawCenterPointMarker();
+}
+
+
+function clear_map(event) {
+	"use strict";
+	if (typeof(event) !== 'undefined') {
+		event.preventDefault();
+	}
+    // Display div for next instruction.
+    $('#drag-map-form').show();
+    $('#mark-map-form').hide();
+    $('#save-area-form').hide();
+    $('#move-map-form').hide();
+    
+    var map = initialize_map.map;
     // Remove Marker
     map.drawingTools.removeCenterPointMarker(); 
 }
-
 function save_map_mode() {
 	"use strict";
 	
@@ -556,17 +597,10 @@ function save_map_mode() {
     // Turn of Draging Mode but keep markers
     var map = initialize_map.map;
     map.drawingTools.stopDrawCenterPointMarker(map); 
+    
     var locn_string = map.drawingTools.geoJsonInput.value;
-    /*
-    try {
-        map.drawingTools.area_location = JSON.parse(locn_string);
-    }
-    catch(error) {
-    	console.log('Error: '+ error + 'parsing string: ' + locn_string);
-    	map.drawingTools.area_location = null;
-    }
-    */
 }
+
 function initialize_geojson_editor()
 {
 	"use strict";
@@ -579,7 +613,7 @@ function initialize_geojson_editor()
 		    scrollbarStyle: 'overlay',
 		    mode: "application/json",
 		    gutters: ["CodeMirror-lint-markers"],
-	        theme: 'midnight', //eclipse',
+	        theme: 'midnight', 
 	        autofocus: (window === window.top),
 	        lint: true,
 		    lintWith: CodeMirror.jsonValidator,
@@ -598,24 +632,14 @@ function initialize_geojson_editor()
 		});
 		
 		function downloadURI(uri, name) {
-			}
+		}
 		
 		initialize_map.editor.on("changes", function (editor, changes) {
-			  /*
-			  var change = changes[0];	
-			  var from = change.from;
-			  var text = change.text.join("\n");
-			  var removed = change.removed.join("\n");
-			  var to =  editor.posFromIndex(editor.indexFromPos(from) + text.length);
-			  var before = editor.getRange({ line: 0, ch: 0 }, from);
-			  var after = editor.getRange(to, { line: editor.lineCount() + 1, ch: 0 });
-			  console.log("after change", before, removed, text, after);
-			  */
-			
-			  initialize_map.map.drawingTools.refreshDataFromGeoJson();
-			  return true;
+		   /* load editor with current drawing on map */
+		  initialize_map.map.drawingTools.refreshDataFromGeoJson();
+		  return true;
 		});
-		
+		initialize_map.map.drawingTools.refreshGeoJsonFromData();
 		google.maps.event.addDomListener(window, 'resize', resizeEditor);
 		resizeEditor();
 	}
@@ -752,7 +776,7 @@ BJTEST.subns = (function() {
 		
 		initialize_map(null, center_pt);
 		drop_pin_mode(initialize_map.map, null);
-		toggle_advanced();
+		//toggle_advanced();
 		return "";
     }
     
@@ -776,6 +800,7 @@ BJTEST.subns = (function() {
  */
 function pre_checkform_next_area(event) {
 	"use strict";
+
 	var validations = [];
 	var problems = "";
 	var target;
@@ -852,15 +877,37 @@ function pre_checkform_next_area(event) {
 		$('#next-area').removeClass('btn-default').addClass('btn-primary');
 		$('#form-errors').html(' ');
 	}
+	
+	
+	
 	return validations;
 }
 	
+var test_message = 1;
+
+function sharingAccord_title_clicked(event) {
+	$('#sharingAccord').collapse('toggle');
+    addToasterMessage('alert-success','Test Alert Message ' + test_message);
+    test_message += 1;
+}
+
+function monitoringAccord_title_clicked(event) {
+	$('#monitoringAccord').collapse('toggle');
+    addToasterMessage('alert-danger','Test Danger Message');
+}
+
+function helplocateAccord_title_clicked(event) {
+	$('#helplocateAccord').collapse('toggle');
+}
+function drawlocateAccord_title_clicked(event) {
+	$('#drawlocateAccord').collapse('toggle');
+}
+
 /**
  * Checks if all inputs are provided to enable create button
  * This occurs when user clicks Next,
  * Calls pre-checks()
  */
-
 function checkform_next_area(event) {
 	"use strict";	
 	event.preventDefault();
@@ -871,7 +918,7 @@ function checkform_next_area(event) {
 	if(error_count > 0) {
 		var str = "Fix these issues: ";
 		for (var p=0; p < error_count ; p++) {
-			//str += (validations[p].value + '<br/>');
+			
 			$(validations[p].name).show();
 		}
 		var msg = 'Fix the issue' + ((error_count  === 1) ? ' ':'s ') + 'above, then click <i>Next</i>.';
@@ -879,10 +926,12 @@ function checkform_next_area(event) {
 	}
 	else {
 		$('#form-errors').html(' ');
+		$('#sharingAccord').collapse('hide');
+		$('#monitoringAccord').collapse('hide');
+		$('#helplocateAccord').collapse('show');
+		$('#drawlocateAccord').collapse('show');
 		$('#map-row').show();
-		$('#map-row').show();
-		var target = $('#map-find');
-		target.show();
+		$('#map-find').show();
 		initialize_map(null, null);
 	}
 }
@@ -901,14 +950,25 @@ $(document).ready(function() {
 	  });
 	});
 
-function init_fusionform()
+function init_boundary_form()
 {
 	"use strict";
+	  $("#update-area-form").show(); //ask user for more info to enrich area.   
+	  //$("#boundary-form").show(); //ask user for more info to enrich area.   
+	  //$('#map-row').hide();
+	  //$('#map-find').hide();
+
+	$('#sharingAccord').collapse('hide');
+	$('#monitoringAccord').collapse('hide');
+	$('#helplocateAccord').collapse('hide');
+	$('#drawlocateAccord').collapse('hide');
+
+	
 	var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
 	if((selection === 'is-fusion') || (selection === 'is-drawmap')) {
-		initialize_map(null, null);
+		//initialize_map(null, null);
 
-		$('#createarea_id').fadeIn();
+		//$('#createarea_id').fadeIn();
 
 		if (selection === 'is-fusion') {
 			$('#drawmap-form-c').fadeOut();
@@ -935,7 +995,11 @@ function initialize_new() {
 	$('#new_area_form input').on('change', pre_checkform_next_area);
 	
 	$('#next-area').click(checkform_next_area);
-
+	$('#sharingAccord_title').click(sharingAccord_title_clicked);
+	$('#monitoringAccord_title').click(monitoringAccord_title_clicked);
+	$('#helplocateAccord_title').click(helplocateAccord_title_clicked);
+	$('#drawlocateAccord_title').click(drawlocateAccord_title_clicked);
+	
 	/** -- resize the map div - This uses a tip from //github.com/twitter/bootstrap/issues/2475 --> 
 	$(window).resize(function () {
 		var h = $(window).height();

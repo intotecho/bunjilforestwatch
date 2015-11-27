@@ -362,6 +362,31 @@ function createLandsatGrid(data, landsatGridOverlay) {
 	landsatGridOverlay.initialized = true;
 }
 
+
+/**
+ * This is the callback that creates the Landsat Grid and draws it on the map.
+ * @param data
+ * @param landsatGridOverlay
+ * 
+ */
+function deleteLandsatGrid(landsatGridOverlay) {
+    
+	"use strict";
+	//current_map = map; //TODO how to get parameters.
+	if ((landsatGridOverlay !== 'undefined') && (typeof landsatGridOverlay.landsat_overlays !== 'undefined'))
+	{
+		var len = landsatGridOverlay.landsat_overlays.length;
+		for ( var i = 0 ; i < len; i++) {
+
+				var landsat_cell = landsatGridOverlay.landsat_overlays[i]; //.push(landsat_cell);
+
+				landsat_cell.setMap(null); //landsatGridOverlay.map);
+				//delete landsat_cell;
+		} 
+		landsatGridOverlay.initialized = false;
+	}
+}
+
 /**
  * @descr polygon2LatLngCoordinates() creates an array of GoogleLatLngs from a Polygon.
  * @param polygon

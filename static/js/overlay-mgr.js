@@ -14,16 +14,35 @@ var maxPendingUrls = 0;
 
 function createLandsatGridOverlay(map, opacity, clickable, cellarray) { 
 	"use strict"
-    if (map.landsatGridOverlay === undefined){
+    if ((map.landsatGridOverlay === undefined) || (map.landsatGridOverlay === null)){
         var landsatGridOverlay = new LandsatGridOverlay(map, opacity, clickable, cellarray);
         landsatGridOverlay.name = "grid" ;
         landsatGridOverlay.initialize();       
         map['landsatGridOverlay'] = landsatGridOverlay;
         overlayMaps.push(landsatGridOverlay);
         update_cell_panel(landsatGridOverlay);
+        
     }
 }
-   
+
+function deleteLandsatGridOverlay(map, opacity, clickable, cellarray) { 
+	"use strict"
+    if ((typeof map.landsatGridOverlay !== 'undefined') && (map.landsatGridOverlay !== null)){
+        var id;
+		do {
+			id = findOverlayLayer(map.landsatGridOverlay.name, overlayMaps);
+			if (id !== -1) {
+				console.log("removing landsat grid :" + overlayMaps[id].name);
+				deleteLandsatGrid(map.landsatGridOverlay);
+				overlayMaps.splice(id, 1);
+			}
+		} while (id !== -1);
+
+		delete map.landsatGridOverlay;//delete the overlay
+		map.landsatGridOverlay = null;
+    }
+}
+ 
 //find overlay in obs matching role and viz algorithm.
 function findOverlay(obs, role, algorithm) {
 	"use strict"

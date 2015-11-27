@@ -1,18 +1,16 @@
 {%  extends "base.html" %} 
         <!-- Example URL  //localhost:8001/obs/bunjilfw/5847615153373184  -->
-    
-{% block head%}
+
+{% block head %}
 <title>Bunjil Forest Watch View Map</title>
 
 <style type="text/css">
-
 html { 
          height: 100%;
          overflow-y:scroll /* show scroll bar */
 }
-body {
-    overflow: hidden; 
-}
+
+
 #map-left-latest, #map-left-prior, #map-left-c, #map-right-c {
     height: 100%,
     overflow: hidden;  / *truncate content wider than div */
@@ -42,22 +40,6 @@ body {
 #map-left-c-latest {
     z-index: 1;
 }
-
-
-/*
-#dragger, draghandle, #left-title , #right-title { /* inspired by storage.googleapis.com/jlivni/presentations/lightning/styled.html 
-    height: 100%;
-    width: 4px;
-    position: absolute;
-    color: #ffffff;
-    font-color: #ffffff;
-    background: #444;
-    left: initial_dragger;
-    cursor:e-resize;
-    z-index: 3;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.75);
-}
-*/
 
 .drag-base { /*inspired by storage.googleapis.com/jlivni/presentations/lightning/styled.html */
     color: #ffffff ;
@@ -134,6 +116,7 @@ body {
 
 <!-- base_maps.html endblock head-->
 {% endblock  head%}
+
 {% block breadcrumbs %}
 <!-- base_maps.html  breadcrumbs-->
 {% endblock breadcrumbs %} 

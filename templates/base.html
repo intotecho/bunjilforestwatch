@@ -2,17 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<!-- <meta name="viewport" content="width=device-width, initial-scale=1">  -->
-<meta name="viewport" content="initial-scale=1.0, user-scalable=no" /> 
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 <meta name="description" content="Community based forest monitoring">
 <meta name="author" content="Chris Goodman">
-<link rel=	"alternate" type="application/atom+xml" title="bunjil forest watch" href="{{ "feeds"|url("blog") }}">
- 
+<link rel="alternate" type="application/atom+xml" title="bunjil forest watch" href="{{ "feeds"|url("blog") }}">
+
 
 {% block head_scripts %}
 <!-- base.html head_scripts -->
-{% include "includes/head_scripts.html" %}
-{% endblock head_scripts %}
+    {% include "includes/head_scripts.html" %} 
+{% endblock head_scripts %} 
 
 {% block head %}
 <!-- base.html block head -->
@@ -20,15 +19,16 @@
 
 {% block map_head %} {% endblock %}
 <!-- base.html end <head> -->
+
 </head>
 <!-- base.html start here <body> -->
 
 <body>
-<!-- base.html start <body> -->
+	<!-- base.html start <body> -->
 
 	{% if show_navbar %}
-	<div class="container" >
-		<nav role="navigation" class="navbar navbar-default navbar-margin">
+	<nav role="navigation" class="navbar navbar-default navbar-fixed-top navbar-margin">
+		<div class="container">
 			<!-- Brand and toggle get grouped for better mobile display -->
 			<div class="navbar-header">
 				<button type="button" data-target="#navbarCollapse" data-toggle="collapse" class="navbar-toggle">
@@ -39,156 +39,163 @@
 			<!-- Collection of nav links and other content for toggling -->
 			<div id="navbarCollapse" class="collapse navbar-collapse">
 				<ul class="nav navbar-nav">
-					<li {% if active== "about" %} class="active"{% endif %}>
-					   <a href="https://blog.bunjilforestwatch.net"">about</a>
-					</li> 
-					{% if user %} 
+					<li {% if active== "about" %} class="active"{% endif %}><a href='http://bunjilforestwatch.net'>about</a></li> {% if user %}
 					<!--  AREAS-->
-					<li class="dropdown{% if active  == " view-area" or active== "entry" or active=="new-area" %} active{% endif %}">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">areas <b class="caret"></b></a>
-                        <ul class="dropdown-menu">
-                            {% for ar in session.areas_list %}
-                                <li {% if active== "view-area" and ar.1== area.name %} class="active"{% endif %}>
-						          <a href="{{ ar.0 }}"> <span class="glyphicon glyphicon-map-marker"></span> {{ ar.1 }}</a>
-                                </li> 
-                            {% endfor %}
-                                <li class="divider"></li> 
-                            {% for arf in session.following_areas_list %}
-                                <li {% if active== "view-area" and arf.1== area.name %} class="active"{% endif %}>
-							         <a href="{{ arf.0 }}"><span class="glyphicon glyphicon-eye-open"></span> {{ arf.1 }}</a>
-							    </li> 
-                            {% endfor %}
+					<li class="dropdown{% if active  == 'view-area' or active== 'entry' or active=='new-area' %} active{% endif %}"><a
+						href="#" class="dropdown-toggle" data-toggle="dropdown">areas <b class="caret"></b></a>
+						<ul class="dropdown-menu">
+							{% for ar in session.areas_list %}
+							<li {% if active== "view-area" and ar.1== area.name %} class="active"{% endif %}><a href="{{ ar.0 }}"> <span
+									class="glyphicon glyphicon-map-marker"></span> {{ ar.1 }}
+							</a></li> {% endfor %}
+							<li class="divider"></li> {% for arf in session.following_areas_list %}
+							<li {% if active== "view-area" and arf.1== area.name %} class="active"{% endif %}><a href="{{ arf.0 }}"><span
+									class="glyphicon glyphicon-eye-open"></span> {{ arf.1 }}</a></li> {% endfor %}
 							<li class="divider"></li>
 							<li><a href="{{ "user"|url(user.name)}}/myareas">my areas</a></li>
-							<li {% if active== "new-area" %} class="active"{% endif %}>
-							     <a href="{{ "new-area"|url }}"><span class="glyphicon glyphicon-plus"></span> new area</a>
-							</li>
-						</ul>
-					</li>
+							<li {% if active== "new-area" %} class="active"{% endif %}><a href="{{ "new-area"|url }}"><span
+									class="glyphicon glyphicon-plus"></span> new area</a></li>
+						</ul></li>
 					<!--  TASKS -->
-                    <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">tasks<b class="caret"></b></a>
-                        <ul class="dropdown-menu">
-                            <li>
-                                 <a href="{{ 'view-obstasks'| url }}?user2view={{user.name }}"><span class="glyphicon glyphicon-tasks"></span>My tasks</a>
-                            </li>
-                            <li>
-                                 <a href="{{ 'view-obstasks'|url }}"><span class="glyphicon glyphicon-tasks"></span>All tasks</a>
-                            </li>
-                        </ul>
-                    </li>
-                        <!--  REPORTS/JOURNALS -->
-                     <li class="dropdown{% if active  == " view-journal" or active== "entry" or active=="new-journal" %} active{% endif %}">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">journals<b class="caret"></b></a>
-                        <ul class="dropdown-menu">
-                            <li><a href="{{ "user"|url(user.name) }}/journals"><span class="glyphicon glyphicon-home"></span> my journals</a></li>
-                            <li {% if active== "new-journal" %} class="active"{% endif %}>
-                                 <a href="{{ "new-journal"|url }}"><span class="glyphicon glyphicon-plus"></span>  new journal</a>
-                            </li>
-                            <li class="divider"></li>
+					<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">tasks<b class="caret"></b></a>
+						<ul class="dropdown-menu">
+							<li><a href="{{ 'view-obstasks'| url }}?user2view={{user.name }}"><span class="glyphicon glyphicon-tasks"></span>My
+									tasks</a></li>
+							<li><a href="{{ 'view-obstasks'|url }}"><span class="glyphicon glyphicon-tasks"></span>All tasks</a></li>
+						</ul></li>
+					<!--  REPORTS/JOURNALS -->
+					<li class="dropdown{% if active  == " view-journal" or active== "entry" or active=="new-journal" %} active{% endif %}">
+						<a href="#" class="dropdown-toggle" data-toggle="dropdown">journals<b class="caret"></b></a>
+						<ul class="dropdown-menu">
+							<li><a href="{{ "user"|url(user.name) }}/journals"><span class="glyphicon glyphicon-home"></span> my journals</a></li>
+							<li {% if active== "new-journal" %} class="active"{% endif %}><a href="{{ "new-journal"|url }}"><span
+									class="glyphicon glyphicon-plus"></span> new journal</a></li>
+							<li class="divider"></li> {% for j in session.journals %}
+							<li {% if active== "view-journal" and j.1== journal.name %} class="active"{% endif %}><a href="{{ j.0 }}"> {% if
+									j.2 == "observations" %} <span class="glyphicon glyphicon-list-alt"></span> {% else %} <span
+									class="glyphicon glyphicon-book"></span> {% endif %} {{ j.1 }}
+							</a></li> {% endfor %}
+						</ul>
+					</li> {% endif %}
+					<!-- if user  -->
+				</ul>
+				<ul class="nav navbar-nav navbar-right">
+					{% if user %} {% if user.admin %}
+					<li class="dropdown{% if active  == "admin" %} active{% endif %}"><a href="#" class="dropdown-toggle"
+						data-toggle="dropdown">admin<b class="caret"></b></a>
+						<ul class="dropdown-menu">
+							<li><a href="{{ "flush-memcache"|url }}">flush memcache</a></li>
+							<li><a href="{{ "update-users"|url }}">update users</a></li>
+							<li><a href="{{ "view-obstasks"|url(None) }}">list recent observations</a></li>
+							<li><a href="{{ "check-new-all-images"|url }}">check for new images</a></li>
+                            <li><a href="#">Test Info Message </a></li>
+						</ul></li> {% endif %}
 
-                            {% for j in session.journals %}
-                            <li {% if active== "view-journal" and j.1== journal.name %} class="active"{% endif %}>
-                                 <a href="{{ j.0 }}">
-                                 {% if j.2 == "observations" %}
-                                 <span class="glyphicon glyphicon-list-alt"></span> 
-                                 {% else %}
-                                 <span class="glyphicon glyphicon-book"></span> 
-                                 {% endif %}
-                                 {{ j.1 }}
-                                 </a>
-                            </li> 
-                            {% endfor %}
-                        </ul>
-                    </li>
-			{% endif %} <!-- if user  -->
-    		</ul>
-  			<ul class="nav navbar-nav navbar-right">
-  			       {% if user %} 
-  			        {% if user.admin %}
-                    <li class="dropdown{% if active  == "admin" %} active{% endif %}"><a href="#" class="dropdown-toggle"
-                        data-toggle="dropdown">admin<b class="caret"></b></a>
-                        <ul class="dropdown-menu">
-                            <li><a href="{{ "flush-memcache"|url }}">flush memcache</a></li>
-                            <li><a href="{{ "update-users"|url }}">update users</a></li>
-                            <li><a href="{{ "view-obstasks"|url(None) }}">list recent observations</a></li>
-                            <li><a href="{{ "check-new-all-images"|url }}">check for new images</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-    
-					<li class="dropdown{% if active == "account" %} active{% endif %}">
-                       <a href="#" class="dropdown-toggle"
-                        data-toggle="dropdown">{{ user.name }} <img class="topbar-img-gravatar" src="{{ user.avatar }}&amp;s=30"
-                            alt="{{ user.name }}" width="26" height="26"> <b style="margin-left: 30px" class="caret"></b></a>
-                        <ul class="dropdown-menu">
-                            <li {% if active== "account" %} class="active"{% endif %}>
-                                 <a href="{{ "account"|url }}"><span class="glyphicon glyphicon-user" ></span> my account</a>
-                            </li>
-                            <li {% if active== "account" %} class="active"{% endif %}>
-                                 <a href="{{ "activity"|url }}"><span class="dropdown-toggle" ></span>activity</a>
-                            </li>
-                            <li><a href="{{ "logout"|url }}">logout</a></li>
-                            {% if login_source == "google" %}
-                            <li><a href="{{ "logout-google"|url }}">switch account</a></li>
-                            {% endif %}
-                    {% else %}
-                            <li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">login<b class="caret"></b></a>
-                            <ul class="dropdown-menu">
-                            <li><a href="{{ "login-google"|url }}">with google</a></li>
-                    {% endif %} <!-- { % if user% } -->
-                        </ul>
-                    </li> 
-					
+					<li class="dropdown{% if active == "account" %} active{% endif %}"><a href="#" class="dropdown-toggle"
+						data-toggle="dropdown">{{ user.name }} <img class="topbar-img-gravatar" src="{{ user.avatar }}&amp;s=30"
+							alt="{{ user.name }}" width="26" height="26"> <b style="margin-left: 30px" class="caret"></b></a>
+						<ul class="dropdown-menu">
+							<li {% if active== "account" %} class="active"{% endif %}><a href="{{ "account"|url }}"><span
+									class="glyphicon glyphicon-user"></span> my account</a></li>
+							<li {% if active== "account" %} class="active"{% endif %}><a href="{{ "activity"|url }}"><span
+									class="dropdown-toggle"></span>activity</a></li>
+							<li><a href="{{ "logout"|url }}">logout</a></li> {% if login_source == "google" %}
+							<li><a href="{{ "logout-google"|url }}">switch account</a></li> {% endif %} {% else %}
+							<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">login<b class="caret"></b></a>
+								<ul class="dropdown-menu">
+									<li><a href="{{ "login-google"|url }}">with google</a></li> {% endif %}
+									<!-- { % if user% } -->
+								</ul></li>
+
+						</ul></li>
 				</ul>
 			</div>
+        </div >
 		</nav>
+	{% endif %}
+	<div id='server-alerts' style='display:none'>  <!-- displayed by $(document).ready -->
+	       {% if messages %} 
+            {% for m in messages %}
+                 <div class="alert-{{ m.1 }} " >
+                        {{ m.0 }}
+                 </div>
+            {% endfor %} 
+        {% endif %}
 	</div>
-	{% endif %} 
-	{% if messages %}
-	<div class="container">
-		{% for m in messages %}
-		<div class="row ">
-			<div class="col-md-12 ">
-				<div class="alert alert-{{ m.1 }} fade in" data-dismiss="alert" data-alert="alert"><a class="close" href="#">&times;</a> {{ m.0 }}
+	
+	<div id='toaster-container'>
+		<div id='toaster' class='container'>
+		{% if messages %} 
+			{% for m in messages %}
+			<div class="row ">
+				<div class="col-md-12 ">
+					<div class="alert alert-{{ m.1 }} fade in" data-dismiss="alert" data-alert="alert">
+						<a class="close" href="#">&times;</a> {{ m.0 }}
+					</div>
 				</div>
 			</div>
+			{% endfor %} 
+		{% endif %}
 		</div>
-		{% endfor %}
 	</div>
-    {% endif %} 
+	{% block content %}{% endblock %} 
+	{%block layer_template %}{% endblock layer_template %} 
+	{%block jobs_template %}{% endblock jobs_template %} 
+	
+	{% block footer_js%} 
+	{% include "includes/project_scripts.html" %} 
+	{% endblock footer_js %}
 
-{% block content %}{% endblock %} 
+	<!-- TEMPLATE TO ADD TO toaster  -->
+	<div id=toast-message-template class="row" style='display: none'>
+		<div class="col-md-12 ">
+			<div class="alert" data-dismiss="alert" data-alert="alert">
+				<a class="close" href="#">&times;</a>
+				<div class=alert-message></div>
+			</div>
+		</div>
+    </div>
+    
+		{% if google_analytics %}
+		<script type="text/javascript">
+			(function(i, s, o, g, r, a, m) {
+				i['GoogleAnalyticsObject'] = r;
+				i[r] = i[r] || function() {
+					(i[r].q = i[r].q || []).push(arguments)
+				}, i[r].l = 1 * new Date();
+				a = s.createElement(o), m = s.getElementsByTagName(o)[0];
+				a.async = 1;
+				a.src = g;
+				m.parentNode.insertBefore(a, m)
+			})(window, document, 'script',
+					'//www.google-analytics.com/analytics.js', 'ga');
 
-{%block layer_template %}{% endblock layer_template  %}
+			ga('create', '{{google_analytics }}', 'auto');
+			ga('send', 'pageview');
+		</script>
 
-{%block jobs_template %}{% endblock jobs_template  %}
-
-{% block footer_js%}
- {% include "includes/project_scripts.html" %} 
-{% endblock footer_js %}
-
- {% if google_analytics %}   
-         <script>
-         (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-        	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-        	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-        	  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-        	  ga('create', '{{google_analytics }}', 'auto');
-        	  ga('send', 'pageview');
-         </script>
-           
-           <!-- Google Tag Manager -->
-           <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-PHBW8V"
-           height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-           <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-           j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-           '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-           })(window,document,'script','dataLayer','GTM-PHBW8V');</script>
-           <!-- End Google Tag Manager -->
- {% endif %}
+		<!-- Google Tag Manager -->
+		<noscript>
+			<iframe src="//www.googletagmanager.com/ns.html?id=GTM-PHBW8V" height="0" width="0" style="display: none; visibility: hidden"></iframe>
+		</noscript>
+		<script type="text/javascript">
+			(function(w, d, s, l, i) {
+				w[l] = w[l] || [];
+				w[l].push({
+					'gtm.start' : new Date().getTime(),
+					event : 'gtm.js'
+				});
+				var f = d.getElementsByTagName(s)[0], j = d.createElement(s), dl = l != 'dataLayer' ? '&l='
+						+ l
+						: '';
+				j.async = true;
+				j.src = '//www.googletagmanager.com/gtm.js?id=' + i + dl;
+				f.parentNode.insertBefore(j, f);
+			})(window, document, 'script', 'dataLayer', 'GTM-PHBW8V');
+		</script>
+		<!-- End Google Tag Manager -->
+		{% endif %}
+	</div>
 </body>
 </html>
 
