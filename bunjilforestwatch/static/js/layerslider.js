@@ -9,13 +9,7 @@ function setLayerOpacity(e) {
     var val = slider.val();
     var layername = slider.context.id.substr(7); //strip "slider_"
     var checkbox_id = "#checkbox_" + layername;
-    //var slider_id   = "#slider_" + layername;
-    //var layer_id    = "#" + layername;
-    //var label_id    = "#label_" + layername;
-    //var sliderdiv = $(slider_id);
-    //var cb = sliderdiv.attr("layer_callback");
-    //console.log(layername + ":, " + slider_id + ", " + val );
-
+    
     callbacks.fire(layername, val);
     
     // toggle the check box.

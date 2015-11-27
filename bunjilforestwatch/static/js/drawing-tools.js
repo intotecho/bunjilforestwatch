@@ -56,9 +56,14 @@ function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, ge
 		editable : true,
 		draggable : true
 	});
+	map_p.data.setOptions({
+		drawingMode: null
+	});
+	
 	this.map = map_p;
 	
 	this.map.mode = "none";
+
 	this.bindDataLayerListeners();
 
 	var geoJsonInputRect = this.geoJsonInput.getBoundingClientRect();
@@ -185,7 +190,7 @@ DrawingTools.prototype.refreshGeoJsonFromData = function (e) {
 	});
 	
 	if (map.mode === 'drawCenterPointMarker') {
-		map.drawingTools.stopDrawCenterPointMarker();
+		//map.drawingTools.stopDrawCenterPointMarker();
 	};
 }
 
@@ -205,6 +210,7 @@ DrawingTools.prototype.fitMapToGeoJsonFromData = function (e) {
 }
 
 //Replace the data layer with a new one based on the inputted geoJson.
+
 DrawingTools.prototype.refreshDataFromGeoJson = function () {
 	"use strict";
 	
@@ -214,7 +220,7 @@ DrawingTools.prototype.refreshDataFromGeoJson = function () {
 		map : map,
 		style : map.data.getStyle(),
 		controls : [ 'Point', 'Polygon' ],
-		drawingMode: 'Point'
+		drawingMode: null
 	});
 	var editor = initialize_map.editor;
 	if (typeof editor !== 'undefined') {
@@ -396,9 +402,22 @@ function fitMapBoundsTofeature(feature) {
 	}
 }
 
+/**
+ * return data layer as JSON string. 
+ */
+
+DrawingTools.prototype.getDataValue = function () {
+	"use strict";
+
+	var editor = initialize_map.editor;
+	if (typeof editor !== 'undefined') {
+		var value = editor.getValue();
+		this.downloadLink.download = 'area_' + $('#area_name').val() + ".json";		
+		this.downloadLink.href = "data:;base64," + btoa(value);
+	}	
+}
 
 
-//Styling related functions.
 /*
 DrawingTools.prototype.resizeGeoJsonInput = function () {
 	"use strict";
@@ -414,7 +433,7 @@ DrawingTools.prototype.resizeGeoJsonInput = function () {
 */
 
 
-function geojson_validate(editor, changeObj) { /* not used */
+function geojson_notused_validate(editor, changeObj) { /* not used */
 	'use strict';
     var err = geojsonhint.hint(editor.getValue());
     editor.clearGutter('error');
@@ -456,6 +475,7 @@ function geojson_validate(editor, changeObj) { /* not used */
         }
     }
 
+    /* probably never called */
     function handleErrors(errors) {
         editor.clearGutter('error');
         errors.forEach(function(e) {
