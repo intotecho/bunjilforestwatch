@@ -55,11 +55,16 @@ $(document).ready(function() {
 	  });
 	});
 
+	$('#admin-test-1').click(admin_test_1);
+	$('#admin-test-2').click(admin_test_2);
+	$('#admin-test-3').click(admin_test_3);
+	$('#admin-test-4').click(admin_test_4);
+	
 	var divs = document.getElementById("server-alerts").children;
-	console.log('doc ready ' + divs);
+	//console.log('doc ready ' + divs);
 	for(var i = 0; i < divs.length; i++){
 		console.log(divs[i].innerHTML);
-		addToasterMessage(divs[i].className, divs[i].innerHTML)
+		addToasterMessage(divs[i].className, divs[i].innerHTML);
 }
 
 /**
@@ -69,7 +74,6 @@ $(document).ready(function() {
  * @param message - to display
  * @example addToasterMessage('alert-success', 'ok message');
  */
-
 function addToasterMessage(alert_p, message)
 {
 	"use strict";
@@ -80,48 +84,63 @@ function addToasterMessage(alert_p, message)
 			  "newestOnTop": true,
 			  "progressBar": false,
 			  "positionClass": "toast-top-full-width",
-			  "preventDuplicates": true,
+			  "preventDuplicates": false,
 			  "onclick": null,
 			  "showDuration": "300",
 			  "hideDuration": "1000",
 			  "timeOut": "5000",
-			  "extendedTimeOut": "60000",
+			  "extendedTimeOut": "6000",
 			  "showEasing": "swing",
 			  "hideEasing": "linear",
 			  "showMethod": "fadeIn",
 			  "hideMethod": "fadeOut"
 			}
-	toastr.info(message);
-	
-	var new_toast = $('#toast-message-template').clone();
-	new_toast.prop('id', 'alert-id-' + Math.random());
-	var alert_div = new_toast.find(".alert");
-	var message_div = new_toast.find(".alert-message");
-	//alert_div.html('<a class='close' href="#">' + message + ' &times;</a>');
-	message_div.html(message);
-	
-	alert_div.addClass(alert_p);
-	
-	if (alert_p !== 'alert-danger') {
-		alert_div.addClass('alert-dismissible');
-		window.setTimeout(function() {
-			alert_div.fadeTo(1500, 0).slideUp(1500, function(){
-		        alert_div.remove(); 
-		    });
-		}, 15000);
+	switch(alert_p) {
+	case 'alert-success':
+		toastr.success(message);
+		break;
 
+	case 'alert-info':
+		toastr.info(message);
+		break;
+
+	case 'alert-warning':
+		toastr.warning(message);
+		break;
+
+	case 'alert-danger':
+		toastr.options.closeButton = true;
+		toastr.options.timeOut = "15000";
+		toastr.options.extendedTimeOut =  "10000";
+
+		toastr.error(message);
+		break;
 	}
 	
-	//var position = $('#toaster-container').position();
-	//console.log(position);
-	//$("#toaster").css({left: position.left});
-
-	new_toast.appendTo('#toaster').show();
-			
-	$('#toaster').stop().animate({
-		  scrollTop: $("#toaster")[0].scrollHeight
-		}, 800);
 }
+
+function admin_test_1()
+{
+	console.log('admin test 1');
+	toastr.success('Success message');
+}
+
+function admin_test_2()
+{
+	console.log('admin test 2');
+	toastr.info('Info message');
+}
+function admin_test_3()
+{
+	console.log('admin test 3');
+	toastr.warning ('Warning message - a long message lorem ipsum facto bro axis');
+}
+function admin_test_4()
+{
+	console.log('admin test 4');
+	toastr.error('Error message');
+}
+
 
 //fadeout and slide up bootstrap .alert messages after 10 seconds.
 window.setTimeout(function() {

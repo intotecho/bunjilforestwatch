@@ -5,8 +5,7 @@
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 <meta name="description" content="Community based forest monitoring">
 <meta name="author" content="Chris Goodman">
-<link rel="alternate" type="application/atom+xml" title="bunjil forest watch" href="{{ "feeds"|url("blog") }}">
-
+<link rel="alternate" type="application/atom+xml" title="bunjil forest watch" href="{{"feeds"|url("blog")}}">
 
 {% block head_scripts %}
 <!-- base.html head_scripts -->
@@ -14,7 +13,7 @@
 {% endblock head_scripts %} 
 
 {% block head %}
-<!-- base.html block head -->
+<title>Bunjil Forest Watch </title>
 {% endblock %}
 
 {% block map_head %} {% endblock %}
@@ -48,10 +47,10 @@
 							<li {% if active== "view-area" and ar.1== area.name %} class="active"{% endif %}><a href="{{ ar.0 }}"> <span
 									class="glyphicon glyphicon-map-marker"></span> {{ ar.1 }}
 							</a></li> {% endfor %}
-							<li class="divider"></li> {% for arf in session.following_areas_list %}
+							{% for arf in session.following_areas_list %}
 							<li {% if active== "view-area" and arf.1== area.name %} class="active"{% endif %}><a href="{{ arf.0 }}"><span
 									class="glyphicon glyphicon-eye-open"></span> {{ arf.1 }}</a></li> {% endfor %}
-							<li class="divider"></li>
+							
 							<li><a href="{{ "user"|url(user.name)}}/myareas">my areas</a></li>
 							<li {% if active== "new-area" %} class="active"{% endif %}><a href="{{ "new-area"|url }}"><span
 									class="glyphicon glyphicon-plus"></span> new area</a></li>
@@ -70,13 +69,20 @@
 							<li><a href="{{ "user"|url(user.name) }}/journals"><span class="glyphicon glyphicon-home"></span> my journals</a></li>
 							<li {% if active== "new-journal" %} class="active"{% endif %}><a href="{{ "new-journal"|url }}"><span
 									class="glyphicon glyphicon-plus"></span> new journal</a></li>
-							<li class="divider"></li> {% for j in session.journals %}
-							<li {% if active== "view-journal" and j.1== journal.name %} class="active"{% endif %}><a href="{{ j.0 }}"> {% if
-									j.2 == "observations" %} <span class="glyphicon glyphicon-list-alt"></span> {% else %} <span
-									class="glyphicon glyphicon-book"></span> {% endif %} {{ j.1 }}
-							</a></li> {% endfor %}
+							{% for j in session.journals %}
+							<li {% if active== "view-journal" and j.1== journal.name %} class="active"{% endif %}>
+							     <a href="{{ j.0 }}"> 
+							         {% if j.2 == "observations" %} 
+								            <span class="glyphicon glyphicon-list-alt"></span> 
+								     {% else %} 
+								            <span class="glyphicon glyphicon-book"></span> 
+								     {% endif %} 
+							     {{ j.1 }}</a>
+							 </li>
+							{% endfor %}
 						</ul>
-					</li> {% endif %}
+					   </li>
+					 {% endif %}
 					<!-- if user  -->
 				</ul>
 				<ul class="nav navbar-nav navbar-right">
@@ -88,7 +94,11 @@
 							<li><a href="{{ "update-users"|url }}">update users</a></li>
 							<li><a href="{{ "view-obstasks"|url(None) }}">list recent observations</a></li>
 							<li><a href="{{ "check-new-all-images"|url }}">check for new images</a></li>
-                            <li><a href="#">Test Info Message </a></li>
+                            <li id="admin-test-1" ><a href="#">Test 1- Success</a></li>
+                            <li id="admin-test-2" ><a href="#">Test 1- Info</a></li>
+                            <li id="admin-test-3" ><a href="#">Test 1- Warn</a></li>
+                            <li id="admin-test-4" ><a href="#">Test 1- Error</a></li>
+                            
 						</ul></li> {% endif %}
 
 					<li class="dropdown{% if active == "account" %} active{% endif %}"><a href="#" class="dropdown-toggle"
@@ -99,45 +109,34 @@
 									class="glyphicon glyphicon-user"></span> my account</a></li>
 							<li {% if active== "account" %} class="active"{% endif %}><a href="{{ "activity"|url }}"><span
 									class="dropdown-toggle"></span>activity</a></li>
-							<li><a href="{{ "logout"|url }}">logout</a></li> {% if login_source == "google" %}
-							<li><a href="{{ "logout-google"|url }}">switch account</a></li> {% endif %} {% else %}
-							<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">login<b class="caret"></b></a>
+							<li><a href="{{ "logout"|url }}">logout</a></li> 
+							{% if login_source == "google" %}
+							<li><a href="{{ "logout-google"|url }}">switch account</a></li> {% endif %} 
+							{% else %}
+							<li class="dropdown">
+							    <a href="#" class="dropdown-toggle" data-toggle="dropdown">login<b class="caret"></b></a>
 								<ul class="dropdown-menu">
-									<li><a href="{{ "login-google"|url }}">with google</a></li> {% endif %}
-									<!-- { % if user% } -->
-								</ul></li>
-
-						</ul></li>
+									<li><a href="{{ "login-google"|url }}">with google</a></li> 
+                                </ul>
+                             </li>
+							{% endif %} <!-- { % if user% } -->
+						</ul>
 				</ul>
 			</div>
         </div >
 		</nav>
 	{% endif %}
-	<div id='server-alerts' style='display:none'>  <!-- displayed by $(document).ready -->
+	<div id='server-alerts' style='display:none'>  <!-- toastr displayed by $(document).ready -->
 	       {% if messages %} 
             {% for m in messages %}
-                 <div class="alert-{{ m.1 }} " >
+                 <div class="alert-{{ m.1 }}" >
                         {{ m.0 }}
                  </div>
             {% endfor %} 
         {% endif %}
 	</div>
 	
-	<div id='toaster-container'>
-		<div id='toaster' class='container'>
-		{% if messages %} 
-			{% for m in messages %}
-			<div class="row ">
-				<div class="col-md-12 ">
-					<div class="alert alert-{{ m.1 }} fade in" data-dismiss="alert" data-alert="alert">
-						<a class="close" href="#">&times;</a> {{ m.0 }}
-					</div>
-				</div>
-			</div>
-			{% endfor %} 
-		{% endif %}
-		</div>
-	</div>
+	
 	{% block content %}{% endblock %} 
 	{%block layer_template %}{% endblock layer_template %} 
 	{%block jobs_template %}{% endblock jobs_template %} 
@@ -176,7 +175,7 @@
 
 		<!-- Google Tag Manager -->
 		<noscript>
-			<iframe src="//www.googletagmanager.com/ns.html?id=GTM-PHBW8V" height="0" width="0" style="display: none; visibility: hidden"></iframe>
+			<iframe src="www.googletagmanager.com/ns.html?id=GTM-PHBW8V" height="0" width="0" style="display: none; visibility: hidden"></iframe>
 		</noscript>
 		<script type="text/javascript">
 			(function(w, d, s, l, i) {
@@ -195,7 +194,6 @@
 		</script>
 		<!-- End Google Tag Manager -->
 		{% endif %}
-	</div>
 </body>
 </html>
 

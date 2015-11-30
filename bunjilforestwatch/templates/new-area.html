@@ -1,9 +1,15 @@
-{% extends "base.html" %} 
+{% extends "base.html" %}
 
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+
+{% block head %}
 <title>Bunjil Forest Watch - New Area</title>
 
-{% block map_head %}
+<link rel="stylesheet" href="/static/css/drawing-tools.css">
+<link rel="stylesheet" href="/static/css/codemirror.css">
+<link rel="stylesheet" href="/static/css/simplescrollbars.css">
+<link rel="stylesheet" href="/static/css/lint.css">
+<link rel="stylesheet" href="/static/css/new-area.css">
 
 <script type="text/javascript">
 	var single_map = true;
@@ -11,347 +17,10 @@
 	var initial_dragger = "100%";
 </script>
 
-{% endblock map_head %} 
 
-{% block content %}
+{% endblock %} {% block map_head %} {% endblock map_head %} {% block content %}
 
-<link rel="stylesheet" href="/static/css/drawing-tools.css">
-<link rel="stylesheet" href="/static/css/codemirror.css">
-<link rel="stylesheet" href="/static/css/simplescrollbars.css">
-<link rel="stylesheet" href="/static/css/lint.css">
 
-<style type="text/css">
-html {
-	overflow-y: scroll; /* show scroll bar */
-	width: 100%;
-	margin: 0;
-	padding: 0;
-}
-
-body {
-    background: url("/static/images/bfw_border.jpg") no-repeat center center
-        fixed;
-    -webkit-background-size: cover;
-    -moz-background-size: cover;
-    -o-background-size: cover;
-    background-size: cover;
-}
-
-.btn-form-ctrl {
-	margin-left: 15px;
-}
-
-.space-above-form {
-	height: 25px; /* clear for bg image */
-	padding-top: 65px;
-}
-
-.container {
-	/* background-color: rgba(248, 246, 229, 0.83); /* #fafaeb; */
-	background: -webkit-linear-gradient(top, rgba(248, 246, 229, 0.90),
-		rgba(248, 246, 229, 1)); /* For Safari 5.1 to 6.0 */
-	background: -o-linear-gradient(top, rgba(248, 246, 229, 0.90),
-		rgba(248, 246, 229, 1)); /* For Opera 11.1 to 12.0 */
-	background: -moz-linear-gradient(top, rgba(248, 246, 229, 0.90),
-		rgba(248, 246, 229, 1)); /* For Firefox 3.6 to 15 */
-	background: linear-gradient(top, rgba(248, 246, 229, 0.90),
-		rgba(248, 246, 229, 1)); /* Standard syntax (must be last) */
-	color: hsla(227, 10%, 55%, 1);
-	padding-left: 30px;
-	padding-right: 30px;
-/*	overflow-y: auto; */
-}
-
-.checkbox label,#accept,.radio label {
-	color: hsl(227, 68%, 58%);
-	font-weight: bold;
-}
-
-.control-label {
-	color: hsla(227, 50%, 60%, 1);
-}
-
-#subform-find-help {
-	background: rgba(250, 233, 125, 0.22);
-	width: 100%;
-	padding-left: 20px;
-}
-
-.subform-control-label {
-	color: hsla(227, 10%, 55%, 1);
-	text-align: center;
-}
-
-.help-block {
-	color: hsla(227, 10%, 55%, 1);
-	font-size: 13px;
-}
-
-#form-errors {
-	color: #FF0000;
-	font-size: 15px;
-}
-
-.validation {
-	color: #FF0000;
-	font-size: 13px;
-	display: none; /*js calls show */
-}
-
-hr {
-	border-top: 1px solid rgba(54, 105, 194, 0.1);
-}
-
-legend {
-	color: #234196; /*    color: #333; */
-	text-align: center;
-	border-bottom: 0;
-	font-size: 24px;
-}
-
-.framing-help {
-	color: #234196; /*    color: #333; */
-	text-align: center;
-}
-
-.framing-sub-help {
-	color: hsla(227, 10%, 55%, 1);
-	text-align: center;
-	font-size: 13px;
-}
-
-#searchbox_id {
-	width: 80%;
-}
-
-.asterix {
-	color: #FA7063;
-	data-toggle: tooltip;
-}
-
-#mark-map-form,#save-area-form,#move-map-form {
-	display: none;
-}
-
-.CodeMirror-gutters {
-	background: #fff;
-}
-
-/* 
- * Midnight Theme 
- * Based on the theme at http://bonsaiden.github.com/JavaScript-Garden
- */
-
-/*<!--breakpoint-->*/
-.breakpoints {
-	width: .8em;
-}
-
-.breakpoint {
-	color: #822;
-}
-
-/*<!--match-->*/
-span.CodeMirror-matchhighlight {
-	background: #494949
-}
-
-.CodeMirror-focused span.CodeMirror-matchhighlight {
-	background: #314D67;
-	!
-	important
-}
-
-/*<!--activeline-->*/
-.activeline {
-	background: #253540 !important;
-}
-
-.cm-s-midnight.CodeMirror {
-	/*background: #0F192A; color: #D1EDFF; */
-	/*background: #101D62; color: #F1F2ED;*/
-	background: #08113F;
-	color: #F1F2ED;
-}
-
-.CodeMirror {
-	border-top: 1px solid black;
-	border-bottom: 1px solid black;
-}
-
-.cm-s-midnight div.CodeMirror-selected {
-	background: #314D67 !important;
-}
-
-.cm-s-midnight .CodeMirror-gutters {
-	background: #101D62;
-	border-right: 1px solid;
-}
-
-.cm-s-midnight .CodeMirror-linenumber {
-	color: #F1F2E4;
-}
-
-.cm-s-midnight .CodeMirror-cursor {
-	border-left: 1px solid #F8F8F0 !important;
-}
-
-.cm-s-midnight span.cm-comment {
-	color: #428BDD;
-}
-
-.cm-s-midnight span.cm-atom {
-	color: #AE81FF;
-}
-
-.cm-s-midnight span.cm-number {
-	color: #D1EDFF;
-}
-
-.cm-s-midnight span.cm-property,.cm-s-tropicaleve span.cm-attribute {
-	color: #A6E22E;
-}
-
-.cm-s-midnight span.cm-keyword {
-	color: #E83737;
-}
-
-.cm-s-midnight span.cm-string {
-	color: #97FF9F
-} /* color: #97FF9F */
-.cm-s-midnight span.cm-variable {
-	color: #FFAA3E;
-}
-
-.cm-s-midnight span.cm-variable-2 {
-	color: #FFAA3E;
-}
-
-.cm-s-midnight span.cm-def {
-	color: #4DD;
-}
-
-.cm-s-midnight span.cm-error {
-	background: #F92672;
-	color: #F8F8F0;
-}
-
-.cm-s-midnight span.cm-bracket {
-	color: #D1EDFF;
-}
-
-.cm-s-midnight span.cm-tag {
-	color: #008;
-}
-
-.cm-s-midnight span.cm-link {
-	color: #AE81FF;
-}
-
-.cm-s-midnight .CodeMirror-matchingbracket {
-	text-decoration: underline;
-	color: white !important;
-}
-
-.typ {
-	color: #FFAA3E;
-}
-
-.atn {
-	color: #606;
-}
-
-.atv {
-	color: #080;
-}
-
-.dec {
-	color: #606;
-}
-
-/*
- * CodeMirror & Markers -------------------------------------------------------
- */
-.right .CodeMirror {
-	position: absolute;
-	bottom: 0;
-	right: 0;
-	left: 0;
-	top: 0;
-	height: auto !important;
-	background: #fff;
-	font-family: 'm_1regular', monospace;
-	line-height: 1.5em;
-}
-
-.error-marker {
-	width: 10px;
-	height: 1.5em;
-	background: #EAB;
-	transition: all 100ms;
-	-webkit-transition: all 100ms;
-}
-
-.error-marker:hover {
-	background: #D68;
-}
-
-.error-marker:before {
-	opacity: 0;
-	pointer-events: none;
-	content: attr(message);
-	transition: all 100ms;
-	-webkit-transition: all 100ms;
-	content: attr(message);
-	width: 300px;
-	font-size: 10px;
-	padding: 5px;
-	border: 1px solid #000;
-	position: absolute;
-	background: #fff;
-	z-index: 999;
-}
-
-.error-marker:hover:before {
-	opacity: 1;
-	margin-left: 35px;
-}
-
-.right .edit-pane .CodeMirror-linenumber {
-	color: #666;
-	font-size: 75%;
-}
-
-/* placeholder addon */
-.CodeMirror {
-	/*border: 1px solid silver; 
-        height: 100%;*/
-	padding: 0;
-}
-
-.CodeMirror-empty {
-	outline: 1px solid #c22;
-}
-
-.CodeMirror-empty.CodeMirror-focused {
-	outline: none;
-}
-
-.CodeMirror pre.CodeMirror-placeholder {
-	color: #999;
-}
-
-.extended-content-container {
-	width: 100%;
-	margin-left: -5%;
-	padding: 0;
-}
-/*
-.extended-content {
-    width:100%;
-}
-*/
-</style>
 
 <!-- NO BREADCRUMBS REQUIRED FOR THIS PAGE -->
 
@@ -366,12 +35,12 @@ span.CodeMirror-matchhighlight {
 <div class="container">
 
 	<div id="new_area_form" class="form-horizontal">
-		<!-- </div>action="" method="POST">  -->
+
 		<!-- Form Name -->
-		<legend>
+		<div class='form-legend'>
 			Register your forest area
 			<!-- <span class="glyphicon glyphicon-question-sign" ></span> -->
-		</legend>
+		</div>
 		<div class='framing-help'>
 			If you live or work near a forest and want to protect it then register it for monitoring.<br />
 		</div>
@@ -386,34 +55,32 @@ span.CodeMirror-matchhighlight {
 					Area Name </label>
 				<div class="col-md-4">
 					<input id="area_name" name="area_name" type="text" autofocus placeholder="Give your area a short name"
-						class="form-control input-md" accesskey="n" tabindex="1"> <span class="help-block">Choose a unique name to
-						identify your area</span>
+						class="form-control input-md" accesskey="n" tabindex="1"> <span class="help-block">Give your area a short unique name</span>
 					<div class='validation' id='area-name-validation'>Give your area a short name.</div>
 				</div>
 			</div>
 			<hr>
-
 			<div class="controls">
 				<input id="geojson_toserver" name="geojson_toserver" type="hidden" value="undefined">
 			</div>
 			<div class="panel-group" id="options-accordion">
 				<!-- Public or Private  sharing options accordion panel panel-info -->
-				<div class="">
+				<div>
 					<!-- panel panel-info -->
 					<div class="panel-heading">
 						<!-- panel-heading -->
 						<h4 class="panel-title">
-							<a data-toggle="collapse" data-parent="#options-accordion" id="sharingAccord_title"> Sharing Options </a>
+							<a data-toggle="collapse" data-parent="options-accordion" id="sharingAccord_title"> Sharing Options </a>
 						</h4>
 					</div>
 					<!-- panel body -->
 					<div id="sharingAccord" class="panel-collapse collapse in">
 						<div class="panel-body">
 							<div class="form-group">
-								<label class="col-md-4 control-label" for="opt-sharing "><span class='asterix' title="This field is required">*</span>Public
+								<label class="col-md-4 control-label" for="opt-sharing"><span class='asterix' title="This field is required">*</span>Public
 									or Private? </label>
 								<div class="col-md-6">
-									<div class="radio">
+									<div class="radio" id='private'>
 										<label for="private"> <input type="radio" name="opt-sharing" value="private" accesskey="r" tabindex="2">
 											Private
 										</label>
@@ -422,14 +89,14 @@ span.CodeMirror-matchhighlight {
 										help you monitor. See <a href="http://bunjilforestwatch.net/privacy">Privacy</a>
 									</span>
 
-									<div class="radio">
+									<div class="radio" id='unlisted'>
 										<label for="unlisted"> <input type="radio" name="opt-sharing" value="unlisted" accesskey="u" tabindex="3">
 											Unlisted
 										</label>
 									</div>
 									<span class="help-block">Only people with the link can see or follow this area</span>
 
-									<div class="radio">
+									<div class="radio" id='public'>
 										<label for="public"> <input type="radio" name="opt-sharing" value="shared" accesskey="p" tabindex="4">
 											Public
 										</label>
@@ -443,12 +110,11 @@ span.CodeMirror-matchhighlight {
 						</div>
 					</div>
 				</div>
-
-				<div class="">
+				<div>
 					<!-- panel panel-info Monitoring Options Accordion -->
 					<div class="panel-heading">
 						<h4 class="panel-title">
-							<a data-toggle="collapse" data-parent="#options-accordion" id="monitoringAccord_title"> Monitoring Options </a>
+							<a data-toggle="collapse" data-parent="options-accordion" id="monitoringAccord_title"> Monitoring Options </a>
 						</h4>
 					</div>
 					<!-- panel body -->
@@ -465,9 +131,8 @@ span.CodeMirror-matchhighlight {
 									</div>
 									<div class="checkbox">
 										<label for="request-volunteers"> <input type="checkbox" checked="checked" name="request-volunteers"
-											accesskey="v" tabindex="6" id='request-volunteers' value="request-volunteers"> Community monitoring
-										</label> <span class="help-block">Ask Volunteers to help monitor my area. I don't have the ability to monitor images
-											for changes.</span>
+											accesskey="v" tabindex="6" id='request-volunteers' value="request-volunteers"> Community monitoring</label>
+											<span class="help-block">Ask Volunteers to help monitor my area. I don't have the ability to monitor images for changes.</span>
 									</div>
 									<div class='validation' id='monitoring-validation'>Either self-monitor or request volunteers.</div>
 								</div>
@@ -475,31 +140,37 @@ span.CodeMirror-matchhighlight {
 						</div>
 					</div>
 				</div>
+		
+			<div class="panel-heading"> <!-- Agreement Undertaking -->
+				<h4 class="panel-title">
+					<a data-toggle="collapse" data-parent="options-accordion" id="agreementAccord_title">Agree to Monitor</a>
+				</h4>
 			</div>
-			<!-- Undertaking -->
-			<div class="form-group">
-				<label class="col-md-4 control-label" for="accept"><span class='asterix'
-					title="You must agree to investigate disturbances to request volunteers">*</span>I Accept</label>
-				<div class="col-md-6">
-					<label class="checkbox-inline" for="accept"> <input type="checkbox" name="accept" id="accept" value="true"
-						accesskey=" " tabindex="7"> I agree to investigate disturbances to this area reported by volunteers
-					</label>
-					<div class='validation' id='accept-validation'>To register an area you must agree to investigate reports in your
-						area.</div>
+			<div id="agreementAccord" class="panel-collapse collapse in">
+				<div class="panel-body">
+					<div class="form-group">
+						<label class="col-md-4 control-label" for="accept"><span class='asterix'
+							title="You must agree to investigate disturbances to request volunteers">*</span>I Accept</label>
+						<div class="col-md-6">
+							<label class="checkbox-inline" for="accept"> <input type="checkbox" name="accept" id="accept" value="true"
+								accesskey=" " tabindex="7"> I agree to investigate disturbances to this area reported by volunteers
+							</label>
+							<div class='validation' id='accept-validation'>To register an area you must agree to investigate reports in your
+								area.</div>
+						</div>
+					</div>
 				</div>
+				<hr>
 			</div>
-			<hr>
-
-
+       </div>
 			<!-- NEXT -->
-			<div class="form-group">
+			<div id='next-subform' class="form-group">
 				<label class="col-md-4 control-label" for="accept"><button id="next-area" name="next-area" accesskey="x"
 						tabindex="8" class="btn btn-default btn-form-ctrl">Next</button></label>
 				<div class="col-md-8">
 					<div id='form-errors' class="help-block"></div>
 				</div>
 			</div>
-			<hr>
 		</div>
 		<div class="row" id='scroll-to-here'></div>
 		<div class="row" id='map-find' style='display: none'>
@@ -507,7 +178,7 @@ span.CodeMirror-matchhighlight {
 
 			<div class="panel-group" id="locate-accordion">
 				<!-- Help Locate accordion -->
-				<div class="">
+				<div id='helplocateAccord_c'>
 					<!-- panel panel-info -->
 					<div class="panel-heading">
 						<!-- panel-heading -->
@@ -519,7 +190,7 @@ span.CodeMirror-matchhighlight {
 					<div id="helplocateAccord" class="panel-collapse collapse in">
 						<div class="panel-body">
 
-							<legend>Locate your Area</legend>
+							<div class='form-legend'>Locate your Area</div>
 							<div id='subform-find-help'>
 								<div class="row">
 									<div class="col-md-1"></div>
@@ -536,8 +207,8 @@ span.CodeMirror-matchhighlight {
 										<p id='zoom-here-help' class="help-block">Click if your forest is near you now.</p>
 									</div>
 									<div class="col-md-7 form-group">
-										<label class="control-label">Find by name</label> <input id="searchbox_id" name="searchinput" type="text"
-											placeholder="Enter name of a place near your area" class="form-control input-md">
+										<label class="control-label" for='searchbox_id'>Find by name</label> <input id="searchbox_id" name="searchinput"
+											type="text" placeholder="Enter name of a place near your area" class="form-control input-md">
 										<p class="help-block">Map will zoom to that place</p>
 									</div>
 									<div class="col-md-1"></div>
@@ -547,8 +218,7 @@ span.CodeMirror-matchhighlight {
 						</div>
 					</div>
 				</div>
-
-				<div class="">
+				<div id='drawlocateAccord_c'>
 					<!-- Draw Location Accordion -->
 					<div class="panel-heading">
 						<h4 class="panel-title">
@@ -640,11 +310,22 @@ span.CodeMirror-matchhighlight {
 										<button id="save-area" name="move-map" class="btn btn-primary">
 											Save <span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
 										</button>
+										<div id="save-wait-popover" class='popover popover-info popover-lg' data-toggle="popover-x"
+											data-target='#save-wait-popover1' style='display: none' data-placement='right'>
+											<div id='save-wait-popover1' class="arrow"></div>
+											<h3 class="popover-title">Saving Area</h3>
+											<div class="popover-content">Please wait while your area is saved.</div>
+											<div class="popover-footer">
+												<button id='close-dialog-save-area-wait' class="btn btn-sm btn-default">Close</button>
+											</div>
+										</div>
+
 									</div>
 									<div class="col-md-5 form-group">
 										<label class="control-label"> If mark is over your area click <i>Save area</i>
 										</label>
 									</div>
+
 								</div>
 							</div>
 							<!-- MOVE MAP LINK -->
@@ -670,14 +351,23 @@ span.CodeMirror-matchhighlight {
 					</div>
 				</div>
 			</div>
-
-            <div class='row' id='update-area-form' style='display: none'>
-                <!--  DESCRIPTION  -->
+			     </div>
+            <!--  DESCRIPTION  -->
+			<div class='row' id='update-area-form' style='display: none'>
+			<div class="panel-group">
+			 <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" data-parent="options-accordion" id="agreementAccord_title">Describe your area</a>
+                </h4>
+                <p>Now is a good time to tell other users about your area.  
+            </div>
+            <div id="descriptionAccord" class="panel-collapse collapse in">
                 <div class="accordion-group">
+                <!-- 
                     <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#area_descr_panel">Description</a>
-                    </div>
-                    <div id="area_descr_panel" class="accordion-body collapse" data-toggle="collapse">
+                        <a class="accordion-toggle" data-toggle="collapse in" href="#area_descr_panel">Description</a>
+                    </div>  -->
+                    <div id="area_descr_panel" class="accordion-body collapse in" data-toggle="collapse">
                         <div class="accordion-inner">
                             <div class="accordion" id="inner_accordion">
                                 <div class="accordion-group">
@@ -686,7 +376,7 @@ span.CodeMirror-matchhighlight {
                                     </div>
                                     <div id="area_descr_what" class="accordion-body collapse in">
                                         <div class="accordion-inner small">
-                                            <textarea rows="3" class="map-panel-controls" id="area_descr_what" name="description-what"
+                                            <textarea rows="3" class="map-panel-controls" id="area_descr_what_text" name="description-what"
                                                 placeholder="Tell volunteers  a little about the area or park are you protecting. You can enter a link to a wiki page"
                                                 form="new_area_form" cols=""></textarea>
                                         </div>
@@ -698,7 +388,7 @@ span.CodeMirror-matchhighlight {
                                     </div>
                                     <div id="area_descr_why" class="accordion-body collapse ">
                                         <div class="accordion-inner small">
-                                            <textarea rows="3" class="map-panel-controls" id="area_descr_why2" name="description-why"
+                                            <textarea rows="3" class="map-panel-controls" id="area_descr_why_text" name="description-why"
                                                 placeholder="Explain why it's important to monitor this area" form="new_area_form" cols=""></textarea>
                                         </div>
                                     </div>
@@ -709,7 +399,7 @@ span.CodeMirror-matchhighlight {
                                     </div>
                                     <div id="area_descr_who" class="accordion-body collapse ">
                                         <div class="accordion-inner small">
-                                            <textarea rows="3" class="map-panel-controls" id="area_descr_who" name="description-who"
+                                            <textarea rows="3" class="map-panel-controls" id="area_descr_who_text" name="description-who"
                                                 placeholder="Who is going to act on reports of disturbances in this area" form="new_area_form" cols=""></textarea>
                                         </div>
                                     </div>
@@ -721,7 +411,7 @@ span.CodeMirror-matchhighlight {
                                 </div>
                                 <div id="area_descr_how" class="accordion-body collapse ">
                                     <div class="accordion-inner small">
-                                        <textarea rows="3" class="map-panel-controls" id="area_descr_how" name="description-how"
+                                        <textarea rows="3" class="map-panel-controls" id="area_descr_how_text" name="description-how"
                                             placeholder="How is this area protected? For example, Is it a national park or a native area? " form="new_area_form"
                                             cols=""></textarea>
                                     </div>
@@ -730,27 +420,39 @@ span.CodeMirror-matchhighlight {
                         </div>
                     </div>
                 </div>
+                
+           
+           
+                <hr>
             </div>
-            <!--  DEFINE AREA - BOUNDARY SELECTION  -->
-            <div>
-                <fieldset id='boundary-form' class='control-label map-panel-controls' style='display: none'>
+				
+				
+				
+				
 
-                    <legend class='control-label'>
-                        Area boundary <span style="color: #ff0000">*</span>
-                    </legend>
-                    <div class='framing-help'>
-                        You can draw the boundary of your area now, or enter it from another source.<br />
-                    </div>
-                    <div class='framing-sub-help'>The boundary defines the size and shape of the area to select the best images and to
-                        help observers.</div>
-                    <div class="radio">
-                        <label><input type="radio" name="opt-fusion" value="is-drawmap">Draw my area on a map</label>
-                    </div>
-                    <div class="radio">
-                        <label><input type="radio" name="opt-fusion" value="is-fusion">Area's boundary is in a fusion table</label>
-                    </div>
-                </fieldset>
-            </div>
+				
+			</div>
+			</div>
+			<!--  DEFINE AREA - BOUNDARY SELECTION  -->
+			<div>
+				<fieldset id='boundary-form' class='control-label map-panel-controls' style='display: none'>
+
+					<div class='form-legend control-label'>
+						Area boundary <span style="color: #ff0000">*</span>
+					</div>
+					<div class='framing-help'>
+						You can draw the boundary of your area now, or enter it from another source.<br />
+					</div>
+					<div class='framing-sub-help'>The boundary defines the size and shape of the area to select the best images and to
+						help observers.</div>
+					<div class="radio">
+						<label><input type="radio" name="opt-fusion" value="is-drawmap">Draw my area on a map</label>
+					</div>
+					<div class="radio">
+						<label><input type="radio" name="opt-fusion" value="is-fusion">Area's boundary is in a fusion table</label>
+					</div>
+				</fieldset>
+			</div>
 
 
 			<div class="row" id='map-row' style='display: none'>
@@ -804,10 +506,10 @@ span.CodeMirror-matchhighlight {
 				<div id="boundary-instructions" style='display: none'></div>
 			</div>
 			<form action=""></form>
-    </div>
-    </div>
-   </div> 
-   
+
+	</div>
+</div>
+
 {% include "includes/project_scripts.html" %} {% include "includes/map_scripts.html" %}
 
 <script src="/static/js/vendor/codemirror.js" type="text/javascript"></script>

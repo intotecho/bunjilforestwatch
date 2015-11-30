@@ -835,7 +835,7 @@ class AreaHandler(BaseHandler):
         try:
             new_area = geojson.loads(new_area_geojson_str)
         
-        except Exception, e:
+        except ValueError, e:
             logging.error("AreaHandler() Error parsing new_area_geojson_str: %s ", new_area_geojson_str)
             logging.error("AreaHandler() Exception : {0!s}".format(e)) 
             
@@ -872,7 +872,7 @@ class AreaHandler(BaseHandler):
                 self.response.set_status(400)
                 return self.response.out.write('Area name required to update area.')
 
-            area = cache.get_area(area_name)
+            area = cache.get_area(None, area_name)
             if not area:
                 #not updateable
                 self.response.set_status(404)
@@ -1050,7 +1050,7 @@ class AreaHandler(BaseHandler):
             self.response.set_status(403, message='')
             return self.response.out.write('Area too big (%d sq km = %d Landsat images!)' %(total_area, area_in_cells))
         
-        decoded_name = name.decode('utf-8') #allow non-english area names.
+        decoded_name = area_name.decode('utf-8') #allow non-english area names.
         
         if park_boundary_fc <> None:
             fc_info= json.dumps(park_boundary_fc.getInfo())
