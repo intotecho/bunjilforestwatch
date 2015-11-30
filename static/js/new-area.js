@@ -136,15 +136,27 @@ function createArea(map, is_update)
 	}
 	else {
 		//create a new area
+		toastr.clear();
+		$('#save-wait-popover').popoverX({
+	            target: '#save-area'  //container
+	    });
+		$('#save-wait-popover').popoverX('show');
+		 
+	    $('#close-dialog-save-area-wait').click(function(){    
+	        $('#save-wait-popover').popoverX('hide');
+	    });
+	    
 		$.ajax({
 		      type: "POST",
 		      url: "area",
 		      data: 'new_area_geojson_str='+ data_to_post,
 		      success: function() {
+		    	  $('#save-wait-popover').popoverX('hide');
 	 	          addToasterMessage('alert-success','Area created OK');
 		    	  init_boundary_form();
 		      },
 		      error: function(requestObject, error, errorThrown) {
+		    	  	$('#save-wait-popover').popoverX('hide');
 	 	            console.log('Error ' + requestObject.status + ' ' + requestObject.statusText + ' ' + requestObject.responseText );
 	 	            addToasterMessage('alert-danger','Error ' + requestObject.status + ' ' + requestObject.statusText + ' ' + requestObject.responseText);
 		      }
@@ -862,9 +874,6 @@ function pre_checkform_next_area(event) {
 		return "";
 	}
 	
-	if(area_name[0] === '#'){ //test code
-		$('update-area-form').show();
-	}
 	
 	if(area_name[0] === '!'){ //test code
 		BJTEST.subns.initAdvancedMap();
@@ -893,9 +902,11 @@ function sharingAccord_title_clicked(event) {
 
 function monitoringAccord_title_clicked(event) {
 	$('#monitoringAccord').collapse('toggle');
-    addToasterMessage('alert-danger','Test Danger Message');
 }
 
+function agreementAccord_title_clicked(event) {
+	$('#agreementAccord').collapse('toggle');
+}
 function helplocateAccord_title_clicked(event) {
 	$('#helplocateAccord').collapse('toggle');
 }
@@ -910,6 +921,7 @@ function drawlocateAccord_title_clicked(event) {
  */
 function checkform_next_area(event) {
 	"use strict";	
+	
 	event.preventDefault();
 	checkform_next_area.clicked = true;
 	
@@ -925,13 +937,18 @@ function checkform_next_area(event) {
 		$('#form-errors').html(msg);
 	}
 	else {
+		//set up form for the next stage - get the map location
 		$('#form-errors').html(' ');
+		$('#next-subform').hide();
 		$('#sharingAccord').collapse('hide');
 		$('#monitoringAccord').collapse('hide');
+		$('#agreementAccord').collapse('hide');
+
 		$('#helplocateAccord').collapse('show');
 		$('#drawlocateAccord').collapse('show');
 		$('#map-row').show();
 		$('#map-find').show();
+
 		initialize_map(null, null);
 	}
 }
@@ -953,17 +970,25 @@ $(document).ready(function() {
 function init_boundary_form()
 {
 	"use strict";
-	  $("#update-area-form").show(); //ask user for more info to enrich area.   
-	  //$("#boundary-form").show(); //ask user for more info to enrich area.   
-	  //$('#map-row').hide();
-	  //$('#map-find').hide();
+	
+	// make area name read only
+	$('input[type="text"], #area_name').attr('readonly','readonly');
+	$('#help-block').hide();
+	
 
+	// collapse sharing and monitoring and agreement accordions - use can still update them (tbd)
 	$('#sharingAccord').collapse('hide');
 	$('#monitoringAccord').collapse('hide');
-	$('#helplocateAccord').collapse('hide');
-	$('#drawlocateAccord').collapse('hide');
+	$('#agreementAccord').collapse('hide');
 
-	
+	// hide next button and ability to change area's location.  
+	$('#next-subform').hide();
+	$('#helplocateAccord_c').hide();
+	$('#drawlocateAccord_c').hide();
+
+	// Display description and boundary form - ask user to enrich info.
+	$("#update-area-form").show();    
+
 	var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
 	if((selection === 'is-fusion') || (selection === 'is-drawmap')) {
 		//initialize_map(null, null);
@@ -997,6 +1022,7 @@ function initialize_new() {
 	$('#next-area').click(checkform_next_area);
 	$('#sharingAccord_title').click(sharingAccord_title_clicked);
 	$('#monitoringAccord_title').click(monitoringAccord_title_clicked);
+	$('#agreementAccord_title').click(agreementAccord_title_clicked);
 	$('#helplocateAccord_title').click(helplocateAccord_title_clicked);
 	$('#drawlocateAccord_title').click(drawlocateAccord_title_clicked);
 	

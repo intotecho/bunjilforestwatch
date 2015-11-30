@@ -68,6 +68,25 @@ a[class ="popup"] {
   top: 35px;
 }
 
+.toast-top-full-width {
+  top: 35px;
+}
+
+
+.toast-success {
+  background-color: #C6E0C6;
+}
+.toast-error {
+  background-color: #FBA9A9;
+}
+.toast-info {
+  background-color: #9DC3CE;
+}
+.toast-warning {
+  background-color: #EDE6B4;
+}
+
+/*
 #toaster-container {
     position:fixed;
     top: 35px;
@@ -79,9 +98,6 @@ a[class ="popup"] {
     background: transparent;
 }
 
-.toast-top-full-width {
-  top: 35px;
-}
 
 #toaster {
 	float: center;
@@ -93,12 +109,11 @@ a[class ="popup"] {
     opacity: 0.85;
 }
 
-/* tiqhten up the bootstrap alert - must be loaded after bootstrap.min.css */
 .alert {
   padding: 2px 35px 2px 14px;    
   margin-bottom: 6px;
 }
-
+*/
 
 textarea {
 	height: 200px;
