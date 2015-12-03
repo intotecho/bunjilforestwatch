@@ -164,7 +164,19 @@ window.setTimeout(function() {
     });
 }, 15000);
 
-
+/**
+ * From: http://stackoverflow.com/questions/5717093/check-if-a-javascript-string-is-an-url
+ * @return true is string is a valid URL
+ */
+function isURL(str) {
+	  var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+	  '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|'+ // domain name
+	  '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+	  '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+	  '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+	  '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+	  return pattern.test(str);
+	}
 
 // don't fade out alert-error or alert-danger.
 
