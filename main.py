@@ -862,9 +862,10 @@ class AreaHandler(BaseHandler):
             if self.session['areas_list']:
                 #FIXME should checkl the cache, not loop through the session.
                 if len(self.session['areas_list']) >= models.AreaOfInterest.MAX_AREAS:
-                    self.add_message('warning', 'Sorry, there is a quota of only %i areas per user.' %models.AreaOfInterest.MAX_AREAS)
-                    self.redirect(webapp2.uri_for('new-area'))
-                    return
+                    message = 'Sorry, you have created too many areas. Max Areas = {0!s}'.format(models.AreaOfInterest.MAX_AREAS)
+                    logging.error(message) 
+                    self.response.set_status(400)
+                    return self.response.out.write(message)
             
         else: #update
             logging.info("AreaHandler() Updating area ")
@@ -1059,10 +1060,14 @@ class AreaHandler(BaseHandler):
         
         area = models.AreaOfInterest(
                                     id=decoded_name, name=decoded_name, 
-                                    description=self.request.get('description-what').decode('utf-8'), 
-                                    description_why=self.request.get('description-why').decode('utf-8'), 
-                                    description_who=self.request.get('description-who').decode('utf-8'), 
-                                    description_how=self.request.get('description-how').decode('utf-8'), 
+                                    description = new_area['properties']['area_description']['description'].decode('utf-8'), 
+                                    
+                                    description_why = new_area['properties']['area_description']['description_why'].decode('utf-8'),  
+                                    description_who = new_area['properties']['area_description']['description_who'].decode('utf-8'),  
+                                    description_how = new_area['properties']['area_description']['description_how'].decode('utf-8'),  
+                                    threats = new_area['properties']['area_description']['threats'].decode('utf-8'), 
+                                    wiki = new_area['properties']['area_description']['wiki'].decode('utf-8'), 
+                                    
                                     area_location=area_location,
                                     coordinates=coords, boundary_fc= fc_info, ft_link=ftlink, ft_docid = boundary_ft,
                                     map_center = center, map_zoom = zoom, 

@@ -24,6 +24,83 @@ var fusion_table_instructions=
 	"<li>The fusion table must either be public or shared with this bunjil's service account. </li>";
 
 
+
+
+/**
+ * @returns returns the area_area in the input text control.
+ */
+function get_area_name() {
+	return  $('#area_name').val();
+}
+
+/**
+ * @returns one of 'not_selected', 'private', 'unlisted' or 'shared'.
+ */
+function get_shared() {
+	//var shared = $('input[name=opt-sharing]:checked', '#sharingAccord').val();
+	var shared  = $('#sharingAccord input:radio:checked').val();
+	if(typeof(shared) === 'undefined') 
+	{
+		shared = 'not_selected';
+	}
+	//console.log('shared: ', shared);
+	return shared;
+}
+
+/**
+ * @returns true if the 'Self-monitor' control is ticked, else false.
+ */
+function get_self_monitor() {
+	var self_monitor = $('input[name=self-monitor]:checked', '#new_area_form').val() === 'self-monitor'? true:false;
+	//console.log('self_monitor: ', self_monitor);
+	return self_monitor;
+}
+
+
+/**
+ * @returns true if the 'Community monitoring' control is ticked, else false.
+ */
+function get_request_volunteers() {
+	var request_volunteers = $('input[name=request-volunteers]:checked', '#new_area_form').val() === 'request-volunteers'? true:false;
+	//console.log('request_volunteers: ', request_volunteers);
+	return request_volunteers;
+}
+
+/**
+ * @returns true if user has ticked the areement, else false.
+ */
+function get_has_accepted() {
+	var accepted = $('input[name=accept]:checked', '#new_area_form').val() === "true" ? true:false;
+	//console.log('has accepted : ', accepted);
+	return accepted;
+}
+
+function get_descr_what() {
+	return $('#area_descr_what_text').val();
+}
+
+function get_descr_who() {
+	return $('#area_descr_who_text').val();
+}
+function get_descr_why() {
+	return $('#area_descr_why_text').val();
+}
+
+function get_descr_how() {
+	return $('#area_descr_how_text').val();
+}
+
+function get_threats() {
+	return $('#area_descr_threats_text').val();
+}
+
+function get_area_wiki() {
+	var area_wiki = $('#area-wiki').val();
+	console.log('wiki: ', area_wiki);
+	return area_wiki;
+}
+
+
 /**
  * Called when user clicks Create Area.
  * Pulls data from the form and validates it. 
@@ -35,13 +112,11 @@ var fusion_table_instructions=
 function createArea(map, is_update)
 {
 	"use strict";
-	var area_name =  $('#area_name').val();
-
-	var shared = $('input[name=opt-sharing]:checked', '#new_area_form').val();
-	var self_monitor = $('input[name=self-monitor]', '#new_area_form').val();
-	var request_volunteers = $('input[name=request-volunteers]', '#new_area_form').val();
-	var accept = $('input[name=accept]:checked', '#new_area_form').val();
-
+	var area_name =  get_area_name();
+	var shared = get_shared();
+	var self_monitor = get_self_monitor();
+	var request_volunteers = get_request_volunteers(); //$('input[name=request-volunteers]', '#new_area_form').val();
+	var accept = get_has_accepted();
 	
 	// get and send the viewing parameters of the map
 	var unwrapped_mapcenter = map.getCenter(); // can exceed 90lat or 180 lon
@@ -80,12 +155,12 @@ function createArea(map, is_update)
 					// 'owner': 'server sets' 
 					
 					"area_description": {
-						   "description": 	  $('#area_descr_what').val(),
-						   "description_why": $('#area_descr_why').val(),
-						   "description_who": $('#area_descr_who').val(),
-						   "description_how": $('#area_descr_how').val(),
-						   "wiki": "",
-						   "threats": ""
+						   "description": 	  get_descr_what(),
+						   "description_why": get_descr_why(),
+						   "description_who": get_descr_who(),
+						   "description_how": get_descr_how(),
+						   "threats": 		  get_threats(),
+						   "wiki": 			  get_area_wiki()
 					},
 					"fusion_table": {
 						   //"ft_link": server sets,
@@ -152,7 +227,7 @@ function createArea(map, is_update)
 		      data: 'new_area_geojson_str='+ data_to_post,
 		      success: function() {
 		    	  $('#save-wait-popover').popoverX('hide');
-	 	          addToasterMessage('alert-success','Area created OK');
+	 	          addToasterMessage('alert-success','Area ' + area_name + ' created OK');
 		    	  init_boundary_form();
 		      },
 		      error: function(requestObject, error, errorThrown) {
@@ -760,11 +835,11 @@ BJTEST.subns = (function() {
     };
     
     var initAdvancedMap = function() {
-		var area_name =  $('#area_name').val();
-		var shared = $('input[name=opt-sharing]:checked', '#new_area_form').val();
-		var self_monitor = $('input[name=self-monitor]', '#new_area_form');
-		var request_volunteers = $('input[name=request-volunteers]', '#new_area_form');
-		var accept = $('input[name=accept]:checked', '#new_area_form').val();
+		var area_name =  get_area_name(); 
+		var shared = get_shared(); 
+		var self_monitor = get_self_monitor(); 
+		var request_volunteers = get_request_volunteers();
+		var accept = get_has_accepted(); 
 
 		$('#map-row').show();
 		if (area_name.length < 3) {
@@ -772,12 +847,13 @@ BJTEST.subns = (function() {
     		$('#area_name').val(area_name);
 		}
 
-		if(typeof shared === 'undefined') {
+		if(shared === 'not_selected') {
 			$('input[value=shared]', '#new_area_form').prop('checked', true);
 			shared = 'shared';
 		}
 
-		$('#area_descr').val('A test area created by initAdvancedMap()');
+		$('#area_descr_what_text').val('A test area created by initAdvancedMap()');
+		$('#area-wiki').val('http://bunjilforestwatch.net');
 
 		$('#accept').prop('checked', true);
 
@@ -816,12 +892,20 @@ function pre_checkform_next_area(event) {
 	var validations = [];
 	var problems = "";
 	var target;
-	var area_name =  $('#area_name').val();
-	var shared = $('input[name=opt-sharing]:checked', '#new_area_form').val();
-	var self_monitor = $('input[name=self-monitor]', '#new_area_form');
-	var request_volunteers = $('input[name=request-volunteers]', '#new_area_form');
-	var accept = $('input[name=accept]:checked', '#new_area_form').val();
+	
+	//get form values
+	var area_name = get_area_name();
+	var shared = get_shared();
+	var self_monitor = get_self_monitor();
+	var request_volunteers = get_request_volunteers();
+	var area_wiki = get_area_wiki();
+	
+	//get controls
+	var self_monitor_control = $('input[name=self-monitor]', '#new_area_form');
+	var request_volunteers_control = $('input[name=request-volunteers]', '#new_area_form');
 
+	var accept = get_has_accepted();
+	
 	// form validation
 	if ((null === area_name) || (area_name === "")) {
 		validations.push({'name':'#area-name-validation', 'value':'Give your area a short name.'});
@@ -832,7 +916,7 @@ function pre_checkform_next_area(event) {
 		}
 	}
 	
-	if(shared === undefined) {
+	if(shared === 'not_selected') {
 		validations.push({'name':'#sharing-validation', 'value':'Choose public, private or unlisted.'});
 	}
 	else {
@@ -840,17 +924,17 @@ function pre_checkform_next_area(event) {
 			$('#sharing-validation').hide();
 		}
 	}
-		
-	if((shared === 'private') && (request_volunteers.val() !== undefined)) {
-		self_monitor.prop("checked", true).prop('disabled', true);
-		request_volunteers.prop("checked", false).prop('disabled', true);
+	
+	if((shared === 'private') && (request_volunteers !== undefined)) {
+		self_monitor_control.prop("checked", true).prop('disabled', true);
+		request_volunteers_control.prop("checked", false).prop('disabled', true);
 	}
 	else {
-		self_monitor.prop('disabled', false);
-		request_volunteers.prop('disabled', false);
+		self_monitor_control.prop('disabled', false);
+		request_volunteers_control.prop('disabled', false);
 	}
 
-	if((self_monitor.prop("checked") !== true) && (request_volunteers.prop("checked") !== true)) {
+	if((self_monitor !== true) && (request_volunteers !== true)) {
 		validations.push({'name':'#monitoring-validation', 'value':'Either self-monitor or request volunteers.'});
 	}
 	else {
@@ -859,7 +943,18 @@ function pre_checkform_next_area(event) {
 		}
 	}
 	
-	if(accept !== "true") {
+	if ((area_wiki !== "") && (isURL(area_wiki) !== true))
+	{
+		validations.push({'name':'#area-wiki-validation', 'value':'Link is not a valid URL. If unsure, leave this blank.'});
+		$('#area-wiki-validation').hide();
+	}
+	else {
+		if (checkform_next_area.clicked) { 
+			$('#area-wiki-validation').hide();
+		}
+	}
+	
+	if(accept !== true) {
 		validations.push({'name':'#accept-validation', 'value':'To register an area you must agree to investigate reports in your area.'});
 	}
 	else {
@@ -886,33 +981,59 @@ function pre_checkform_next_area(event) {
 		$('#next-area').removeClass('btn-default').addClass('btn-primary');
 		$('#form-errors').html(' ');
 	}
-	
-	
-	
 	return validations;
 }
 	
 var test_message = 1;
 
+function areanameAccord_title_clicked(event) {
+	$('#areanameAccord').collapse('toggle');
+	var area_name = $('#area_name').val()
+	$('#areanameAccord_title').html('Area Name: ' + area_name  );
+	addToasterMessage('alert-success','Test Alert Message ' + test_message + ' ' + area_name);
+    test_message += 1;
+}
+
 function sharingAccord_title_clicked(event) {
 	$('#sharingAccord').collapse('toggle');
-    addToasterMessage('alert-success','Test Alert Message ' + test_message);
-    test_message += 1;
+	$('#sharingAccord_title').html('Sharing: ' +  get_shared());
+
 }
 
 function monitoringAccord_title_clicked(event) {
 	$('#monitoringAccord').collapse('toggle');
+	//var options = 'Not selected';
+	var self_monitor =       $('input[name=self-monitor]', '#new_area_form').val();
+	var request_volunteers = $('input[name=request-volunteers]', '#new_area_form').val();
+	var title = 'Monitoring: ' + self_monitor + ' ' + request_volunteers; 
+	
+	$('#monitoringAccord_title').html(title);
 }
 
 function agreementAccord_title_clicked(event) {
 	$('#agreementAccord').collapse('toggle');
+	var accept = get_has_accepted();
+	var title = 'Agreement ' +  ((accept === true )? 'Accepted' : 'Not Accepted');
+	$('#agreementAccord_title').html(title);
 }
+
+
+function descriptionAccord_title_clicked(event) {
+	$('#descriptionAccord').collapse('toggle');
+	//var accept = get_has_accepted();
+	//var title = 'Description' ;
+	//$('#agreementAccord_title').html(title);
+}
+
 function helplocateAccord_title_clicked(event) {
 	$('#helplocateAccord').collapse('toggle');
 }
 function drawlocateAccord_title_clicked(event) {
 	$('#drawlocateAccord').collapse('toggle');
 }
+
+
+
 
 /**
  * Checks if all inputs are provided to enable create button
@@ -940,12 +1061,15 @@ function checkform_next_area(event) {
 		//set up form for the next stage - get the map location
 		$('#form-errors').html(' ');
 		$('#next-subform').hide();
+		areanameAccord_title
+		$('#areanameAccord').collapse('hide');
 		$('#sharingAccord').collapse('hide');
 		$('#monitoringAccord').collapse('hide');
 		$('#agreementAccord').collapse('hide');
 
 		$('#helplocateAccord').collapse('show');
 		$('#drawlocateAccord').collapse('show');
+		$('#descriptionAccord').collapse('hide');
 		$('#map-row').show();
 		$('#map-find').show();
 
@@ -973,13 +1097,22 @@ function init_boundary_form()
 	
 	// make area name read only
 	$('input[type="text"], #area_name').attr('readonly','readonly');
-	$('#help-block').hide();
-	
+	$('#area-name-validation').hide();
 
 	// collapse sharing and monitoring and agreement accordions - use can still update them (tbd)
+	$('#areanameAccord').collapse('hide');
+	$('#descriptionAccord').collapse('show');
+	
+	$('#areanameAccord_title').html('Area Name ' +   $('#area_name').val());
+
 	$('#sharingAccord').collapse('hide');
+	$('#sharingAccord_title').html('Sharing ' +  $('input[name=opt-sharing]:checked', '#new_area_form').val());
+
 	$('#monitoringAccord').collapse('hide');
+	$('#monitoringAccord_title').html('Monitoring: ' +  $('input[name=self-monitor]', '#new_area_form').val());
+
 	$('#agreementAccord').collapse('hide');
+	$('#agreementAccord_title').html('Agreement: ' +   'Agreed');
 
 	// hide next button and ability to change area's location.  
 	$('#next-subform').hide();
@@ -1021,10 +1154,37 @@ function initialize_new() {
 	
 	$('#next-area').click(checkform_next_area);
 	$('#sharingAccord_title').click(sharingAccord_title_clicked);
+	$('#areanameAccord_title').click(areanameAccord_title_clicked);
 	$('#monitoringAccord_title').click(monitoringAccord_title_clicked);
 	$('#agreementAccord_title').click(agreementAccord_title_clicked);
+	$('#descriptionAccord_title').click(descriptionAccord_title_clicked);
 	$('#helplocateAccord_title').click(helplocateAccord_title_clicked);
 	$('#drawlocateAccord_title').click(drawlocateAccord_title_clicked);
+
+	var auto_collapse = true;
+
+	$('#auto-collapse').click(function(){
+
+	  if (auto_collapse) { 		//if ($(this).is(':checked')){
+
+		  	$(this).attr('checked', false);
+        	auto_collapse = false;
+            $('#inner_accordion .panel-collapse').collapse('show');
+            $('#inner_accordion .panel-title').attr('data-toggle', '');
+            console.log('Enable accordion behavior');
+        } else {
+		  	$(this).attr('checked', true);
+        	auto_collapse = true;
+            $('#inner_accordion .panel-collapse').collapse('hide');
+            $('#inner_accordion .panel-title').attr('data-toggle', 'collapse');
+            console.log('Disable accordion behavior');
+        }	
+	});
+	
+    $('#inner_accordion').on('show.bs.collapse', function () {
+    	if (auto_collapse) $('#inner_accordion .in').collapse('hide');
+	});
+	
 	
 	/** -- resize the map div - This uses a tip from //github.com/twitter/bootstrap/issues/2475 --> 
 	$(window).resize(function () {
