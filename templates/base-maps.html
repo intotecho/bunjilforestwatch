@@ -1,561 +1,530 @@
-{%  extends "base.html" %} 
-        <!-- Example URL  //localhost:8001/obs/bunjilfw/5847615153373184  -->
+{% extends "base.html" %}
+<!-- Example URL  //localhost:8001/obs/bunjilfw/5847615153373184  -->
 
 {% block head %}
-    <title>Bunjil Forest Watch - Manage / Monitor Area</title>
-    <link rel="stylesheet" href="/static/css/base-maps.css">
-{% endblock  head%}
-
-{% block breadcrumbs %}
+<title>Bunjil Forest Watch - Manage / Monitor Area</title>
+<link rel="stylesheet" href="/static/css/base-maps.css">
+{% endblock head%} {% block breadcrumbs %}
 <!-- base_maps.html  breadcrumbs-->
-{% endblock breadcrumbs %} 
-{% block content %}
+{% endblock breadcrumbs %} {% block content %}
 <!-- base_maps.html start content-->
-<div id='area_json'   class='django-template'>{{ area_json}}</div>
-<div id='celllist'         class='django-template'>{{ celllist }}</div>
-<div id='obslist'         class='django-template'>{{ obslist }}</div>
+<div id='area_json' class='django-template'>{{ area_json}}</div>
+<div id='celllist' class='django-template'>{{ celllist }}</div>
+<div id='obslist' class='django-template'>{{ obslist }}</div>
 {% if show_navbar == True %}
 <div id='user_name' class='django-template'>{{ user.name }}</div>
-<div id='user_url'       class='django-template'>{{ "user"|url(user.name) }}</div>
- {% endif %}
+<div id='user_url' class='django-template'>{{ "user"|url(user.name) }}</div>
+{% endif %}
 <div class="container-fluid">
-    
-    <!--  AREA NAME HEADING  -->
-    <div class="row">
-     <div class="col-md-2 lesspadding" style="margin: 0;">
-     <h4 class="bg-success"><b>{{area.name}} </b> <label id="instructions"><span class="img-responsive glyphicon glyphicon-info-sign" rel="popover"  style='color: #234196'
-                                        title="help tbc"></span></label>
-     </h4> 
-        
-      <div class="panel with-nav-tabs panel-success">
-        <div class="panel-heading">
-          <ul class="nav nav-tabs">
-            <li class="active">
-              <a data-toggle="tab" href="#manage-area-panel">Manage</a>
-            </li>
+
+	<!--  AREA NAME HEADING  -->
+	<div class="row">
+		<div class="col-md-2 lesspadding" style="margin: 0;">
+			<h4 class="bg-success">
+				<b>{{area.name}} </b> <label id="instructions"><span class="img-responsive glyphicon glyphicon-info-sign"
+					rel="popover" style='color: #234196' title="help tbc"></span></label>
+			</h4>
+
+			<div class="panel with-nav-tabs panel-success">
+				<div class="panel-heading">
+					<ul class="nav nav-tabs">
+						<li class="active"><a data-toggle="tab" href="#manage-area-panel">Manage</a></li>
 
 
-            <li>
-              <a data-toggle="tab" href="#monitor-area-panel">Monitor</a>
-            </li>
-          </ul>
-        </div>
+						<li><a data-toggle="tab" href="#monitor-area-panel">Monitor</a></li>
+					</ul>
+				</div>
 
 
-        <div class="panel-body">
-          <div class="tab-content">
-            <div class="tab-pane fade in active" id="manage-area-panel">
+				<div class="panel-body">
+					<div class="tab-content">
+						<div class="tab-pane fade in active" id="manage-area-panel">
 
-              <!-- MANAGE-AREA-ACCORDION -->
-              <div class="panel-group" id="manage-area-accordion">
+							<!-- MANAGE-AREA-ACCORDION -->
+							<div class="panel-group" id="manage-area-accordion">
 
-                <!-- SHARING PANEL -->
-                <div class="panel panel-warning">
-                  <div class="panel-heading">
-                    <h4 class="panel-title" data-parent="#1manage-area-accordion" data-target="#manage-accord-sharing" data-toggle="collapse">
-                                            Sharing</h4>
-                  </div>
+								<!-- SHARING PANEL -->
+								<div class="panel panel-warning">
+									<div class="panel-heading">
+										<h4 class="panel-title" data-parent="#1manage-area-accordion" data-target="#manage-accord-sharing"
+											data-toggle="collapse">Sharing '{{area.shared_str}}'</h4>
+									</div>
 
-
-                  <div class="panel-collapse collapse in" id="manage-accord-sharing">
-                    <div class="panel-body">
-                      Sharing Content
-                    </div>
-                  </div>
-                </div>
-
-                <!-- BOUNDARY PANEL -->
-                <div class="panel panel-warning">
-                  <div class="panel-heading">
-                    <h4 class="panel-title" data-parent="#3manage-area-accordion" data-target="#manage-accord-boundary" data-toggle="collapse">
-                                            Boundary</h4>
-                  </div>
-
-
-                  <div class="panel-collapse collapse in" id="manage-accord-boundary">
-                    <div class="panel-body">
-                      Draw a Area's Border
-                    </div>
-                  </div>
-                </div>
-
-                <!-- ACTIVATE CELLS FOR MONITORING -->
-                <div class="panel panel-warning">
-                  <div class="panel-heading">
-                    <h4 class="panel-title" data-parent="#4manage-area-accordion" data-target="#manage-accord-cells" data-toggle="collapse">Activate
-                                            Monitoring</h4>
-                  </div>
-
-
-                  <div class="panel-collapse collapse in" id="manage-accord-cells">
-                    <div class="panel-body">
-                      Edit Cells for Monitoring
-                    </div>
-                  </div>
-                </div>
-
-                <!-- MAP-VIEW PANEL -->
-                <div class="panel panel-warning">
-                  <div class="panel-heading">
-                    <h4 class="panel-title" data-parent="#2manage-area-accordion" data-target="#manage-accord-map-view" data-toggle="collapse">
-                                            Default View</h4>
-                  </div>
-
-
-                  <div class="panel-collapse collapse in" id="manage-accord-map-view">
-                    <div class="panel-body">
-                      Set Map View
-                    </div>
-                  </div>
-                </div>
-                <!-- AREA DESCRIPTION PANEL-->
-
-
-                <div class="panel panel-warning">
-                  <div class="panel-heading">
-                    <h4 class="panel-title" data-parent="#5manage-area-accordion" data-target="#manage-accord-description" data-toggle="collapse">
-                                            Area Description</h4>
-                  </div>
-
-
-                  <div class="panel-collapse collapse" id="manage-accord-description">
-                    <div class="panel-body">
-                      Description Inner Accordion
-                    </div>
-                  </div>
-                </div>
-
-                <!-- DELETE AREA  -->
-                <div class="panel panel-danger">
-                  <div class="panel-heading">
-                    <h4 class="panel-title" data-parent="#6manage-area-accordion" data-target="#manage-accord-delete" data-toggle="collapse">Delete
-                                            Area</h4>
-                  </div>
-
-
-                  <div class="panel-collapse collapse" id="manage-accord-delete">
-                    <div class="panel-body">
-                      Delete Area. Are You Sure?
-                    </div>
-                  </div>
-                </div>
-                <!-- END-MANAGE-AREA-ACCORDION-->
-              </div>
-
-            </div>
-            <!-- END-MANAGE-AREA-PANEL-->
-
-            <!-- MONITOR-AREA-PANEL-->
-            <div class="tab-pane fade" id="monitor-area-panel">
-
-              <!-- MONITOR-AREA-ACCORDION -->
-              <div class="panel-group" id="monitor-area-accordion">
-
-                <!-- MONITOR REPORTS PANEL -->
-                <div class="panel panel-default">
-                  <div class="panel-heading">
-                    <h4 class="panel-title" data-parent="#1monitor-area-accordion" data-target="#monitor-accord-reports" data-toggle="collapse">
-                                            Reports</h4>
-                  </div>
-
-
-                  <div class="panel-collapse collapse in" id="monitor-accord-reports">
-                    <div class="panel-body">
-                      No Reports Available
-                    </div>
-                  </div>
-                </div>
-                <!-- MONITOR TASKS PANEL -->
-
-
-                <div class="panel panel-default">
-                  <div class="panel-heading">
-                    <h4 class="panel-title" data-parent="#2monitor-area-accordion" data-target="#monitor-accord-tasks" data-toggle="collapse">
-                                            Observation Tasks</h4>
-                  </div>
-
-
-                  <div class="panel-collapse collapse in" id="monitor-accord-tasks">
-                    <div class="panel-body">
-                      Observation Tasks
-                    </div>
-                  </div>
-                </div>
-
-                <!-- FOLLOWERS PANEL -->
-                <div class="panel panel-default">
-                  <div class="panel-heading">
-                    <h4 class="panel-title" data-parent="#3monitor-area-accordion" data-target="#monitor-accord-followers" data-toggle="collapse">
-                                            Followers</h4>
-                  </div>
-
-
-                  <div class="panel-collapse collapse in" id="monitor-accord-followers">
-                    <div class="panel-body">
-                      List Users who volunteer to monitor this area
-                    </div>
-                  </div>
-                </div>
-                <!-- END-MONITOR-AREA-ACCORDION-->
-              </div>
-            </div>
-            <hr>
-            <!-- OLD CONTROLS -->
-            <div class="panel" id="tab3success">
-            
-                             <div class="accordion" id="accordion2">
-                <div class="accordion-group">
-                    <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#layer_table"> Layers </a>
-                    </div>
-                    <div class="accordion-body collapse in">
-                        <div class="accordion-inner">
-                            <div class="container-fluid">
-                                <div class="row">
-                                    <div id="layer_table" class=" panel-tight">
-                                        <!-- LayerTemplate rows dynamcially inserted here -->
+                                   {% if is_owner%}
+                                    <div class="panel-collapse collapse" id="manage-accord-sharing">
+                                        <form id="shared_form" class="form-vertical" method="POST" action="">
+                                            <fieldset class='control-label accordion-body'>
+                                                <div class="radio">
+                                                    <label><input type="radio" id='public' name="opt-sharing" value="public" checked="false"
+                                                        data-toggle="tooltip" title="Everyone can see and follow this area"><b>Public</b></label> <br />Everyone can see
+                                                    and follow this area.
+                                                </div>
+                                                <div class="radio">
+                                                    <label><input type="radio" id='unlisted' name="opt-sharing" value="unlisted" checked="false"
+                                                        data-toggle="tooltip" title="Only people with the link can see or follow this area"><b>Unlisted</b></label> <br />Anyone
+                                                    with the <a href={{area|area_url }}>link</a> can see and follow this area.
+                                                </div>
+                                                <div class="radio">
+                                                    <label><input type="radio" id='private' name="opt-sharing" value="private" checked="false"
+                                                        data-toggle="tooltip" title="Only you can see or follow this area"><b>Private</b></label> <br />Only you can see
+                                                    or follow this area. See <a href="http://bunjilforestwatch.wordpress.com/privacy">Privacy</a>
+                                                </div>
+                                            </fieldset>
+                                        </form>
                                     </div>
-                                </div>
+                                    {% endif %}
+								</div>
+									
+								<!-- BOUNDARY PANEL -->
+								<div class="panel panel-warning">
+									<div class="panel-heading">
+										<h4 class="panel-title" data-parent="#3manage-area-accordion" data-target="#manage-accord-boundary"
+											data-toggle="collapse">Boundary</h4>
+									</div>
+
+
+									<div class="panel-collapse collapse in" id="manage-accord-boundary">
+										<div class="panel-body">Draw a Area's Border</div>
+									</div>
+								</div>
+
+								<!-- ACTIVATE CELLS FOR MONITORING -->
+								<div class="panel panel-warning">
+									<div class="panel-heading">
+										<h4 class="panel-title" data-parent="#4manage-area-accordion" data-target="#manage-accord-cells"
+											data-toggle="collapse">Activate Monitoring</h4>
+									</div>
+
+
+									<div class="panel-collapse collapse in" id="manage-accord-cells">
+										<div class="panel-body">Edit Cells for Monitoring</div>
+									</div>
+								</div>
+
+								<!-- MAP-VIEW PANEL -->
+								<div class="panel panel-warning">
+									<div class="panel-heading">
+										<h4 class="panel-title" data-parent="#2manage-area-accordion" data-target="#manage-accord-map-view"
+											data-toggle="collapse">Default View</h4>
+									</div>
+
+
+									<div class="panel-collapse collapse in" id="manage-accord-map-view">
+										<div class="panel-body">
+										  <div id='map_panel_cursor' class='map-panel-cursor' title='Cursor(Latitude, Longitude)'>
+                                                <!-- Filled by update_map_cursor()  -->
+                                            </div>
+                                            <div id='map_panel_data' class='map-panel-data' title='Map Center(Latitude, Longitude)'>
+                                                <!-- Filled by update_map_panel()  -->
+                                            </div>
+                                            <div id='map_panel_controls' class='map-panel-controls'>
+                                                {% if is_owner%} <a id='save-view' class='btn btn-small btn-lightblue confirm glyphicon glyphicon-save'
+                                                    style='width: 40%' data-toggle='tooltip' title='Update saved view to current view'>Save</a> {% endif %} <a
+                                                    id='reset-view' class='btn btn-small btn-lightred confirm glyphicon glyphicon-open' style='width: 40%'
+                                                    data-toggle='tooltip' title='Restore view to area default '>Return</a>
+                                            </div>
+                                          </div>
+									</div>
+								</div>
+								
+								<!-- AREA DESCRIPTION PANEL-->
+								<div class="panel panel-warning">
+									<div class="panel-heading">
+										<h4 class="panel-title" data-parent="#5manage-area-accordion" data-target="#manage-accord-description"
+											data-toggle="collapse">Area Description</h4>
+									</div>
+
+									<div class="panel-collapse collapse" id="manage-accord-description">
+										<div class="panel-body"><div class="accordion-inner">{% include "includes/area-description.html" %}</div>
+										</div>
+									</div>
+								</div>
+
+								<!-- DELETE AREA  -->
+                                {% if show_delete %} 
+								<div class="panel panel-warning">
+									<div class="panel-heading">
+										<h4 class="panel-title" data-parent="#6manage-area-accordion" data-target="#manage-accord-delete"
+											data-toggle="collapse">Delete Area</h4>
+									</div>
+
+									<div class="panel-collapse collapse" id="manage-accord-delete">
+									<div id='user-is-owner-div'>
+		                                            <a  id="delete_area_id" class="btn btn-small btn-lightred map-panel-oops-button confirm" 
+		                                            style='width:60%' data-toggle="tooltip" title="Delete Area (Can't be undone) ">
+		                                            Delete area <span class='red_cross'>&times;</span></a>
+									</div>
+									</div>
+								</div>
+                                {% endif %}    
+
+								<!-- END-MANAGE-AREA-ACCORDION-->
+							</div>
+
+						</div>
+						<!-- END-MANAGE-AREA-PANEL-->
+
+						<!-- MONITOR-AREA-PANEL-->
+						<div class="tab-pane fade" id="monitor-area-panel">
+
+							<!-- MONITOR-AREA-ACCORDION -->
+							<div class="panel-group" id="monitor-area-accordion">
+
+								<!-- MONITOR REPORTS PANEL -->
+								<div class="panel panel-default">
+									<div class="panel-heading">
+										<h4 class="panel-title" data-parent="#1monitor-area-accordion" data-target="#monitor-accord-reports"
+											data-toggle="collapse">Reports</h4>
+									</div>
+
+
+									<div class="panel-collapse collapse in" id="monitor-accord-reports">
+										<div class="panel-body">No Reports Available</div>
+									</div>
+								</div>
+								<!-- MONITOR TASKS PANEL -->
+
+
+								<div class="panel panel-default">
+									<div class="panel-heading">
+										<h4 class="panel-title" data-parent="#2monitor-area-accordion" data-target="#monitor-accord-tasks"
+											data-toggle="collapse">Observation Tasks</h4>
+									</div>
+
+
+									<div class="panel-collapse collapse in" id="monitor-accord-tasks">
+										<div class="panel-body">Observation Tasks</div>
+									</div>
+								</div>
+
+								<!-- FOLLOWERS PANEL -->
+								<div class="panel panel-default">
+									<div class="panel-heading">
+										<h4 class="panel-title" data-parent="#3monitor-area-accordion" data-target="#monitor-accord-followers"
+											data-toggle="collapse">Followers</h4>
+									</div>
+
+
+									<div class="panel-collapse collapse in" id="monitor-accord-followers">
+										<div class="panel-body">List Users who volunteer to monitor this area</div>
+									</div>
+								</div>
+								<!-- END-MONITOR-AREA-ACCORDION-->
+							</div>
+						</div>
+						<hr>
+						<!-- OLD CONTROLS -->
+						<div class="panel" id="old-controls">
+
+							<div class="accordion" id="accordion2">
+								
+								<div class="accordion-group">
+								
+		
+								</div>
+								<div class="accordion-group">
+									<div class="accordion-heading">
+										<a class="accordion-toggle" data-toggle="collapse" href="#area_panel"> Area </a>
+									</div>
+									<div id="area_panel" class="accordion-body collapse">
+										<div class="accordion-inner">{% include "accordion.html" %}</div>
+									</div>
+								</div>
+								<div class="accordion-group">
+									<div class="accordion-heading">
+										<a class="accordion-toggle" data-toggle="collapse" href="#reports_panel"> Reports </a>
+									</div>
+									<div id="reports_panel" class="accordion-body collapse">
+										<div class="accordion-inner">
+											<p>No reports</p>
+											<p></p>
+										</div>
+									</div>
+								</div>
+								<div class="accordion-group">
+									<div class="accordion-heading">
+										<a class="accordion-toggle" data-toggle="collapse" href="#obstasks_panel"> Observation Tasks</a>
+									</div>
+									<div id="obstasks_panel" class="accordion-body collapse">
+										<div class="accordion-inner">
+											<a href="{{ area|area_tasks_url}}">view tasks</a>
+										</div>
+									</div>
+								</div>
+								<div class="accordion-group">
+									<div class="accordion-heading">
+										<a class="accordion-toggle" data-toggle="collapse" href="#area_followers_panel"> Followers {{area.follower_count}}</a>
+									</div>
+									<div id="area_followers_panel" class="accordion-body collapse">
+										<div class="accordion-inner">
+											{% for j in area_followers%}
+											<ul>
+												<a href="{{ "user"|url(j) }}" data-toggle="tooltip" title="A volunteer who monitors this area.">{{j}}</a>
+											</ul>
+											{% endfor %}
+										</div>
+									</div>
+								</div>
+								<div class="accordion-group">
+								<div class="accordion-heading">
+										<a class="accordion-toggle" data-toggle="collapse" id='area_sharing_heading' href="#area_sharing_panel"> Sharing:
+											'{{area.shared_str}}'</a>
+									</div>
+	
+								</div>
+
+								<div class="accordion-group">
+									<div id='cell_panel_t' class="accordion-heading">
+										<a class="accordion-toggle " data-toggle="collapse" href="#cell_panel_title"> Landsat Cells </a>
+									</div>
+									<div id="cell_panel_title" class="accordion-body collapse">
+										<div class="accordion-inner">
+											{% if is_owner%}
+											<div id='edit-cells-lock'>
+												<!-- Filled in by toggle_edit_cells_lock() -->
+											</div>
+											{% endif %}
+											<div id='cell_panel' class='cell-panel'>
+												<!-- Filled by update_cell_panel()  -->
+											</div>
+										</div>
+									</div>
+								</div>
+								<div id="dialog-new-cells" class='popover popover-success popover-lg' data-toggle="popover-x" data-target='#myPopover1'
+									data-placement="right" style='display: none'>
+									<div id='myPopover1' class="arrow"></div>
+									<h3 class="popover-title">Calculating New Cells</h3>
+									<div class="popover-content">
+										Your new area's border is shown in yellow. Bunjil is calculating which Landsat images overlap this area. When finished
+										their outlines will show as white square outlines<br />
+										<br /> Bunjil selects the most important cells for <b>monitoring</b> and highlights these in a bolder white outline.<br />
+										<br /> If you want to change which cells are monitored open the <a id='close-dialog-new-cells-open-accordion'><i>Landsat
+												Cells</i></a> panel on the left.
+									</div>
+									<div class="popover-footer">
+										<button id='close-dialog-new-cells' class="btn btn-sm btn-default">Close</button>
+									</div>
+								</div>
+
+								<div class="accordion-group">
+									<div class="accordion-heading">
+										<a class="accordion-toggle" data-toggle="collapse" href="#map_panel"> Map View</a>
+									</div>
+									<div id="map_panel" class="accordion-body collapse">
+										<div class="accordion-inner">
+										
+										</div>
+									</div>
+								</div>
+								{% if show_navbar == True %}
+								<div class="accordion-group">
+									<div class="accordion-heading">
+										<a class="accordion-toggle" data-toggle="collapse" href="#ad_hoc_panel"> Create Overlay</a>
+									</div>
+									<div id="ad_hoc_panel" class="accordion-body collapse">
+										<div class="accordion-inner">
+											<div class="btn-toolbar" role="toolbar">
+												<div class="btn-group">
+													<button id='algorithm' type="button" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
+														data-toggle="tooltip" title="Select RGB for true colour or NDVI to highlight vegetation change">
+														RGB<span class="caret"></span>
+													</button>
+													<ul class="dropdown-menu" role="menu">
+														<li><a href="#" id='algorithm-visual'>RGB</a></li>
+														<li class="divider"></li>
+														<li><a href="#" id='algorithm-ndvi'>NDVI</a></li>
+														<li><a href="#" id='algorithm-change'>Change</a></li>
+													</ul>
+												</div>
+												<div class="btn-group">
+													<button id='latest' type="button" class="btn btn-xs dropdown-toggle" data-toggle="dropdown" data-toggle="tooltip"
+														title="Select the latest image, the one before or the one before that)">
+														Latest<span class="caret"></span>
+													</button>
+													<ul class="dropdown-menu" role="menu">
+														<li><a href="0" id='latest-0'>Latest</a></li>
+														<li class="divider"></li>
+														<li><a href="1" id='latest-1'>Latest-1</a></li>
+														<li><a href="2" id='latest-2'>Latest-2</a></li>
+														<li><a href="3" id='latest-3'>Latest-3</a></li>
+													</ul>
+												</div>
+
+												<div class="btn-group">
+													<button id='satellite' type="button" style="width: 40px" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
+														data-toggle="tooltip" title="Select Landsat7, Landsat 8)">
+														L8<span class="caret"></span>
+													</button>
+													<ul class="dropdown-menu" role="menu">
+														<li><a href="#" id='satellite-l7'>L7</a></li>
+														<li class="divider"></li>
+														<li><a href="#" id='satellite-both'></a></li>
+													</ul>
+												</div>
+												<p class="white-font">`</p>
+												<div class="btn-group">
+													<button id='get_overlay_btn' type="button" style="padding: 4px" class="btn btn-xs btn-lightblue"
+														data-toggle="tooltip" title="Fetch the image matching the above settings.">Create Overlay</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								{% endif %}
+							</div>
+							<div>
+								<br /> {% if user %}
+								<div>
+									<a id='make-report' class="btn btn-small btn-lightblue confirm" style='width: 80%' data-toggle="popover-x"
+										data-target='#make-report-popover' data-placement="right">Make report</a>
+									<div id="make-report-popover" class='popover popover-info' data-toggle="popover-x">
+										<div class="arrow"></div>
+										<h3 class="popover-title">Report a change or disturbance</h3>
+										<div class="popover-content">
+											If you see a change in the image, make a report.<br /> First drop a pin on the map where you see the disturbance.
+											Then click Next.
+										</div>
+										<div class="popover-footer">
+											<button id='make-report-popover-next' class="btn btn-sm btn-default">Next</button>
+											<button id='make-report-popover-close' class="btn btn-sm btn-info">Close</button>
+										</div>
+									</div>
+								</div>
+								{% else%} <br />
+								<div>
+									<a id='sign-in' class="btn btn-small btn-lightblue confirm" style='width: 80%' data-toggle="popover-x"
+										data-target='#sign-in-popover' data-placement="right">Report changes</a>
+									<div id="sign-in-popover" class='popover popover-info' data-toggle="popover-x">
+										<div class="arrow"></div>
+										<h3 class="popover-title">Report a change or disturbance</h3>
+										<div class="popover-content">
+											<a href='/login/google'><i>Sign in</i></a> to make a report.<br />
+										</div>
+										<div class="popover-footer">
+											<button id='do-popover-sign-in' class="btn btn-sm btn-default">Sign in</button>
+											<button id='close-popover-sign-in' class="btn btn-sm btn-info">Close</button>
+										</div>
+									</div>
+								</div>
+								{% endif %}
+							</div>
+						</div>
+					</div>
+					<!-- END-OLD CONTROLS-->
+
+					<!-- PERMANENT-ACCORDION (ALL TABS) -->
+					<div class="panel-group" id="perm-area-accordion">
+
+						<!-- LAYERS PANEL -->
+						<div class="panel panel-info">
+							<div class="panel-heading">
+								<h4 class="panel-title" data-parent="#4monitor-area-accordion" data-target="#perm-accord-layers" data-toggle="collapse">
+									Layers</h4>
+							</div>
+
+
+							<div class="panel-collapse collapse in" id="perm-accord-layers">
+								<div class="panel-body"><div class="accordion-inner">
+                                            <div class="container-fluid">
+                                                <div class="row">
+                                                    <div id="layer_table" class=" panel-tight">
+                                                        <!-- LayerTemplate rows dynamcially inserted here -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div></div>
+							</div>
+						</div>
+
+						<!-- JOBS PANEL -->
+						<div class="panel panel-info">
+							<div class="panel-heading">
+								<h4 class="panel-title" data-parent="#4monitor-area-accordion" data-target="#perm-accord-jobs" data-toggle="collapse">
+									Jobs</h4>
+							</div>
+
+                            <div id="tile-progress-c" style='display: none'>
+                                        <div id="tile-progress-label" >Loaded Tiles</div>
+                                        <progress id="tile-progress" value="0" max="0"></progress>
                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="accordion-group">
-                    <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#jobs_table">Jobs </a>
-                    </div>
-                    <div id="tile-progress-c" style='display: none' width="100%">
-                        <div id="tile-progress-label"  width="100%" style="color:red">Loaded Tiles</div>
-                        <progress id='tile-progress' value="0" max="0" ></progress>
-                    </div>
-                    <div class="accordion-body collapse in">
-                        <div class="accordion-inner">
-                            <div class="container-fluid">
-                                <div class="row">
-                                    <div id="jobs_table" class=" panel-tight">
-                                        <!-- JobsTemplate rows dynamcially inserted here -->
+
+							<div class="panel-collapse collapse in" id="perm-accord-jobs">
+								<div class="panel-body">
+								                        
+                                    <div class="accordion-body collapse in">
+                                        <div class="accordion-inner">
+                                            <div class="container-fluid">
+                                                <div class="row">
+                                                    <div id="jobs_table" class=" panel-tight">
+                                                        <!-- JobsTemplate rows dynamcially inserted here -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="accordion-group">
-                    <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#area_panel"> Area  </a>
-                    </div>
-                    <div id="area_panel" class="accordion-body collapse">
-                        <div class="accordion-inner">
-                            {% include "accordion.html" %}
-                        </div>
-                    </div>
-                </div>
-                <div class="accordion-group">
-                    <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#reports_panel"> Reports </a>
-                    </div>
-                    <div id="reports_panel" class="accordion-body collapse">
-                        <div class="accordion-inner">
-                            <p>No reports
-                            <p>
-                        </div>
-                    </div>
-                </div>
-                <div class="accordion-group">
-                    <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#obstasks_panel"> Observation Tasks</a>
-                    </div>
-                    <div id="obstasks_panel" class="accordion-body collapse">
-                        <div class="accordion-inner">
-                            <a href="{{ area|area_tasks_url}}">view tasks</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="accordion-group">
-                    <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#area_followers_panel"> Followers {{area.follower_count}}</a>
-                    </div>
-                    <div id="area_followers_panel" class="accordion-body collapse">
-                        <div class="accordion-inner">
-                    {% for j in area_followers%}
-                           <ul><a href="{{ "user"|url(j) }}" data-toggle="tooltip" title="A volunteer who monitors this area.">{{j}}</a></ul>
-                        {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                <div class="accordion-group">
-                    <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" id='area_sharing_heading' href="#area_sharing_panel"> Sharing: '{{area.shared_str}}'</a>
-                    </div>
-                    {% if is_owner%} 
-                    <div id="area_sharing_panel" class="accordion-body collapse">
-                       <form id="shared_form" class="form-vertical" method="POST">
-                        <fieldset class='control-label accordion-body'>
-                         <div class="radio">
-                            <label><input type="radio" id='public' name="opt-sharing" value="public" checked="false" data-toggle="tooltip" title="Everyone can see and follow this area"><b>Public</b></label>
-                            <br/>Everyone can see and follow this area.
-                        </div>
-                             <div class="radio">
-                            <label><input type="radio" id='unlisted' name="opt-sharing" value="unlisted" checked="false" data-toggle="tooltip" title="Only people with the link can see or follow this area"><b>Unlisted</b></label>
-                            <br/>Anyone with the <a href={{ area|area_url }}>link</a> can see and follow this area.
-                        </div>
-                        <div class="radio">
-                            <label><input type="radio" id='private' name="opt-sharing" value="private" checked="false" data-toggle="tooltip" title="Only you can see or follow this area"><b>Private</b></label>
-                            <br/>Only you can see or follow this area. See <a href="http://bunjilforestwatch.wordpress.com/privacy">Privacy</a>
-                        </div>
-                    </fieldset>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <div>
-                </div>
-                <div class="accordion-group">
-                    <div id='cell_panel_t'  class="accordion-heading">
-                       <a class="accordion-toggle " data-toggle="collapse" href="#cell_panel_title"> Landsat Cells   </a>
-                    </div>
-                    <div id="cell_panel_title" class="accordion-body collapse">
-                        <div class="accordion-inner">
-                        {% if is_owner%} 
-                        <div id='edit-cells-lock'>
-                                <!-- Filled in by toggle_edit_cells_lock() -->
-                        </div>
-                        {% endif %}
-                            <div id='cell_panel' class='cell-panel'>
-                                    <!-- Filled by update_cell_panel()  -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                 <div id="dialog-new-cells" class='popover popover-success popover-lg' data-toggle="popover-x"  data-target='#myPopover1' data-placement="right" style='display:none'>
-                     <div id='myPopover1' class="arrow"></div>
-                     <h3 class="popover-title">Calculating New Cells</h3>
-                     <div class="popover-content">
-                             Your new area's border is shown in yellow.          
-                             Bunjil is calculating which Landsat images overlap this area. When finished their outlines will show as white square outlines<br/><br/>
-                             Bunjil selects the most important cells for <b>monitoring</b> and highlights these in a bolder white outline.<br/><br/>
-                             If you want to change which cells are monitored open the <a id='close-dialog-new-cells-open-accordion'><i>Landsat Cells</i></a>
-                             panel on the left.
-                     </div>
-                      <div class="popover-footer">
-                           <button id='close-dialog-new-cells' class="btn btn-sm btn-default">Close </button>
-                      </div>
-                 </div>
-                
-                 <div class="accordion-group">
-                    <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#map_panel"> Map View</a>
-                    </div>
-                    <div id="map_panel" class="accordion-body collapse">
-                        <div class="accordion-inner">
-                           <div id='map_panel_cursor' class='map-panel-cursor' title='Cursor(Latitude, Longitude)'>
-                                    <!-- Filled by update_map_cursor()  -->
-                            </div>
-                            <div id='map_panel_data' class='map-panel-data' title='Map Center(Latitude, Longitude)'>
-                                    <!-- Filled by update_map_panel()  -->
-                            </div>
-                            <div id='map_panel_controls' class='map-panel-controls' >
-                                 {% if is_owner%} 
-                                 <a  id='save-view' class='btn btn-small btn-lightblue confirm glyphicon glyphicon-save' style='width:40%' data-toggle='tooltip' title='Update saved view to current view'>Save</a>
-                                 {% endif %}
-                                 <a  id='reset-view' class='btn btn-small btn-lightred confirm glyphicon glyphicon-open' style='width:40%' data-toggle='tooltip' title='Restore view to area default '>Return</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% if show_navbar == True %}
-               <div class="accordion-group">
-                    <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#ad_hoc_panel"> Create Overlay</a>
-                    </div>
-                    <div id="ad_hoc_panel" class="accordion-body collapse">
-                        <div class="accordion-inner">
-                              <div class="btn-toolbar" role="toolbar">
-                                <div class="btn-group">
-                                    <button id='algorithm' type="button"  class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
-                                        data-toggle="tooltip" title="Select RGB for true colour or NDVI to highlight vegetation change">
-                                        RGB<span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" role="menu">
-                                        <li><a href="#" id='algorithm-visual'>RGB</a></li>
-                                        <li class="divider"></li>
-                                        <li><a href="#" id='algorithm-ndvi'>NDVI</a></li>
-                                        <li><a href="#" id='algorithm-change'>Change</a></li>
-                                    </ul>
-                                </div>
-                                <div class="btn-group">
-                                    <button id='latest' type="button" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
-                                        data-toggle="tooltip" title="Select the latest image, the one before or the one before that)">
-                                        Latest<span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" role="menu">
-                                        <li><a href="0" id='latest-0'>Latest</a></li>
-                                        <li class="divider"></li>
-                                        <li><a href="1" id='latest-1'>Latest-1</a></li>
-                                        <li><a href="2" id='latest-2'>Latest-2</a></li>
-                                        <li><a href="3" id='latest-3'>Latest-3</a></li>
-                                    </ul>
-                                </div>
-                                
-                                <div class="btn-group" >
-                                    <button id='satellite' type="button" style="width: 40px" class="btn btn-xs dropdown-toggle" data-toggle="dropdown"
-                                        data-toggle="tooltip" title="Select Landsat7, Landsat 8)">
-                                        L8<span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" role="menu">
-                                        <li><a href="#" id='satellite-l7'>L7</a></li>
-                                        <li class="divider"></li>
-                                        <li><a href="#" id='satellite-both'></a></li>
-                                    </ul>
-                                </div>
-                                <p class="white-font"> `</p>
-                                <div class="btn-group">
-                                    <button id='get_overlay_btn' type="button"  style="padding:4px"  class="btn btn-xs btn-lightblue" data-toggle="tooltip"
-                                        title="Fetch the image matching the above settings.">Create Overlay</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-           </div>
-           <div>
-                <br/>
-                {% if user  %}
-                    <div>
-                        <a  id='make-report' class="btn btn-small btn-lightblue confirm" style='width:80%' data-toggle="popover-x" data-target='#make-report-popover' data-placement="right" >Make report</a>
-                         <div id="make-report-popover" class='popover popover-info' data-toggle="popover-x" >
-                             <div class="arrow" ></div>
-                             <h3 class="popover-title">Report a change or disturbance</h3>
-                             <div class="popover-content">
-                                     If you see a change in the image, make a report.<br/>
-                                     First drop a pin on the map where you see the disturbance.
-                                     Then click Next.
-                             </div>
-                              <div class="popover-footer">
-                                   <button id='make-report-popover-next' class="btn btn-sm btn-default">Next</button>
-                                   <button id='make-report-popover-close' class="btn btn-sm btn-info">Close</button>
-                              </div>
-                           </div>
-                       </div>
-                 {% else%}
-                <br/>
-                    <div>
-                     <a  id='sign-in'  class="btn btn-small btn-lightblue confirm" style='width:80%' data-toggle="popover-x" data-target='#sign-in-popover' data-placement="right" >Report changes</a>
-                     <div id="sign-in-popover" class='popover popover-info' data-toggle="popover-x" >
-                         <div class="arrow" ></div>
-                         <h3 class="popover-title">Report a change or disturbance</h3>
-                         <div class="popover-content">
-                                 <a href = '/login/google'><i>Sign in</i></a> to make a report.<br/>
-                         </div>
-                          <div class="popover-footer">
-                               <button id='do-popover-sign-in' class="btn btn-sm btn-default">Sign in</button>
-                               <button id='close-popover-sign-in' class="btn btn-sm btn-info">Close</button>
-                          </div>
-                       </div>
-                      </div>
-                 {% endif %}
-           </div> 
-         </div>
-            </div> <!-- OLD CONTROLS-->
-
-            <!-- PERMANENT-ACCORDION (ALL TABS) -->
-            <div class="panel-group" id="perm-area-accordion">
-
-              <!-- LAYERS PANEL -->
-              <div class="panel panel-info">
-                <div class="panel-heading">
-                  <h4 class="panel-title" data-parent="#4monitor-area-accordion" data-target="#perm-accord-layers" data-toggle="collapse">
-                                    Layers</h4>
-                </div>
+								</div>
+							</div>
+						</div>
+						<!-- END-PERMANENT-AREA-ACCORDION-->
+					</div>
 
 
-                <div class="panel-collapse collapse in" id="perm-accord-layers">
-                  <div class="panel-body">
-                    Hide or Show Image Overlays
-                  </div>
-                </div>
-              </div>
-
-              <!-- JOBS PANEL -->
-              <div class="panel panel-info">
-                <div class="panel-heading">
-                  <h4 class="panel-title" data-parent="#4monitor-area-accordion" data-target="#perm-accord-jobs" data-toggle="collapse">
-                                    Jobs</h4>
-                </div>
+				</div>
+			</div>
+		</div>
+	</div>
 
 
-                <div class="panel-collapse collapse in" id="perm-accord-jobs">
-                  <div class="panel-body">
-                    ShowJobs
-                  </div>
-                </div>
-              </div>
-              <!-- END-PERMANENT-AREA-ACCORDION-->
-            </div>
+	<!-- MAP CANVAS  -->
 
-
-          </div>
-        </div>
-      </div>
-    </div>
-
-        
-        <!-- MAP CANVAS  -->
-        
-        <div id="map-left-c" class="col-md-5 lesspadding map-canvas">
-            <!-- Left Hand Map Element -->
-            <div id="dragger"       class='drag-base'>
-                <div id="right-title" class='drag-base'>before</div>
-                <div id="left-title"    class='drag-base'>latest</div>
-                <div id="draghandle" class='drag-base'><img src='/static/img/dragger.png' alt="Drag handle" height="50" width="50"> </div>
-            </div>
-            <div id="map-left-c-latest" >
-                <div id="map-left-latest" ></div>
-            </div>
-            <div id="map-left-c-prior">
-                <div id="map-left-prior"></div>
-            </div>
-        </div>
-        <div id="map-right-c" class="col-md-5 lesspadding map-canvas">
-            <div id="rhs_cursor-c">
-                <span id="rhs_cursor" style='display:none'>x</span>
-            </div>
-            <div id="map-right"></div>
-        </div>
-    </div>
+	<div id="map-left-c" class="col-md-5 lesspadding map-canvas">
+		<!-- Left Hand Map Element -->
+		<div id="dragger" class='drag-base'>
+			<div id="right-title" class='drag-base'>before</div>
+			<div id="left-title" class='drag-base'>latest</div>
+			<div id="draghandle" class='drag-base'>
+				<img src='/static/img/dragger.png' alt="Drag handle" height="50" width="50">
+			</div>
+		</div>
+		<div id="map-left-c-latest">
+			<div id="map-left-latest"></div>
+		</div>
+		<div id="map-left-c-prior">
+			<div id="map-left-prior"></div>
+		</div>
+	</div>
+	<div id="map-right-c" class="col-md-5 lesspadding map-canvas">
+		<div id="rhs_cursor-c">
+			<span id="rhs_cursor" style='display: none'>x</span>
+		</div>
+		<div id="map-right"></div>
+	</div>
 </div>
-{% endblock content %}
-
-{%block layer_template %}
+<div></div>
+{% endblock content %} {%block layer_template %}
 <!--TEMPLATE DIV  does not display till added by addLayer() call. See layerslider.js ?-->
 <div class="row" id='LayerTemplate' style='display: none'>
-    <div class="col-xs-1 col-sm-1 col-md-1">
-        <input id='tcheckbox_id' type="checkbox" class="panel-tight checklabel" name="layer_enable" value="On" checked="true" />
-    </div>
-
-    <div class="col-xs-3 col-sm-3 col-md-3">
-        <div id='tslider_id' class="slider"></div>
-    </div>
-    <div id='tlabel_id' class="panel-tight layerlabel col-xs-5 col-sm-5 col-md-5" data-toggle="tooltip" title="template tooltip">
-        <small>template label</small>
-    </div>
-</div>
-{% endblock layer_template %}
-
-{%block jobs_template %}
-	<!--TEMPLATE DIV  does not display till added by addLayer() call. -->
-	<div class="row addjobdiv" id='JobTemplate' >
-	        <a id='tcross_id' class="close">&times;</a> 
-	      <div id='tlabel_id'class="col-xs-11" style='margin: 0'>
-	       <small>template message text to replace</small>
-	    </div>
+	<div class="col-xs-1 col-sm-1 col-md-1">
+		<input id='tcheckbox_id' type="checkbox" class="panel-tight checklabel" name="layer_enable" value="On" checked="true" />
 	</div>
-{%endblock jobs_template %}
 
-{% block footer_js%}
-    {% include "includes/project_scripts.html" %}
-    {% include "includes/map_scripts.html" %}
-    <script type="text/javascript" src="/static/js/base-maps.js" defer ></script>
+	<div class="col-xs-3 col-sm-3 col-md-3">
+		<div id='tslider_id' class="slider"></div>
+	</div>
+	<div id='tlabel_id' class="panel-tight layerlabel col-xs-5 col-sm-5 col-md-5" data-toggle="tooltip" title="template tooltip">
+		<small>template label</small>
+	</div>
+</div>
+{% endblock layer_template %} {%block jobs_template %}
+<!--TEMPLATE DIV  does not display till added by addLayer() call. -->
+<div class="row addjobdiv" id='JobTemplate'>
+	<a id='tcross_id' class="close">&times;</a>
+	<div id='tlabel_id' class="col-xs-11" style='margin: 0'>
+		<small>template message text to replace</small>
+	</div>
+</div>
+{%endblock jobs_template %} {% block footer_js%} {% include "includes/project_scripts.html" %} {% include
+"includes/map_scripts.html" %}
+<script type="text/javascript" src="/static/js/base-maps.js" defer></script>
 {% endblock footer_js %}
 
