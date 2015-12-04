@@ -96,7 +96,7 @@ function get_threats() {
 
 function get_area_wiki() {
 	var area_wiki = $('#area-wiki').val();
-	console.log('wiki: ', area_wiki);
+	//console.log('wiki: ', area_wiki);
 	return area_wiki;
 }
 
@@ -986,50 +986,48 @@ function pre_checkform_next_area(event) {
 	
 var test_message = 1;
 
-function areanameAccord_title_clicked(event) {
-	$('#areanameAccord').collapse('toggle');
+
+function areanameAccord_clicked(event) {
+	//$('#areanameAccord').collapse('toggle');
 	var area_name = $('#area_name').val()
-	$('#areanameAccord_title').html('Area Name: ' + area_name  );
+	$('#areanameAccord').html('Area Name: ' + area_name  );
 	addToasterMessage('alert-success','Test Alert Message ' + test_message + ' ' + area_name);
     test_message += 1;
 }
 
-function sharingAccord_title_clicked(event) {
-	$('#sharingAccord').collapse('toggle');
-	$('#sharingAccord_title').html('Sharing: ' +  get_shared());
+function sharingAccord_clicked(event) {
+	//$('#sharingAccord').collapse('toggle');
+	$('#sharingAccord').html('Sharing: ' +  get_shared());
 
 }
 
-function monitoringAccord_title_clicked(event) {
-	$('#monitoringAccord').collapse('toggle');
+function monitoringAccord_clicked(event) {
+	//$('#monitoringAccord').collapse('toggle');
 	//var options = 'Not selected';
 	var self_monitor =       $('input[name=self-monitor]', '#new_area_form').val();
 	var request_volunteers = $('input[name=request-volunteers]', '#new_area_form').val();
 	var title = 'Monitoring: ' + self_monitor + ' ' + request_volunteers; 
 	
-	$('#monitoringAccord_title').html(title);
+	$('#monitoringAccord').html(title);
 }
 
-function agreementAccord_title_clicked(event) {
-	$('#agreementAccord').collapse('toggle');
+function agreementAccord_clicked(event) {
+	//$('#agreementAccord').collapse('toggle');
 	var accept = get_has_accepted();
 	var title = 'Agreement ' +  ((accept === true )? 'Accepted' : 'Not Accepted');
-	$('#agreementAccord_title').html(title);
+	$('#agreementAccord').html(title);
 }
 
 
-function descriptionAccord_title_clicked(event) {
-	$('#descriptionAccord').collapse('toggle');
-	//var accept = get_has_accepted();
-	//var title = 'Description' ;
-	//$('#agreementAccord_title').html(title);
+function descriptionAccord_clicked(event) {
+	//$('#descriptionAccord').collapse('toggle');
 }
 
-function helplocateAccord_title_clicked(event) {
-	$('#helplocateAccord').collapse('toggle');
+function helplocateAccord_clicked(event) {
+	//$('#helplocateAccord').collapse('toggle');
 }
-function drawlocateAccord_title_clicked(event) {
-	$('#drawlocateAccord').collapse('toggle');
+function drawlocateAccord_clicked(event) {
+	//$('#drawlocateAccord').collapse('toggle');
 }
 
 
@@ -1061,7 +1059,6 @@ function checkform_next_area(event) {
 		//set up form for the next stage - get the map location
 		$('#form-errors').html(' ');
 		$('#next-subform').hide();
-		areanameAccord_title
 		$('#areanameAccord').collapse('hide');
 		$('#sharingAccord').collapse('hide');
 		$('#monitoringAccord').collapse('hide');
@@ -1103,21 +1100,21 @@ function init_boundary_form()
 	$('#areanameAccord').collapse('hide');
 	$('#descriptionAccord').collapse('show');
 	
-	$('#areanameAccord_title').html('Area Name ' +   $('#area_name').val());
+	$('#areanameAccord').html('Area Name ' +   $('#area_name').val());
 
 	$('#sharingAccord').collapse('hide');
-	$('#sharingAccord_title').html('Sharing ' +  $('input[name=opt-sharing]:checked', '#new_area_form').val());
+	$('#sharingAccord').html('Sharing ' +  $('input[name=opt-sharing]:checked', '#new_area_form').val());
 
 	$('#monitoringAccord').collapse('hide');
-	$('#monitoringAccord_title').html('Monitoring: ' +  $('input[name=self-monitor]', '#new_area_form').val());
+	$('#monitoringAccord').html('Monitoring: ' +  $('input[name=self-monitor]', '#new_area_form').val());
 
 	$('#agreementAccord').collapse('hide');
-	$('#agreementAccord_title').html('Agreement: ' +   'Agreed');
+	$('#agreementAccord').html('Agreement: ' +   'Agreed');
 
 	// hide next button and ability to change area's location.  
 	$('#next-subform').hide();
-	$('#helplocateAccord_c').hide();
-	$('#drawlocateAccord_c').hide();
+	$('#helplocateAccord').hide();
+	$('#drawlocateAccord').hide();
 
 	// Display description and boundary form - ask user to enrich info.
 	$("#update-area-form").show();    
@@ -1153,13 +1150,13 @@ function initialize_new() {
 	$('#new_area_form input').on('change', pre_checkform_next_area);
 	
 	$('#next-area').click(checkform_next_area);
-	$('#sharingAccord_title').click(sharingAccord_title_clicked);
-	$('#areanameAccord_title').click(areanameAccord_title_clicked);
-	$('#monitoringAccord_title').click(monitoringAccord_title_clicked);
-	$('#agreementAccord_title').click(agreementAccord_title_clicked);
-	$('#descriptionAccord_title').click(descriptionAccord_title_clicked);
-	$('#helplocateAccord_title').click(helplocateAccord_title_clicked);
-	$('#drawlocateAccord_title').click(drawlocateAccord_title_clicked);
+	$('#sharingAccord').click(sharingAccord_clicked);
+	$('#areanameAccord').click(areanameAccord_clicked);
+	$('#monitoringAccord').click(monitoringAccord_clicked);
+	$('#agreementAccord').click(agreementAccord_clicked);
+	$('#descriptionAccord').click(descriptionAccord_clicked);
+	$('#helplocateAccord').click(helplocateAccord_clicked);
+	$('#drawlocateAccord').click(drawlocateAccord_clicked);
 
 	var auto_collapse = true;
 
@@ -1167,22 +1164,22 @@ function initialize_new() {
 
 	  if (auto_collapse) { 		//if ($(this).is(':checked')){
 
-		  	$(this).attr('checked', false);
+		  	//$(this).attr('checked', false);
         	auto_collapse = false;
-            $('#inner_accordion .panel-collapse').collapse('show');
-            $('#inner_accordion .panel-title').attr('data-toggle', '');
+            $('#inner-descr-accordion .panel-collapse').collapse('show');
+            $('#inner-descr-accordion .panel-title').attr('data-toggle', '');
             console.log('Enable accordion behavior');
         } else {
-		  	$(this).attr('checked', true);
+		  	//$(this).attr('checked', true);
         	auto_collapse = true;
-            $('#inner_accordion .panel-collapse').collapse('hide');
-            $('#inner_accordion .panel-title').attr('data-toggle', 'collapse');
+            $('#inner-descr-accordion .panel-collapse').collapse('hide');
+            $('#inner-descr-accordion .panel-title').attr('data-toggle', 'collapse');
             console.log('Disable accordion behavior');
         }	
 	});
 	
-    $('#inner_accordion').on('show.bs.collapse', function () {
-    	if (auto_collapse) $('#inner_accordion .in').collapse('hide');
+    $('#inner-descr-accordion').on('show.bs.collapse', function () {
+    	if (auto_collapse) $('#inner-descr-accordion .in').collapse('hide');
 	});
 	
 	

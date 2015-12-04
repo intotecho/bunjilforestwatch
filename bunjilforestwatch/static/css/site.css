@@ -48,6 +48,9 @@ a[class ="popup"] {
     border-bottom:1px;
 }
 
+.panel-title:hover {
+     cursor: pointer;
+}
 .panel-success > .panel-footer {
     color: #468847;
     background-color: #dff0d8;
