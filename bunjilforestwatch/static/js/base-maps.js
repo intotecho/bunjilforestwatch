@@ -41,13 +41,14 @@ function update_map_panel(map, panel) {
 	/* global map_over_lhs */
 	/* global map_under_lhs */
     var htmlString = "<span class=divider small><strong>zoom:</strong>   " + map.getZoom() + " <br/>";
-    //htmlString += "<strong>center:</strong><br>";
     htmlString += "Center(" + map_under_lhs.getCenter().lat().toFixed(3) + ",  " + map_under_lhs.getCenter().lng().toFixed(3) + ")</span>";
     $(panel).empty().html(htmlString); 
 }
 
 
-//update_map_cursorupdates the panel div with values of the cursor in long based after map becomes idle.
+/**
+ * Updates the panel div with lat lng values of the cursor - Called after mouse moves over the map to [position pnt.
+ */
 
 function update_map_cursor(map, pnt, panel) {   
 	"use strict";
@@ -56,7 +57,8 @@ function update_map_cursor(map, pnt, panel) {
     var lng = pnt.lng();
     lng = lng.toFixed(4);
     var htmlString  = "Cursor( " + lat + ", " + lng + ")";
-    $(panel).html(htmlString); 
+    $(panel).empty().html(htmlString);
+    console.log(htmlString);
 }
 
 /**
@@ -257,12 +259,103 @@ function initialize() {
         console.log('area.share unrecognised state %s', share);
     }
 
+
+    // Update Area Shared property
     $('#shared_form input').on('change', function() {
         var selection = $('input[name=opt-sharing]:checked', '#shared_form').val();
-        console.log("share returned: ", selection);
+        //console.log("share returned: ", selection);
+        
         /* global updateAreaShared */
-        updateAreaShared(selection); //ajax call
-        $('#area_sharing_heading').html("Sharing: updating ...");
+        //updateAreaShared(selection); //ajax call
+    
+        var patch_ops = [
+            { "op": "replace", "path": "/properties/shared", "value": selection, "id": "shared_form"}
+    	];
+
+        var request = patch_area(patch_ops, area_json.properties.area_url);  //patch_area(); //ajax call
+        request.done(function (data) {
+        	if(typeof data !== 'undefined') {
+        		console.log ('patch_area() - result: ' + data.status + ', ' + data.updates.length + ' updates: ' + data.updates[0].result);
+        	}
+        });
+        
+        request.fail(function (xhr, textStatus, error) {
+        	$('#area_sharing_heading').html("Sharing: failed");
+			console.log ('patch_area() - request failed:', xhr.status, ' error: ', error);
+        })
+     });
+    
+    // Update Area Description properties
+    $('.update-area-btn').click(function(e) {
+        var elem = $(e.target);
+        elem.html('Saving...');
+    	var p =  elem.parent().parent();
+    	
+    	var id = p.attr('id');
+        var gp =  p.parent();
+        var text = (id === 'area-wiki-form') ?  gp.find('input').val() : gp.find('textarea').val();
+        /*
+        if(id === 'area-wiki-form') {
+        	text = gp.find('input').val();
+        }
+        else {
+        	text = gp.find('textarea').val();
+        }
+        */  
+        var patch_ops =  [];
+        
+        switch (id) {
+        	case 'area_descr_what':
+	        	patch_ops.push( { "op": "replace", "path": "/properties/area_description/description", "value": text, "id": id });
+	        	break;
+
+        	case 'area_descr_why':
+	        	patch_ops.push( { "op": "replace", "path": "/properties/area_description/description_why", "value": text, "id": id });
+	        	break;
+
+        	case 'area_descr_how':
+	        	patch_ops.push( { "op": "replace", "path": "/properties/area_description/description_how", "value": text, "id": id });
+	        	break;
+
+        	case 'area_descr_who':
+	        	patch_ops.push( { "op": "replace", "path": "/properties/area_description/description_who", "value": text, "id": id });
+	        	break;
+	
+        	case 'area_descr_threats':
+	        	patch_ops.push( { "op": "replace", "path": "/properties/area_description/threats", "value": text, "id": id });
+	        	break;
+    
+        	case 'area-wiki-form':
+	        	patch_ops.push( { "op": "replace", "path": "/properties/area_description/wiki", "value": text, "id": id });
+	        	break;
+	        	
+	        default:
+	            console.log("update-area-btn Error: id:" + id  + ', div:' + gp + ', patch:' + patch_ops);
+	        	break;
+        }
+        
+        //console.log("update-area-btn id:" + id  + ', div:' + gp + ', patch:' + patch_ops[0]);
+        var request = patch_area(patch_ops, area_json.properties.area_url);  //patch_area(); //ajax call
+        
+        request.done(function (data) {
+        	if(typeof data !== 'undefined') {
+        		console.log ('patch_area() result: ' + data.status + ', ' 
+        						+ data.updates.length + ' updates: ' + data.updates[0].result);
+        	}
+    		gp.find('.dirty-flag').hide(); //move to ajax response.
+    	    gp.find('.update-area-btn').attr('disabled', true).html('Saved');
+        });
+        
+        request.fail(function (xhr, textStatus, error) {
+			  console.log ('patch_area() - request failed:', xhr.status, ' error: ', error);
+	    	  gp.find('.update-area-btn').attr('color', 'red').html('Error');
+        })
+    });
+    
+    $('#area-description-panel textarea').on('change', function(e) {
+    	var p =  $(e.target).parent().parent().parent();
+        p.find('.dirty-flag').show();
+        p.find('.update-area-btn').attr('disabled', false).html('Save');
     });
     
     google.maps.event.addListener(map_under_lhs, 'bounds_changed', function() {        
@@ -272,9 +365,9 @@ function initialize() {
     google.maps.event.addListener(map_under_lhs, 'mousemove', function (event) {
         update_map_cursor(map_under_lhs, event.latLng, '#map_panel_cursor');               
     });
-    
+      
     google.maps.event.addListener(map_over_lhs, 'mousemove', function (event) {
-        update_map_cursor(map_under_lhs, event.latLng, '#map_panel_cursor');               
+        update_map_cursor(map_over_lhs, event.latLng, '#map_panel_cursor');               
     });
    
     google.maps.event.addListener(map_rhs, 'bounds_changed', function() {    
@@ -388,10 +481,11 @@ function initialize() {
     	console.log("make report");
         $('#make-report-popover').popoverX('show');
         if (drawingManager  === null){
-        	drawingManager  = createDrawingManager(map_over_lhs, google.maps.drawing.OverlayType.MARKER); //FIXME Don't draw more than one.
-        	google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-        		complete_report(drawingManager, event);
-             });
+        	//map.drawingTools = new DrawingTools(map_over_lhs, mapContainer, dropContainer, geoJsonPanel, geoJsonInput, downloadLink);
+        	//drawingManager  = createDrawingManager(map_over_lhs, google.maps.drawing.OverlayType.MARKER); //FIXME Don't draw more than one.
+        	//google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+        	//	complete_report(drawingManager, event);
+            // });
         }
      });
     
@@ -517,6 +611,17 @@ function initialize() {
             "This does not update the saved view.<br/>"
             });
         
+        $('#reset-view').click(function(){
+        	console.log('reset-view:');
+        	var map = map_under_lhs;
+        	
+        	var map_zoom = area_json.features[0].properties.map_zoom;  // init global.
+        	var map_center = new google.maps.LatLng(center_coords[1], center_coords[0] );
+        	 
+            map.setZoom(map_zoom);
+            map.setCenter(map_center);
+            
+        });
         
         
         $('#lock-map-rhs').click(function(e){

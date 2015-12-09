@@ -260,7 +260,7 @@ function queryLandsatFusionTableCellArray(map, cellarray) {
 	url.push(encodedQuery);
 	url.push('&callback=?');	
 	url.push('&key=' + MAPS_API_KEY);
-	console.log("ft query: " + query + " ft url: " + url);
+	//console.log("ft query: " + query + " ft url: " + url);
 	return url;
 }
 
@@ -572,7 +572,7 @@ function cellSelected(landsat_cell)
   $.get(httpget_url).done(function(data) {
 	  	  // store toggled cell.
 	  	  var celldict = jQuery.parseJSON(data);
-		  console.log(celldict);
+		  //console.log(celldict);
 		  if (celldict.result === "ok") { 
 			  var cell = getCellArrrayCell(celldict.path, celldict.row,  landsat_cell.parent.cellarray);
 			  if (cell !== null) {

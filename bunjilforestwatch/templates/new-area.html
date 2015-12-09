@@ -56,7 +56,7 @@
 
 			<div class="panel-group" id="options-accordion">
 
-				<div class="panel-heading">
+				<div class="panel-heading" id="areanameAccord_title">
 					<h4 class="panel-title" data-toggle="collapse" data-parent="#options-accordion" data-target="#areanameAccord" >Area Name</h4>
 				</div>
 
@@ -68,7 +68,7 @@
 								title='This field is required'>*</span> Area Name</label>
 
 							<div class="col-md-4">
-								<input accesskey="n" autofocus' class="form-control input-md" id="area_name" name="area_name"
+								<input accesskey="n" autofocus class="form-control input-md" id="area_name" name="area_name"
 									placeholder="Give your area a short name" tabindex="1" type="text"> <span class="help-block">Enter a
 									short unique name</span>
 							</div>
@@ -84,7 +84,7 @@
                 <!-- SHARING OPTIONS -->
 				<div>
 			
-					<div class="panel-heading">
+					<div class="panel-heading" id="sharingAccord_title">
                          <h4 class="panel-title" data-toggle="collapse" data-parent="#options-accordion" data-target="#sharingAccord" >Sharing Options</h4>
 					</div>
 			
@@ -129,44 +129,41 @@
                 <!--  Monitoring Options Accordion -->
 				
 
-					<div class="panel-heading">
+					<div class="panel-heading"  id='monitoringAccord_title'>
                         <h4 class="panel-title" data-toggle="collapse" data-parent="#options-accordion" data-target="#monitoringAccord">Monitoring Options</h4>
     				</div>
 
 					<div class="panel-collapse collapse in" id="monitoringAccord">
 						<div class="panel-body">
+						   
+						      
 							<div class="form-group">
 								<label class="col-md-4 control-label" id="opt-monitoring">Monitoring Options</label>
-
+                                
 								<div class="col-md-6">
+								
+                                    <div class="checkbox">
+                                        <label class="checkbox-inline"  for="self-monitors"><input accesskey="m" id='self-monitor'
+                                            name="self-monitor" tabindex="5" type="checkbox" checked='checked' value="true"> Self Monitor</label><span
+                                            class="help-block">Notify me when there are new images of my area. I have time and bandwidth to review images.</span>
+                                    </div>
+
+                                  
+
 									<div class="checkbox">
-										<label for="self-monitor"><input accesskey="m" checked="checked" id="self-monitor" name="self-monitor"
-											tabindex="5" type="checkbox" value="self-monitor"> Self-monitor</label> <span class="help-block">Notify me
-											when there are new images of my area. I have time and bandwidth to review images</span>
+										<label class="checkbox-inline"  for="request-volunteers"><input accesskey="v" id='request-volunteers'
+											name="request-volunteers" tabindex="6" type="checkbox" checked='checked'  value="true"> Community monitoring</label><span
+											class="help-block">Ask Volunteers to help monitor my area. I don't have the ability to monitor images for changes.</span>
 									</div>
-
-
-									<div class="checkbox">
-										<label for="request-volunteers"><input accesskey="v" checked="checked" id='request-volunteers'
-											name="request-volunteers" tabindex="6" type="checkbox" value="request-volunteers"> Community monitoring</label> <span
-											class="help-block">Ask Volunteers to help monitor my area. I don't have the ability to monitor images for
-											changes.</span>
-									</div>
-
 
 								</div>
 							</div>
 						</div>
 		                    <div class='validation' id='monitoring-validation'>Either self-monitor or request volunteers.</div>
 					</div>
-
-		
-		
-
-
-
+	
 				<!-- Agreement Undertaking -->
-				<div class="panel-heading">
+				<div class="panel-heading" id="agreementAccord_title">
                      <h4 class="panel-title" data-toggle="collapse" data-parent="#options-accordion" data-target="#agreementAccord">Agree to Monitor</h4>
 				</div>
 
@@ -178,7 +175,7 @@
 
 							<div class="col-md-6">
 								<label class="checkbox-inline" for="accept"><input accesskey="" id="accept" name="accept" tabindex="7"
-									type="checkbox" value="true"> I agree to check reports of disturbance to this area created by volunteers</label>
+									type="checkbox" value="true"> I agree to check distrubance reports created by volunteers for this area</label>
 							</div>
 						</div>
 					</div>
@@ -192,7 +189,6 @@
 			</div>
 
 			<!-- NEXT -->
-
 			<div class="form-group" id='next-subform'>
 				<div class='col-md-4'></div>
 				<div class='col-md-5'>
@@ -203,10 +199,12 @@
 					<div class="help-block" id='form-errors'></div>
 				</div>
 			</div>
+			
 		</div>
 		<div class="row" id='scroll-to-here' style='display: none'></div>
 		<div class="row" id='map-find' style='display: none'>
-			<!-- Help Locate your Area -->
+		     
+		     <!-- Help Locate your Area -->
 			<div class="panel-group" id="locate-accordion">
 				<!-- Help Locate accordion -->
 

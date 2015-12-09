@@ -1,4 +1,17 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %} 
+
+{% block head %}
+<title>Bunjil Forest Watch - Entry Form</title>
+{% endblock head%}
+
+{% block breadcrumbs %}
+<!-- entry.html  breadcrumbs-->
+{% endblock breadcrumbs %} 
+{% block content %}
+<!-- entry.html start content-->
+
+
+
 <div class="container">
 	<div>
 		<p>
@@ -120,120 +133,124 @@
 	{{ render|safe }}
 </div>
 
-<script type="text/javascript">
-	$(function() {
-		$("#save").click(function() {
-			$("#form").submit();
-		});
-		$("#delete").click(function() {
-			$("#form").append('<input type="hidden" name="delete" value="delete">');
-			$("#form").submit();
-		});
-	});
 
-	// file attaching
-	$(function() {
-		var attach = '\
-			<div class="form-group"> \
-				<label class="control-label" for="attach" class="label-attach">Attach a file</label> \
-					<form method="POST" enctype="multipart/form-data"> \
-						<div class="controls"> \
-							<input class="input-sm file-attach" id="attach" name="attach" type="file" /> \
-							<span id="span-attach" class="help-block">Files and images must be less than 4MB</span> \
-						</div> \
-					</form> \
-			</div> \
-		';
-
-		var full_text = '\
-			<div class="control-group"> \
-				<div class="controls"> \
-					your account has reached its upload limit: you cannot upload any more files \
-				</div> \
-			</div> \
-		';
-
-		var cnt = 1;
-		var full = {% if can_upload %}0{% else %}1{% endif %};
-
-		var addattach = function() {
-			$(".file-attach").unbind('change');
-			$(".iilabel-attach").each(function() {
-				$(this).html('<a href="#" onclick="$(this).parent().parent().remove(); return false;">remove</a>');
-			});
-
-			if(full == 1)
-			{
-				full = 2;
-				$(".post-attach").before(full_text);
-				return;
-			}
-
-			$(".post-attach").before(attach);
-			$(".file-attach").last().change(function() {
-				var $this = $(this);
-				var name = $this.val().split('\\').pop();
-				var label = $this.parent().parent().parent().children("label");
-				var form = $this.parent().parent();
-				$("#span-attach").remove();
-
-				addattach();
-
-				label.html('uploading...');
-
-				$.ajax({
-					url: '{{ upload_url }}',
-					success: function(data) {
-						if(data == '')
-						{
-							full = 1;
-						}
-
-						var target = 'upload-' + cnt++;
-						label.prepend('<iframe id="' + target + '" src="#" style="width: 0; height: 0; border: 0px solid #fff;"></iframe>');
-						form.attr('target', target);
-						form.attr('action', data);
-
-						form.ajaxSubmit({
-							success: function(data, stat, xhr) {
-								$("#" + target).remove();
-
-								if(data == '')
-								{
-									label.html('error during upload - no data');
-									$this.parent().html('<span class="uneditable-input">' + name + '</span>');
-								}
-								else if(xhr.responseText.status == 413)
-								{
-									label.html('file too large');
-									$this.parent().html('<span class="uneditable-input">' + name + '</span>');
-								}
-								else
-								{
-									label.html('uploaded');
-									var obj = jQuery.parseJSON(data);
-									$this.parent().html(
-										'<input type="checkbox" checked disabled> ' +
-										filesizeformat(obj.size) +
-										', ' +
-										'<a href="' +
-										obj.url +
-										'">' +
-										obj.name +
-										'</a>'
-									);
-									$("#form").append('<input type="hidden" name="blob" value="' + obj.blob_id + '">');
-								}
-							}
-						});
-					}
-				});
-			});
-		}
-
-		addattach();
-	});
-	</script>
-{% endblock %} {% block footer_js%} {% include "includes/project_scripts.html" %}
+{% endblock %}
+{% block footer_js%} 
+{% include "includes/project_scripts.html" %}
 <script src="/static/js/vendor/jquery.form.min.js"></script>
+
+<script type="text/javascript">
+    $(function() {
+        $("#save").click(function() {
+            $("#form").submit();
+        });
+        $("#delete").click(function() {
+            $("#form").append('<input type="hidden" name="delete" value="delete">');
+            $("#form").submit();
+        });
+    });
+
+    // file attaching
+    $(function() {
+        var attach = '\
+            <div class="form-group"> \
+                <label class="control-label" for="attach" class="label-attach">Attach a file</label> \
+                    <form method="POST" enctype="multipart/form-data"> \
+                        <div class="controls"> \
+                            <input class="input-sm file-attach" id="attach" name="attach" type="file" /> \
+                            <span id="span-attach" class="help-block">Files and images must be less than 4MB</span> \
+                        </div> \
+                    </form> \
+            </div> \
+        ';
+
+        var full_text = '\
+            <div class="control-group"> \
+                <div class="controls"> \
+                    your account has reached its upload limit: you cannot upload any more files \
+                </div> \
+            </div> \
+        ';
+
+        var cnt = 1;
+        var full = {% if can_upload %}0{% else %}1{% endif %};
+
+        var addattach = function() {
+            $(".file-attach").unbind('change');
+            $(".iilabel-attach").each(function() {
+                $(this).html('<a href="#" onclick="$(this).parent().parent().remove(); return false;">remove</a>');
+            });
+
+            if(full == 1)
+            {
+                full = 2;
+                $(".post-attach").before(full_text);
+                return;
+            }
+
+            $(".post-attach").before(attach);
+            $(".file-attach").last().change(function() {
+                var $this = $(this);
+                var name = $this.val().split('\\').pop();
+                var label = $this.parent().parent().parent().children("label");
+                var form = $this.parent().parent();
+                $("#span-attach").remove();
+
+                addattach();
+
+                label.html('uploading...');
+
+                $.ajax({
+                    url: '{{ upload_url }}',
+                    success: function(data) {
+                        if(data == '')
+                        {
+                            full = 1;
+                        }
+
+                        var target = 'upload-' + cnt++;
+                        label.prepend('<iframe id="' + target + '" src="#" style="width: 0; height: 0; border: 0px solid #fff;"></iframe>');
+                        form.attr('target', target);
+                        form.attr('action', data);
+
+                        form.ajaxSubmit({
+                            success: function(data, stat, xhr) {
+                                $("#" + target).remove();
+
+                                if(data == '')
+                                {
+                                    label.html('error during upload - no data');
+                                    $this.parent().html('<span class="uneditable-input">' + name + '</span>');
+                                }
+                                else if(xhr.responseText.status == 413)
+                                {
+                                    label.html('file too large');
+                                    $this.parent().html('<span class="uneditable-input">' + name + '</span>');
+                                }
+                                else
+                                {
+                                    label.html('uploaded');
+                                    var obj = jQuery.parseJSON(data);
+                                    $this.parent().html(
+                                        '<input type="checkbox" checked disabled> ' +
+                                        filesizeformat(obj.size) +
+                                        ', ' +
+                                        '<a href="' +
+                                        obj.url +
+                                        '">' +
+                                        obj.name +
+                                        '</a>'
+                                    );
+                                    $("#form").append('<input type="hidden" name="blob" value="' + obj.blob_id + '">');
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
+        addattach();
+    });
+    </script>
 {% endblock footer_js %}

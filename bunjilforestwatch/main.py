@@ -7,6 +7,7 @@ main.py Web Handlers
 
 This document is planned to give a tutorial-like overview of all web handlers in the bunjil forest wastch app.
 """
+#from jsonpointer import resolve_pointer
 
 from __future__ import with_statement
 
@@ -26,6 +27,7 @@ import datetime
 import re
 import os
 import geojson
+import bleach
 
 from google.appengine.api import files
 from google.appengine.api import taskqueue
@@ -775,6 +777,224 @@ class AccountHandler(BaseHandler): #superseded for now by user.html. no menu pat
 
         self.redirect(webapp2.uri_for('account'))
 
+class ViewArea(BaseHandler):
+
+    #owner can update existing area        
+    def post(self, area_name):
+        
+        if self.request.headers['x-http-method-override'] == 'PATCH':
+            logging.info("AreaHandler() PATCHING area ")
+        else:
+            self.response.set_status(405)
+            return self.response.out.write('{"status": "error", "reason": "post not accepted without x-http-method-override to PATCH" }')
+            
+        current_user = users.get_current_user()
+        if  not current_user:
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
+            self.response.set_status(401)
+            return self.response.out.write('{"status": "error", "reason": "not logged in" }')
+
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
+ 
+        if not registered:
+            self.response.set_status(401)
+            return self.response.out.write('{"status": "error", "reason": "not logged in" }')
+        try:
+            username = self.session['user']['name']
+        except:
+            logging.error('Should never get this exception')
+            self.response.set_status(500)
+            return self.response.out.write('{"status": "error", "reason": "exception in user session" }')
+            
+            if 'user' not in self.session:
+                self.response.set_status(403)
+                return self.response.out.write('{"status": "error", "reason": "user not in session" }')
+
+        area = cache.get_area(None, area_name)
+        if not area:
+            self.response.set_status(404)
+            return self.response.out.write('{"status": "error", "reason": "area not found" }')
+        
+        if not area or (area.owner.string_id() != user.name):
+            self.response.set_status(403)
+            return self.response.out.write('{"status": "error", "reason": "user not owner of area" }')
+        
+        
+        if (area.owner.string_id()  != user.name) and (user.role != 'admin'):
+            self.response.set_status(403)
+            #"Only the owner '{0!s}' of area '{1!s}' or admin can update an area.".format(area.owner, area.name)
+            return self.response.out.write('{"status": "error", "reason": "user not owner of area" }')
+                
+        patch_ops_str= self.request.body.decode('utf-8')
+        logging.debug("UpdateArea() with: {0!s}".format(patch_ops_str) )
+        
+        try:
+            patch_ops = json.loads(patch_ops_str)
+        except:
+            self.response.set_status(400)
+            return self.response.out.write('{"status": "error", "reason": "JSON Parse error in patch request" }')
+
+        status = 304
+        op_results = []
+        
+        for operation in patch_ops:
+            safe_value = bleach.linkify(bleach.clean(operation['value']))
+            if operation['op'] == "replace":
+                
+                id = operation['id'] # ref to div
+                 
+                if operation['path'] == "/properties/area_description/description":
+                    area.description = safe_value
+                    op_results.append({"result": "Updated description_what", "value": safe_value, "id": id})
+                    status = 200 
+                    
+                if operation['path'] == "/properties/area_description/description_why":
+                    area.description_why = safe_value
+                    op_results.append({"result": "Updated description_why", "value": safe_value, "id":id})
+                    status = 200 
+                    
+                if operation['path'] == "/properties/area_description/description_how":
+                    area.description_how = safe_value
+                    op_results.append({"result": "Updated description_how", "value": safe_value, "id": id})
+                    status = 200
+                     
+                if operation['path'] == "/properties/area_description/description_who":
+                    area.description_who = safe_value
+                    op_results.append({"result": "Updated description_who", "value": safe_value, "id": id})
+                    status = 200
+                    
+                if operation['path'] == "/properties/area_description/threats":
+                    area.threats = safe_value
+                    op_results.append({"result": "Updated threats", "value": safe_value, "id": id})
+                    status = 200
+                     
+                if operation['path'] == "/properties/area_description/wiki":
+                    area.wiki = safe_value
+                    op_results.append({"result": "Updated wiki", "value": safe_value, "id":id})
+                    status = 200 
+
+                if operation['path'] == "/properties/shared":
+    
+                    if area.set_shared(safe_value) == 'error':
+                        logging.error('Shared, invalid value {0!s}'.format(shared))
+                        self.response.set_status(400)
+                        return self.response.write('{"status": "error", "reason": "bad value for shared" }')
+                        
+                    op_results.append({"result": "Updated shared", "value": safe_value, "id":id})
+                    status = 200 
+                    
+        if status != 200:
+            self.response.set_status(status)
+            op_results.append({"result": "Error No valid path found for area", "value": safe_value, "id": id})
+            return self.response.write('{"status": "error", "reason": "Error No valid path found for op" }')
+            
+        try:
+            area.put()
+            cache.delete([cache.C_AREA %(username, area_name),  
+                          cache.C_AREA %(None, area_name)])
+            
+        except Exception, e: 
+            self.response.set_status(500)
+            message = 'Exception updating area {0!s}'.format(e)
+            
+            logging.error(message)
+            return self.response.out.write('{"status": "error", "reason": ' + message + '}')
+        
+        results = {
+                   "status": "ok",
+                   "updates": op_results
+                   };
+                   
+        response_str = json.dumps(results)
+        logging.info('Updated : {0!s} with result {1!s} '.format(area_name, response_str))
+
+        self.response.set_status(200)
+        return self.response.out.write(response_str)
+        
+        
+    def get(self, area_name):
+        
+        current_user = users.get_current_user()
+        if  not current_user:
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
+            self.add_message('danger', 'You must log in to view areas.')
+            return self.redirect(users.create_login_url(original_url))
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
+ 
+        if not registered:
+            return self.redirect(webapp2.uri_for('register'))
+        try:
+            username = self.session['user']['name']
+        except:
+            logging.error('Should never get this exception')
+            self.add_message('danger', 'You must log in to see this page.')
+            
+            if 'user' not in self.session:
+                self.redirect(webapp2.uri_for('main'))
+                return
+
+        area = cache.get_area(None, area_name)
+        if not area or (area.share == area.PRIVATE_AOI and area.owner.string_id()   != user.name and not users.is_current_user_admin()):
+            self.add_message('danger', "Area not found!")
+            logging.error('AreaHandler: Area not found! %s', area_name)
+            self.redirect(webapp2.uri_for('main'))
+        else:
+            if (area.share == area.PRIVATE_AOI and area.owner.string_id()   != user.name and users.is_current_user_admin()):
+                self.add_message('warning', "Only admin and owner can view this area: '{0:s}'!".format(area_name))
+    
+            # Make a list of the cells that overlap the area with their path, row and status. 
+            #This may be an empty list for a new area.
+            
+            cell_list = []        
+            cell_list = area.CellList()
+            observations =    {} 
+            
+            if area.ft_docid is not None and len(area.ft_docid) <> 0:
+                #print 'fusion table DocId', area.ft_docid
+                area.isfusion = True
+            else:
+                #print 'no fusion table in area', area.ft_docid, area.boundary_fc
+                area.isfusion = False
+    
+            area_followers_index = cache.get_area_followers(area_name)
+            #print 'area_followers ', area_followers_index, 
+            if area_followers_index:
+                area_followers = area_followers_index.users
+            else:
+                area_followers = []
+            
+            #print 'user ', user.name, user.role
+            
+            if (area.owner.string_id()  == user.name ):
+                is_owner = True
+                show_delete = True
+            else:
+                is_owner = False
+                show_delete = False
+                
+            if users.is_current_user_admin():
+                show_delete = True
+            
+            geojson_area = area.geojsonArea()
+             
+            self.render('view-area.html', {
+                'username': user.name,
+                'area_json' : geojson_area,
+                'area': area,
+                #'boundary_ft' : area.boundary_ft,
+                'show_navbar': True,
+                'show_delete':show_delete,
+                'is_owner': is_owner,
+                'celllist':json.dumps(cell_list), # to be replaced by jsonarea
+                'area_followers': area_followers,
+                'obslist': json.dumps(observations)
+            })
+            
+
 class AreaHandler(BaseHandler):
     def delete(self):
         #return DeleteAreaHandler() #TODO Make deleteArea RESTFUL
@@ -822,12 +1042,13 @@ class AreaHandler(BaseHandler):
         logging.info("AreaHandler() Updating area ")
         return self.createorupdate('update')
     
+     
     #@decorator.oauth_aware
     def post(self):
-        logging.info("AreaHandler() Creating area ")
-        return self.createorupdate('create')
-
-    def createorupdate(self, method):
+        if self.request.headers.get('x-http-method-override') == 'PATCH':
+            logging.info("AreaHandler() PATCHING area ")
+        else:    
+            logging.info("AreaHandler() Creating new area ")
 
         new_area_geojson_str = self.request.get('new_area_geojson_str').decode('utf-8')
         logging.debug("AreaHandler() new_area_geojson_str: %s ", new_area_geojson_str)
@@ -853,31 +1074,18 @@ class AreaHandler(BaseHandler):
             self.response.set_status(503)
             return self.response.out.write('Sorry, Google Earth Engine not available right now. Please try again later')
 
-        if method == 'create':
-            logging.info("AreaHandler() Creating area ")
-            if not area_name:
-                self.response.set_status(400)
-                return self.response.out.write('Create area requires a name.')
-    
-            if self.session['areas_list']:
-                #FIXME should checkl the cache, not loop through the session.
-                if len(self.session['areas_list']) >= models.AreaOfInterest.MAX_AREAS:
-                    message = 'Sorry, you have created too many areas. Max Areas = {0!s}'.format(models.AreaOfInterest.MAX_AREAS)
-                    logging.error(message) 
-                    self.response.set_status(400)
-                    return self.response.out.write(message)
-            
-        else: #update
-            logging.info("AreaHandler() Updating area ")
-            if not area_name:
-                self.response.set_status(400)
-                return self.response.out.write('Area name required to update area.')
+        if not area_name:
+            self.response.set_status(400)
+            return self.response.out.write('Create area requires a name.')
 
-            area = cache.get_area(None, area_name)
-            if not area:
-                #not updateable
-                self.response.set_status(404)
-                return self.response.out.write('Cannot update. Area does not exist.')
+        if self.session['areas_list']:
+            #FIXME should checkl the cache, not loop through the session.
+            if len(self.session['areas_list']) >= models.AreaOfInterest.MAX_AREAS:
+                message = 'Sorry, you have created too many areas. Max Areas = {0!s}'.format(models.AreaOfInterest.MAX_AREAS)
+                logging.error(message) 
+                self.response.set_status(400)
+                return self.response.out.write(message)
+            
         
         descr = new_area['properties']['area_description']['description'] #self.request.get('description')
 
@@ -1088,10 +1296,11 @@ class AreaHandler(BaseHandler):
             self.populate_user_session()
             #FIXME Ajax Method to follow area
             if new_area['properties']['self_monitor'] == 'true':
-                logging.error('FIXME:Call Ajax Method to follow this area ')
+                logging.warning('FIXME:Area creator requested self-monitoring but auto-following not yet impletmented for %s' %(area.name))
+                #logging.error('FIXME:Call Ajax Method to follow this area ')
                 #self.redirect(webapp2.uri_for('follow-area', username=user.name, area_name=area.name)) 
             else:
-                logging.info('FIXME:Not self-monitored %s' %(area.name))
+                logging.info('Area creator did not request self-monitoring for %s' %(area.name))
 
             self.response.set_status(200)
             return self.response.out.write("Created area")
@@ -1171,57 +1380,6 @@ class UpdateAreaViewHandler(BaseHandler):
             logging.error(message)
             return self.response.write(message)
 
-class UpdatedAreaSharedHandler(BaseHandler):
-    def post(self, area_name, shared):
-        current_user = users.get_current_user()
-        if  not current_user:
-            abs_url  = urlparse(self.request.uri)
-            original_url = abs_url.path
-            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
-            return self.response.write('error no login')
-
-        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
- 
-        if not registered:
-            return self.response.write('error not registered')
-        try:
-            username = self.session['user']['name']
-        except:
-            logging.error('Should never get this exception')
-            return self.response.write('error exception')
-            
-            if 'user' not in self.session:
-                return self.response.write('error user')
-                return
-
-        area = cache.get_area(None, area_name)
-
-        if not area:
-            return self.response.write('UpdatedAreaSharedHandler() - area not found')
-            
-        # if user does not own area or user is not admin - disallow
-        if (area.owner.string_id()  != user.name) and (user.role != 'admin'):
-            logging.error("Only the owner '{0!s}' of area '{1!s}' or admin can update an area.".format(area.owner, area.name))
-            return self.response.write('error not owner')
-
-        if area.set_shared(shared) == 'error':
-            logging.error('Shared, invalid value {0!s}'.format(shared))
-            return self.response.write('error bad value {0!s}'.format(shared))
-        try:
-            area.put()
-            if area.share != area.PUBLIC_AOI: # Now unlisted or private so get rid of all references in the cache.
-                  cache.flush() 
-            else:      
-                cache.delete([cache.C_AREA %(username, area_name),  
-                          cache.C_AREA %(None, area_name)])
-            
-            msg = 'Updated Area of interest: {0!s} is now {1!s}'.format(area_name, area.shared_str)
-            logging.info(msg)
-            return self.response.write(area.shared_str)
-        except Exception, e: 
-            message = 'error Exception {0!s}'.format(e)
-            logging.error(message)
-            return self.response.write(message)
 
  
 class DeleteAreaHandler(BaseHandler):
@@ -1432,89 +1590,6 @@ class NewJournal(BaseHandler):
         self.render('new-journal.html')
 
     
-class ViewArea(BaseHandler):
-        
-    def get(self, area_name):
-        
-        current_user = users.get_current_user()
-        if  not current_user:
-            abs_url  = urlparse(self.request.uri)
-            original_url = abs_url.path
-            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
-            self.add_message('danger', 'You must log in to view areas.')
-            return self.redirect(users.create_login_url(original_url))
-        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
- 
-        if not registered:
-            return self.redirect(webapp2.uri_for('register'))
-        try:
-            username = self.session['user']['name']
-        except:
-            logging.error('Should never get this exception')
-            self.add_message('danger', 'You must log in to see this page.')
-            
-            if 'user' not in self.session:
-                self.redirect(webapp2.uri_for('main'))
-                return
-
-        area = cache.get_area(None, area_name)
-        if not area or (area.share == area.PRIVATE_AOI and area.owner.string_id()   != user.name and not users.is_current_user_admin()):
-            self.add_message('danger', "Area not found!")
-            logging.error('ViewArea: Area not found! %s', area_name)
-            self.redirect(webapp2.uri_for('main'))
-        else:
-            if (area.share == area.PRIVATE_AOI and area.owner.string_id()   != user.name and users.is_current_user_admin()):
-                self.add_message('warning', "Only admin and owner can view this area: '{0:s}'!".format(area_name))
-    
-            # Make a list of the cells that overlap the area with their path, row and status. 
-            #This may be an empty list for a new area.
-            
-            cell_list = []        
-            cell_list = area.CellList()
-            observations =    {} 
-            
-            if area.ft_docid is not None and len(area.ft_docid) <> 0:
-                #print 'fusion table DocId', area.ft_docid
-                area.isfusion = True
-            else:
-                #print 'no fusion table in area', area.ft_docid, area.boundary_fc
-                area.isfusion = False
-    
-            area_followers_index = cache.get_area_followers(area_name)
-            #print 'area_followers ', area_followers_index, 
-            if area_followers_index:
-                area_followers = area_followers_index.users
-            else:
-                area_followers = []
-            
-            #print 'user ', user.name, user.role
-            
-            if (area.owner.string_id()  == user.name ):
-                is_owner = True
-                show_delete = True
-            else:
-                is_owner = False
-                show_delete = False
-                
-            if users.is_current_user_admin():
-                show_delete = True
-            
-            geojson_area = area.geojsonArea()
-             
-            self.render('view-area.html', {
-                'username': user.name,
-                'area_json' : geojson_area,
-                'area': area,
-                #'boundary_ft' : area.boundary_ft,
-                'show_navbar': True,
-                'show_delete':show_delete,
-                'is_owner': is_owner,
-                'celllist':json.dumps(cell_list), # to be replaced by jsonarea
-                'area_followers': area_followers,
-                'obslist': json.dumps(observations)
-            })
-            
-
 '''
 Use Earth Engine to work out which cells belong to an AreaOfInterest.
 Store the result in aoi.cells.
@@ -3259,7 +3334,6 @@ app = webapp2.WSGIApplication([
 
     webapp2.Route(r'/area', handler=AreaHandler, name='new-area'),                             # create area
     webapp2.Route(r'/area/<area_name>/delete', handler=DeleteAreaHandler, name='delete-area'),  # delete area (owner or admin)
-    webapp2.Route(r'/area/<area_name>/update/share/<shared>', handler=UpdatedAreaSharedHandler, name='share-area'),  # updatearea (owner only)
     webapp2.Route(r'/area/<area_name>/update/view', handler=UpdateAreaViewHandler, name='area-save-view'),
     #webapp2.Route(r'/area/<area_name>/update/view/<lat:\d+>/<lng:\d+>/<zoom:\d+>/', handler=UpdateAreaViewHandler, name='area-save-view'),
     

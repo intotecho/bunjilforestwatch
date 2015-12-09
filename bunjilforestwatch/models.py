@@ -352,6 +352,14 @@ class AreaOfInterest(ndb.Model):
 		else:	
 			area_locn = [self.area_location.lon, self.area_location.lat]
 			locn_defined = True
+		"""		
+		area_followers_index = cache.get_area_followers(self.name)
+            #print 'area_followers ', area_followers_index, 
+            if area_followers_index:
+                area_followers = area_followers_index.users
+            else:
+                area_followers = []
+        """
 
 		geojson_obj =	 { 
 			"type": "FeatureCollection",

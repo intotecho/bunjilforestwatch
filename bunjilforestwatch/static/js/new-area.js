@@ -51,8 +51,8 @@ function get_shared() {
  * @returns true if the 'Self-monitor' control is ticked, else false.
  */
 function get_self_monitor() {
-	var self_monitor = $('input[name=self-monitor]:checked', '#new_area_form').val() === 'self-monitor'? true:false;
-	//console.log('self_monitor: ', self_monitor);
+	var self_monitor = $('input[name=self-monitor]:checked').val() === 'true'? true:false;
+	console.log('self_monitor: ', self_monitor);
 	return self_monitor;
 }
 
@@ -61,8 +61,8 @@ function get_self_monitor() {
  * @returns true if the 'Community monitoring' control is ticked, else false.
  */
 function get_request_volunteers() {
-	var request_volunteers = $('input[name=request-volunteers]:checked', '#new_area_form').val() === 'request-volunteers'? true:false;
-	//console.log('request_volunteers: ', request_volunteers);
+	var request_volunteers = $('input[name=request-volunteers]:checked').val() === 'true'? true:false;
+	console.log('request_volunteers: ', request_volunteers);
 	return request_volunteers;
 }
 
@@ -76,29 +76,46 @@ function get_has_accepted() {
 }
 
 function get_descr_what() {
-	return $('#area_descr_what_text').val();
+	var val = $('#area_descr_what_text').val();
+	if (typeof val === 'undefined') 
+		return ""; 
+	else return val;
 }
 
 function get_descr_who() {
-	return $('#area_descr_who_text').val();
+	var val = $('#area_descr_who_text').val();
+	if (typeof val === 'undefined') 
+		return ""; 
+	else return val;
 }
 function get_descr_why() {
-	return $('#area_descr_why_text').val();
+	var val = $('#area_descr_why_text').val();
+	if (typeof val === 'undefined') 
+		return ""; 
+	else return val;
 }
 
 function get_descr_how() {
-	return $('#area_descr_how_text').val();
+	var val = $('#area_descr_how_text').val();
+	if (typeof val === 'undefined') 
+		return ""; 
+	else return val;
 }
 
 function get_threats() {
-	return $('#area_descr_threats_text').val();
+	var val = $('#area_descr_threats_text').val();
+	if (typeof val === 'undefined') 
+		return ""; 
+	else return val;
 }
 
 function get_area_wiki() {
-	var area_wiki = $('#area-wiki').val();
-	//console.log('wiki: ', area_wiki);
-	return area_wiki;
+	var val= $('#area-wiki').val();
+	if (typeof val === 'undefined') 
+		return ""; 
+	else return val;
 }
+
 
 
 /**
@@ -108,7 +125,6 @@ function get_area_wiki() {
  * Sends new area request to server.
  * @param map
  */
-
 function createArea(map, is_update)
 {
 	"use strict";
@@ -232,99 +248,19 @@ function createArea(map, is_update)
 		      },
 		      error: function(requestObject, error, errorThrown) {
 		    	  	$('#save-wait-popover').popoverX('hide');
-	 	            console.log('Error ' + requestObject.status + ' ' + requestObject.statusText + ' ' + requestObject.responseText );
-	 	            addToasterMessage('alert-danger','Error ' + requestObject.status + ' ' + requestObject.statusText + ' ' + requestObject.responseText);
+		    	  	var msg = 'Error ' + requestObject.status + ' ' + requestObject.statusText + ' ' + requestObject.responseText;
+	 	            console.log(msg);
+	 	            addToasterMessage('alert-danger', msg);
 		      }
 		    });
 	}   
 	return false; //don't call more event handlers
 } /* end-of-createArea*/       
 
-
 /**
  * After submitting the location name and sharing options, ask user for more details
  * @param map
  */
-/*
-function updateArea(map)
-{
-	"use strict";
-	var problems = "";
-	var area_name =  $('#area_name').val();
-	var area_descr =  $('#area_descr').val();
-	var area_boundary_ft =  $('#boundary_ft').val();
-	var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
-	
-	if ((null === area_descr) || (area_descr === "")) {
-		if (problems.length > 0) {
-			problems += 'Giving  your area an optional description helps others know why it should be monitored.<br/><br/>';
-		}   
-	}
-	if(selection === 'is-fusion') {
-		if ((null === area_boundary_ft  )|| (area_boundary_ft === "" )) {
-			problems += 'Please provide a fusion table id.<br/><br/>';
-		}
-	}
-	else if(selection === 'is-drawmap')  {
-		if (map.drawingOverlay === null) {
-			problems += 'Please mark out the boundary of your area or provide a fusion table id.<br/><br/>';
-		}
-	}    
-	else {
-		problems += 'Please select either fusion table or draw map.<br/><br/>';
-	}
-	
-	if (problems.length > 0) {
-		bootbox.dialog({
-			message: problems,
-			title: "Please fix these problems and then click <i>Create Area</i>",
-			buttons: {
-				success: {
-					label: "OK",
-					className: "btn-info",
-				}
-			}
-		});
-		return;
-	}
-	
-	// get and send the viewing parameters of the map
-	var unwrapped_mapcenter = map.getCenter(); // can exceed 90lat or 180 lon
-	var mapcenter = new google.maps.LatLng(unwrapped_mapcenter.lat(), unwrapped_mapcenter.lng()); //wrapped.
-	var mapzoom = map.getZoom();
-	var new_area_geojson;
-	var boundaryPoints= '';
-	if(selection === 'is-drawmap')  {
-		new_area_geojson = { "type": "FeatureCollection",
-					"features": [
-			             { "type": "Feature",
-			            	 "geometry":   {"type": "Point", "coordinates": [mapcenter.lat(), mapcenter.lng()]},
-			            	 "properties": {"featureName": "mapview", "zoom": mapzoom }
-			             },
-			             { "type": "Feature",
-			            	 "geometry":   {"type": "Polygon","coordinates": boundaryPoints},
-			            	 "properties": {"featureName": "boundary"}
-			             }
-			       ]
-		}; // End new_area_geojson
-		map.data.forEach(function(feature, map_p){
-			feature.properties.featureName = "boundary";
-			new_area_geojson.features.append(feature);
-		});
-	}  
-	else {
-		new_area_geojson = { 
-				"boundary_ft": area_boundary_ft
-		}
-	}
-
-	var toServer = JSON.stringify(new_area_geojson);
-	document.getElementById("coordinates_id").value = toServer;
-	$("#new_area_form").submit();
-
-}        
-*/
-
 function drop_marker(map, position, name) {
 	"use strict";
 	/* Get the icon, place name, and location.*/
@@ -925,7 +861,7 @@ function pre_checkform_next_area(event) {
 		}
 	}
 	
-	if((shared === 'private') && (request_volunteers !== undefined)) {
+	if((shared === 'private') && (request_volunteers !== false)) {
 		self_monitor_control.prop("checked", true).prop('disabled', true);
 		request_volunteers_control.prop("checked", false).prop('disabled', true);
 	}
@@ -986,51 +922,79 @@ function pre_checkform_next_area(event) {
 	
 var test_message = 1;
 
+function areanameAccord_setTitle() {
+	var area_name = get_area_name();
+	$('#areanameAccord_title').html('Area Name: <i>' + area_name + '</i>' );
+}
 
 function areanameAccord_clicked(event) {
-	//$('#areanameAccord').collapse('toggle');
-	var area_name = $('#area_name').val()
-	$('#areanameAccord').html('Area Name: ' + area_name  );
-	addToasterMessage('alert-success','Test Alert Message ' + test_message + ' ' + area_name);
-    test_message += 1;
+	$('#areanameAccord').collapse('toggle');
+	areanameAccord_setTitle();
+}
+
+function sharingAccord_setTitle() {
+	$('#sharingAccord_title').html('Sharing: <i>' +  get_shared() + '</i>');
 }
 
 function sharingAccord_clicked(event) {
-	//$('#sharingAccord').collapse('toggle');
-	$('#sharingAccord').html('Sharing: ' +  get_shared());
+	$('#sharingAccord').collapse('toggle');
+	sharingAccord_setTitle();
+}
 
+function monitoringAccord_setTitle() {
+	var self_monitor =  get_self_monitor(); 		   
+	var request_volunteers = get_request_volunteers(); 
+	
+	var title = 'Monitoring: '; 
+	if(self_monitor === true) {
+		title += "<i>Self Monitoring</i> ";
+		if(request_volunteers === true) {
+			title += " <i>and Requesting Volunteers help</i>";
+		}
+		else {
+			title += " <i>only</i>";
+		}
+	}
+	else {
+		if(request_volunteers === true) {
+			title += " <i>Not self monitoring, requesting volunteers</i>";
+		}
+		else {
+			title += "<i>No one will be monitoring this area!</i>";
+		}
+	}
+		
+	console.log(title);
+	$('#monitoringAccord_title').html(title);
 }
 
 function monitoringAccord_clicked(event) {
-	//$('#monitoringAccord').collapse('toggle');
-	//var options = 'Not selected';
-	var self_monitor =       $('input[name=self-monitor]', '#new_area_form').val();
-	var request_volunteers = $('input[name=request-volunteers]', '#new_area_form').val();
-	var title = 'Monitoring: ' + self_monitor + ' ' + request_volunteers; 
+	$('#monitoringAccord').collapse('toggle');
+	monitoringAccord_setTitle();
+}
+
+function agreementAccord_setTitle() {
+	var accept = get_has_accepted();
+	var title = 'Agreement <i>' +  ((accept === true )? 'Accepted' : 'Not Accepted') + + '</i>';
+	$('#agreementAccord_title').html(title);
 	
-	$('#monitoringAccord').html(title);
 }
 
 function agreementAccord_clicked(event) {
-	//$('#agreementAccord').collapse('toggle');
-	var accept = get_has_accepted();
-	var title = 'Agreement ' +  ((accept === true )? 'Accepted' : 'Not Accepted');
-	$('#agreementAccord').html(title);
+	$('#agreementAccord').collapse('toggle');
+	agreementAccord_setTitle();
 }
 
-
 function descriptionAccord_clicked(event) {
-	//$('#descriptionAccord').collapse('toggle');
+	$('#descriptionAccord').collapse('toggle');
 }
 
 function helplocateAccord_clicked(event) {
-	//$('#helplocateAccord').collapse('toggle');
+	$('#helplocateAccord').collapse('toggle');
 }
 function drawlocateAccord_clicked(event) {
-	//$('#drawlocateAccord').collapse('toggle');
+	$('#drawlocateAccord').collapse('toggle');
 }
-
-
 
 
 /**
@@ -1061,9 +1025,14 @@ function checkform_next_area(event) {
 		$('#next-subform').hide();
 		$('#areanameAccord').collapse('hide');
 		$('#sharingAccord').collapse('hide');
+		sharingAccord_setTitle();
+		
 		$('#monitoringAccord').collapse('hide');
+		monitoringAccord_setTitle();
+		
 		$('#agreementAccord').collapse('hide');
-
+		agreementAccord_setTitle();
+		
 		$('#helplocateAccord').collapse('show');
 		$('#drawlocateAccord').collapse('show');
 		$('#descriptionAccord').collapse('hide');
@@ -1103,14 +1072,14 @@ function init_boundary_form()
 	$('#areanameAccord').html('Area Name ' +   $('#area_name').val());
 
 	$('#sharingAccord').collapse('hide');
-	$('#sharingAccord').html('Sharing ' +  $('input[name=opt-sharing]:checked', '#new_area_form').val());
-
+	sharingAccord_setTitle();
+		
 	$('#monitoringAccord').collapse('hide');
-	$('#monitoringAccord').html('Monitoring: ' +  $('input[name=self-monitor]', '#new_area_form').val());
-
+	monitoringAccord_setTitle();
+	
 	$('#agreementAccord').collapse('hide');
-	$('#agreementAccord').html('Agreement: ' +   'Agreed');
-
+	agreementAccord_setTitle();
+	
 	// hide next button and ability to change area's location.  
 	$('#next-subform').hide();
 	$('#helplocateAccord').hide();
@@ -1150,13 +1119,13 @@ function initialize_new() {
 	$('#new_area_form input').on('change', pre_checkform_next_area);
 	
 	$('#next-area').click(checkform_next_area);
-	$('#sharingAccord').click(sharingAccord_clicked);
-	$('#areanameAccord').click(areanameAccord_clicked);
-	$('#monitoringAccord').click(monitoringAccord_clicked);
-	$('#agreementAccord').click(agreementAccord_clicked);
-	$('#descriptionAccord').click(descriptionAccord_clicked);
-	$('#helplocateAccord').click(helplocateAccord_clicked);
-	$('#drawlocateAccord').click(drawlocateAccord_clicked);
+	$('#areanameAccord_title').click(areanameAccord_clicked);
+	$('#sharingAccord_title').click(sharingAccord_clicked);
+	$('#monitoringAccord_title').click(monitoringAccord_clicked);
+	$('#agreementAccord_title').click(agreementAccord_clicked);
+	$('#descriptionAccord_title').click(descriptionAccord_clicked);
+	$('#helplocateAccord_title').click(helplocateAccord_clicked);
+	$('#drawlocateAccord_title').click(drawlocateAccord_clicked);
 
 	var auto_collapse = true;
 
@@ -1182,17 +1151,9 @@ function initialize_new() {
     	if (auto_collapse) $('#inner-descr-accordion .in').collapse('hide');
 	});
 	
-	
-	/** -- resize the map div - This uses a tip from //github.com/twitter/bootstrap/issues/2475 --> 
-	$(window).resize(function () {
-		var h = $(window).height();
-		var offsetTop = 60; // Calculate the top offset
-		$('#map-canvas').css('height', (h - offsetTop));	        
-	}).resize();   
-    ***/
-	
+
 	/* If Testing GeoJson panel*/
-	$('#area_name').val('!');
+	$('#area_name').val('');
 }
 
 google.maps.event.addDomListener(window, 'load', initialize_new);
