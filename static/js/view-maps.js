@@ -70,6 +70,8 @@ function updateAreaShared(shared)
 			  return error;
 		});
 }
+
+
 /**
 * instructions depend on the view_mode
 */
@@ -116,13 +118,6 @@ $('#save-view').click(function(){
 	});
 });
 
-
-$('#reset-view').click(function(){
-	console.log('reset-view:');
-	var map = map_under_lhs;
-    map.setZoom(map_zoom);
-    map.setCenter(map_center);
-});
 
 var monitored_cells_are = 
 	"<b>Monitored</b> cells are highlighted with a bolder outline. " + 

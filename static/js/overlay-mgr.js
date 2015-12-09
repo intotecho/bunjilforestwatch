@@ -230,7 +230,7 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
 
         // Listen for our custom events
         $(overlay).bind("overlay-idle", function() {
-            //console.log("Finished loading overlay tiles"); 
+            console.log("Finished loading overlay tiles"); 
             
             var progress = $('#tile-progress-c');
             progress.fadeOut(1200);
@@ -241,7 +241,7 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
         });
 
         $(overlay).bind("overlay-busy", function() {
-            //console.log("Loading overlay tiles"); 
+            console.log("Loading overlay tiles"); 
             var progress = $('#tile-progress-c');
             progress.stop(); //stop any fadeOut 
             progress.show();
@@ -260,8 +260,8 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
             var node = overlay.baseGetTile(tileCoord, zoom, ownerDocument);
 
             // Listen for any images within the node to finish loading
-            $("img", node).one("load", function() {
-
+            $("img", node).on("load", function() {
+            	console.log('tile loaded');
                 // Remove the image from our list of pending urls
                 var index = $.inArray(this.__src__, pendingUrls);
                 pendingUrls.splice(index, 1);

@@ -1,114 +1,157 @@
-
+<!--  area-description.html  -->
 <div class="panel-group" id="inner-descr-accordion">
 	<!-- DESCR WHAT -->
 	<div class="panel panel-default">
 
 		<div class="panel-heading">
-			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_what">Description</h4>
+			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_what">Description<span class='dirty-flag'>*</span> </h4>
 		</div>
 
 		<div id="area_descr_what" class="panel-collapse collapse in">
 			<div class="panel-body">
-				<textarea form="new_area_form" id="area_descr_what_text" name="description-what" cols="80" rows="4"
-					placeholder="Describe your park?"></textarea>
-			</div>
+			 {% if is_owner%} 
+				<textarea class='text-in-front' {% if not is_owner%} readonly  {% endif %} id="area_descr_what_text" name="description-what"
+					 rows="4" placeholder="Describe your park?">{{ area.description }}</textarea>
+		   
+                    <a class='update-area-btn btn btn-small btn-lightblue confirm glyphicon glyphicon-save'
+                                                    style='width: 50%' data-toggle='tooltip' title='Save this description'> Update</a> 
+              {% else %}
+                <div class='text-in-front textarea-sim' id="area_descr_what_text">{{area.description}}</div>
+              {% endif %}        
+            </div>
 		</div>
 	</div>
+	
 	<!-- DESCR WHY -->
+	{% if is_owner or area.description_why%} 
+	
 	<div class="panel panel-default">
 
 		<div class="panel-heading">
 			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_why">Why's
-				this area important?</h4>
+				this area important?<span class='dirty-flag'>*</span></h4>
 		</div>
 
 		<div id="area_descr_why" class="panel-collapse collapse">
 			<div class="panel-body">
-				<textarea form="new_area_form" id="area_descr_what_text" name="description-what" cols="80" " rows="4"
-					placeholder="Why is it important to monitor this area"></textarea>
+				<textarea class='text-in-front' {% if not is_owner%} readonly  {% endif %} id="area_descr_why_text" name="description-what"
+					rows="4" placeholder="Why monitor this area">{{area.description_why }}</textarea>
+					<a class='update-area-btn btn btn-small btn-lightblue confirm glyphicon glyphicon-save'
+                                                    style='width: 50%' data-toggle='tooltip' title='Save this description'> Update Why</a> 
 			</div>
 		</div>
 	</div>
-
+    {% endif %}        
+ 
 	<!-- DESCR THREATS -->
-	<div class="panel panel-danger">
-
-		<div class="panel-heading">
-			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_threats">Threats</h4>
-		</div>
+	{% if is_owner or area.threats%} 
+	<div class="panel panel-default">
+     
+        <div class="panel-heading">
+            <h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_threats">Threats<span class='dirty-flag'>*</span></h4>
+        </div>
 
 		<div id="area_descr_threats" class="panel-collapse collapse">
 			<div class="panel-body">
-				<textarea form="new_area_form" id="area_descr_threats_text" name="description-threats" cols="80" rows="4"
-					placeholder="What are the main threats to this forest?" rows="4"></textarea>
+			{% if is_owner%} 
+				<textarea class='text-in-front' id="area_descr_threats_text"
+					name="description-threats" rows="4" placeholder="What are the main threats to this forest?">{{area.threats}}</textarea>
+		        <a class='update-area-btn btn btn-small btn-lightblue confirm glyphicon glyphicon-save'
+                                                    style='width: 50%' data-toggle='tooltip' title='Save this description'> Update Threats</a> 
+              {% else %}
+                <div class='text-in-front textarea-sim' id="area_descr_threats_text">{{area.threats}}</div>
+              {% endif %}             
 			</div>
 		</div>
 
 	</div>
+    {% endif %}
 
 	<!-- DESCR WHO -->
-	<div class="panel panel-defaul">
-
+	<div class="panel panel-default">
+        {% if is_owner or area.description_who%} 
 		<div class="panel-heading">
 			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_who">Who's
-				monitoring it?</h4>
+				monitoring it?<span class='dirty-flag'>*</span></h4>
 		</div>
+        {% else %}
+        <div class="panel-heading">
+            <h4 class="panel-title" >
+            Created by <a href="{{ 'user'|url(area.owner.string_id()) }}" data-toggle="tooltip" title="The user who created this area."><i>{{area.owner.string_id()}}</i></a></h4>
+        </div>
+        {% endif %}
 
 		<div id="area_descr_who" class="panel-collapse collapse">
 			<div class="panel-body">
-				<textarea form="new_area_form" id="area_descr_threats_text" name="description-who" cols="80" rows="4"
-					placeholder="Who will check distrubance reports for this area"></textarea>
+				<textarea class='text-in-front' {% if not is_owner%} readonly  {% endif %} id="area_descr_who_text"
+					name="description-who" rows="4" placeholder="Who will check distrubance reports for this area">{{area.description_who }}</textarea>
+                <a class='update-area-btn btn btn-small btn-lightblue confirm glyphicon glyphicon-save'
+                                                    style='width: 50%' data-toggle='tooltip' title='Save this description'>Update Who</a> 
 			</div>
+			
+		     <div class="panel-body">
+		           Area created by <br/> 
+                   <a href="{{ 'user'|url(area.owner.string_id()) }}" data-toggle="tooltip" title="The user who created this area.">{{area.owner.string_id()}}</a>
+            </div>			
 		</div>
-
 	</div>
 
 	<!-- DESCR HOW -->
+	{% if is_owner or area.description_how%} 
 	<div class="panel panel-default">
 
 		<div class="panel-heading">
 			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_how">How's
-				it protected?</h4>
+				it protected?<span class='dirty-flag'>*</span></h4>
 		</div>
 
 		<div id="area_descr_how" class="panel-collapse collapse">
 			<div class="panel-body">
-				<textarea form="new_area_form" id="area_descr_how_text" name="description-how" cols="80" rows="4"
-					placeholder="Is this area protected?  Is it a national park? Is it private?"></textarea>
-			</div>
+				<textarea class='text-in-front' {% if not is_owner%} readonly  {% endif %} id="area_descr_how_text" name="description-how"
+					 rows="4" placeholder="Is this area protected?  Is it a national park? Is it private?">{{area.description_how }}</textarea>
+	           <a class='update-area-btn btn btn-small btn-lightblue confirm glyphicon glyphicon-save'
+                                                    style='width: 50%' data-toggle='tooltip' title='Save this description'> Update How</a> 
+    		</div>
+    
 		</div>
 
 	</div>
+    {% endif %}
+
 
 	<!-- WIKI -->
 	<div class="panel panel-info">
-
+	   {% if is_owner %} 
 		<div class="panel-heading">
 			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area-wiki-form">Area's
-				Website</h4>
+				Website<span class='dirty-flag'>*</span></h4>
 		</div>
-
+		{% else %} 
+	   	  {% if area.wiki %}
+	      <div class="panel-heading">
+            <h4 class="panel-title glyphicon glyphicon-link" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area-wiki-form">{{area.wiki}}</h4>
+             </div>
+          {% endif %}
+       {% endif %}
+		
 		<div id="area-wiki-form" class="panel-collapse collapse">
 
 			<div class="accordion-inner small">
 
-				<div id='area-wiki-form' class="form-group">
-					<label class="col-md-4 control-label" for="area_wiki">URL for area</label>
-
-					<div class="col-md-4">
-						<input accesskey="u" autofocus class="form-control input-md" id="area-wiki" name="area_wiki"
-							placeholder="http://example.com or www.mywebpage.com" tabindex="1" type="text"> <span class="help-block">
-							If your area already has a web page, enter a link to the web page here. This is optional.</span>
-
-						<div class='validation' id='area-wiki-validation'>Not a valid link. If unsure, leave this blank</div>
-					</div>
-				</div>
-
+				{% if is_owner %} 
+				<input accesskey="u" id="area-wiki" name="area_wiki" placeholder="http://example.com or www.mywebpage.com"
+					tabindex="1" type="text" style='width:100%' value='{{area.wiki}}'> <span class="help-block"> If your area has a web
+					page, like a Wikipedia entry, enter a link to it here.</span> 
+					<a class='update-area-btn btn btn-small btn-lightblue confirm glyphicon glyphicon-save'
+                        style='width: 50%' data-toggle='tooltip' title='Save this description'> Update Wiki</a> 
+                {% endif %}
+			    {% if area.wiki %} 
+					 <div class='glyphicon glyphicon-link' data-toggle='tooltip' title="Link to area's website">{{area.wiki}}</div> 
+				{% else %} 
+					No Website saved. 
+				{% endif %} 
 			</div>
-
 		</div>
-
 	</div>
 </div>
 <!-- END-INNER-ACCORD-->
-
