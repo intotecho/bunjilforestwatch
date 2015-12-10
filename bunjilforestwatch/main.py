@@ -15,7 +15,6 @@ LANSAT_CELL_AREA = (185*170) # sq.km  http://iic.gis.umn.edu/finfo/land/landsat2
 
 import logging
 import urllib
-logging.basicConfig(level=logging.DEBUG)
 
 from django.utils import html # used for entry.html markup
 import models

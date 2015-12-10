@@ -24,13 +24,17 @@ var fusion_table_instructions=
 	"<li>The fusion table must either be public or shared with this bunjil's service account. </li>";
 
 
-
-
 /**
  * @returns returns the area_area in the input text control.
  */
 function get_area_name() {
-	return  $('#area_name').val();
+	var area_name = $('#area_name').val();
+	if(typeof(area_name) === 'undefined') 
+	{
+		area_name = '';
+	}
+	//console.log('area_name: ', area_name);
+	return area_name;
 }
 
 /**
@@ -199,7 +203,7 @@ function createArea(map, is_update)
 				
 	}; // End new_area_geojson
 
-	if (map.drawingTools.area_location !== null) {
+	if (typeof map.drawingTools.area_location !== 'undefined') {
 		var location_feature = map.drawingTools.area_location.features[0];
 		location_feature.properties.featureName = 'area_location';
 		new_area_geojson.features.push(location_feature);
@@ -228,6 +232,7 @@ function createArea(map, is_update)
 	else {
 		//create a new area
 		toastr.clear();
+		
 		$('#save-wait-popover').popoverX({
 	            target: '#save-area'  //container
 	    });
@@ -237,7 +242,7 @@ function createArea(map, is_update)
 	        $('#save-wait-popover').popoverX('hide');
 	    });
 	    
-		$.ajax({
+		var xhr = $.ajax({
 		      type: "POST",
 		      url: "area",
 		      data: 'new_area_geojson_str='+ data_to_post,

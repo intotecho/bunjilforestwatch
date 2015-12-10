@@ -18,6 +18,7 @@
 
 import sys
 import math
+import logging
 from google.appengine.ext import db # is it required?
 import cache
 from models import Observation # only required for Observations model.
@@ -40,9 +41,6 @@ import settings #You have to import your own private keys.
 import ee
 from ee.oauthinfo import OAuthInfo
     
-import logging
-logging.basicConfig(level=logging.DEBUG)
-
 # from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')

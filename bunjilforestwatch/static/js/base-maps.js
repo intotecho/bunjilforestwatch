@@ -1,5 +1,5 @@
 /**
- * @name base=maps.js
+ * @name base=maps.js 
  * @version 1.0
  * @author Chris Goodman 
  * @copyright (c) 2012-2015 Chris Goodman 
