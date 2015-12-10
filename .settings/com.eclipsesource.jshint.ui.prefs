@@ -1,0 +1,4 @@
+eclipse.preferences.version=1
+excluded=//*.min.js\://*.py\://*.pyc\:Crypto/*\:PIL/*\:PIL/*.js\:lib/*
+included=//*.js\:static/js/*.js
+projectSpecificOptions=true

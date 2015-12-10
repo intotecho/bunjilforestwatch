@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<body>
+	{% if entries|length > 1 %}
+	<h1>{{ title }}</h1>
+	{% endif %}
+
+	{% for entry, content, blobs in entries %}
+		<h2>
+		{% if content.subject %}
+			{{ content.subject }}<small> from {{ entry.date|jdate }}</small>
+		{% else %}
+			{{ entry.date|jdate }}
+		{% endif %}
+		</h2>
+
+		{{ content.rendered|safe }}
+	{% endfor %}
+</body>
+</html>

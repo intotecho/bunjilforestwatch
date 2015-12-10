@@ -1,0 +1,40 @@
+ {% for j in following_areas %}
+        <div class="accordion" id="accordion-areas">
+                <div class="accordion-group">
+                    <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#f_{{ j.key.urlsafe() }}">{{ j }}</a>
+                    </div>
+                    <div id="f_{{ j.key.urlsafe()  }}" class="accordion-body collapse ">
+                        <div class="accordion-inner">
+                            <div class="container-fluid">
+                                <div class="row">
+                                    <div class=" panel-tight">
+                                           <pre class="table-otherareabackground">
+                                                <table class="table table-condensed  ">
+                                                    <tbody>
+											            {% if user.name == j.owner.name %}
+											                <tr><a data-toggle="tooltip" title="{{ j.description}}" href="{{ j|area_url }}"><h4>{{ j }}</h4></a></tr>
+											            {% else %}
+											                <tr>{{ j }}</tr>
+											            {% endif %}
+
+                                                        <tr><td><a href="{{ j|area_url }}">view area</a></td></tr>
+                                                        <tr><td><a href="{{ j|area_tasks_url}}">view tasks</a></td><td>
+                                                        <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
+                                                        <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
+                                                        <tr><td>followers</td><td>{{ j.follower_count }}</td></tr>
+                                                         <tr><td><a href="{{ 'user'|url(user.name) }}/follow/{{ j }}?unfollow=true" class="btn btn-small btn-lightred" data-toggle="tooltip" title="Stop receiving review requests for this area.">Unfollow <span class='red_cross'>&times;</span></a></td></tr>
+                                                    </tbody>        
+                                               </table>
+                                             </pre> 
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </tbody>        
+           </table></pre> 
+{% endfor %}
+    

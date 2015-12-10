@@ -1,0 +1,18 @@
+{% for j in journals %}
+<pre class="table-journalbackground table-condensed"> 
+<table class="table table-condensed ">
+    <tbody>
+		{% if thisuser %}
+            <tr><h5><a href="{{ j|journal_url }}">{{ j }}</a></h5></tr>
+            <tr>
+			<td><a href="{{ "new-entry"|url(j) }}" class="btn btn-small  btn-lightblue">Add Entry</a></td>
+			</tr>
+		{% else %}
+   		 <tr><h5>{{ j }}</h5></tr>
+		{% endif %}
+        <tr><td>type</td><td>{{ j.journal_type }}</td></tr>
+        <tr><td>entries</td><td>{{ j.entry_count}}</td></tr>
+    </tbody>
+</table>
+</pre> 
+{% endfor %}

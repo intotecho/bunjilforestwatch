@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <p>
+    <ul class="breadcrumb">
+        <li class="active">User Account for <a href="{{ "user"|url(user.name) }}">{{ user.name }}</a></li>
+    </ul>
+    </p>
+ 	<div class="row">
+		<div class="col-xs-6 well">
+			<table class="table">
+                <tr><td>Username</td><td>{{ u.name }}</td></tr>
+                <tr><td>Role</td><td>{{ u.role}}</td></tr>
+                <tr><td>Login with</td><td>{{ u.sources|join(", ") }}</td></tr>
+                <tr><td>Email address</td><td>{{ u.email }}</td></tr>
+				<tr><td>Member since</td><td>{{ u.register_date|sdate }}</td></tr>
+				<tr><td>Reports</td><td>{{ u.entry_count }}</td></tr>
+                <tr><td>Registered</td><td>{{ u.register_date|sdate }}</td></tr>
+				{% if u.last_entry %}<tr><td>Last observation task</td><td>{{ u.last_entry|sdate }}</td></tr>{% endif %}
+				{% if u.first_entry %}<tr><td>Last report</td><td>{{ u.first_entry|sdate }}</td></tr>{% endif %}
+			</table>
+		 </div>
+	 <div class="col-xs-6 well">
+			<div class="row">
+				<div class="col-xs-2">
+					<img src="{{ u.gravatar(50) }}" alt="{{ u }}">
+				</div>
+				<div class="col-xs-2 offset2">
+					{% if user and not thisuser %}
+					{% endif %}
+					{% if thisuser %}
+						<h2> Stats </h2>
+					{% endif %}
+				</div>
+		  </div>
+		  <div class="row">
+				<div class="col-xs-6">
+					<h1></h1>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-xs-2">
+					<h2>{{ u.journal_count }}</h2>
+					<span>journal{{ u.journal_count|pluralize }}</span>
+				</div>
+				<div class="col-xs-2">
+					<h2>{{ u.areas_count }}</h2>
+					<span>area{{ u.areas_count|pluralize }}</span>
+				</div>
+				<div class="col-xs-2">
+					<h2>{{ following|length }}</h2>
+					<span>following</span>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-xs-6">
+					<h1></h1>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-xs-6">
+			<h3>activity <small><a href="{{ "user-feeds"|url(u.name) }}"><img src="/static/images/feed.png" class="feed-img" alt="feed">rss feed</a></small></h3>
+			{% for a in activities %}
+				<p>{% if a.img %}<img src="{{ a.img }}" alt="{{ a.user }}"> {% endif %}<a href="{{ "user"|url(a.user) }}">{{ a.user }}</a> {{ a.get_action()|safe }} {{ a.date|timesince }}</p>
+			{% endfor %}
+		</div>
+	</div>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base-maps.html" %} 
+{% block map_head %}
+<!-- Example URL  http://localhost:8001/obs/bunjilfw/5847615153373184  -->
+<script>
+
+var single_map = true;   
+var view_mode =  "view-obstask"; 
+</script>            
+
+{% endblock map_head %} 
+
+{% block breadcrumbs %}
+<div class="container-fluid">
+    <div class='row'>
+        <div class="col-xs-2"> </div>
+
+        <div class="col-xs-5">
+            <ul class="breadcrumb">
+                <li><a href="{{ "user"|url(username) }}">{{ username }}</a></li>
+                <li class="active"><a href="{{ area|area_url }}">{{ area }}</a></li>
+                <li class="active"><a href="{{ obstask_url }}">{{ task.name }}</a></li>
+   
+            </ul>
+        </div>
+        <div class="col-xs-5">
+            <ul class="breadcrumb">
+                <input type="checkbox" id="lock-map-rhs" class="layer" checked data-toggle="tooltip">Lock to Left Map
+                <input type="checkbox" id="expand-map-rhs" class="layer" data-toggle="tooltip">Expand
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% endblock breadcrumbs %} 
+
+{% block map_content %}
+
+{% endblock %}
+

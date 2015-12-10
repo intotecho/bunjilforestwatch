@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> 
+
+{% block content %}
+<div class="container">
+<ul class="breadcrumb">
+        <li class="active">/account for <a href="{{ "user"|url(user.name) }}">{{ user.name }}</a></li>
+ </ul>
+    
+	<div class="page-header">
+		<h1><img src="{{ u.gravatar(50) }}" alt="{{ u }}">{{ u }} user account</h1>
+	</div>
+    <div class="row">
+        <div class="col-xs-6 well">
+            <table class="table">
+                <tr><td>Username</td><td>{{ u.name }}</td></tr>
+                <tr><td>Role</td><td>{{ u.role}}</td></tr>
+                <tr><td>Login with</td><td>{{ u.sources|join(", ") }}</td></tr>
+                <tr><td>Email address</td><td>{{ u.email }}</td></tr>
+                <tr><td>Account Created</td><td>{{ u.register_date|sdate }}</td></tr>
+            </table>
+         </div>
+    <div class="row">
+        <div class="col-xs-6 well">
+            <table class="table">
+                <tr><td>Created Areas</td><td>{{ u.areas_count }}</td></tr>
+                <tr><td>Watching Areas</td><td>{{ u.journal_count }}</td></tr>
+                <tr><td>Disturbance Reports</td><td>{{ u.entry_count }}</td></tr>
+                {% if u.last_entry %}<tr><td>Last observation task</td><td>{{ u.last_entry|sdate }}</td></tr>{% endif %}
+                {% if u.first_entry %}<tr><td>Last report</td><td>{{ u.first_entry|sdate }}</td></tr>{% endif %}
+                <tr><td>History</td><td><a href="{{ 'activity'|url }}">activity</a></td></tr>
+            </table>
+         </div>
+
+	<div class="row">
+        <div class="col-xs-6">
+
+            <h3>Settings</h3>
+			<form class="form-horizontal" method="POST">
+				<fieldset>
+					<div class="control-group">
+						<label class="control-label" for="email">Alternative email address (for receiving notifications)</label>
+						<div class="controls">
+							<input id="email" name="email" type="text" disabled value="{{ u.email|default("", true) }}" />
+						</div>
+					</div>
+	               <p></p>
+    				<div class="form-actions">
+    				
+						<input type="submit" class="btn btn-primary" name="settings" value="Save">
+					</div>
+				</fieldset>
+			</form>
+            </div>
+		</div>
+	</div>
+<!-- 
+	<div class="row">
+		<div class="span12">
+			<h3>social media <small>When you create a report, automatically publish to</small></h3>
+			{% for network, values in social.items() %}
+			<div class="row">
+				<div class="span2">
+					{{ network }}
+				</div>
+				<div class="span2">
+					<span class="label label-{{ values.label_class }}">{{ values.label_text }}</span>
+				</div>
+				<div class="span2">
+					<a href="{{ values.auth_url }}" class="btn">{{ values.auth_text }}</a>
+				</div>
+				<div class="span2">
+					<a href="{{ values.enable_url }}" class="btn {{ values.enable_class }}">{{ values.enable_text }}</a>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+	</div>
+ -->	
+</div>
+{% endblock %}

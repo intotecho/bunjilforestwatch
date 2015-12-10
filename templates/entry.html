@@ -1,0 +1,256 @@
+{% extends "base.html" %} 
+
+{% block head %}
+<title>Bunjil Forest Watch - Entry Form</title>
+{% endblock head%}
+
+{% block breadcrumbs %}
+<!-- entry.html  breadcrumbs-->
+{% endblock breadcrumbs %} 
+{% block content %}
+<!-- entry.html start content-->
+
+
+
+<div class="container">
+	<div>
+		<p>
+		<ul class="breadcrumb">
+			<li><a href="{{ "user"|url(username) }}">{{ username }}</a></li>
+			<li><a href="{{ username|user_journal_url(journal_name) }}">{{ journal_name }}</a></li>
+			<li><a class="active" href="{{ entry.url }}">{{ content.subject|entry_subject(entry.date) }}</a></li>
+		</ul>
+		</p>
+	</div>
+</div>
+<div class="container">
+	<form class="form" role='form' id="form" method="POST" action="{{ "entry-save"|url }}">
+		<div class="row">
+			<div class="col-md-12">
+				<input type="hidden" name="journal_name" value="{{ journal_name }}"> <input type="hidden" name="username"
+					value="{{ username }}"> <input type="hidden" name="entry_id" value="{{ entry.key.integer_id() }}">
+				<div class="form-group">
+					<label class="control-label" for="subject">Subject</label>
+					<div class="controls">
+						<input class="form-control" id="subject" default='Title of this report' name="subject" type="text"
+							value="{{ content.subject|default('', True) }}" /> <span class="help-block">Title of this report. Summarise the
+							contents</span>
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="control-label" for="date">Date and Time</label>
+					<div class="controls">
+						<input class="input-sm" id="date" name="date" type="date" value="{{ entry.date|date('%Y-%m-%d') }}" /> <input
+							class="input-sm" id="time" name="time" type="time" value="{{ entry.time }}" /> <span class="help-block">Optional.
+							If a date or time is entered it will be used instead of the current time.</span>
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="control-label" for="text">Your Report</label>
+					<div class="controls">
+						<textarea class="form-control" rows=8 type="text" id="text" name="text">{{ content.text|default('', True) }}</textarea>
+						<span class="help-block">Describe the disturbance or changes you can see.</span>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-3">
+				<div class="form-group ">
+					<label class="control-label" for="markup">Use markup</label>
+					<div class="controls">
+						<select class="form-control input-sm" select id="markup" type="text" name="markup">{{ markup_options|safe }}
+						</select> <span class="help-block">? <a href="{{ 'markup'|url }}" target="#_blank">brief explanation</a> about markups
+						</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-9">
+				<div class="form-group">
+					<label class="control-label" for="tags">Tags</label>
+					<div class="controls">
+						<input class="form-control input-sm" id="tags" name="tags" type="text" value="{{ content.tags|join(" , ") }}" /> <span
+							class="help-block">Comma separated (ex: road, clearing, fire, park)</span>
+					</div>
+				</div>
+			</div>
+		</div>
+		<label class="control-label" for="tags">Attachments</label> {% for b in blobs %}
+		<div class="row">
+			<div class="col-md-6">
+				<div class="form-group">
+					<div class="controls">
+						<input class="btn btn-default" type="checkbox" name="blob" value="{{ b.key }}" checked> {{ b.size|filesizeformat
+						}}, <a href="{{ b.get_url() }}">{{ b.name }}</a>
+					</div>
+				</div>
+			</div>
+		</div>
+		{% endfor %} 
+		{% if journal_type == "observations" %}
+        <div class="row">
+			<div class="form-group col-md-9">
+				<label class="control-label" for="images">Satellite Images</label>
+				<div class="controls">
+					<input class="form-control input-sm" id="images" name="images" type="text" value="{{ content.images|join(" , ") }}" /> <span
+						class="help-block">Identifies the Landsat image(s) that this observation is based on</span>
+				</div>
+			</div>
+			<div class="form-group col-md-3">
+				<label class="control-label" for="type">Journal type</label>
+				<div class="controls">
+					<input class="form-control input-sm" disabled id="overlay" name="satimage" type="text" value="{{journal_type}}" /> <span
+						class="help-block">Identifies journal purpose</span>
+				</div>
+			</div>
+		</div>	
+		{% endif %}
+
+        <div class="row">
+			<div class="form-actions post-attach">
+				<button id="save" class="btn btn-lightgreen">
+					<i class="icon-pencil icon-white"></i> Save
+				</button>
+				<!-- <a href="javascript:(function(){document.body.appendChild(document.createElement('script')).src='//encipher.it/javascripts/inject.v2.js';})();" class="btn  btn-lightblue" rel="tooltip" title="Click on the security link at the top to learn more about this."><i class="icon-lock icon-white"></i> Encipher It</a>  -->
+				<button id="delete" class="btn btn-danger disabled show-tooltip" disabled="disabled"
+					title="This will delete all files attached to this entry, too.">
+					<i class="icon-trash icon-white"></i> Delete entry
+				</button>
+				<input id="sure" type="checkbox" name="sure"> <span>I'm sure</span>
+			</div>
+		</div>
+	
+	<div class="row">
+		<div class="col-md-12">
+			<p>
+				Download as: <a href="?pdf" class="btn btn-disabled"><i class="icon-download"></i>PDF (Not implemented)</a>
+			</p>
+		</div>
+	</div>
+</form>
+
+
+	{{ render|safe }}
+</div>
+
+
+{% endblock %}
+{% block footer_js%} 
+{% include "includes/project_scripts.html" %}
+<script src="/static/js/vendor/jquery.form.min.js"></script>
+
+<script type="text/javascript">
+    $(function() {
+        $("#save").click(function() {
+            $("#form").submit();
+        });
+        $("#delete").click(function() {
+            $("#form").append('<input type="hidden" name="delete" value="delete">');
+            $("#form").submit();
+        });
+    });
+
+    // file attaching
+    $(function() {
+        var attach = '\
+            <div class="form-group"> \
+                <label class="control-label" for="attach" class="label-attach">Attach a file</label> \
+                    <form method="POST" enctype="multipart/form-data"> \
+                        <div class="controls"> \
+                            <input class="input-sm file-attach" id="attach" name="attach" type="file" /> \
+                            <span id="span-attach" class="help-block">Files and images must be less than 4MB</span> \
+                        </div> \
+                    </form> \
+            </div> \
+        ';
+
+        var full_text = '\
+            <div class="control-group"> \
+                <div class="controls"> \
+                    your account has reached its upload limit: you cannot upload any more files \
+                </div> \
+            </div> \
+        ';
+
+        var cnt = 1;
+        var full = {% if can_upload %}0{% else %}1{% endif %};
+
+        var addattach = function() {
+            $(".file-attach").unbind('change');
+            $(".iilabel-attach").each(function() {
+                $(this).html('<a href="#" onclick="$(this).parent().parent().remove(); return false;">remove</a>');
+            });
+
+            if(full == 1)
+            {
+                full = 2;
+                $(".post-attach").before(full_text);
+                return;
+            }
+
+            $(".post-attach").before(attach);
+            $(".file-attach").last().change(function() {
+                var $this = $(this);
+                var name = $this.val().split('\\').pop();
+                var label = $this.parent().parent().parent().children("label");
+                var form = $this.parent().parent();
+                $("#span-attach").remove();
+
+                addattach();
+
+                label.html('uploading...');
+
+                $.ajax({
+                    url: '{{ upload_url }}',
+                    success: function(data) {
+                        if(data == '')
+                        {
+                            full = 1;
+                        }
+
+                        var target = 'upload-' + cnt++;
+                        label.prepend('<iframe id="' + target + '" src="#" style="width: 0; height: 0; border: 0px solid #fff;"></iframe>');
+                        form.attr('target', target);
+                        form.attr('action', data);
+
+                        form.ajaxSubmit({
+                            success: function(data, stat, xhr) {
+                                $("#" + target).remove();
+
+                                if(data == '')
+                                {
+                                    label.html('error during upload - no data');
+                                    $this.parent().html('<span class="uneditable-input">' + name + '</span>');
+                                }
+                                else if(xhr.responseText.status == 413)
+                                {
+                                    label.html('file too large');
+                                    $this.parent().html('<span class="uneditable-input">' + name + '</span>');
+                                }
+                                else
+                                {
+                                    label.html('uploaded');
+                                    var obj = jQuery.parseJSON(data);
+                                    $this.parent().html(
+                                        '<input type="checkbox" checked disabled> ' +
+                                        filesizeformat(obj.size) +
+                                        ', ' +
+                                        '<a href="' +
+                                        obj.url +
+                                        '">' +
+                                        obj.name +
+                                        '</a>'
+                                    );
+                                    $("#form").append('<input type="hidden" name="blob" value="' + obj.blob_id + '">');
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
+        addattach();
+    });
+    </script>
+{% endblock footer_js %}

@@ -1,0 +1,5 @@
+cron:
+- description: test for new images
+  url: /admin/checknew
+  schedule: every day 00:00
+#  timezone: Australia/NSW

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.python.pydev.customizations.app_engine.launching.AppEngineLaunchConfigurationType">
+<stringAttribute key="org.eclipse.debug.core.ATTR_REFRESH_SCOPE" value="${project}"/>
+<mapAttribute key="org.eclipse.debug.core.environmentVariables">
+<mapEntry key="CLASLITEDIR" value="C:\claslite"/>
+<mapEntry key="MY_PRIVATE_KEY_FILE" value="251ba32eacf1e172dadd64eda0cbbe359e64c9df-privatekey2.pem"/>
+<mapEntry key="MY_SERVICE_ACCOUNT" value="486762466976@developer.gserviceaccount.com"/>
+</mapAttribute>
+<stringAttribute key="org.eclipse.debug.ui.ATTR_CONSOLE_ENCODING" value="ISO-8859-1"/>
+<booleanAttribute key="org.eclipse.debug.ui.ATTR_LAUNCH_IN_BACKGROUND" value="false"/>
+<listAttribute key="org.eclipse.debug.ui.favoriteGroups">
+<listEntry value="org.eclipse.debug.ui.launchGroup.run"/>
+</listAttribute>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="${GOOGLE_APP_ENGINE}/dev_appserver.py"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_OTHER_WORKING_DIRECTORY" value="${workspace_loc:}"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="&quot;${project_loc:bunjilae}&quot;&#13;&#10;--port=8001&#13;&#10;--logs_path=/bunjilsrc/logs/bunjilae_${current_date}.log&#13;&#10;--log_level=debug&#13;&#10;--smtp_host=localhost&#13;&#10;--smtp_port=25 &#13;&#10;--smtp_user=Postmaster@bunjilforestwatch.org&#13;&#10;--smtp_password=password&#13;&#10;--clear_datastore=no"/>
+<stringAttribute key="org.python.pydev.debug.ATTR_INTERPRETER" value="C:\Anaconda\python.exe"/>
+<stringAttribute key="org.python.pydev.debug.ATTR_PROJECT" value="bunjilae"/>
+<intAttribute key="org.python.pydev.debug.ATTR_RESOURCE_TYPE" value="4"/>
+<stringAttribute key="process_factory_id" value="org.python.pydev.debug.processfactory.PyProcessFactory"/>
+</launchConfiguration>
