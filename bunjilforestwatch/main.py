@@ -988,6 +988,7 @@ class ViewArea(BaseHandler):
                 'show_navbar': True,
                 'show_delete':show_delete,
                 'is_owner': is_owner,
+                'is_new' : False,
                 'celllist':json.dumps(cell_list), # to be replaced by jsonarea
                 'area_followers': area_followers,
                 'obslist': json.dumps(observations)
@@ -999,6 +1000,7 @@ class AreaHandler(BaseHandler):
         #return DeleteAreaHandler() #TODO Make deleteArea RESTFUL
         return
     
+    #get the New Area form
     def get(self):
 
         logging.info('get new area form')
@@ -1029,19 +1031,30 @@ class AreaHandler(BaseHandler):
         if latlng == None:
             logging.info('NewAreaHandler: No X-Appengine-Citylatlong in header')  #not unusual in debug mode.
             latlng = '8.2, 22.2'
+
+        #send a blank area for templates
+        default_area =  {
+                "description": "",
+                "description_who": "",
+                "description_how": "",
+                "description_why": "",
+                "threats" : "",
+                "wiki": ""
+                }
+        
         self.render('new-area.html', {
                 #'country': country,
+                'area': default_area,
                 'latlng': latlng,
                 'username': username,
-                'show_navbar': True
+                'show_navbar': True,
+                'show_delete':True,
+                'is_owner': True,
+                'is_new'   : True, # area not created yet
             })    
 
-    #@decorator.oauth_aware
-    def put(self):
-        logging.info("AreaHandler() Updating area ")
-        return self.createorupdate('update')
     
-     
+    #New Area form submitted.
     #@decorator.oauth_aware
     def post(self):
         if self.request.headers.get('x-http-method-override') == 'PATCH':
@@ -1302,7 +1315,8 @@ class AreaHandler(BaseHandler):
                 logging.info('Area creator did not request self-monitoring for %s' %(area.name))
 
             self.response.set_status(200)
-            return self.response.out.write("Created area")
+            
+            return self.response.out.write(area.geojsonArea())
         
         except Exception, e : 
             #self.add_message('danger', "Error creating area.  Exception: {0!s}".format(e)) 
@@ -1435,8 +1449,9 @@ class DeleteAreaHandler(BaseHandler):
                 'area_json' : geojson_area,
                 'area': area,
                 'show_navbar': True,
-                'show_delete':false,
-                'is_owner': false,
+                'show_delete':False,
+                'is_owner':  False,
+                'is_new'   : False, # area exists
                 'celllist':json.dumps(cell_list), # to be replaced by jsonarea
                 'area_followers': area_followers,
                 'obslist': json.dumps(observations)
@@ -2237,6 +2252,9 @@ class UserHandler(BaseHandler):
 
         #logging.info ("u is %s", u)
         
+        if not thisuser:
+            u.email = "**masked**"
+
         self.render('user.html', {
             'u': u,
             'journals': journals,

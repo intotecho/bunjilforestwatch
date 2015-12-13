@@ -12,7 +12,7 @@ build/*
 source/*
 out/*
 ut/*
-lib-not-used-see bfw-lib/*
+
 
 keys/*
 PIL/*

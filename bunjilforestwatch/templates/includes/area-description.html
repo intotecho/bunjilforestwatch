@@ -1,10 +1,10 @@
 <!--  area-description.html  -->
-<div class="panel-group" id="inner-descr-accordion">
+<div class="panel-group"  id='area-description-panel'>
 	<!-- DESCR WHAT -->
 	<div class="panel panel-default">
 
 		<div class="panel-heading">
-			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_what">Description<span class='dirty-flag'>*</span> </h4>
+			<h4 class="panel-title" data-toggle="collapse" data-parent="#area-description-panel" data-target="#area_descr_what">Description<span class='dirty-flag'>*</span> </h4>
 		</div>
 
 		<div id="area_descr_what" class="panel-collapse collapse in">
@@ -28,7 +28,7 @@
 	<div class="panel panel-default">
 
 		<div class="panel-heading">
-			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_why">Why's
+			<h4 class="panel-title" data-toggle="collapse" data-parent="#area-description-panel" data-target="#area_descr_why">Why's
 				this area important?<span class='dirty-flag'>*</span></h4>
 		</div>
 
@@ -48,7 +48,7 @@
 	<div class="panel panel-default">
      
         <div class="panel-heading">
-            <h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_threats">Threats<span class='dirty-flag'>*</span></h4>
+            <h4 class="panel-title" data-toggle="collapse" data-parent="#area-description-panel" data-target="#area_descr_threats">Threats<span class='dirty-flag'>*</span></h4>
         </div>
 
 		<div id="area_descr_threats" class="panel-collapse collapse">
@@ -71,7 +71,7 @@
 	<div class="panel panel-default">
         {% if is_owner or area.description_who%} 
 		<div class="panel-heading">
-			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_who">Who's
+			<h4 class="panel-title" data-toggle="collapse" data-parent="#area-description-panel" data-target="#area_descr_who">Who's
 				monitoring it?<span class='dirty-flag'>*</span></h4>
 		</div>
         {% else %}
@@ -88,11 +88,12 @@
                 <a class='update-area-btn btn btn-small btn-lightblue confirm glyphicon glyphicon-save'
                                                     style='width: 50%' data-toggle='tooltip' title='Save this description'>Update Who</a> 
 			</div>
-			
+			 {% if not is_new%} 
 		     <div class="panel-body">
 		           Area created by <br/> 
                    <a href="{{ 'user'|url(area.owner.string_id()) }}" data-toggle="tooltip" title="The user who created this area.">{{area.owner.string_id()}}</a>
-            </div>			
+            </div>
+             {% endif %}
 		</div>
 	</div>
 
@@ -101,7 +102,7 @@
 	<div class="panel panel-default">
 
 		<div class="panel-heading">
-			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area_descr_how">How's
+			<h4 class="panel-title" data-toggle="collapse" data-parent="#area-description-panel" data-target="#area_descr_how">How's
 				it protected?<span class='dirty-flag'>*</span></h4>
 		</div>
 
@@ -123,7 +124,7 @@
 	<div class="panel panel-info">
 	   {% if is_owner %} 
 		<div class="panel-heading">
-			<h4 class="panel-title" data-toggle="collapse" data-parent="#inner-descr-accordion" data-target="#area-wiki-form">Area's
+			<h4 class="panel-title" data-toggle="collapse" data-parent="#area-description-panel" data-target="#area-wiki-form">Area's
 				Website<span class='dirty-flag'>*</span></h4>
 		</div>
 		{% else %} 

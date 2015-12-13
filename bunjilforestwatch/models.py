@@ -360,10 +360,13 @@ class AreaOfInterest(ndb.Model):
             else:
                 area_followers = []
         """
-
+        
+     
+		
 		geojson_obj =	 { 
 			"type": "FeatureCollection",
 			"properties": {
+						"area" :self.name,
 						"area_name" :self.name,
 						"shared" :self.shared_str,
 						"area_url" : self.url(),

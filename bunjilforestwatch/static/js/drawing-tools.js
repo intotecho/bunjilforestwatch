@@ -186,13 +186,13 @@ DrawingTools.prototype.refreshGeoJsonFromData = function (e) {
 		map.drawingTools.refreshDownloadLinkFromGeoJson.bind(this);
 		if (map.mode === 'drawCenterPointMarker') {
 			map.drawingTools.area_location = geoJson;
-		};
-	});
+		}
+	})
 	
 	if (map.mode === 'drawCenterPointMarker') {
 		//map.drawingTools.stopDrawCenterPointMarker();
-	};
-}
+	}
+};
 
 
 //Refresh different components from other components.
@@ -207,7 +207,7 @@ DrawingTools.prototype.fitMapToGeoJsonFromData = function (e) {
 			});
 		}
 	}
-}
+};
 
 //Replace the data layer with a new one based on the inputted geoJson.
 
@@ -274,7 +274,7 @@ DrawingTools.prototype.setGeoJsonValidity = function (newVal, message) {
 		//this.geoJsonInput.className = '';
 		this.refreshDownloadLinkFromGeoJson();
 	}
-}
+};
 
 
 

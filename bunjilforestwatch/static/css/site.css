@@ -12,7 +12,7 @@ html {
 body {
     margin: 0;
     padding: 63px 0px 0px 0px;
-    font-family: 'Verdana', "sans-serif !important";
+/*    font-family: 'Verdana', "sans-serif !important"; */
     font-size: 15px;
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
     overflow: hidden; 
@@ -62,6 +62,11 @@ a[class ="popup"] {
     border: 0px;
 }
 
+.panel-title {
+	color: hsl(227,50%, 60%, 1);
+	font-size: 18px;
+	font-weight: 700pw
+}
 .space-behind-form {
     height: 0px; /* clear for bg image */
     padding-top: 65px;

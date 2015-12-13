@@ -4,6 +4,7 @@
 {% block head %}
 <title>Bunjil Forest Watch - Manage / Monitor Area</title>
 <link rel="stylesheet" href="/static/css/base-maps.css">
+<link rel="stylesheet" href="/static/css/area-description.css">
 {% endblock head%} {% block breadcrumbs %}
 <!-- base_maps.html  breadcrumbs-->
 {% endblock breadcrumbs %} {% block content %}
@@ -160,7 +161,7 @@
 								</div>
 								
 								<!-- AREA DESCRIPTION PANEL-->
-								<div class="panel panel-warning" id='area-description-panel'>
+								<div class="panel panel-warning" id='area-description-panel_title'>
 									<div class="panel-heading">
 										<h4 class="panel-title" data-parent="#5manage-area-accordion" data-target="#manage-accord-description"
 											data-toggle="collapse">Area Description</h4>
@@ -465,5 +466,6 @@
 {%endblock jobs_template %} {% block footer_js%} {% include "includes/project_scripts.html" %} {% include
 "includes/map_scripts.html" %}
 <script type="text/javascript" src="/static/js/base-maps.js" defer></script>
+<script type="text/javascript" src="/static/js/area-description.js" defer></script>
 {% endblock footer_js %}
 

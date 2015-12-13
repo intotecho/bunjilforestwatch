@@ -6,6 +6,8 @@
  * @fileoverview Shows a map and allows user to create a new area.
  */
 
+var area_json = null; // WARNING only defined after a successful save returns an area object.
+
 var draw_boundary_instructions = 
 	"<li><b>How to draw a boundary</b></li>" + 
 	"<li>Drag  the map so that its center is roughly over your area. " + 
@@ -246,10 +248,12 @@ function createArea(map, is_update)
 		      type: "POST",
 		      url: "area",
 		      data: 'new_area_geojson_str='+ data_to_post,
-		      success: function() {
+		      success: function(data) {
 		    	  $('#save-wait-popover').popoverX('hide');
 	 	          addToasterMessage('alert-success','Area ' + area_name + ' created OK');
-		    	  init_boundary_form();
+	 	          area_json = JSON.parse(data);
+	 	          var url = area_json.properties.area_url
+		    	  init_boundary_form(url);
 		      },
 		      error: function(requestObject, error, errorThrown) {
 		    	  	$('#save-wait-popover').popoverX('hide');
@@ -980,7 +984,7 @@ function monitoringAccord_clicked(event) {
 
 function agreementAccord_setTitle() {
 	var accept = get_has_accepted();
-	var title = 'Agreement <i>' +  ((accept === true )? 'Accepted' : 'Not Accepted') + + '</i>';
+	var title = 'Agreement: <i>' +  ((accept === true )? 'Accepted' : 'Not Accepted') + '</i>';
 	$('#agreementAccord_title').html(title);
 	
 }
@@ -1029,6 +1033,8 @@ function checkform_next_area(event) {
 		$('#form-errors').html(' ');
 		$('#next-subform').hide();
 		$('#areanameAccord').collapse('hide');
+		areanameAccord_setTitle();
+		
 		$('#sharingAccord').collapse('hide');
 		sharingAccord_setTitle();
 		
@@ -1062,20 +1068,25 @@ $(document).ready(function() {
 	  });
 	});
 
-function init_boundary_form()
+function init_boundary_form(url)
 {
 	"use strict";
-	
-	// make area name read only
-	$('input[type="text"], #area_name').attr('readonly','readonly');
-	$('#area-name-validation').hide();
+	init_area_descriptions(url);
+
+	$('#register-area-legend').hide();
+
+	// make inputs read only
+	$('input[type="text"], #area_name').attr('readonly','readonly').parent().find('.help-block').hide();
+	$('input[name=opt-sharing]:radio , #new_area_form').attr('disabled', true);
+	$('input[name=self-monitor], #new_area_form').attr('disabled', true);
+	$('input[name=request-volunteers], #new_area_form').attr('disabled', true);
+	$('input[name=accept], #new_area_form').attr('disabled', true);
 
 	// collapse sharing and monitoring and agreement accordions - use can still update them (tbd)
 	$('#areanameAccord').collapse('hide');
-	$('#descriptionAccord').collapse('show');
+	areanameAccord_setTitle();
 	
-	$('#areanameAccord').html('Area Name ' +   $('#area_name').val());
-
+	
 	$('#sharingAccord').collapse('hide');
 	sharingAccord_setTitle();
 		
@@ -1085,14 +1096,19 @@ function init_boundary_form()
 	$('#agreementAccord').collapse('hide');
 	agreementAccord_setTitle();
 	
-	// hide next button and ability to change area's location.  
 	$('#next-subform').hide();
 	$('#helplocateAccord').hide();
-	$('#drawlocateAccord').hide();
+	//$('#drawlocateAccord').hide();
+	
+	$('#descriptionAccord').collapse('show');
 
+	// hide next button and ability to change area's location.  
+	
 	// Display description and boundary form - ask user to enrich info.
-	$("#update-area-form").show();    
-
+	$("#description-form").show();    
+	$("#boundary-row").show();    
+	
+	
 	var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
 	if((selection === 'is-fusion') || (selection === 'is-drawmap')) {
 		//initialize_map(null, null);
