@@ -35,10 +35,49 @@
 				</button>
 				<a href='{{ "main"|url }}' class="navbar-brand"><span class="glyphicon glyphicon-home"></span> Bunjil</a>
 			</div>
+           
 			<!-- Collection of nav links and other content for toggling -->
 			<div id="navbarCollapse" class="collapse navbar-collapse">
+			    {% if wizard %}
+			             
+                <div class="wizard-container">
+                    <div class="panel with-nav-tabs">
+                      <div class="panel-heading">
+                          <ul class="nav nav-pills nav-wizard">
+                              
+                              <li id='info-tab' class="active" >
+                                  <a data-toggle="tab" href="#info-tab-body">Info</a>
+                                  <div class="nav-arrow"></div>
+                              </li>
+                              
+                              <li id='locate-tab'>
+                                  <div class="nav-wedge"></div>
+                                  <a data-toggle="tab" href="#locate-tab-body">Locate</a>
+                                  <div class="nav-arrow"></div>
+                              </li>
+                              
+                              <li id='boundary-tab'>
+                                  <div class="nav-wedge"></div>
+                                  <a data-toggle="tab" href='#boundary-tab-body'>Boundary</a>
+                                  <div class="nav-arrow"></div>
+                              </li>
+                              
+                              <li id='descr-tab'>
+                                  <div class="nav-wedge"></div>
+                                  <a data-toggle="tab" href="#descr-tab-body">Description</a>
+                                  <div class="nav-arrow"></div>
+                              </li>
+                          
+                          </ul>
+                      </div>
+                  </div>
+            </div>
+			    {% else  %} {# <!-- { % else wizard % } --> #}
 				<ul class="nav navbar-nav">
-					<li {% if active== "about" %} class="active"{% endif %}><a href='http://bunjilforestwatch.net'>about</a></li> {% if user %}
+					<li {% if active== "about" %} class="active"{% endif %}><a href='http://bunjilforestwatch.net'>about</a></li> 
+					
+					{% if user %}
+					
 					<!--  AREAS-->
 					<li class="dropdown{% if active  == 'view-area' or active== 'entry' or active=='new-area' %} active{% endif %}"><a
 						href="#" class="dropdown-toggle" data-toggle="dropdown">areas <b class="caret"></b></a>
@@ -55,13 +94,16 @@
 							<li {% if active== "new-area" %} class="active"{% endif %}><a href="{{ "new-area"|url }}"><span
 									class="glyphicon glyphicon-plus"></span> new area</a></li>
 						</ul></li>
+					
 					<!--  TASKS -->
 					<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">tasks<b class="caret"></b></a>
 						<ul class="dropdown-menu">
 							<li><a href="{{ 'view-obstasks'| url }}?user2view={{user.name }}"><span class="glyphicon glyphicon-tasks"></span>My
 									tasks</a></li>
 							<li><a href="{{ 'view-obstasks'|url }}"><span class="glyphicon glyphicon-tasks"></span>All tasks</a></li>
-						</ul></li>
+						</ul>
+					</li>
+					
 					<!--  REPORTS/JOURNALS -->
 					<li class="dropdown{% if active  == " view-journal" or active== "entry" or active=="new-journal" %} active{% endif %}">
 						<a href="#" class="dropdown-toggle" data-toggle="dropdown">journals<b class="caret"></b></a>
@@ -82,26 +124,31 @@
 							{% endfor %}
 						</ul>
 					   </li>
-					 {% endif %}
-					<!-- if user  -->
+					 {% endif %}  <!-- end if user  -->
+                    
 				</ul>
+	             {% endif %} {# <!-- { % end wizard % } --> #}
+				
 				<ul class="nav navbar-nav navbar-right">
-					{% if user %} {% if user.admin %}
-					<li class="dropdown{% if active  == "admin" %} active{% endif %}"><a href="#" class="dropdown-toggle"
+					{% if user %} 
+					   {% if user.admin %}
+					   <li class="dropdown{% if active  == "admin" %} active{% endif %}"><a href="#" class="dropdown-toggle"
 						data-toggle="dropdown">admin<b class="caret"></b></a>
-						<ul class="dropdown-menu">
-							<li><a href="{{ "flush-memcache"|url }}">flush memcache</a></li>
-							<li><a href="{{ "update-users"|url }}">update users</a></li>
-							<li><a href="{{ "view-obstasks"|url(None) }}">list recent observations</a></li>
-							<li><a href="{{ "check-new-all-images"|url }}">check for new images</a></li>
-                            <li id="admin-test-1" ><a href="#">Test 1- Success</a></li>
-                            <li id="admin-test-2" ><a href="#">Test 1- Info</a></li>
-                            <li id="admin-test-3" ><a href="#">Test 1- Warn</a></li>
-                            <li id="admin-test-4" ><a href="#">Test 1- Error</a></li>
-                            
-						</ul></li> {% endif %}
+							<ul class="dropdown-menu">
+								<li><a href="{{ "flush-memcache"|url }}">flush memcache</a></li>
+								<li><a href="{{ "update-users"|url }}">update users</a></li>
+								<li><a href="{{ "view-obstasks"|url(None) }}">list recent observations</a></li>
+								<li><a href="{{ "check-new-all-images"|url }}">check for new images</a></li>
+	                            <li id="admin-test-1" ><a href="#">Test 1- Success</a></li>
+	                            <li id="admin-test-2" ><a href="#">Test 1- Info</a></li>
+	                            <li id="admin-test-3" ><a href="#">Test 1- Warn</a></li>
+	                            <li id="admin-test-4" ><a href="#">Test 1- Error</a></li>
+	                            
+							</ul>
+						</li> 
+						{% endif %}
 
-					<li class="dropdown{% if active == "account" %} active{% endif %}"><a href="#" class="dropdown-toggle"
+					   <li class="dropdown{% if active == "account" %} active{% endif %}"><a href="#" class="dropdown-toggle"
 						data-toggle="dropdown">{{ user.name }} <img class="topbar-img-gravatar" src="{{ user.avatar }}&amp;s=30"
 							alt="{{ user.name }}" width="26" height="26"> <b style="margin-left: 30px" class="caret"></b></a>
 						<ul class="dropdown-menu">
@@ -119,14 +166,14 @@
 									<li><a href="{{ "login-google"|url }}">with google</a></li> 
                                 </ul>
                              </li>
-							{% endif %} <!-- { % if user% } -->
-						</ul>
+					         {% endif %} {# <!-- { % end login source  % } --> #}
+					   </ul>
 				</ul>
 			</div>
         </div >
 		</nav>
-	{% endif %}
-	<div id='server-alerts' style='display:none'>  <!-- toastr displayed by $(document).ready -->
+	{% endif %} {# <!-- { % end show_navbar% } --> #}
+	<div id='server-alerts' class='hidden'>  <!-- toastr displayed by $(document).ready -->
 	       {% if messages %} 
             {% for m in messages %}
                  <div class="alert-{{ m.1 }}" >

@@ -13,7 +13,7 @@ body {
     margin: 0;
     padding: 63px 0px 0px 0px;
 /*    font-family: 'Verdana', "sans-serif !important"; */
-    font-size: 15px;
+    font-size: 14px;
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
     overflow: hidden; 
 }
@@ -73,11 +73,11 @@ a[class ="popup"] {
 }
 
 .toast-top-center {
-  top: 35px;
+  top: 45px;
 }
 
 .toast-top-full-width {
-  top: 35px;
+  top: 45px;
 }
 
 
@@ -442,7 +442,6 @@ iframe { /* retain video aspect ratio */
     border-bottom-width: 1px;
 }
 
-
 .boxshadow-controls {
 	    margin-top: 16px;
         border: 1px solid transparent;
@@ -452,28 +451,6 @@ iframe { /* retain video aspect ratio */
         outline: none;
         height: 32px;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-      }
-
-
-#pac-input {
-        background-color: #fff;
-        padding: 0 11px 0 13px;
-        width: 400px;
-        font-family: Roboto;
-        font-size: 15px;
-        font-weight: 300;
-        text-overflow: ellipsis;
-      }
-
- #pac-input:focus {
-        border-color: #4d90fe;
-        margin-left: -1px;
-        padding-left: 14px;  /* Regular padding-left + 1. */
-        width: 401px;
-      }
-
-.pac-container {
-        font-family: Roboto;
       }
 
  #type-selector {
@@ -647,4 +624,8 @@ cell-panel-date
 .django-template {
   height: 0px;  
   visibility: hidden; 
+}
+
+.hidden-panel {
+    display: none;
 }

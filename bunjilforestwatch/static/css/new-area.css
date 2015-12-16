@@ -72,8 +72,10 @@ body {
 .validation {
     color: #FF0000;
     font-size: 13px;
+    font-style: italic;
     display: none; /*js calls show */
 }
+
 
 hr {
     border-top: 1px solid rgba(54, 105, 194, 0.1);
@@ -84,21 +86,29 @@ hr {
 /*	top: 200px; */
 }
 
+
+.accordion-form-label {
+	color: #234196;
+}
 .form-legend {
     color: #234196; /*    color: #333; */
-    text-align: center;
+    text-align: left;
     border-bottom: 0;
-    font-size: 24px;
+    font-size: 32px;
+    padding-top: 10px;
+    padding-bottom: 10px;
 }
 
 .framing-help {
     color: #234196; /*    color: #333; */
-    text-align: center;
+    text-align: left;
+    padding-bottom: 8px;
+    font-size: 18px;
 }
 
 .framing-sub-help {
     color: hsla(227, 10%, 55%, 1);
-    text-align: center;
+    text-align: left;
     font-size: 13px;
 }
 
@@ -109,6 +119,17 @@ hr {
 .asterix {
     color: #FA7063;
     data-toggle: tooltip;
+    font-weight: bold;
+}
+
+/* area_name displayed in collapsed accordion title */
+.collapsed-content-info {
+	font-style: italic;
+    color: hsl(227, 68%, 58%);	
+}
+
+#area_name {
+	max-width: 280px; /* don't encourage long names */
 }
 
 #mark-map-form,#save-area-form,#move-map-form {
@@ -330,3 +351,234 @@ span.CodeMirror-matchhighlight {
 }
 
 @import url('static/css/area-descriptions.css');
+
+/*************** WIZARD TABS ***********************/
+/* http://benjii.me/2014/03/wizard-style-navigation-tabs-for-bootstrap/ */
+/*** http://bootsnipp.com/snippets/featured/panels-with-nav-tabs ***/
+
+.panel.with-nav-tabs .panel-heading {
+/*  padding: 5px 5px 0 5px; */
+}
+
+.panel.with-nav-tabs .nav-tabs {
+  border-bottom: none;
+}
+
+.panel.with-nav-tabs .nav-justified {
+  margin-bottom: -1px;
+}
+
+
+/*** PANEL SUCCESS ***/
+
+.with-nav-tabs.panel-success .nav-tabs > li > a,
+.with-nav-tabs.panel-success .nav-tabs > li > a:hover,
+.with-nav-tabs.panel-success .nav-tabs > li > a:focus {
+  color: #F1F2E4;
+}
+
+.with-nav-tabs.panel-success .nav-tabs > .open > a,
+.with-nav-tabs.panel-success .nav-tabs > .open > a:hover,
+.with-nav-tabs.panel-success .nav-tabs > .open > a:focus,
+.with-nav-tabs.panel-success .nav-tabs > li > a:hover,
+.with-nav-tabs.panel-success .nav-tabs > li > a:focus {
+  color: #F1F2E4;
+  background-color: #F1F2ED;
+  border-color: transparent;
+}
+
+.with-nav-tabs.panel-success .nav-tabs > li.active > a,
+.with-nav-tabs.panel-success .nav-tabs > li.active > a:hover,
+.with-nav-tabs.panel-success .nav-tabs > li.active > a:focus {
+  color: #F1F2E4;
+  background-color: #fff;
+  border-color: #F1F2ED;
+  border-bottom-color: transparent;
+}
+
+.with-nav-tabs.panel-success .nav-tabs > li.dropdown .dropdown-menu {
+  background-color: #dff0d8;
+  border-color: #F1F2ED;
+}
+
+.with-nav-tabs.panel-success .nav-tabs > li.dropdown .dropdown-menu > li > a {
+  color: #F1F2E4;
+}
+
+.with-nav-tabs.panel-success .nav-tabs > li.dropdown .dropdown-menu > li > a:hover,
+.with-nav-tabs.panel-success .nav-tabs > li.dropdown .dropdown-menu > li > a:focus {
+  background-color: #F1F2ED;
+}
+
+.with-nav-tabs.panel-success .nav-tabs > li.dropdown .dropdown-menu > .active > a,
+.with-nav-tabs.panel-success .nav-tabs > li.dropdown .dropdown-menu > .active > a:hover,
+.with-nav-tabs.panel-success .nav-tabs > li.dropdown .dropdown-menu > .active > a:focus {
+  color: #fff;
+  background-color: #F1F2E4;
+}
+
+
+
+/*** PANEL NOT USED ***/
+
+.with-nav-tabs.panel-notused .nav-tabs > li > a,
+.with-nav-tabs.panel-notused .nav-tabs > li > a:hover,
+.with-nav-tabs.panel-notused .nav-tabs > li > a:focus {
+  color: #3c763d;
+}
+
+.with-nav-tabs.panel-notused .nav-tabs > .open > a,
+.with-nav-tabs.panel-notused .nav-tabs > .open > a:hover,
+.with-nav-tabs.panel-notused .nav-tabs > .open > a:focus,
+.with-nav-tabs.panel-notused .nav-tabs > li > a:hover,
+.with-nav-tabs.panel-notused .nav-tabs > li > a:focus {
+  color: #3c763d;
+  background-color: #F1F2ED;
+  border-color: transparent;
+}
+
+.with-nav-tabs.panel-notused .nav-tabs > li.active > a,
+.with-nav-tabs.panel-notused .nav-tabs > li.active > a:hover,
+.with-nav-tabs.panel-notused .nav-tabs > li.active > a:focus {
+  color: #3c763d;
+  background-color: #fff;
+  border-color: #F1F2ED;
+  border-bottom-color: transparent;
+}
+
+.with-nav-tabs.panel-notused .nav-tabs > li.dropdown .dropdown-menu {
+  background-color: #dff0d8;
+  border-color: #d6e9c6;
+}
+
+.with-nav-tabs.panel-notused .nav-tabs > li.dropdown .dropdown-menu > li > a {
+  color: #3c763d;
+}
+
+.with-nav-tabs.panel-notused .nav-tabs > li.dropdown .dropdown-menu > li > a:hover,
+.with-nav-tabs.panel-notused .nav-tabs > li.dropdown .dropdown-menu > li > a:focus {
+  background-color: #d6e9c6;
+}
+
+.with-nav-tabs.panel-notused .nav-tabs > li.dropdown .dropdown-menu > .active > a,
+.with-nav-tabs.panel-notused .nav-tabs > li.dropdown .dropdown-menu > .active > a:hover,
+.with-nav-tabs.panel-notused .nav-tabs > li.dropdown .dropdown-menu > .active > a:focus {
+  color: #fff;
+  background-color: #3c763d;
+}
+
+
+/********************************************************************/
+
+.nav-pills.nav-wizard > li {
+  position: relative;
+  overflow: visible;
+  border-right: 15px solid #F1F2E3;
+  border-left: 15px solid #F1F2E3;
+}
+
+.nav-pills.nav-wizard > li:first-child {
+  border-left: 0;
+}
+
+.nav-pills.nav-wizard > li:first-child a {
+  border-radius: 5px 0 0 5px;
+  padding-left: 8px;
+}
+
+.nav-pills.nav-wizard > li:last-child {
+  border-right: 0;
+  border-radius: 0 0 0 0;
+}
+
+.nav-pills.nav-wizard > li:last-child a {
+  border-radius: 0 0 0 0;
+}
+
+.nav-pills.nav-wizard > li a {
+  border-radius: 0;
+  background-color: #C8D2D5;
+}
+
+.nav-pills.nav-wizard > li .nav-arrow {
+  position: absolute;
+  top: 0px;
+  right: -20px;
+  width: 0px;
+  height: 0px;
+  border-style: solid;
+  border-width: 20px 0 20px 20px;
+  border-color: transparent transparent transparent #C8D2D5;
+  z-index: 150;
+}
+
+.nav-pills.nav-wizard > li .nav-wedge {
+  position: absolute;
+  top: 0px;
+  left: -20px;
+  width: 0px;
+  height: 0px;
+  border-style: solid;
+  border-width: 20px 0 20px 20px;
+  border-color: #C8D2D5 #C8D2D5 #C8D2D5 transparent;
+  z-index: 150;
+}
+
+.nav-pills.nav-wizard > li:hover .nav-arrow {
+  border-color: transparent transparent transparent #aaa;
+}
+
+.nav-pills.nav-wizard > li:hover .nav-wedge {
+  border-color: #aaa #aaa #aaa transparent;
+}
+
+.nav-pills.nav-wizard > li:hover a {
+  background-color: #aaa;
+  color: #fff;
+}
+
+.nav-pills.nav-wizard > li.active .nav-arrow {
+  border-color: transparent transparent transparent #428bca;
+}
+
+.nav-pills.nav-wizard > li.active .nav-wedge {
+  border-color: #428bca #428bca #428bca transparent;
+}
+
+.nav-pills.nav-wizard > li.active a {
+  background-color: #428bca;
+}
+
+/*************** END WIZARD TABS ***********************/
+
+.disabled-tab{
+    pointer-events: none;
+}
+
+.wizard-container {
+    position:fixed;
+    top: 0px;
+    left: 200px;
+    z-index:2000;
+    padding-top: 0px;
+    padding-left: 20px;
+    padding-right: 50px;
+    overflow-y: visible;
+    background: transparent;
+}
+
+.wizard-container  .panel-heading {
+    padding: 5px 26px 3px 10px;
+}
+
+.wizard-container  .panel {
+   background: transparent;
+}
+
+.wizard-container .nav>li>a {
+	padding: 10px 2px;
+}
+
+.wizard-container .nav>li>a {
+    padding: 10px 2px;
+}

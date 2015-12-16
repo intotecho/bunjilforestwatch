@@ -83,7 +83,7 @@ function addToasterMessage(alert_p, message)
 			  "debug": false,
 			  "newestOnTop": true,
 			  "progressBar": false,
-			  "positionClass": "toast-top-full-width",
+			  "positionClass": "toast-top-center",
 			  "preventDuplicates": false,
 			  "onclick": null,
 			  "showDuration": "300",

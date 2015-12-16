@@ -68,15 +68,14 @@ function update_map_cursor(map, pnt, panel) {
  */
 function complete_report(drawingManager, event) {
 	'use strict';
-	var href = '/' 
-				+ user_name 
-				+ '/journal/Observations for ' 
-				+ area_json.properties.area_name; 
+	var href = '/' + user_name +
+				 '/journal/Observations for ' + 
+				area_json.properties.area_name; 
 				 
 				
 	if (view_mode ===  "view-obstask") {
-		href 	+= '/new?sat_image=' 
-				+ observations[0].image_id;
+		href 	+= '/new?sat_image=' +
+				observations[0].image_id;
 	}
 	window.location.href = href; //+ mapobj.id;
 	console.log(event);
@@ -89,11 +88,11 @@ function complete_report(drawingManager, event) {
 */
 function displayAreaBoundary() {
 	
-    var boundary_coords_str = '<p class="divider small">'
+    var boundary_coords_str = '<p class="divider small">';
     var coords_arr   =  area_json.features[1].geometry.coordinates;  // init global.
     var border_latlngs = [];
 
-    if  (coords_arr.length == 0 ) {        
+    if  (coords_arr.length === 0 ) {        
     	var area_location = area_json.features[2].geometry.coordinates;  // init global.
         var latlng = new google.maps.LatLng(area_location[1], area_location[0] );
 
@@ -113,13 +112,13 @@ function displayAreaBoundary() {
     else {
 	    for (var j=0; j < coords_arr.length; j++)
 	    {
-	        var latlng = new google.maps.LatLng(coords_arr[j].lat, coords_arr[j].lng );
+	        latlng = new google.maps.LatLng(coords_arr[j].lat, coords_arr[j].lng );
 	        //console.logprint parseInt(coords_arr[j].lat. parseInt(coords_arr[j].lng
 	        border_latlngs.push(latlng);
 	        boundary_coords_str += latlng.toUrlValue(5) + '<br>';
 	    }
 	  
-	    boundary_coords_str += '</p>' //fill the accordion.html
+	    boundary_coords_str += '</p>'; //fill the accordion.html
 	    //console.log(boundary_coords_str);
 	    $('#boundary_panel').html(boundary_coords_str);
 	 
@@ -199,7 +198,7 @@ function initialize() {
         rotateControl:false,
         clickable: true,
         scaleControl: true //        scaleControlOptions: {position: google.maps.ControlPosition.BOTTOM_LEFT}
-    }
+    };
 
     var mapOptions_prior = {
             zoom: map_zoom,
@@ -214,7 +213,8 @@ function initialize() {
             clickable: true,
             scaleControl: true,
             scaleControlOptions: {position: google.maps.ControlPosition.BOTTOM_RIGHT}
-        }
+        };
+    
     /* global map_under_lhs */ 
     /* global map_under_lhs */ 
     /* global map_rhs */ 

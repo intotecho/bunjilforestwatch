@@ -1029,7 +1029,7 @@ class AreaHandler(BaseHandler):
 
         latlng = self.request.headers.get("X-Appengine-Citylatlong") #user's location to center initial new map
         if latlng == None:
-            logging.info('NewAreaHandler: No X-Appengine-Citylatlong in header')  #not unusual in debug mode.
+            logging.info('AreaHandler: No X-Appengine-Citylatlong in header')  #not unusual in debug mode.
             latlng = '8.2, 22.2'
 
         #send a blank area for templates
@@ -1050,7 +1050,9 @@ class AreaHandler(BaseHandler):
                 'show_navbar': True,
                 'show_delete':True,
                 'is_owner': True,
+                'wizard'   : True, # area not created yet
                 'is_new'   : True, # area not created yet
+                
             })    
 
     
@@ -1430,13 +1432,14 @@ class DeleteAreaHandler(BaseHandler):
         else:
             cell_list = area.CellList()
             observations =    {} 
-            if area.ft_docid is not None and len(area.ft_docid) <> 0:
+            if area.ft_docid is not None and len(area.ft_docid) != 0:
                 area.isfusion = True
             else:
                 area.isfusion = False
 
+        
+        area_followers  = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key) 
         # if user does not own area or user is not admin - disallow
-       
          
         if (area.owner.string_id()   != user.name) and (user.role != 'admin'):
             logging.error('Only the owner of an area or admin can delete an area %s %s', area.owner, user)

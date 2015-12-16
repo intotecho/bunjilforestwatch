@@ -131,7 +131,7 @@ function get_area_wiki() {
  * Sends new area request to server.
  * @param map
  */
-function createArea(map, is_update)
+function save_area(map, is_update)
 {
 	"use strict";
 	var area_name =  get_area_name();
@@ -211,7 +211,7 @@ function createArea(map, is_update)
 		new_area_geojson.features.push(location_feature);
 	}
 	else {
-		console.log('createArea() Error: no location set');
+		console.log('save_area() Error: no location set');
 	}
 
 	var data_to_post = JSON.stringify(new_area_geojson);
@@ -253,7 +253,7 @@ function createArea(map, is_update)
 	 	          addToasterMessage('alert-success','Area ' + area_name + ' created OK');
 	 	          area_json = JSON.parse(data);
 	 	          var url = area_json.properties.area_url
-		    	  init_boundary_form(url);
+		    	  saved_area(url);
 		      },
 		      error: function(requestObject, error, errorThrown) {
 		    	  	$('#save-wait-popover').popoverX('hide');
@@ -264,7 +264,7 @@ function createArea(map, is_update)
 		    });
 	}   
 	return false; //don't call more event handlers
-} /* end-of-createArea*/       
+} /* end-of-save_area*/       
 
 /**
  * After submitting the location name and sharing options, ask user for more details
@@ -513,7 +513,7 @@ function initialize_map(place, center_prm) {
 	/*function to add the polygon coordinates to the form data prior to submit.*/ 
 	$('#save-area').click(function(event){ 
 		event.preventDefault();
-		createArea(map, false);
+		save_area(map, false);
 	});		
 
 	$('#update-area').click(function(event){ 
@@ -802,8 +802,7 @@ BJTEST.subns = (function() {
 
 		$('#accept').prop('checked', true);
 
-		var target = $('#map-find');
-		target.show();
+		$('#locate-accordion').show();
 		
 		var center_pt =  new google.maps.LatLng(-33.8, 151.47); //Blue Mountains NP.
 		
@@ -818,12 +817,6 @@ BJTEST.subns = (function() {
         initAdvancedMap: initAdvancedMap
     };
 })();
-
-
-/**
- * Initialises the form for new-area page, but not yet the map.
- */
-
 
 
 
@@ -907,9 +900,8 @@ function pre_checkform_next_area(event) {
 	}
 
 	if(area_name[0] === '@'){ //test code
+		$('#locate-accordion').show();
 		$('#map-row').show();
-		target = $('#map-find');
-		target.show();
 		initialize_map(null, null);
 		return "";
 	}
@@ -933,7 +925,12 @@ var test_message = 1;
 
 function areanameAccord_setTitle() {
 	var area_name = get_area_name();
-	$('#areanameAccord_title').html('Area Name: <i>' + area_name + '</i>' );
+	var div = $('#areanameAccord_title');
+	div.find('.collapsed-content-info').html(area_name);
+	if (area_name.length > 0) 
+		div.find('.asterix').hide(); 
+	else 
+		div.find('.asterix').show();
 }
 
 function areanameAccord_clicked(event) {
@@ -942,7 +939,13 @@ function areanameAccord_clicked(event) {
 }
 
 function sharingAccord_setTitle() {
-	$('#sharingAccord_title').html('Sharing: <i>' +  get_shared() + '</i>');
+	var share = get_shared();
+	var div = $('#sharingAccord_title');
+	div.find('.collapsed-content-info').text(share);
+	if (share === 'not_selected') 
+		div.find('.asterix').show(); 
+	else 
+		div.find('.asterix').hide();
 }
 
 function sharingAccord_clicked(event) {
@@ -954,27 +957,36 @@ function monitoringAccord_setTitle() {
 	var self_monitor =  get_self_monitor(); 		   
 	var request_volunteers = get_request_volunteers(); 
 	
-	var title = 'Monitoring: '; 
+	var title = ""; 
 	if(self_monitor === true) {
-		title += "<i>Self Monitoring</i> ";
+		title += "Self Monitoring";
 		if(request_volunteers === true) {
-			title += " <i>and Requesting Volunteers help</i>";
+			title += " and Requesting Volunteers help";
 		}
 		else {
-			title += " <i>only</i>";
+			title += " only";
 		}
 	}
 	else {
 		if(request_volunteers === true) {
-			title += " <i>Not self monitoring, requesting volunteers</i>";
+			title += " Not self monitoring, requesting volunteers";
 		}
 		else {
-			title += "<i>No one will be monitoring this area!</i>";
+			title += "No one will be monitoring this area!";
 		}
 	}
 		
-	console.log(title);
-	$('#monitoringAccord_title').html(title);
+	//console.log(title);
+	
+	var div = $('#monitoringAccord_title');
+	div.find('.collapsed-content-info').text(title);
+	//Either self-monitor or request volunteers.
+	if((self_monitor === false) && (request_volunteers === false)) {
+		div.find('.asterix').show();
+	}	
+	else {
+		div.find('.asterix').hide();
+	}
 }
 
 function monitoringAccord_clicked(event) {
@@ -984,9 +996,16 @@ function monitoringAccord_clicked(event) {
 
 function agreementAccord_setTitle() {
 	var accept = get_has_accepted();
-	var title = 'Agreement: <i>' +  ((accept === true )? 'Accepted' : 'Not Accepted') + '</i>';
-	$('#agreementAccord_title').html(title);
+	var div = $('#agreementAccord_title');
 	
+	if(accept === true) {
+		div.find('.asterix').hide();
+		div.find('.collapsed-content-info').text(' Accepted');
+	}	
+	else {
+		div.find('.asterix').show();
+		div.find('.collapsed-content-info').text(' Not accepted');
+	}
 }
 
 function agreementAccord_clicked(event) {
@@ -1005,9 +1024,29 @@ function drawlocateAccord_clicked(event) {
 	$('#drawlocateAccord').collapse('toggle');
 }
 
+/**
+ * Simulates clicking on a tab in the wizard-container to make it active.
+ * @param target of tab to activate. 
+ * @example Use '#locate-tab' as param'
+ */
+function activate_tab(target) {
+	var tab = $('.wizard-container ' + target);
+	tab.find("a").trigger('click');
+	$(window).scrollTop(0);
+	return tab;
+}
+
+function enable_tab(target) {
+	return $(target).removeClass('disabled disabled-tab');
+}
+
+function disable_tab(target) {
+	return $(target).addClass('disabled disabled-tab ').removeClass('active');
+}
+
 
 /**
- * Checks if all inputs are provided to enable create button
+ * Checks if sufficient inputs are provided to enable create button
  * This occurs when user clicks Next,
  * Calls pre-checks()
  */
@@ -1034,7 +1073,6 @@ function checkform_next_area(event) {
 		$('#next-subform').hide();
 		$('#areanameAccord').collapse('hide');
 		areanameAccord_setTitle();
-		
 		$('#sharingAccord').collapse('hide');
 		sharingAccord_setTitle();
 		
@@ -1045,11 +1083,14 @@ function checkform_next_area(event) {
 		agreementAccord_setTitle();
 		
 		$('#helplocateAccord').collapse('show');
-		$('#drawlocateAccord').collapse('show');
+		$('#drawlocateAccord_c').collapse('show');
 		$('#descriptionAccord').collapse('hide');
+		$('#locate-accordion').show();
 		$('#map-row').show();
-		$('#map-find').show();
-
+		
+		enable_tab("#locate-tab");
+		activate_tab("#locate-tab");
+		
 		initialize_map(null, null);
 	}
 }
@@ -1068,7 +1109,11 @@ $(document).ready(function() {
 	  });
 	});
 
-function init_boundary_form(url)
+/**
+ * Called after successful save by save_area(). url is returned from save_area.
+ * @param url
+ */
+function saved_area(url)
 {
 	"use strict";
 	init_area_descriptions(url);
@@ -1095,25 +1140,26 @@ function init_boundary_form(url)
 	
 	$('#agreementAccord').collapse('hide');
 	agreementAccord_setTitle();
-	
-	$('#next-subform').hide();
-	$('#helplocateAccord').hide();
-	//$('#drawlocateAccord').hide();
-	
-	$('#descriptionAccord').collapse('show');
 
 	// hide next button and ability to change area's location.  
+	$('#next-subform').hide();
+	$('#helplocateAccord').hide();
+	$('#drawlocateAccord_c').hide();
 	
 	// Display description and boundary form - ask user to enrich info.
-	$("#description-form").show();    
+	//$("#description-form").show();    
+	//$('#descriptionAccord').collapse('show');
+	
+	
 	$("#boundary-row").show();    
-	
-	
+	enable_tab("#boundary-tab");
+	activate_tab("#boundary-tab");
+		
 	var selection = $('input[name=opt-fusion]:checked', '#new_area_form').val();
 	if((selection === 'is-fusion') || (selection === 'is-drawmap')) {
 		//initialize_map(null, null);
 
-		//$('#createarea_id').fadeIn();
+		//$('#save_area_id').fadeIn();
 
 		if (selection === 'is-fusion') {
 			$('#drawmap-form-c').fadeOut();
@@ -1130,9 +1176,11 @@ function init_boundary_form(url)
 	}	
 }
 
-function initialize_new() {
+function initialize_new_area_form() {
 	"use strict";
-
+	
+	var form_state = 'begin'
+		
 	var searchBox = addSearchBox();
 	$(window).scrollTop(0);
     /* Radio Button Handler - Select Fusion or Draw Map */
@@ -1147,7 +1195,28 @@ function initialize_new() {
 	$('#descriptionAccord_title').click(descriptionAccord_clicked);
 	$('#helplocateAccord_title').click(helplocateAccord_clicked);
 	$('#drawlocateAccord_title').click(drawlocateAccord_clicked);
-
+	
+	disable_tab("#locate-tab");
+	disable_tab("#boundary-tab");
+	disable_tab("#description-tab");
+	
+	
+	$('#info-tab').click(function() {
+		$(window).scrollTop(0);
+	});
+	
+	$('#locate-tab').click(function() {
+		$(window).scrollTop(0);
+	});
+	
+	$('#boundary-tab').click(function() {
+		$(window).scrollTop(0);
+	});
+	
+	$('#description-tab').click(function() {
+		$(window).scrollTop(0);
+	});
+	
 	var auto_collapse = true;
 
 	$('#auto-collapse').click(function(){
@@ -1177,4 +1246,4 @@ function initialize_new() {
 	$('#area_name').val('');
 }
 
-google.maps.event.addDomListener(window, 'load', initialize_new);
+google.maps.event.addDomListener(window, 'load', initialize_new_area_form);
