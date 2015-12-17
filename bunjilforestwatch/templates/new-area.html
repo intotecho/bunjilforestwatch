@@ -232,42 +232,23 @@
 				<div class="tab-pane fade disable" id="locate-tab-body">
 				
 						<!-- Help Locate your Area -->
-						<div class="panel-group hidden-panel" id="locate-accordion">
+						<div class="panel-group" id="locate-accordion">
 		                    <div id='locate-area-legend'>
 		                            <div class='form-legend'>
 		                                Locate Area
 		                                <!-- <span class="glyphicon glyphicon-question-sign" ></span> -->
 		                            </div>
-		                
-		                            <div class='framing-help'>
-		                                Locate your area on the map.<br>
-		                            </div>
-		                
-		                            <div class='framing-sub-help'>
-		                                Before you can save your area.<br />
-		                            </div>
-		                        </div>
+		                    </div>
 		    
-
 							<!-- Help Locate accordion -->
 
-							<div class="panel-heading accordion-form-label">
-								<h4 class="panel-title" data-toggle="collapse in " data-parent="#locate-accordion" data-target="#helplocateAccord">Find
-									your area</h4>
-							</div>
-
-							<!-- panel body -->
-							<div class="panel-collapse collapse in" id="helplocateAccord">
+							<div class="panel" >
 								<div class="panel-body">
 									<div id='subform-find-help'>
-										<div class="row">
-											<div class="col-md-1"></div>
-
-											<div class='col-md-6 framing-help'>Need help finding your area?</div>
-
-											<div class="col-md-5"></div>
-										</div>
-
+										
+                                        <div class='framing-help'>Find your area</div>
+										<div class='framing-sub-help'>Use these to help find your area on the map</div>
+										
 										<div class="row">
 
 											<div class="col-md-1"></div>
@@ -292,6 +273,7 @@
 								</div>
 							</div>
 						</div>
+						
 						<!-- Draw Location Accordion -->
 						<div class="panel-heading accordion-form-label">
 							<h4 class="panel-title" data-toggle="collapse" data-parent="#locate-accordion" data-target="#drawlocateAccord">
@@ -318,7 +300,6 @@
 
 								<div class="row" id='drag-map-form'>
 									<div class="col-md-1"></div>
-
 
 									<div class="col-md-2 form-group">
 										<button class="btn btn-primary" data-placement="top" data-target='#zoom-more-popover' data-toggle="popover-x"

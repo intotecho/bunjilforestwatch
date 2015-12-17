@@ -82,6 +82,7 @@ a[class ="popup"] {
 
 
 .toast-success {
+	
   background-color: #C6E0C6;
 }
 .toast-error {
@@ -91,7 +92,8 @@ a[class ="popup"] {
   background-color: #9DC3CE;
 }
 .toast-warning {
-  background-color: #EDE6B4;
+    color: #0;
+	background-color: #EDE6B4;
 }
 
 /*
@@ -110,7 +112,7 @@ a[class ="popup"] {
 #toaster {
 	float: center;
     z-index:100;
-    max-height: 100px;
+    max-height: 90px;
     overflow-y: auto;
     overflow-x: visible;
     background: transparent;
