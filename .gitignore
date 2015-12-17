@@ -1,11 +1,10 @@
 secrets.py
 package.json
 Makefile
-.jshintrc
-.jshintignore
-.pylintrc
-.project
-.pydevproject
+*/.jshintrc
+*/.pylintrc
+*/.project
+*/.pydevproject
 
 # Documentation Building
 build/*
@@ -20,7 +19,7 @@ ee/*
 lib/*
 notused/*
 .svn/*
-.settings/*
+*/.settings/*
 .secrets/
 .metadata/*
 */photothumb.db
