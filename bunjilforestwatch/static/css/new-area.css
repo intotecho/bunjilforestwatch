@@ -128,6 +128,12 @@ hr {
     color: hsl(227, 68%, 58%);	
 }
 
+
+#new_area_form .panel-body {
+    padding: 0 5px; /* tighter */
+    background-color: hsla(0, 100%, 100%, 0.37); /* lighter inside collapsibles */
+}
+
 #area_name {
 	max-width: 280px; /* don't encourage long names */
 }

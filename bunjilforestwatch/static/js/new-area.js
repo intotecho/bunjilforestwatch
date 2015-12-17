@@ -542,12 +542,15 @@ function initialize_map(place, center_prm) {
 	google.maps.event.addListener(map, 'bounds_changed', function() {
 	});
 
+	
+	/*
+	  
 	var scroll_target = $('#scroll-to-here');
 	if (typeof map.scroll_once  === 'undefined') {
 		map.scroll_once = true;
 		scroll_to_target(scroll_target);
 	}
-
+	*/
 	google.maps.event.addListener(map, 'idle', function() {
 		
 		// Normalize longitude. This is needed so the fusion tables query works
@@ -1082,10 +1085,10 @@ function checkform_next_area(event) {
 		$('#agreementAccord').collapse('hide');
 		agreementAccord_setTitle();
 		
-		$('#helplocateAccord').collapse('show');
-		$('#drawlocateAccord_c').collapse('show');
-		$('#descriptionAccord').collapse('hide');
-		$('#locate-accordion').show();
+		//$('#helplocateAccord').collapse('show');
+		//$('#drawlocateAccord_c').collapse('show');
+		//$('#descriptionAccord').collapse('hide');
+		//$('#locate-accordion').show();
 		$('#map-row').show();
 		
 		enable_tab("#locate-tab");
@@ -1143,14 +1146,13 @@ function saved_area(url)
 
 	// hide next button and ability to change area's location.  
 	$('#next-subform').hide();
-	$('#helplocateAccord').hide();
-	$('#drawlocateAccord_c').hide();
 	
+	//$('#helplocateAccord').hide();
+	//$('#drawlocateAccord_c').hide();
+	
+	disable_tab("#locate-tab");
+
 	// Display description and boundary form - ask user to enrich info.
-	//$("#description-form").show();    
-	//$('#descriptionAccord').collapse('show');
-	
-	
 	$("#boundary-row").show();    
 	enable_tab("#boundary-tab");
 	activate_tab("#boundary-tab");
@@ -1200,7 +1202,11 @@ function initialize_new_area_form() {
 	disable_tab("#boundary-tab");
 	disable_tab("#description-tab");
 	
+	$('wizard-container li').click(function() {
+		$(window).scrollTop(0);
+	});
 	
+	/*
 	$('#info-tab').click(function() {
 		$(window).scrollTop(0);
 	});
@@ -1216,7 +1222,7 @@ function initialize_new_area_form() {
 	$('#description-tab').click(function() {
 		$(window).scrollTop(0);
 	});
-	
+	*/
 	var auto_collapse = true;
 
 	$('#auto-collapse').click(function(){

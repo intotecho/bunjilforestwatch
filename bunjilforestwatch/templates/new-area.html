@@ -73,24 +73,25 @@
 <div class="container">
 	<div class="form-horizontal" id="new_area_form">
 
-		<div id='register-area-legend'>
-			<div class='form-legend'>
-				Register your area
-				<!-- <span class="glyphicon glyphicon-question-sign" ></span> -->
-			</div>
-
-			<div class='framing-help'>
-				If you live or work near a forest and want to protect it then register it for monitoring.<br>
-			</div>
-
-			<div class='framing-sub-help'>
-				Volunteers don't have to register a forest. They can <a href='/'>help others monitor their forests</a>.<br />
-			</div>
-		</div>
 		
 	
 				<div class="tab-content">
 					<div class="tab-pane fade in active" id="info-tab-body">
+				        <div id='register-area-legend'>
+				            <div class='form-legend'>
+				                Register your area
+				                <!-- <span class="glyphicon glyphicon-question-sign" ></span> -->
+				            </div>
+				
+				            <div class='framing-help'>
+				                If you live or work near a forest and want to protect it then register it for monitoring.<br>
+				            </div>
+				
+				            <div class='framing-sub-help'>
+				                Volunteers don't have to register a forest. They can <a href='/'>help others monitor their forests</a>.<br />
+				            </div>
+				        </div>
+	
 						<div class="panel-group" id="options-accordion">
 
 							<div class="panel-heading accordion-form-label" id="areanameAccord_title">
@@ -176,15 +177,14 @@
 											<div class="checkbox">
 												<label class="checkbox-inline" for="self-monitors"><input accesskey="m" id='self-monitor'
 													name="self-monitor" tabindex="5" type="checkbox" checked='checked' value="true"> Self Monitor</label> <span
-													class="help-block">Notify me when there are new images of my area. I have time and bandwidth to review
-													images.</span>
+													class="help-block">Notify me each time there are new images of my area. I can review images.</span>
 											</div>
 
 											<div class="checkbox">
 												<label class="checkbox-inline" for="request-volunteers"><input accesskey="v" id='request-volunteers'
-													name="request-volunteers" tabindex="6" type="checkbox" checked='checked' value="true"> Community monitoring</label><span
-													class="help-block">Ask Volunteers to help monitor my area. I don't have the ability to monitor images for
-													changes.</span>
+													name="request-volunteers" tabindex="6" type="checkbox" checked='checked' value="true"> Community monitoring</label>
+													<span class="help-block">Ask Volunteers to help monitor my area. I don't have the ability to monitor images for changes.
+													</span>
 											</div>
 
 										</div>
@@ -230,13 +230,29 @@
 				</div>
 				<!-- end info-tab -->
 				<div class="tab-pane fade disable" id="locate-tab-body">
-					<div id='drawlocateAccord_c' class='hidden-panel'>
+				
 						<!-- Help Locate your Area -->
 						<div class="panel-group hidden-panel" id="locate-accordion">
+		                    <div id='locate-area-legend'>
+		                            <div class='form-legend'>
+		                                Locate Area
+		                                <!-- <span class="glyphicon glyphicon-question-sign" ></span> -->
+		                            </div>
+		                
+		                            <div class='framing-help'>
+		                                Locate your area on the map.<br>
+		                            </div>
+		                
+		                            <div class='framing-sub-help'>
+		                                Before you can save your area.<br />
+		                            </div>
+		                        </div>
+		    
+
 							<!-- Help Locate accordion -->
 
 							<div class="panel-heading accordion-form-label">
-								<h4 class="panel-title" data-toggle="collapse" data-parent="#locate-accordion" data-target="#helplocateAccord">Find
+								<h4 class="panel-title" data-toggle="collapse in " data-parent="#locate-accordion" data-target="#helplocateAccord">Find
 									your area</h4>
 							</div>
 
@@ -390,8 +406,8 @@
 												Save <span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
 											</button>
 
-											<div class='popover popover-info popover-md' data-placement='right' data-target='#save-wait-popover1'
-												data-toggle="popover-x" id="save-wait-popover" style='display: none'>
+											<div class='popover popover-info popover-md hidden-panel' data-placement='right' data-target='#save-wait-popover1'
+												data-toggle="popover-x" id="save-wait-popover" >
 												<div class="arrow" id='save-wait-popover1'></div>
 
 												<h3 class="popover-title">Saving Area</h3>
@@ -437,12 +453,12 @@
 								</div>
 							</div>
 						</div>
-					</div>
+				
 				</div>
 				<div class="tab-pane fade" id="boundary-tab-body">
 					<!--  DEFINE AREA - BOUNDARY SELECTION  -->
 
-					<div class="row hidden-panel " id='boundary-row'>
+					<div class="row" id='boundary-row'>
 
 						<!-- BOUNDARY OPTIONS -->
 						<div>
@@ -539,8 +555,8 @@
 												Save Boundary<span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
 											</button>
 
-											<div class='popover popover-info popover-md' data-placement='right' data-target='#save-boundary-wait-popover1'
-												data-toggle="popover-x" id="save-wait-boundary-popover" style='display: none'>
+											<div class='popover popover-info popover-md hidden-panel' data-placement='right' data-target='#save-boundary-wait-popover1'
+												data-toggle="popover-x" id="save-wait-boundary-popover">
 												<div class="arrow" id='save-wait-boundary-popover1'></div>
 
 												<h3 class="popover-title">Saving Boundary</h3>
@@ -571,7 +587,7 @@
 				</div>
 				<div class="tab-pane fade" id="descr-tab-body">
 					<!--  DESCRIPTION  -->
-					<div class='row' id='description-form' style='display: none'>
+					<div class='row' id='description-form'>
 
 						<div class="panel-group">
 							<div class="panel-heading accordion-form-label">
@@ -608,11 +624,11 @@
 <div class="row">Map Row</div>
 <div class="row">
 
-	<div class="row" id='scroll-to-here' style='display: none'></div>
+	<div class="row hidden-panel" id='scroll-to-here'></div>
 
 
 	<!-- MAP PANEL (MAY ALSO SHOW  EDITOR)-->
-	<div class="row" id='map-row' style='display: none'>
+	<div class="row" id='map-row hidden-panel' >
 
 		<div class='col-md-12 nopadding' id='map-column'>
 			<div class='map-canvas' id='map-canvas-c'>
@@ -626,7 +642,7 @@
 		</div>
 
 
-		<div class='col-md-3 nopadding' id='geojson-column' style='display: none'>
+		<div class='col-md-3 nopadding hidden-panel' id='geojson-column'>
 
 			<!--  GeoJSON -->
 			<div class='extended-content-container' id='geojson-editor'>
@@ -654,14 +670,14 @@
 		</div>
 
 
-		<div class="map-panel-fusiontable" id="fusiontable-form-c" style='display: none'>
+		<div class="map-panel-fusiontable hidden-panel" id="fusiontable-form-c">
 			<label class="control-label map-panel-controls" data-toggle="tooltip" for="boundary_ft"
 				title="If your area's boundary is already in a fusion table, link to it here.">Fusion Table Id: <span
 				style="color: #ff0000">*</span></label> <input class="map-panel-controls" id="boundary_ft" name="boundary_ft" type="text">
 		</div>
 
 
-		<div id="boundary-instructions" style='display: none'></div>
+		<div id="boundary-instructions" class='hidden-panel'></div>
 	</div>
 
 
