@@ -57,7 +57,9 @@ function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, ge
 		draggable : true
 	});
 	map_p.data.setOptions({
-		drawingMode: null
+		drawingControl: false,
+		drawingMode: null,
+		position: google.maps.ControlPosition.TOP_CENTER,
 	});
 	
 	this.map = map_p;
@@ -125,6 +127,9 @@ DrawingTools.prototype.bindDataLayerListeners = function () {
  */
 DrawingTools.prototype.drawCenterPointMarker  = function (stop_handler) {
 	"use strict";
+	
+	//this.removeCenterPointMarker();
+	
 	var newData = new google.maps.Data({
 		map : this.map,
 		style : this.map.data.getStyle(),
@@ -149,13 +154,11 @@ DrawingTools.prototype.stopDrawCenterPointMarker=function () {
 	var map = this.map;
 	
 	map.data.setOptions({
+		drawingControl: false,
 		drawingMode: null
+		//disableDefaultUI: false// no drawing controls
 	});
-	
-	map.setOptions({
-		disableDefaultUI: false// no drawing controls
-	});
-	
+		
 	map.data.toGeoJson(function(geoJson) {
 		map.drawingTools.area_location = geoJson;
 	});

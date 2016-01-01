@@ -49,9 +49,9 @@ body {
 }
 
 #subform-find-help {
-    background: rgba(250, 233, 125, 0.22);
+    /*background: rgba(250, 233, 125, 0.22);
     width: 100%;
-    padding-left: 20px;
+    padding-left: 20px;*/
 }
 
 .subform-control-label {
@@ -63,6 +63,10 @@ body {
     color: hsla(227, 10%, 55%, 1);
     font-size: 13px;
 }
+
+.draw-only,  .drop-only,  .save-only {
+	display: none;
+ }
 
 #form-errors {
     color: #FF0000;
@@ -82,11 +86,6 @@ hr {
 }
 
 
-#save-wait-popover{
-/*	top: 200px; */
-}
-
-
 .accordion-form-label {
 	color: #234196;
 }
@@ -100,16 +99,24 @@ hr {
 }
 
 .framing-help {
-    color: #234196; /*    color: #333; */
+    /*color: #234196; */
     text-align: left;
-    padding-bottom: 8px;
-    font-size: 18px;
+    padding: 6px 12px;
+    font-size: 16px;
 }
 
 .framing-sub-help {
     color: hsla(227, 10%, 55%, 1);
     text-align: left;
     font-size: 13px;
+}
+
+.instruction {
+    color: hsla(227, 10%, 55%, 1);
+    text-align: left;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 12px 4px;
 }
 
 #searchbox_id {
@@ -129,10 +136,6 @@ hr {
 }
 
 
-#new_area_form .panel-body {
-    padding: 0 5px; /* tighter */
-    background-color: hsla(0, 100%, 100%, 0.37); /* lighter inside collapsibles */
-}
 
 #area_name {
 	max-width: 280px; /* don't encourage long names */
@@ -140,6 +143,12 @@ hr {
 
 #mark-map-form,#save-area-form,#move-map-form {
     display: none;
+}
+
+.locate-panel {
+	min-height: 60px;
+	padding: 0 5px 10px 5px; /* tighter */
+    /*background-color: hsla(0, 100%, 100%, 0.37); lighter inside collapsibles */
 }
 
 .CodeMirror-gutters {
@@ -487,4 +496,29 @@ span.CodeMirror-matchhighlight {
 
 .wizard-container .nav>li>a {
     padding: 10px 2px;
+}
+
+.importing {
+	display: none;
+}
+
+.drawborder {
+    display: none;
+}
+
+.panel-collapse {
+	padding-bottom: 7px;
+}
+
+.panel-heading {
+    background-color: hsla(212, 50%, 87%, 0.43);
+}
+
+.panel-footer {
+    background-color: hsla(214, 20%, 74%, 0.28)
+}
+.panel-body {
+    padding: 0 5px; /* tighter */
+    /* background-color: hsla(0, 100%, 100%, 0.37); lighter inside collapsibles */
+    background-color: hsla(193, 100%, 99%, 0.94);
 }
