@@ -1115,8 +1115,8 @@ class AreaHandler(BaseHandler):
         area_location_geojson_feature = None
         ftlink = None
         boundary_ft = None
-        
-        if boundary_type == 'none' :
+        ##  boundary_type can be 'unselected', 'drawborder', 'geojson', or 'fusion'
+        if boundary_type == 'unselected' :
             #no boundary defined
             total_area = 0
             maxlatlon = ndb.GeoPt(0,0)
@@ -1190,7 +1190,7 @@ class AreaHandler(BaseHandler):
                 return self.response.out.write('Could not define boundary - error reading fusion table')
             self.add_message('warning', "Fusion Tables are still experimental - Please reports any bugs") 
         
-        elif boundary_type == 'geojson':
+        elif boundary_type == 'geojson' or boundary_type == 'drawborder' :
             ### user drew a boundary ###
             for f in new_area['features']:
                 if f['name'] == 'boundary':

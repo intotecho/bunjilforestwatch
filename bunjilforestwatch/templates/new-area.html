@@ -32,10 +32,8 @@
 
 <div class="space-above-form"></div>
 
-<div class="container">
+<div class="container new-area-container">
 		<div class="locate-tab-bodyform-horizontal" id="new_area_form">
-
-
 
 				<div class="tab-content">
 						<div class="tab-pane fade in active" id="info-tab-body">
@@ -55,15 +53,13 @@
 								</div>
 
 								<div class="panel-group" id="options-accordion">
+										<div class="panel">
+												<div class="panel-heading" data-toggle="collapse" data-target='.areanameAccord' id="areanameAccord">
+														<span class="panel-title" id="areanameAccord_title"> Area Name</span> <span class='asterix' data-toggle="tooltip"
+																title='Area name is required'> *</span> <span class='collapsed-content-info'></span>
+												</div>
 
-										<div class="panel-heading " id="areanameAccord_title">
-												<span class="panel-title" data-toggle="collapse" data-parent="#options-accordion" data-target="#areanameAccord">
-														Area Name</span> <span class='asterix' data-toggle="tooltip" title='Area name is required'> *</span> <span
-														class='collapsed-content-info'></span>
-
-										</div>
-										<div class="panel-collapse collapse in" id="areanameAccord">
-												<div class="panel-body">
+												<div class="panel-body collapse in areanameAccord">
 														<div class="col-md-1"></div>
 														<div class="col-md-10">
 																<div class='validation' id='area-name-validation'>Give your area a short name.</div>
@@ -74,21 +70,18 @@
 														</div>
 												</div>
 										</div>
+
 										<!-- SHARING OPTIONS -->
+										<div class="panel">
+												<div class="panel-heading" data-toggle="collapse" data-target='.sharingAccord' id="sharingAccord_title">
+														<span class="panel-title"> Sharing Options</span> <span class='asterix' data-toggle="tooltip"
+																title='Sharing Option is required'> *</span> <span class='collapsed-content-info'></span>
+												</div>
 
-
-										<div class="panel-heading " id="sharingAccord_title">
-												<span class="panel-title" data-toggle="collapse" data-parent="#options-accordion" data-target="#sharingAccord">
-														Sharing Options</span> <span class='asterix' data-toggle="tooltip" title='Sharing Option is required'> *</span> <span
-														class='collapsed-content-info'></span>
-										</div>
-
-										<div class="panel-collapse collapse in" id="sharingAccord">
-												<div class="panel-body">
-
+												<div class="panel-body collapse in sharingAccord">
 														<div class="col-md-1"></div>
 														<div class="col-md-10">
-																<div class='validation' id='sharing-validation'>Choose pulbic , unlisted or private. public allows
+																<div class='validation' id='sharing-validation'>Choose public, unlisted or private. public allows
 																		volunteers to help you monitor.</div>
 
 																<div class="radio" id='public'>
@@ -108,25 +101,22 @@
 																				Private</label>
 																</div>
 																<span class="help-block">Only you can see and monitor this area. Volunteers can't see it and won't be
-																		able to help you monitor. See <a href="http://bunjilforestwatch.net/privacy">Privacy</a>
+																		able to help you monitor. Use if your work is dangerous. See <a href="http://bunjilforestwatch.net/privacy">Privacy</a>
 																</span>
 
 														</div>
-
 												</div>
 										</div>
 
-
 										<!--  Monitoring Options Accordion -->
 
-										<div class="panel-heading panel-title" id='monitoringAccord_title'>
-												<span class="panel-title" data-toggle="collapse" data-parent="#options-accordion" data-target="#monitoringAccord">
-														Monitoring Options</span> <span class='asterix' data-toggle="tooltip" title='Tick at least one box'>*</span> <span
-														class='collapsed-content-info'></span>
-										</div>
+										<div class="panel">
+												<div class="panel-heading" data-toggle="collapse" data-target='.monitoringAccord' id="monitoringAccord_title">
+														<span class="panel-title"> Monitoring Options</span> <span class='asterix' data-toggle="tooltip"
+																title='Tick at least one box'>*</span> <span class='collapsed-content-info'></span>
+												</div>
 
-										<div class="panel-collapse collapse in" id="monitoringAccord">
-												<div class="panel-body">
+												<div class="panel-body collapse in monitoringAccord">
 														<div class="form-group">
 																<div class="col-md-1"></div>
 
@@ -148,20 +138,19 @@
 
 																</div>
 														</div>
+
 												</div>
 										</div>
 
 										<!-- Agreement Undertaking -->
-										<div class="panel-heading panel-title" id="agreementAccord_title">
-												<span class="panel-title" data-toggle="collapse" data-parent="#options-accordion" data-target="#agreementAccord">
-														Agree to Monitor</span> <span class='asterix' data-toggle="tooltip"
-														title='You must agree to investigate disturbances to request volunteers'> *</span> <span
-														class='collapsed-content-info'></span>
-										</div>
+										<div class="panel">
+												<div class="panel-heading" data-toggle="collapse" data-target='.agreementAccord' id="agreementAccord_title">
+														<span class="panel-title"> Agree to Monitor</span> <span class='asterix' data-toggle="tooltip"
+																title='You must agree to investigate disturbances to request volunteers'> *</span> <span
+																class='collapsed-content-info'></span>
+												</div>
 
-										<div class="panel-collapse collapse in" id="agreementAccord">
-
-												<div class="panel-body">
+												<div class="panel-body collapse in agreementAccord">
 														<div class="form-group">
 																<div class="col-md-1"></div>
 																<div class="col-md-6">
@@ -173,20 +162,18 @@
 																</div>
 														</div>
 												</div>
+                                                <!-- NEXT -->
+												<div class="panel-footer ">
+														<div class="form-group row" id='next-subform'>
+																<div class='col-md-1'></div>
+																<div class='col-md-10'>
+																		<div class="help-block" id='form-errors'></div>
+																		<button accesskey="x" class="btn btn-default btn-form-ctrl" id="next-area" name="next-area" tabindex="8">Next</button>
+																</div>
+														</div>
+												</div>
 										</div>
-										<hr>
-
 								</div>
-								<!-- NEXT -->
-								<div class="form-group" id='next-subform'>
-										<div class='col-md-1'></div>
-										<div class='col-md-10'>
-												<div class="help-block" id='form-errors'></div>
-												<button accesskey="x" class="btn btn-default btn-form-ctrl" id="next-area" name="next-area" tabindex="8">Next</button>
-										</div>
-								</div>
-
-
 						</div>
 						<!-- end info-tab -->
 
@@ -204,10 +191,10 @@
 
 										<!-- Help Locate accordion -->
 
-										<div class="panel-collapse collapse in" id='subform-find-help'>
+										<div class="panel panel-collapse collapse in" id='subform-find-help'>
 												<div class="panel-heading">
 														<div class='panel-title' data-toggle="collapse" data-target=".find-panel">Find your area</div>
-														<div class='framing-sub-help  find-panel'>Find your area on the map</div>
+														<div class='framing-sub-help  find-panel'>Jump to you current location or a place name</div>
 												</div>
 												<div class="panel-body  find-panel">
 														<div class="row">
@@ -242,11 +229,12 @@
 																<!-- INSTRUCTIONS  ROW -->
 																<div class="col-md-1"></div>
 																<div class="col-md-6">
-																		<label class='drag-only'> <a class="popup" data-placement="bottom" data-target='#zoom-help-popover'
-																				data-toggle="popover-x" data-trigger='hover' id="zoom-help">Zoom</a> and <a class="popup"
-																				data-target='#drag-help-popover' data-toggle="popover-x" data-trigger='hover click' id="drag-help">Drag</a>
-																				the map so it shows your area. Then click <i>Drop Marker</i>.
-																		</label> <label class='drop-only'>Click on the map to drop a marker on your area.</label>
+																
+																    <label class='drag-only'> <a class="popup" data-placement="bottom" data-target='#zoom-help-popover'
+                                                                                data-toggle="popover-x" data-trigger='hover' id="zoom-help">Zoom</a> and <a class="popup"
+                                                                                data-target='#drag-help-popover' data-toggle="popover-x" data-trigger='hover click' id="drag-help">Drag</a>
+                                                                                the map so it shows your area. Then click <i>Drop Marker</i>.
+                                                                        </label> <label class='drop-only'>Click on the map to drop a marker on your area.</label>
 																		<div class='framing-sub-help drop-only'>It can be dropped anywhere within your area.</div>
 
 																		<label class='save-only'> If red marker is in your area click <i>Save</i>.
@@ -352,38 +340,38 @@
 										{#
 										<!-- SET DEFAULT VIEW -->
 										#}
-										<div class="panel-collapse collapse" id="adjust-view">
+										<div class="panel panel-collapse collapse in">
+												<div class="panel-heading panel-title" data-toggle="collapse" data-target=".adjust-view">Change Default View</div>
 
-												<div class="panel-heading panel-title" data-toggle="collapse" data-target="#adjust-view-accord">Change Default
-														View</div>
-												<div id="adjust-view-accord">
-														<div class="panel-body" id="adjust-view-accord">
-																<div class='framing-sub-help'>This sets the initial map center and zoom to view your area.</div>
-																<div class='framing-sub-help'>
-																		[Drag] so that your area is roughly over the center of the map. <br /> [Zoom] in till your area covers a
-																		large part of the map.<br /> [Zoom] out if the whole area can be seen on the map.<br /> <i>Save View</i>
-																		will save this as the default view for your area.
+												<div class="panel-body adjust-view">
+														<div class='framing-sub-help'>This sets the initial map center and zoom to view your area.</div>
+														<div class='framing-sub-help'>
+																<a class="popup" data-target='#drag-help-popover' data-toggle="popover-x" data-trigger='click' id="drag-help">Drag</a>
+																the map below until your area is at the center of the map. <br /> <a class="popup" data-placement="right"
+																		data-target='#zoom-help-popover' data-toggle="popover-x" data-trigger='click' id="zoom-help">Zoom</a> in so
+																your area covers a large part of the map or <br /> Zoom out if the whole area can't be seen on the map.<br />
+																<i>Save View</i> will save this as the default view for your area.
+														</div>
+														<br />
+												</div>
+												<div class="panel-footer adjust-view">
+														<div class='row'>
+																<div class='col-md-1'></div>
+																<div class='col-md-10'>
+																		<button class="btn btn-primary btn-form-ctrl" id="save-view" accesskey="v">
+																				<b>Save View</b>
+																		</button>
 																</div>
 																<br />
 														</div>
-														<div class="panel-footer">
-																<div class='row'>
-																		<div class='col-md-1'></div>
-																		<div class='col-md-10'>
-																				<button class="btn btn-primary btn-form-ctrl" id="save-view" accesskey="v">
-																						<b>Save View</b>
-																				</button>
-																		</div>
-																		<br />
-																</div>
-														</div>
 												</div>
+
 										</div>
 
 										{#
 										<!-- BOUNDARY INPUT METHOD-->
 										#}
-										<div class="panel-collapse collapse in">
+										<div class="panel panel-collapse collapse in">
 												<div class="panel-heading panel-title" data-toggle="collapse" data-target=".select-method">
 														Define the Boundary of your area
 														<div class='framing-sub-help select-method'>
@@ -394,7 +382,7 @@
 												{#
 												<!-- { % DRAW OR IMPORT % } -->
 												#}
-												<div class="panel-body select-method"'>
+												<div class='panel-body select-method'>
 														<div class='framing-help'>
 																Draw a boundary around your area or import it from external data?<br />
 														</div>
@@ -406,7 +394,7 @@
 																				<label for="private"><input accesskey="d" name="opt-boundary" type="radio" value="drawborder">
 																						Draw boundary now </label>
 																		</div>
-																		<span class="help-block"> Draw a shape around your area on the map. <br />If your not sure of the
+																		<span class="help-block"> Draw a shape around your area on the map. <br />If you're not sure of the
 																				exact boundary, just draw an approximate one.
 																		</span>
 																		<div class="radio">
@@ -417,105 +405,88 @@
 																</div>
 														</div>
 												</div>
-										</div>
-										
-										<div class="panel drawborder">
-												<div class='panel'>
-														<div class='panel-heading panel-title'>Draw a boundary</div>
-														<div class='panel-body'>
-																<span class='instruction' id='draw-start''> Click on a starting point anywhere on the boundary of your
-																		area. <br /> Then move around your area in an <b>anticlockwise</b> direction. <br />
-																</span> <span class='instruction' id='draw-second''> Click on the next point. </span> <span class='instruction'
-																		id='draw-finish''> When you return to the start, click on the first point.<br /> Click Clear to start
-																		again. <br />
-																</span> <span class='instruction' id='edit-shape''> Adjust the shape by dragging the small circles.<br />
-																		Click <b>Save Boundary </b> or <i>Clear</i> to start again. <br /></span>
 
-														</div>
-												</div>
-										</div>
-										<hr>
+												<div class="panel-body select-method">
+														<div class="row form-group importing">
+																<div class="col-md-1"></div>
+																<div class="col-md-6">
 
-
-										{#
-										<!-- IMPORT FUSION OR GEOJSON-->
-										#}
-										<div class="panel">
-												<div class="panel-collapse collapse importing">
-														<div class="panel-body">
-																<div class="row form-group">
-																		<div class="col-md-1"></div>
-																		<div class="col-md-6">
-
-																				<div class="radio">
-																						<label for="public"><input accesskey="g" name="opt-import" type="radio" value="geojson">
-																								Import GeoJSON</label>
-																				</div>
-																				<span class="help-block">Import boundary from a <a href="http://geojson.org">GeoJSON</a> file.
-																				</span>
-
-																				<div class="radio">
-																						<label for="unlisted"><input accesskey="f" name="opt-import" type="radio" value="fusion">
-																								Import Fusion Table</label>
-																				</div>
-																				<span class="help-block">Import boundary from a <a href="http://tables.googlelabs.com">fusion
-																								table</a></span>
+																		<div class="radio">
+																				<label for="public"><input accesskey="g" name="opt-import" type="radio" value="geojson">
+																						Import GeoJSON</label>
 																		</div>
+																		<span class="help-block">Import boundary from a <a href="http://geojson.org">GeoJSON</a> file.
+																		</span>
+
+																		<div class="radio">
+																				<label for="unlisted"><input accesskey="f" name="opt-import" type="radio" value="fusion">
+																						Import Fusion Table</label>
+																		</div>
+																		<span class="help-block">Import boundary from a <a href="http://tables.googlelabs.com">fusion table</a></span>
 																</div>
 														</div>
 												</div>
 										</div>
 
-										<div class="panel-body collapse " id="drop-geojson-bdry-ctrl-panel">
-												<div class="framing-help" id='geojson-instr'>
-														Drop a GeoJSON file directly onto the map <br />or paste it into the editor
-												</div>
-										</div>
-										<div class="panel-body collapse " id="fusion-table-ctrl-panel">
-												<div class="panel-title framing-help" id='fusion-instr'>Fusion Table Id</div>
-												<div class="panel-title framing-sub-help" id='fusion-sub-instr'>
-														The fusion table must be public to be imported by this app.<br /> Copy <b>Id</b> from table in your Google Drive.
-														Displayed in File-About. Only the outer boundary will be imported.<br />
-												</div>
-												<div class="form-group">
+										<div class="panel ">
+												<div class='panel-heading panel-title drawborder'>Draw a boundary</div>
+												<div class='panel-heading panel-title importing'>Import area boundary</div>
 
-														<label class="col-md-4 control-label" for="fusion_id">Fusion Table Id</label>
-
-														<div class="col-md-4">
-																<input accesskey="f" class="form-control input-md" id="fusion_id" name="fusion_id" placeholder="" type="text">
-																<span class="help-block">Enter the key or id</span>
+												<div class='panel-body drawborder'>
+														<span class='instruction draw-start'> Click on a starting point anywhere on the boundary of your area.
+																<br /> Then move around your area in an <b>anticlockwise</b> direction. <br />
+														</span> <span class='instruction draw-second'> Click on the next point. </span> <span class='instruction'
+																id='draw-finish'> When you return to the start, click on the first point.<br /> Click Clear to start
+																again. <br />
+														</span> <span class='instruction edit-shape'> Adjust the shape by dragging the small circles.<br /> Click <b>Save
+																		Boundary </b> or <i>Clear</i> to start again. <br /></span>
+												</div>
+												<div class="panel-body collapse importing">
+														<div class="framing-help geojson">
+																Drop a GeoJSON file directly onto the map <br />or paste it into the editor
 														</div>
-												</div>
-										</div>
-										<hr>
+														<div class="panel-title framing-help fusion">Fusion Table Id</div>
+														<div class="panel-title framing-sub-help fusion">
+																The fusion table must be public to be imported by this app.<br /> Copy <b>Id</b> from table in your Google
+																Drive. Displayed in File-About. Only the outer boundary will be imported.<br />
+														</div>
+														<div class="form-group fusion">
 
-										<div class="panel-footer" id="save-bdry-ctrl-panel">
-												<div class="panel-body row">
-														<div class='col-md-6'>
-																<button class="btn btn-primary" id="save-boundary" name="save-boundary">
-																		Save Boundary<span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
-																</button>
+																<label class="col-md-4 control-label" for="fusion_id">Fusion Table Id</label>
 
-																<div class='popover popover-info popover-md hidden-panel' data-placement='right'
-																		data-target='#save-boundary-wait-popover1' data-toggle="popover-x" id="save-wait-boundary-popover">
-																		<div class="arrow" id='save-wait-boundary-popover1'></div>
-
-																		<h3 class="popover-title">Saving Boundary</h3>
-
-																		<div class="popover-content">
-																				Saving your boundary now.<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
-																		</div>
-
-																		<div class="popover-footer">
-																				<button class="btn btn-sm btn-default" id='close-dialog-save-area-wait'>OK</button>
-																		</div>
+																<div class="col-md-4">
+																		<input accesskey="f" class="form-control input-md" id="fusion_id" name="fusion_id" placeholder="" type="text">
+																		<span class="help-block">Enter the key or id</span>
 																</div>
 														</div>
-														<div class='col-md-6'>
-																<button class="btn btn-default" id="cancel-boundary" name="cancel-boundary">
-																		Cancel<span class="glyphicon glyphicon-remove-sign" style='color: #FA7063'></span>
-																</button>
+												</div>
+												{#
+												<!-- IMPORT FUSION OR GEOJSON-->
+												#}
+												<div class="panel-footer save-ctrls">
+														<div class="row save-ctrls">
+																<div class='col-md-6'>
+																		<button class="btn btn-primary" id="save-boundary" name="save-boundary">
+																				Save Boundary <span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
+																		</button>
 
+																		<div class='popover popover-info popover-md hidden-panel' data-placement='right'
+																				data-target='#save-boundary-wait-popover1' data-toggle="popover-x" id="save-wait-boundary-popover">
+																				<div class="arrow" id='save-wait-boundary-popover1'></div>
+																				<div class="popover-content">
+																						Saving.<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
+																				</div>
+
+																				<div class="popover-footer">
+																						<button class="btn btn-sm btn-default" id='close-dialog-save-area-wait'>OK</button>
+																				</div>
+																		</div>
+																</div>
+																<div class='col-md-6'>
+																		<button class="btn btn-default" id="clear-boundary" name="cancel-boundary">
+																				Clear <span class="glyphicon glyphicon-remove-sign" style='color: #FA7063'></span>
+																		</button>
+																</div>
 														</div>
 												</div>
 										</div>
@@ -526,26 +497,22 @@
 						<div class="tab-pane fade" id="descr-tab-body">
 								<!--  DESCRIPTION  TAB -->
 								<div class='row' id='description-form'>
+										<div class='form-legend'>Area description</div>
 
 										<div class="panel-group">
-												<div class="panel-heading ">
-														<h4 class="panel-title" data-toggle="collapse" data-parent="#options-accordion" data-target="#descriptionAccord">Describe
-																your area</h4>
-												</div>
+												<div class="panel panel-collapse collapse in" id="descriptionAccord">
+														<div class="panel-heading panel-title" data-toggle="collapse" data-parent="#options-accordion"
+																data-target="#descriptionAccord">Describe your area</div>
+														<div class='panel-body'>
+																<div class="framing-help" data-target="#add-a-description-legend">Tell others why you are monitoring it.</div>
+																<div class="panel-title framing-sub-help">You can skip this step and update the description later.</div>
 
-												<div class="panel-collapse collapse in" id="descriptionAccord">
-
-														<div class='form-legend'>Update area's description</div>
-
-														<div class="panel-title framing-help" data-target="#add-a-description-legend">Tell others why you are
-																monitoring it.</div>
-														<div class="panel-title framing-sub-help">You can skip this step and update the description later.</div>
-
-														<div class="form-group">
-																<div class='col-md-1'></div>
-																<div class='col-md-3'>
-																		<button class="btn btn-sm btn-default  btn-form-ctrl" id="skip-description" data-toggle="collapse"
-																				data-parent="#options-accordion" data-target="#descriptionAccord" accesskey="k">Skip</button>
+																<div class='panel-footer row'>
+																		<div class='col-md-1'></div>
+																		<div class='col-md-3'>
+																				<button class="btn btn-sm btn-default  btn-form-ctrl" id="skip-description" data-toggle="collapse"
+																						data-parent="#options-accordion" data-target="#descriptionAccord" accesskey="k">Skip</button>
+																		</div>
 																</div>
 														</div>
 														<!--  INNER ACCORDION -->

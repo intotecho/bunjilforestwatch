@@ -70,8 +70,8 @@ function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, ge
 
 	var geoJsonInputRect = this.geoJsonInput.getBoundingClientRect();
 	var panelRect = this. geoJsonPanel.getBoundingClientRect();
-	this.geoJsonInput.style.height = panelRect.bottom - geoJsonInputRect.top - 8
-			+ "px";
+	this.geoJsonInput.style.height = panelRect.bottom - geoJsonInputRect.top - 8 +
+			 "px";
 	
 	$("#map-canvas-c").on("dragover", function(event) {
 		//console.log("dragover map");
@@ -118,7 +118,7 @@ DrawingTools.prototype.bindDataLayerListeners = function () {
 	this.map.data.addListener('addfeature', this.fitMapToGeoJsonFromData);
 	this.map.data.addListener('removefeature', this.refreshGeoJsonFromData.bind(this));
 	this.map.data.addListener('setgeometry', this.refreshGeoJsonFromData.bind(this));
-}
+};
 
 
 /**
@@ -147,7 +147,7 @@ DrawingTools.prototype.drawCenterPointMarker  = function (stop_handler) {
 	this.map.mode = 'drawCenterPointMarker';
 	
 	this.map.data.addListener('addfeature', stop_handler);
-}
+};
 
 DrawingTools.prototype.stopDrawCenterPointMarker=function () {
 	"use strict";
@@ -164,16 +164,68 @@ DrawingTools.prototype.stopDrawCenterPointMarker=function () {
 	});
 	
 	map.mode = 'none';
-}
+};
 
 DrawingTools.prototype.removeCenterPointMarker=function () {
 	"use strict";
 	this.map.data.setMap(null);
 	this.bindDataLayerListeners();
 	this.setGeoJsonValidity(true, null);
-}
+};
 
 
+
+/**
+ * Create a data layer for points.
+ * Give it a function to call when a point is marker is added.
+ */
+DrawingTools.prototype.drawPolygon  = function (stop_handler) {
+	"use strict";
+	
+	//this.removePolygon();
+	
+	var newData = new google.maps.Data({
+		map : this.map,
+		style : this.map.data.getStyle(),
+		editable: true,
+		controls : null, //['Polygon'],
+		drawingMode: 'Polygon'
+	});
+	this.map.data.setMap(null);
+	this.map.data = newData;
+	this.bindDataLayerListeners();
+	this.setGeoJsonValidity(true, null);
+	//this.map.setOptions({
+	//		disableDefaultUI: true // no drawing controls
+	//});
+	this.map.mode = 'drawPolygon';
+	
+	this.map.data.addListener('addfeature', stop_handler);
+};
+
+DrawingTools.prototype.stopDrawPolygon=function () {
+	"use strict";
+	var map = this.map;
+	
+	map.data.setOptions({
+		drawingControl: false,
+		drawingMode: null
+		//disableDefaultUI: false// no drawing controls
+	});
+		
+	map.data.toGeoJson(function(geoJson) {
+		map.drawingTools.boundary = geoJson;
+	});
+	
+	map.mode = 'none';
+};
+
+DrawingTools.prototype.removePolygon=function () {
+	"use strict";
+	this.map.data.setMap(null);
+	this.bindDataLayerListeners();
+	this.setGeoJsonValidity(true, null);
+};
 
 //Refresh different components from other components.
 DrawingTools.prototype.refreshGeoJsonFromData = function (e) {
@@ -190,11 +242,10 @@ DrawingTools.prototype.refreshGeoJsonFromData = function (e) {
 		if (map.mode === 'drawCenterPointMarker') {
 			map.drawingTools.area_location = geoJson;
 		}
-	})
-	
-	if (map.mode === 'drawCenterPointMarker') {
-		//map.drawingTools.stopDrawCenterPointMarker();
-	}
+		if (map.mode === 'drawPolygon') {
+			map.drawingTools.boundary = geoJson;
+		}
+	});
 };
 
 
@@ -249,7 +300,7 @@ DrawingTools.prototype.refreshDataFromGeoJson = function () {
 	this.bindDataLayerListeners();
 
 	this.setGeoJsonValidity(true, null);
-}
+};
 
 // Refresh download link.
 DrawingTools.prototype.refreshDownloadLinkFromGeoJson = function () {
@@ -261,7 +312,7 @@ DrawingTools.prototype.refreshDownloadLinkFromGeoJson = function () {
 		this.downloadLink.download = 'area_' + $('#area_name').val() + ".json";		
 		this.downloadLink.href = "data:;base64," + btoa(value);
 	}	
-}
+};
 
 // Display the validity of geoJson.
 DrawingTools.prototype.setGeoJsonValidity = function (newVal, message) {
@@ -316,7 +367,7 @@ function handleDrop(e, map) {
 			};
 			reader.onerror = function(e) {
 				console.error('reading failed');
-			};
+			}
 			reader.readAsText(file);
 		}
 	} 
@@ -331,7 +382,7 @@ function handleDrop(e, map) {
 			//});
 		}
 		else {
-			console.log('nothing to drop!')
+			console.log('nothing to drop!');
 		}
 	}
 	// prevent drag event from bubbling further
@@ -365,7 +416,7 @@ function fitMapBoundsTofeature(feature) {
 				var polygon = polys[i];
 				var polypoints = polygon.getLength();
 				for (pt = 0; pt < polypoints; pt++) {
-					var point = polygon.getAt(pt)
+					var point = polygon.getAt(pt);
 					//console.log('extend to point ' + point.toString());
 					//if (bounds.contains(point) === false) {
 						//console.log('poly point is type' + typeof(point));
@@ -418,7 +469,7 @@ DrawingTools.prototype.getDataValue = function () {
 		this.downloadLink.download = 'area_' + $('#area_name').val() + ".json";		
 		this.downloadLink.href = "data:;base64," + btoa(value);
 	}	
-}
+};
 
 
 /*

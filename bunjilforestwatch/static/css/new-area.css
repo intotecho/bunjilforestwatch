@@ -23,7 +23,7 @@ body {
     padding-top: 65px;
 }
 
-.container {
+.new-area-container {
     /* background-color: rgba(248, 246, 229, 0.83); /* #fafaeb; */
     background: -webkit-linear-gradient(top, rgba(248, 246, 229, 0.90),
         rgba(248, 246, 229, 1)); /* For Safari 5.1 to 6.0 */
@@ -64,7 +64,7 @@ body {
     font-size: 13px;
 }
 
-.draw-only,  .drop-only,  .save-only {
+.draw-only,  .drop-only,  .save-only,  .save-ctrls, .importing,  .drawborder, .selected{
 	display: none;
  }
 
@@ -133,8 +133,8 @@ hr {
 .collapsed-content-info {
 	font-style: italic;
     color: hsl(227, 68%, 58%);	
+    font-size: 18px;
 }
-
 
 
 #area_name {
@@ -145,11 +145,6 @@ hr {
     display: none;
 }
 
-.locate-panel {
-	min-height: 60px;
-	padding: 0 5px 10px 5px; /* tighter */
-    /*background-color: hsla(0, 100%, 100%, 0.37); lighter inside collapsibles */
-}
 
 .CodeMirror-gutters {
     background: #fff;
@@ -498,27 +493,30 @@ span.CodeMirror-matchhighlight {
     padding: 10px 2px;
 }
 
-.importing {
-	display: none;
+#new_area_form  .panel {
+	background-color: hsla(204, 70%, 93%, 0.76);
 }
 
-.drawborder {
-    display: none;
+#new_area_form  .panel-collapse {
+	margin-bottom: 7px;
 }
 
-.panel-collapse {
-	padding-bottom: 7px;
-}
-
-.panel-heading {
+#new_area_form  .panel-heading {
     background-color: hsla(212, 50%, 87%, 0.43);
 }
 
-.panel-footer {
-    background-color: hsla(214, 20%, 74%, 0.28)
+#new_area_form  .panel-footer {
+    background-color: hsla(214, 8%, 97%, 0.28);
 }
-.panel-body {
+
+#new_area_form  .panel-body {
     padding: 0 5px; /* tighter */
     /* background-color: hsla(0, 100%, 100%, 0.37); lighter inside collapsibles */
     background-color: hsla(193, 100%, 99%, 0.94);
+}
+
+#new_area_form   .locate-panel {
+    min-height: 60px;
+    padding: 0 5px 10px 5px; /* tighter */
+    /*background-color: hsla(0, 100%, 100%, 0.37); lighter inside collapsibles */
 }

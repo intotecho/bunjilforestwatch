@@ -99,11 +99,14 @@ $('#instructions').popoverX({
     "Click 'about' in the menu for more info</p>"
     });
 
-var instructions_str = 
-
 $('#save-view').click(function(){
 	
+	/* global initialize_map */
 	var map = map_under_lhs;
+	if (typeof map === 'undefined') {
+		map = initialize_map.map; //new area form.
+	}
+		
 	var url =  area_json['properties']['area_url'] + '/update/view?lat=' + map.getCenter().lat().toFixed(5)+ '&lng=' + map.getCenter().lng().toFixed(5) + '&zoom=' + map.getZoom();
 	console.log('save-view:', url);
 
