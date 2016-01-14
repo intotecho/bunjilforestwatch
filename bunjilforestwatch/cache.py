@@ -178,16 +178,24 @@ def get_areas(user_key):  #return all areas's owned by user.
     n = C_AREAS %user_key
     data = memcache.get(n)
     if data is None:
-        data = models.AreaOfInterest.query(models.AreaOfInterest.owner == user_key).fetch(models.AreaOfInterest.MAX_AREAS)
+        data = models.AreaOfInterest.query(models.AreaOfInterest.owner == user_key). \
+        order(-models.AreaOfInterest.last_modified). \
+        fetch(models.AreaOfInterest.MAX_AREAS)
         memcache.add(n, data)
 
     return data
 
+def get_area_count(user_key):  #return all areas's owned by user.
+    return models.AreaOfInterest.query(models.AreaOfInterest.owner == user_key).count()
+    
 def get_other_areas(user_key): # returns list of areas user neither created nor follows. User can select an area from this list to follow.
     n = C_OTHER_AREAS %user_key
     data = memcache.get(n)
     if data is None:
-        all_area_keys = models.AreaOfInterest.query().filter(models.AreaOfInterest.owner != user_key).filter(models.AreaOfInterest.share == models.AreaOfInterest.PUBLIC_AOI ).fetch(keys_only=True)
+        all_area_keys = models.AreaOfInterest.query(). \
+            filter(models.AreaOfInterest.owner != user_key). \
+            filter(models.AreaOfInterest.share == models.AreaOfInterest.PUBLIC_AOI ).  \
+            fetch(keys_only=True)
         af = get_following_area_keys(user_key) # a list of area keys.
         other_areas_keys = [x for x in all_area_keys if x not in af] # remove areas user is following from list of all_areas
         otherareas = ndb.get_multi(other_areas_keys)

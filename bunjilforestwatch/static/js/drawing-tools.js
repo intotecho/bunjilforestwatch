@@ -51,14 +51,16 @@ function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, ge
 	this.downloadLink = downloadLink_p;
 	
 	//map_p.data.setControls([ 'Point', 'Polygon' ]);
+	var styleOptions = areaBoundaryPolygonOptions;
+	styleOptions.editable = true;
+	styleOptions.draggable = true;
+	styleOptions.fillOpacity =  0.5;  //more opacity when drawing.
 	
-	map_p.data.setStyle({
-		editable : true,
-		draggable : true
-	});
+	map_p.data.setStyle(styleOptions);
 	map_p.data.setOptions({
 		drawingControl: false,
 		drawingMode: null,
+		controls : null,
 		position: google.maps.ControlPosition.TOP_CENTER,
 	});
 	
@@ -97,7 +99,7 @@ function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, ge
 		console.log("drop drop-container " + event.target);
 		handleDrop(event, initialize_map.map);
 	});
-	this.refreshDataFromGeoJson();
+	//this.refreshDataFromGeoJson();
 	
 	// Set up events for changing the geoJson input.
 	google.maps.event.addDomListener(this.geoJsonInput, 'input',
@@ -183,13 +185,16 @@ DrawingTools.prototype.drawPolygon  = function (stop_handler) {
 	"use strict";
 	
 	//this.removePolygon();
+	/* global areaBoundaryPolygonOptions */ 
 	
 	var newData = new google.maps.Data({
 		map : this.map,
 		style : this.map.data.getStyle(),
 		editable: true,
 		controls : null, //['Polygon'],
-		drawingMode: 'Polygon'
+		drawingMode: 'Polygon',
+		drawingControl: false,
+		polygonOptions: areaBoundaryPolygonOptions
 	});
 	this.map.data.setMap(null);
 	this.map.data = newData;
@@ -212,7 +217,10 @@ DrawingTools.prototype.stopDrawPolygon=function () {
 		drawingMode: null
 		//disableDefaultUI: false// no drawing controls
 	});
-		
+	
+	this.refreshDataFromGeoJson();
+	this.refreshGeoJsonFromData();
+	
 	map.data.toGeoJson(function(geoJson) {
 		map.drawingTools.boundary = geoJson;
 	});
@@ -256,7 +264,7 @@ DrawingTools.prototype.fitMapToGeoJsonFromData = function (e) {
 	var map = initialize_map.map;  //context of this about to change in next call.
 	if( typeof map !== 'undefined') {
 		if( typeof map.data !== 'undefined') {
-			map.data.forEach(function(feature, map_p){
+			map.data.forEach(function(feature, map){
 				fitMapBoundsTofeature(feature);		
 			});
 		}
@@ -273,7 +281,7 @@ DrawingTools.prototype.refreshDataFromGeoJson = function () {
 	var newData = new google.maps.Data({
 		map : map,
 		style : map.data.getStyle(),
-		controls : [ 'Point', 'Polygon' ],
+		controls : null,
 		drawingMode: null
 	});
 	var editor = initialize_map.editor;
@@ -367,7 +375,7 @@ function handleDrop(e, map) {
 			};
 			reader.onerror = function(e) {
 				console.error('reading failed');
-			}
+			};
 			reader.readAsText(file);
 		}
 	} 
@@ -392,6 +400,7 @@ function handleDrop(e, map) {
 /*
  * TODO better to make this a prototype of map.
  * google.maps.event.addListener(map.data,'addfeature',function(e){ 
+ * Note: Does not fitBounds when getBounds() is undefined. So map retains mapview when preloaded with geojson.
  */
 function fitMapBoundsTofeature(feature) {
 	
@@ -399,61 +408,63 @@ function fitMapBoundsTofeature(feature) {
 	var geometry = feature.getGeometry();
 	//var old_bounds = initialize_map.map.getBounds();
 	var bounds = initialize_map.map.getBounds();
-	var old_ne = bounds.getNorthEast();
-	var old_sw = bounds.getSouthWest();
-	
-	console.log( 'orig bounds     ' + bounds.toString());
-	
-	var type = geometry.getType();
-	var pt; 
-	switch (type) {
-		case "Polygon": 
-		case "MultiPolygon":
-			console.log('Extending map to fit ' + type);
-			var polys = geometry.getArray();
-			var polycount = polys.length;
-			for (var i = 0; i < polycount; i++) {
-				var polygon = polys[i];
-				var polypoints = polygon.getLength();
-				for (pt = 0; pt < polypoints; pt++) {
-					var point = polygon.getAt(pt);
-					//console.log('extend to point ' + point.toString());
-					//if (bounds.contains(point) === false) {
-						//console.log('poly point is type' + typeof(point));
-						bounds.extend(point);
-					//}
+	if (typeof bounds !== 'undefined') {
+		var old_ne = bounds.getNorthEast();
+		var old_sw = bounds.getSouthWest();
+		
+		console.log( 'orig bounds     ' + bounds.toString());
+		
+		var type = geometry.getType();
+		var pt; 
+		switch (type) {
+			case "Polygon": 
+			case "MultiPolygon":
+				console.log('Extending map to fit ' + type);
+				var polys = geometry.getArray();
+				var polycount = polys.length;
+				for (var i = 0; i < polycount; i++) {
+					var polygon = polys[i];
+					var polypoints = polygon.getLength();
+					for (pt = 0; pt < polypoints; pt++) {
+						var point = polygon.getAt(pt);
+						//console.log('extend to point ' + point.toString());
+						//if (bounds.contains(point) === false) {
+							//console.log('poly point is type' + typeof(point));
+							bounds.extend(point);
+						//}
+					}
 				}
-			}
-			break;
-
-		case "Point": 
-			console.log('Extending map to fit ' + type);
-			pt = geometry.get();
-			//console.log('point is type' + typeof(pt));
-			bounds.extend(pt);
-			break;
-
-		case "MultiPoint":
-			//console.log('Extending map to fit ' + type);
-            var points = geometry.getArray();
-            for (var mp = 0; mp < points.length; mp++) {
-    			bounds.extend(points[mp]);
-            }
-            break;
-
-		default: // "LineString", "MultiLineString", "LinearRing", "GeometryCollection"
-			console.log('Extending to geometry of type ' + type + ' not implemented.');
-			return;
-	}
-	/*
-	console.log( 'now  bounds     ' + bounds.toString());
-	console.log( 'old nw ' + old_ne.toString());
-	console.log( 'old sw ' + old_sw.toString());
-	*/	
-	if(( bounds.getNorthEast().equals(old_ne) === false) || ( bounds.getSouthWest().equals(old_sw) === false )) {
-		console.log('fitting Map to new bounds ' + bounds.toString());
-		initialize_map.map.fitBounds(bounds);
-	}
+				break;
+	
+			case "Point": 
+				console.log('Extending map to fit ' + type);
+				pt = geometry.get();
+				//console.log('point is type' + typeof(pt));
+				bounds.extend(pt);
+				break;
+	
+			case "MultiPoint":
+				//console.log('Extending map to fit ' + type);
+	            var points = geometry.getArray();
+	            for (var mp = 0; mp < points.length; mp++) {
+	    			bounds.extend(points[mp]);
+	            }
+	            break;
+	
+			default: // "LineString", "MultiLineString", "LinearRing", "GeometryCollection"
+				console.log('Extending to geometry of type ' + type + ' not implemented.');
+				return;
+		}
+		/*
+		console.log( 'now  bounds     ' + bounds.toString());
+		console.log( 'old nw ' + old_ne.toString());
+		console.log( 'old sw ' + old_sw.toString());
+		*/	
+		if(( bounds.getNorthEast().equals(old_ne) === false) || ( bounds.getSouthWest().equals(old_sw) === false )) {
+			console.log('fitting Map to new bounds ' + bounds.toString());
+			initialize_map.map.fitBounds(bounds);
+		}
+	}	
 }
 
 /**

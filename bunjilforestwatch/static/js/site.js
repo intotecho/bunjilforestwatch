@@ -180,24 +180,3 @@ function isURL(str) {
 
 // don't fade out alert-error or alert-danger.
 
-/**
- * Modify area with new value define in the patch_ops.
- * assumes  
- */
-function patch_area(patch_ops, area_url)
-{
-  var patch_ops_string = JSON.stringify(patch_ops);
-
-  //console.log( "updateAreaDescription() url:", area_json.properties.area_url, ' data:', patch_ops_string);
-  
-  return jQuery.ajax({
-	    type: "POST",
-	    beforeSend: function (request)
-        {
-            request.setRequestHeader("X-HTTP-Method-Override", "PATCH");
-        },
-	    url: area_url, //area_json.properties.area_url,
-	    data: patch_ops_string,
-	    dataType:"json",
-	});
-}

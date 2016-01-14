@@ -427,10 +427,10 @@ class MainPage(BaseHandler):
                             #'pagelist': utils.page_list(page, pages)
             }) 
 
-class ViewAreas(BaseHandler):
+class ViewAllAreas(BaseHandler):
 
      def get(self, username):
-        print ViewAreas
+        
         if 'user' in self.session:
 #        
             areas = cache.get_areas(self.session['user']['key'])
@@ -835,58 +835,101 @@ class ViewArea(BaseHandler):
             self.response.set_status(400)
             return self.response.out.write('{"status": "error", "reason": "JSON Parse error in patch request" }')
 
-        status = 304
+        status = 404
         op_results = []
         
         for operation in patch_ops:
             safe_value = bleach.linkify(bleach.clean(operation['value']))
-            if operation['op'] == "replace":
-                
-                id = operation['id'] # ref to div
-                 
-                if operation['path'] == "/properties/area_description/description":
-                    area.description = safe_value
-                    op_results.append({"result": "Updated description_what", "value": safe_value, "id": id})
-                    status = 200 
-                    
-                if operation['path'] == "/properties/area_description/description_why":
-                    area.description_why = safe_value
-                    op_results.append({"result": "Updated description_why", "value": safe_value, "id":id})
-                    status = 200 
-                    
-                if operation['path'] == "/properties/area_description/description_how":
-                    area.description_how = safe_value
-                    op_results.append({"result": "Updated description_how", "value": safe_value, "id": id})
-                    status = 200
-                     
-                if operation['path'] == "/properties/area_description/description_who":
-                    area.description_who = safe_value
-                    op_results.append({"result": "Updated description_who", "value": safe_value, "id": id})
-                    status = 200
-                    
-                if operation['path'] == "/properties/area_description/threats":
-                    area.threats = safe_value
-                    op_results.append({"result": "Updated threats", "value": safe_value, "id": id})
-                    status = 200
-                     
-                if operation['path'] == "/properties/area_description/wiki":
-                    area.wiki = safe_value
-                    op_results.append({"result": "Updated wiki", "value": safe_value, "id":id})
-                    status = 200 
 
-                if operation['path'] == "/properties/shared":
-    
-                    if area.set_shared(safe_value) == 'error':
-                        logging.error('Shared, invalid value {0!s}'.format(shared))
-                        self.response.set_status(400)
-                        return self.response.write('{"status": "error", "reason": "bad value for shared" }')
-                        
-                    op_results.append({"result": "Updated shared", "value": safe_value, "id":id})
-                    status = 200 
+            if operation['path'] == "/features/mapview":
+               
+                try:                
+                    lat_str =  operation['value']['geometry']['coordinates'][1]
+                    if not lat_str:
+                        return self.response.write('error no lat param')
+                    
+                    lng_str =  operation['value']['geometry']['coordinates'][0]
+                    if not lng_str:
+                        return self.response.write('error no lng param ')
+            
+                    zoom =  operation['value']['properties']['zoom']
+                    
+                except KeyError:
+                    self.response.set_status(400)
+                    return self.response.write('error reading mapview params')
+                
+                area.map_zoom = int(zoom)
+                area.map_center = ndb.GeoPt(float(lat_str), float(lng_str))
+                op_results.append({"result": "Updated maview", "value": safe_value, "id": "n/a"})
+                status = 200
+                
+            if operation['path'] == "/features/geojsonboundary":
+                
+                print 'update boundary with: ', operation['value']
+                eeFeatureCollection, status, errormsg = models.AreaOfInterest.get_eeFeatureCollection(operation['value'])
+                #print  eeFeatureCollection, status, errormsg
+                if eeFeatureCollection == None:
+                    self.response.set_status(status)
+                    return self.response.out.write("Could not convert boundary to feature collection: " + errormsg)
+                else:
+                    area.set_boundary_fc(eeFeatureCollection, True)
+                    area.boundary_geojsonstr =  json.dumps(operation['value'])
+                    op_results.append({"result": "Updated boundary", "value": "boundary provided", "id": "n/a"})
+                    status = 200
+
+            if operation['path'] == "/properties/fusion_table":
+                area.ft_docid = safe_value 
+                op_results.append({"result": "Updated fusion table id", "value": safe_value, "id": "n/a"})
+                status = 200 
+                                
+            if operation['path'] == "/properties/boundary_type":
+                area.boundary_type = safe_value 
+                op_results.append({"result": "Updated boundary_type", "value": safe_value, "id": "n/a"})
+                status = 200 
+             
+            if operation['path'] == "/properties/area_description/description":
+                area.description = safe_value
+                op_results.append({"result": "Updated description_what", "value": safe_value, "id": operation['id']})
+                status = 200 
+                
+            if operation['path'] == "/properties/area_description/description_why":
+                area.description_why = safe_value
+                op_results.append({"result": "Updated description_why", "value": safe_value, "id":operation['id']})
+                status = 200 
+                
+            if operation['path'] == "/properties/area_description/description_how":
+                area.description_how = safe_value
+                op_results.append({"result": "Updated description_how", "value": safe_value, "id": operation['id']})
+                status = 200
+                 
+            if operation['path'] == "/properties/area_description/description_who":
+                area.description_who = safe_value
+                op_results.append({"result": "Updated description_who", "value": safe_value, "id": operation['id']})
+                status = 200
+                
+            if operation['path'] == "/properties/area_description/threats":
+                area.threats = safe_value
+                op_results.append({"result": "Updated threats", "value": safe_value, "id": operation['id']})
+                status = 200
+                 
+            if operation['path'] == "/properties/area_description/wiki":
+                area.wiki = safe_value
+                op_results.append({"result": "Updated wiki", "value": safe_value, "id":operation['id']})
+                status = 200 
+
+            if operation['path'] == "/properties/shared":
+
+                if area.set_shared(safe_value) == 'error':
+                    logging.error('Shared, invalid value {0!s}'.format(safe_value))
+                    self.response.set_status(400)
+                    return self.response.write('{"status": "error", "reason": "bad value for shared" }')
+                    
+                op_results.append({"result": "Updated shared", "value": safe_value, "id":operation['id']})
+                status = 200 
                     
         if status != 200:
             self.response.set_status(status)
-            op_results.append({"result": "Error No valid path found for area", "value": safe_value, "id": id})
+            op_results.append({"result": "Error No valid path found for area", "value": safe_value, "id": operation['id']})
             return self.response.write('{"status": "error", "reason": "Error No valid path found for op" }')
             
         try:
@@ -896,7 +939,7 @@ class ViewArea(BaseHandler):
             
         except Exception, e: 
             self.response.set_status(500)
-            message = 'Exception updating area {0!s}'.format(e)
+            message = 'Exception saving area to db {0!s}'.format(e)
             
             logging.error(message)
             return self.response.out.write('{"status": "error", "reason": ' + message + '}')
@@ -906,11 +949,11 @@ class ViewArea(BaseHandler):
                    "updates": op_results
                    };
                    
-        response_str = json.dumps(results)
-        logging.info('Updated : {0!s} with result {1!s} '.format(area_name, response_str))
+        #response_str = results
+        logging.info('Updated : {0!s} with result {1!s} '.format(area_name, results))
 
         self.response.set_status(200)
-        return self.response.out.write(response_str)
+        return self.response.out.write(json.dumps(results))
         
         
     def get(self, area_name):
@@ -949,7 +992,7 @@ class ViewArea(BaseHandler):
             #This may be an empty list for a new area.
             
             cell_list = []        
-            cell_list = area.CellList()
+            cell_list = area.cell_list()
             observations =    {} 
             
             if area.ft_docid is not None and len(area.ft_docid) <> 0:
@@ -978,8 +1021,8 @@ class ViewArea(BaseHandler):
             if users.is_current_user_admin():
                 show_delete = True
             
-            geojson_area = area.geojsonArea()
-             
+            geojson_area = json.dumps(area.toGeoJSON())
+            print 'geojson_area: ', geojson_area     
             self.render('view-area.html', {
                 'username': user.name,
                 'area_json' : geojson_area,
@@ -995,6 +1038,62 @@ class ViewArea(BaseHandler):
             })
             
 
+class AreaBoundaryHandler(BaseHandler):
+
+    def get(self, area_name):
+        logging.info('edit boundary form')
+        
+        current_user = users.get_current_user()
+        if  not current_user:
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
+            self.add_message('danger', 'You must log in to create a new area .')
+            return self.redirect(users.create_login_url(original_url))
+        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
+ 
+        if not registered:
+            return self.redirect(webapp2.uri_for('register'))
+
+        try:
+            username = self.session['user']['name']
+        except:
+            logging.error('Should never get this exception')
+            self.add_message('danger', 'You must log in to create a new area.')
+            
+            if 'user' not in self.session:
+                self.redirect(webapp2.uri_for('main'))
+                return
+
+        #send a blank area for templates
+        
+        area = cache.get_area(None, area_name)
+
+        if not area:
+            self.add_message('danger', 'Edit Boundary failed - Area not found.')
+            logging.error('EditBoundary: Area not found! %s', area_name) # XSS should not return area to client.
+            return self.error(404)
+        else:
+            if area.ft_docid is not None and len(area.ft_docid) != 0:
+                area.isfusion = True
+            else:
+                area.isfusion = False
+        
+        # if user does not own area or user is not admin - disallow
+        if (area.owner.string_id()   != user.name) and (user.role != 'admin'):
+            logging.error("Only the owner of an area or admin can edit an area's boundary %s %s", area.owner, user)
+            self.add_message('danger', "Only the owner of an area or admin can edit an area's boundary. owner:'{0!s}' user:'{1!s}'".format(area.owner, user))
+        geojson_area = json.dumps(area.toGeoJSON())
+        self.render('new-area.html', {
+                   #'country': country,
+                   'area': area,
+                   'area_json': geojson_area,
+                   'username': username,
+                   'show_navbar': True,
+                   'edit_boundary' : True,
+                   'wizard'   : False # area already created 
+               })    
+        
 class AreaHandler(BaseHandler):
     def delete(self):
         #return DeleteAreaHandler() #TODO Make deleteArea RESTFUL
@@ -1055,215 +1154,200 @@ class AreaHandler(BaseHandler):
                 
             })    
 
-    
+
+             
     #New Area form submitted.
     #@decorator.oauth_aware
     def post(self):
-        if self.request.headers.get('x-http-method-override') == 'PATCH':
-            logging.info("AreaHandler() PATCHING area ")
-        else:    
-            logging.info("AreaHandler() Creating new area ")
-
-        new_area_geojson_str = self.request.get('new_area_geojson_str').decode('utf-8')
-        logging.debug("AreaHandler() new_area_geojson_str: %s ", new_area_geojson_str)
-        
+        """
+        Create a new Area 
+        @param new_area_geojson_str - defines the new area as a geojson string.
+               This may optionally contain a boundary_feature named 'boundary'
+        """   
+ 
+        ### get logged in user
         try:
-            new_area = geojson.loads(new_area_geojson_str)
+            username = self.session['user']['name']
+            user = cache.get_user(username)
+            if not user:
+                raise KeyError
         
-        except ValueError, e:
-            logging.error("AreaHandler() Error parsing new_area_geojson_str: %s ", new_area_geojson_str)
+        except KeyError:
+            self.response.set_status(403, message='You must log in to create an area E1149')
+            return self.response.write('You must log in to create an area E1150')
+            '''# client should redirect
+            abs_url  = urlparse(self.request.uri)
+            original_url = abs_url.path
+            logging.error('No user logged in to protected url: ' + original_url)
+            self.response.set_status(403, message='You must log in to create an area E1086')
+            '''
+       
+        ### read geojson dict of area properties
+        try:
+            new_area_geojson_str = self.request.body.decode('utf-8')
+            logging.debug("AreaHandler() new_area_geojson_str: %s ", new_area_geojson_str)
+            new_area = geojson.loads(new_area_geojson_str)
+
+        except (ValueError, KeyError) as e:
             logging.error("AreaHandler() Exception : {0!s}".format(e)) 
-            
-            if isinstance(e, webapp2.HTTPException):
-                self.response.set_status(e.code)
-            else:
-                self.response.set_status(500, message='Error reading new area data')
-            
-            self.add_message('danger', 'Error reading new area data' )
-            return self.response.out.write('bad new area - error message')
-         
-        area_name = new_area['properties']['area_name'] #self.request.get('area_name')
+            if isinstance(e, KeyError):
+                self.response.set_status(400, message='No new_area_geojson_str parameter provided')
+            elif isinstance(e, ValueError):
+                logging.error("AreaHandler() Exception : {0!s} parsing new_area_geojson_str: {1!s}".format(e, new_area_geojson_str)) 
+                self.response.set_status(400, message='Error parsing new_area data E1184')
+            return self.response.out.write('Error reading new area data E1189')
 
-        if not eeservice.initEarthEngineService(): # we need earth engine now.
-            self.response.set_status(503)
-            return self.response.out.write('Sorry, Google Earth Engine not available right now. Please try again later')
+        ### area_name
+        
+        logging.info("AreaHandler() request to create new area %s", new_area)
 
-        if not area_name:
+        try:         
+            area_name = new_area['properties']['area_name'].decode('utf-8') #allow non-english area names.
+        except KeyError, e:    
             self.response.set_status(400)
             return self.response.out.write('Create area requires a name.')
 
-        if self.session['areas_list']:
-            #FIXME should checkl the cache, not loop through the session.
-            if len(self.session['areas_list']) >= models.AreaOfInterest.MAX_AREAS:
+        areas_count = user.get_area_count()
+        logging.debug('User has created %d area.', areas_count)
+        if areas_count  >= models.AreaOfInterest.MAX_AREAS:
+            if (user.role != 'admin'):
                 message = 'Sorry, you have created too many areas. Max Areas = {0!s}'.format(models.AreaOfInterest.MAX_AREAS)
                 logging.error(message) 
                 self.response.set_status(400)
                 return self.response.out.write(message)
-            
+            else:
+                self.add_message('warning', "Extra Areas permitted for admin ")
+                
+        elif areas_count >= models.AreaOfInterest.MAX_AREAS-1:
+            self.add_message('warning', "You won't be able to create any more areas unless you first delete one of your existing areas")
+
+        if not eeservice.initEarthEngineService(): # we need earth engine now.
+            self.response.set_status(503)
+            return self.response.out.write('Sorry, Google Earth Engine not available right now. Please try again later')
         
-        descr = new_area['properties']['area_description']['description'] #self.request.get('description')
-
-        shared = new_area['properties']['shared']
-        if not shared:
-            shared = 'private'
-            logging.error('AreaHandler: No shared attribute provided for new area %s. Setting to private', name)
-
+        
+        ###pre-init variables to create area in case they don't appear in the geojson object
+        
+        #total_area = 0
+        maxlatlon = ndb.GeoPt(0,0)
+        minlatlon = ndb.GeoPt(0,0)
+        area_location = ndb.GeoPt(0,0)
+        boundary_hull = None
+        boundary_geojsonstr = None
         boundary_type = new_area['properties']['boundary_type']
-        park_boundary_fc = None #boundary as FeatureCollection
+        boundary_feature = None # client may optionally pass boundary on a Feature named 'boundary'
+        #park_boundary_fc = None #boundary as FeatureCollection
         total_area = 0
         coords = []
-        area_location_geojson_feature = None
-        ftlink = None
-        boundary_ft = None
-        ##  boundary_type can be 'unselected', 'drawborder', 'geojson', or 'fusion'
-        if boundary_type == 'unselected' :
-            #no boundary defined
-            total_area = 0
-            maxlatlon = ndb.GeoPt(0,0)
-            minlatlon = ndb.GeoPt(0,0)
+        #area_location_geojson_feature = None
         
-        elif boundary_type == 'fusion':
-            boundary_ft = new_area['properties']['fusion_table']['boundary_ft']
-            ftlink = 'https://www.google.com/fusiontables/DataSource?docid=none'
-            logging.debug('AreaHandler name: %s has fusion boundary:%s', area_name, boundary_ft)
-                        ### User Provided a Fusion Table ###
-            #Test the fusion table
-            #authenticate to fusion table API
-            try:
-                http = eeservice.EarthEngineService.credentials.authorize(httplib2.Http(memcache))
-                service = build('fusiontables', 'v2', http=http)
-                
-                result = service.column().list(tableId=boundary_ft).execute(http)
-                message = "Fusion Table Columns: "
-                cols = result.get('items', [])
-                
-                geo_col_name= ""
-                for c in cols:
-                    message += c['name']
-                    if c['type'] == 'LOCATION':
-                        message += '[LOCATION]'
-                        geo_col_name = c['name']
-                    message +=  "; "
-                logging.debug("results=%s, column names=%s", result, message)
-                    
-                # Fusion table EE operations tested at https://ee-api.appspot.com/b8dec39252c0eced49bb085f2b6fcdd4
-                #make a convex hull and store the coordinates in ndb.model.AreoOfInterest.coords
-    
-                park_boundary_fc = ee.FeatureCollection(u'ft:' + boundary_ft, 'geometry')
-                hull = park_boundary_fc.geometry().convexHull(10);
-                coord_list = hull.coordinates().getInfo() #.buffer(0, 1e-10)  #(0, ee.ErrorMargin(10, 'units'), 'EPSG:3786')
-                #print coord_list
-                for lat,lng in coord_list[0]:
-                    #print lat,lng
-                    gp = ndb.GeoPt(float(lng), float(lat))
-                    coords.append(gp)
-                        
-                bounds = park_boundary_fc.geometry().bounds(10)
-                #centroid = bounds.centroid(10).getInfo()
-                
-                rectangle = bounds.coordinates().getInfo()
-                #print 'rectangle', rectangle[0]
+        ft_docid = None
+        #pts = []
+        center_pt = []
+        shared = 'private'
+        #descr = new_area['properties']['area_description']['description'] #self.request.get('description')
+        
+        try:
+            shared = new_area['properties']['shared']
+        except KeyError, e: 
+            logging.error('AreaHandler: No shared attribute provided for new area %s. Setting to private', area_name)
+        if shared not in ['private', 'public', 'shared', 'unlisted']:
+            logging.error('AreaHandler: Invalid shared attribute provided for new area %s. Setting to private', area_name)
+            shared = 'private'
+        
+        ##  boundary_type can be 'unselected', 'drawborder', 'geojson', or 'fusion'
+        
+        if boundary_type == 'fusion':
+            ft_docid = new_area['properties']['fusion_table']['ft_docid']
+            logging.debug('AreaHandler name: %s has fusion boundary:%s', area_name, ft_docid)
             
-                #for p in rectangle[0]:
-                #    print 'rectangle point', p
-                maxlatlon = ndb.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
-                minlatlon =  ndb.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][0]))
-                #print 'maxlatlon', maxlatlon          
-                #print 'minlatlon', minlatlon          
-                
-                centroid = bounds.centroid(10).coordinates().getInfo()
-                #print 'centroid', centroid
-                
-                center = ndb.GeoPt(float(centroid[1]), float(centroid[0]))
-                total_area = hull.area(10).getInfo()/1e6#area in sq km
-                zoom = 12 # zoom will be calculated when the map is displayed.
-                ftlink = 'https://www.google.com/fusiontables/DataSource?docid=' + boundary_ft
-
-            except Exception, e : 
-                logging.error("Exception: {0!s} reading fusion table: {1!s}".format(e, ftlink) )
+            try:
+                coords, total_area, maxlatlon, minlatlon, center, zoom= self.get_fusion_boundary(ft_docid)
+            except:
+                logging.error("Exception: {0!s} reading fusion table: {1!s}".format(e, ft_docid) )
                 self.add_message('danger', "Error reading fusion table: {0!s}".format(e))
                 
                 if isinstance(e, webapp2.HTTPException):
                     self.response.set_status(e.code)
                 else:
                     self.response.set_status(404, message='')
-                return self.response.out.write('Could not define boundary - error reading fusion table')
+            return self.response.out.write('Could not define boundary - error reading fusion table')
             self.add_message('warning', "Fusion Tables are still experimental - Please reports any bugs") 
         
-        elif boundary_type == 'geojson' or boundary_type == 'drawborder' :
-            ### user drew a boundary ###
-            for f in new_area['features']:
-                if f['name'] == 'boundary':
-                    geojsonBoundary = f 
-            pts = []
-            center_pt = []
-            tmax_lat = -90
-            tmin_lat = +90
-            tmax_lon = -180
-            tmin_lon = +180
-            logging.debug("geojsonBoundary: %s",  geojsonBoundary)
-            
-            
-            for item in new_area['features']:
-                if item['properties']['featureName']=="boundary":
-                    pts=item['geometry']['coordinates']
-                    #logging.info("pts: ", pts)
-            
-                    for lat,lon in pts:
-                        gp = ndb.GeoPt(float(lat), float(lon))
-                        coords.append(gp)
-    
-                        #get bounds of area.
-                        if lat > tmax_lat: 
-                            tmax_lat = lat
-                        if lat < tmin_lat: 
-                            tmin_lat = lat
-                        if lon > tmax_lon:
-                            tmax_lon = lon
-                        if lon < tmin_lon: 
-                            tmin_lon = lon
-            maxlatlon = ndb.GeoPt(float(tmax_lat), float(tmax_lon))
-            minlatlon = ndb.GeoPt(float(tmin_lat), float(tmin_lon))
+        for feature in new_area['features']:
+            try: 
+                name = feature['properties']['name']
+                coordinates = feature['geometry']['coordinates']
+            except KeyError:
+                errmsg = "A feature must have ['properties']['name'] and ['geometry']['coordinates']"
+                logging.error(errmsg% feature)
+                self.response.set_status(400, message=errmsg)
+                return self.response.out.write(errmsg)
 
-            if len(coords) > 0:
-                polypoints = []
-                for geopt in coords:
-                    polypoints.append([geopt.lon, geopt.lat])
-                cw_geom = ee.Geometry.Polygon(polypoints)
-                ccw_geom = cw_geom.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
-                feat = ee.Feature(ccw_geom, {'name': name, 'fill': 1})
-    
-                total_area = ccw_geom.area().getInfo()/1e6 #area in sq km
-    
-                park_boundary_fc = ee.FeatureCollection(feat)
-            else:
-                # no boundary defined yet
-                total_area = 0
+            ### get map view
+            if name == "mapview": # get the view settings to display the area.
+                zoom=feature['properties']['zoom']
+                center = ndb.GeoPt(float(coordinates[1]), float(coordinates[0]))
+
+            ### get center point
+            if name == "area_location": # get the view settings to display the area.
+                area_location = ndb.GeoPt(
+                                    float(coordinates[1]), 
+                                    float(coordinates[0]) )
                 
-        ### get map view and center point
-        for item in new_area['features']:
-            if item['properties']['featureName']=="mapview": # get the view settings to display the area.
-                zoom=item['properties']['zoom']
-                center_pt=item['geometry']['coordinates']
-                #logging.debug("zoom: %s, center_pt: %s, type(center_pt) %s", zoom, center_pt, type(center_pt) )
-                center = ndb.GeoPt(float(center_pt[1]), float(center_pt[0]))
-                #be good to add a bounding box too.
-            if item['properties']['featureName']=="area_location": # get the view settings to display the area.
-                area_location_geojson_feature = item['geometry']
-                area_location_coords = item['geometry']['coordinates']
-                #print area_location_geojson_feature
+            ### get drawn or geojson imported boundary
+            if name == "boundary":
+                boundary_feature = feature
+                pass
+            
+                '''
+                coords, total_area, maxlatlon, minlatlon = models.AreaOfInterest.getBoundary(feature)
+                geojsonBoundary = feature
+                logging.debug("geojsonBoundary: %s",  geojsonBoundary)
+                pts=feature['geometry']['coordinates']
+                #logging.info("pts: ", pts)
+                tmax_lat = -90
+                tmin_lat = +90
+                tmax_lon = -180
+                tmin_lon = +180
+                
+                for lat,lon in pts:
+                    gp = ndb.GeoPt(float(lat), float(lon))
+                    coords.append(gp)
 
-        if area_location_geojson_feature <> None:
-            geom= ee.Geometry(area_location_geojson_feature)
-            feat = ee.Feature(geom, {'fill': 1})
-            park_boundary_fc = ee.FeatureCollection(feat) # so far just a point
-            area_location = ndb.GeoPt(float(area_location_geojson_feature['coordinates'][1]), float(area_location_geojson_feature['coordinates'][0]))
-        else:
-            area_location = ndb.GeoPt(0,0)
+                    #get bounds of area.
+                    if lat > tmax_lat: 
+                        tmax_lat = lat
+                    if lat < tmin_lat: 
+                        tmin_lat = lat
+                    if lon > tmax_lon:
+                        tmax_lon = lon
+                    if lon < tmin_lon: 
+                        tmin_lon = lon
+                maxlatlon = ndb.GeoPt(float(tmax_lat), float(tmax_lon))
+                minlatlon = ndb.GeoPt(float(tmin_lat), float(tmin_lon))
+                
+
+                ### generate a FeatureCollection and calculate its area
+                if len(coords) > 0:
+                    polypoints = []
+                    for geopt in coords:
+                        polypoints.append([geopt.lon, geopt.lat])
+                    cw_geom = ee.Geometry.Polygon(polypoints)
+                    ccw_geom = cw_geom.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+                    feat = ee.Feature(ccw_geom, {'name': name, 'fill': 1})
+        
+                    total_area = ccw_geom.area().getInfo()/1e6 #area in sq km
+        
+                    park_boundary_fc = ee.FeatureCollection(feat)
+                else:
+                    # no boundary defined yet
+                total_area = 0
+                '''
             
         def txn(user_key, area):
             user = user_key.get()
-            user.areas_count += 1
+            
             ndb.put_multi([user, area])
             return user, area
         
@@ -1273,15 +1357,16 @@ class AreaHandler(BaseHandler):
             self.response.set_status(403, message='')
             return self.response.out.write('Area too big (%d sq km = %d Landsat images!)' %(total_area, area_in_cells))
         
-        decoded_name = area_name.decode('utf-8') #allow non-english area names.
-        
+        '''
         if park_boundary_fc <> None:
             fc_info= json.dumps(park_boundary_fc.getInfo())
         else:
-            fc_info = None
-        
+            fc_info = ""
+        '''
+       
         area = models.AreaOfInterest(
-                                    id=decoded_name, name=decoded_name, 
+                                    id = area_name, name = area_name, 
+                                    owner=self.session['user']['key'],
                                     description = new_area['properties']['area_description']['description'].decode('utf-8'), 
                                     
                                     description_why = new_area['properties']['area_description']['description_why'].decode('utf-8'),  
@@ -1289,16 +1374,19 @@ class AreaHandler(BaseHandler):
                                     description_how = new_area['properties']['area_description']['description_how'].decode('utf-8'),  
                                     threats = new_area['properties']['area_description']['threats'].decode('utf-8'), 
                                     wiki = new_area['properties']['area_description']['wiki'].decode('utf-8'), 
-                                    
-                                    area_location=area_location,
-                                    coordinates=coords, boundary_fc= fc_info, ft_link=ftlink, ft_docid = boundary_ft,
-                                    map_center = center, map_zoom = zoom, 
-                                    max_latlon = maxlatlon,min_latlon = minlatlon, 
-                                    owner=self.session['user']['key'] )
-        
+                                    ft_docid = ft_docid,
+                                    area_location = area_location,
+                                    boundary_hull = boundary_hull,
+                                    boundary_geojsonstr = boundary_geojsonstr,
+                                    map_center = center, map_zoom = zoom,
+                                    max_latlon = maxlatlon, min_latlon = minlatlon
+                                    #boundary_fc = fc_info, 
+                                    )
+        if boundary_feature != None:
+            area.set_boundary_fc(eeFeatureCollection, False)
         try:
             user, area = ndb.transaction(lambda: txn(self.session['user']['key'], area), xg=True)
-            activity = models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key)
+            models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key)
             self.add_message('success', 'Created your new area of interest: %s covering about %d sq.km'  %(area.name, total_area ) )
 
             cache.clear_area_cache(user.key, area.key)
@@ -1308,7 +1396,7 @@ class AreaHandler(BaseHandler):
             counters.increment(counters.COUNTER_AREAS)
             
             self.populate_user_session()
-            #FIXME Ajax Method to follow area
+            
             if new_area['properties']['self_monitor'] == 'true':
                 logging.warning('FIXME:Area creator requested self-monitoring but auto-following not yet impletmented for %s' %(area.name))
                 #logging.error('FIXME:Call Ajax Method to follow this area ')
@@ -1316,10 +1404,14 @@ class AreaHandler(BaseHandler):
             else:
                 logging.info('Area creator did not request self-monitoring for %s' %(area.name))
 
-            self.response.set_status(200)
-            
-            return self.response.out.write(area.geojsonArea())
-        
+            try:
+                geojson_area = json.dumps(area.toGeoJSON())
+                self.response.set_status(200)
+                return self.response.out.write(geojson_area)
+            except ValueError, e:
+                self.response.set_status(500, message="Invalid json creating area... {0!s}".format(e))
+                return self.response.out.write("Invalid json creating area... {0!s}".format(e))
+                
         except Exception, e : 
             #self.add_message('danger', "Error creating area.  Exception: {0!s}".format(e)) 
             self.response.set_status(500, message="Exception creating area... {0!s}".format(e))
@@ -1327,76 +1419,7 @@ class AreaHandler(BaseHandler):
         
 
 
-class UpdateAreaViewHandler(BaseHandler):
-    def post(self, area_name):
-        current_user = users.get_current_user()
-        if  not current_user:
-            abs_url  = urlparse(self.request.uri)
-            original_url = abs_url.path
-            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
-            return self.response.write('error no login')
 
-        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
- 
-        if not registered:
-            return self.response.write('error not registered')
-        try:
-            username = self.session['user']['name']
-        except:
-            logging.error('Should never get this exception')
-            return self.response.write('error exception')
-            
-            if 'user' not in self.session:
-                return self.response.write('error user')
-                return
-
-        area = cache.get_area(None, area_name)
-
-        if not area:
-            return self.response.write('UpdateAreaViewHandler() - area not found')
-            
-        # if user does not own area or user is not admin - disallow
-        if (area.owner.string_id()   != user.name) and (user.role != 'admin'):
-            logging.error("Only the owner '{0!s}' of area '{1!s}' or admin can update an area.".format(area.owner, area.name))
-            return self.response.write('error not owner')
-
-
-        lat_str =  self.request.get('lat')
-        if lat_str:
-            lat = float(lat_str)
-        else: 
-            return self.response.write('error no lat param')
-        
-        lng_str =  self.request.get('lng')
-        if lng_str:
-            lng = float(lng_str)
-        else: 
-            return self.response.write('error no lng param ')
-
-        zoom_str =  self.request.get('zoom')
-        if zoom_str:
-            lng = float(zoom_str)
-        else: 
-            return self.response.write('error no zoomparam ')
-
-        area.map_zoom = int(zoom_str)
-        area.map_center = ndb.GeoPt(float(lat_str), float(lng_str))
-
-        try:
-            area.put()
-            cache.delete([cache.C_AREA %(username, area_name),  
-                          cache.C_AREA %(None, area_name)])
-            
-            msg = 'Updated Area of interest: {0!s} Saved map view'.format(area_name)
-            logging.info(msg)
-            return self.response.write(msg)
-        except Exception, e: 
-            message = 'error Exception {0!s}'.format(e)
-            logging.error(message)
-            return self.response.write(message)
-
-
- 
 class DeleteAreaHandler(BaseHandler):
 
     def get(self, area_name):
@@ -1430,7 +1453,7 @@ class DeleteAreaHandler(BaseHandler):
             logging.error('DeleteArea: Area not found! %s', area_name) # XSS should not return area to client.
             return self.error(404)
         else:
-            cell_list = area.CellList()
+            cell_list = area.cell_list()
             observations =    {} 
             if area.ft_docid is not None and len(area.ft_docid) != 0:
                 area.isfusion = True
@@ -1445,7 +1468,7 @@ class DeleteAreaHandler(BaseHandler):
             logging.error('Only the owner of an area or admin can delete an area %s %s', area.owner, user)
             self.add_message('danger', "Only the owner of an area or admin can delete an area. owner:'{0!s}' user:'{1!s}'".format(area.owner, user))
             
-            geojson_area = area.geojsonArea()
+            geojson_area = area.toGeoJSON()
  
             return self.redirect(webapp2.uri_for('view-area', area_name=area_name), {
                 'username': user.name,
@@ -1466,7 +1489,6 @@ class DeleteAreaHandler(BaseHandler):
         
         def txn(user_key, area, area_followers_index):
             user = user_key.get()
-            user.areas_count -= 1 # decrement the user's area count.
             user.put()
             for cell_key in area.cells:
                 cell_key.delete()
@@ -1539,7 +1561,7 @@ class SelectCellHandler(BaseHandler):
             cache.delete([cache.C_CELL_KEY %cell.key,
                           cache.C_CELL %(path, row, area_name), 
                           cache.C_CELLS %(cell.aoi)])
-            cell_dict['monitoredCount'] = area.CountMonitoredCells()
+            cell_dict['monitoredCount'] = area.count_monitored_cells()
             self.response.write(json.dumps(cell_dict))
         else:
             logging.error('Selected Cell does not exist %d %d', path, row)
@@ -1618,12 +1640,13 @@ class GetLandsatCellsHandler(BaseHandler):
     def get(self, area_name):
         area = cache.get_area(None, area_name)
         if not area or area is None:
+            getCellsResult = {'result': 'error', 'reason': 'no area'}
             logging.info('GetLandsatCellsHandler - area %s not found', area_name)
-            self.error(404)
-            return
-        cell_list = area.CellList()
+            return self.error(404)
+
+        cell_list = area.cell_list()
         result ='success'
-        if len(cell_list)== 0:
+        if len(cell_list) == 0:
             
             #logging.debug('GetLandsatCellsHandler area.name: %s type: %d area.key: %s', area.name, type(area), area.key)
             if not eeservice.initEarthEngineService(): # we need earth engine now.
@@ -1632,12 +1655,12 @@ class GetLandsatCellsHandler(BaseHandler):
                 self.add_message('danger', reason)
                 logging.error(reason)
                 getCellsResult = {'result': result, 'reason': reason}
-                self.response.write(json.dumps(getCellsResult))
-                return
+                return self.response.write(json.dumps(getCellsResult))
+                
             else:       
                 eeservice.getLandsatCells(area)
                 area = cache.get_area(None, area_name) # refresh the cache as it has been updated by getLandsatCells(). #TODO test this works
-                cell_list = area.CellList()
+                cell_list = area.cell_list()
                 monitored_count = sum(c['monitored'] == 'true' for c in cell_list)
                 reason = 'Your area is covered by {0:d} Landsat Cells of which {1:d} were selected for monitoring'.format(len(area.cells), monitored_count)
                 self.add_message('success',reason)
@@ -1672,10 +1695,6 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
             self.error(404)
             return
     
-        poly = []
-        for geopt in area.coordinates:
-            poly.append([geopt.lon, geopt.lat])
-       
         if not eeservice.initEarthEngineService(): # we need earth engine now.
             returnval = {}
             returnval['result'] = "error"
@@ -1684,7 +1703,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
             logging.error(returnval['reason'])
             self.response.write(json.dumps(returnval))
         
-        map_id = eeservice.getLandsatOverlay(poly, satelite, algorithm, latest, opt_params)
+        map_id = eeservice.getLandsatOverlay(area.coordinates(), satelite, algorithm, latest, opt_params)
         if not map_id:
             returnval = {}
             returnval['result'] = "error"
@@ -1912,7 +1931,7 @@ class ObservationTaskHandler(BaseHandler):
                 self.add_message('info', "You {0!s} are not assigned to this task. Task assigned to {1!s}".format(current_user.nickname , obstask.assigned_owner.string_id()))
             self.populate_user_session(user)
         area      = obstask.aoi.get() 
-        cell_list  = area.CellList()
+        cell_list  = area.cell_list()
           
         owner = obstask.assigned_owner.string_id()
           
@@ -1927,7 +1946,8 @@ class ObservationTaskHandler(BaseHandler):
             else:
                 logging.error("Missing Observation from cache")
         
-        geojson_area = area.geojsonArea()
+        geojson_area = json.dumps(area.toGeoJSON())
+        print 'geojson_area: ', geojson_area
         return self.render('view-obstask.html', {
             'username':  username,
             'area_json' : geojson_area,
@@ -1940,7 +1960,6 @@ class ObservationTaskHandler(BaseHandler):
             'obslist': json.dumps(obslist),
             'celllist':json.dumps(cell_list)
         })
-
 
 '''
 checkForNewInArea() is a function to check if any new images for the specified area. 
@@ -1989,7 +2008,7 @@ def checkForNewInArea(area, hosturl):
                 try:
                     mailer.new_image_email(new_task, hosturl)
                 except:
-                    logging.errror("Error sending new_image_email()")
+                    logging.error("Error sending new_image_email()")
                     
                 num_obs = len(new_observations)
                 linestr += "<p>Created task with " + str(num_obs) + " observations for " + user.name + ".</p>"
@@ -3349,12 +3368,13 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/%s.html' %settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
     
     
-    webapp2.Route(r'/myareas', handler=ViewAreas, name='view-areas'), # view my areas
-    webapp2.Route(r'/<username>/myareas', handler=ViewAreas, name='view-areas'), # view someone else's areas.
+    webapp2.Route(r'/myareas', handler=ViewAllAreas, name='view-areas'), # view my areas
+    webapp2.Route(r'/<username>/myareas', handler=ViewAllAreas, name='view-areas'), # view someone else's areas.
 
     webapp2.Route(r'/area', handler=AreaHandler, name='new-area'),                             # create area
+    webapp2.Route(r'/area/<area_name>/boundary', handler=AreaBoundaryHandler, name='edit-boundary'),  # dialog to edit boundary
+
     webapp2.Route(r'/area/<area_name>/delete', handler=DeleteAreaHandler, name='delete-area'),  # delete area (owner or admin)
-    webapp2.Route(r'/area/<area_name>/update/view', handler=UpdateAreaViewHandler, name='area-save-view'),
     #webapp2.Route(r'/area/<area_name>/update/view/<lat:\d+>/<lng:\d+>/<zoom:\d+>/', handler=UpdateAreaViewHandler, name='area-save-view'),
     
     webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #ajax

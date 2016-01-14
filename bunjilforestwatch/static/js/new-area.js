@@ -10,20 +10,7 @@ var area_json = null; // WARNING only defined after a successful save returns
 // an area object.
 
 
-var fusion_table_instructions = "<li><b>How to import a fusion table</b></li>" +
-		"<li>The fusion table must either be public or shared with this bunjil's service account. </li>";
 
-/**
- * @returns returns the area_area in the input text control.
- */
-function get_area_name() {
-	var area_name = $('#area_name').val();
-	if (typeof (area_name) === 'undefined') {
-		area_name = '';
-	}
-	// console.log('area_name: ', area_name);
-	return area_name;
-}
 
 /**
  * @returns one of 'not_selected', 'private', 'unlisted' or 'shared'.
@@ -45,7 +32,7 @@ function get_shared() {
 function get_self_monitor() {
 	var self_monitor = $('input[name=self-monitor]:checked').val() === 'true' ? true
 			: false;
-	console.log('self_monitor: ', self_monitor);
+	//console.log('self_monitor: ', self_monitor);
 	return self_monitor;
 }
 
@@ -55,7 +42,7 @@ function get_self_monitor() {
 function get_request_volunteers() {
 	var request_volunteers = $('input[name=request-volunteers]:checked').val() === 'true' ? true
 			: false;
-	console.log('request_volunteers: ', request_volunteers);
+	//console.log('request_volunteers: ', request_volunteers);
 	return request_volunteers;
 }
 
@@ -137,6 +124,42 @@ function get_boundary_type() {
 	return  draw_or_import; // 'drawborder' or 'import'.
 }
 
+function set_boundary_type(boundary_type) {
+	switch(boundary_type) {
+	case 'fusion':
+		$("input[name=opt-boundary][value=" + 'import' + "]").prop('checked', true);
+		$("input[name=opt-import][value=" + 'fusion' + "]").prop('checked', true);
+		break;
+		
+	case 'geojson':
+		$("input[name=opt-boundary][value=" + 'import' + "]").prop('checked', true);
+		$("input[name=opt-import][value=" + 'geojson' + "]").prop('checked', true);
+		break;
+
+	case 'import':
+		$("input[name=opt-boundary][value=" + 'import' + "]").prop('checked', true);
+		$("input[name=opt-import][value=" + 'geojson' + "]").prop('checked', false);
+		$("input[name=opt-import][value=" + 'fusion' + "]").prop('checked', false);
+		break;
+		
+	case 'drawborder':
+		$("input[name=opt-boundary][value=" + 'drawborder' + "]").prop('checked', true);
+		$("input[name=opt-import][value=" + 'geojson' + "]").prop('checked', false);
+		$("input[name=opt-import][value=" + 'fusion' + "]").prop('checked', false);
+		break;
+
+	case 'unselected':
+		$("input[name=opt-boundary][value=" + 'drawborder' + "]").prop('checked', false);
+		$("input[name=opt-boundary][value=" + 'import' + "]").prop('checked', false);
+		$("input[name=opt-import][value=" + 'geojson' + "]").prop('checked', false);
+		$("input[name=opt-import][value=" + 'fusion' + "]").prop('checked', false);
+		break;
+		
+	}
+	initialize_map.boundary_type = get_boundary_type();
+	return boundary_type_changed();
+}
+
 /**
  * Called when user clicks Create Area. Pulls data from the form and validates
  * it. Pulls boundary from the map or fusion table. Sends new area request to
@@ -150,7 +173,7 @@ function save_area(map, is_update) {
 	var shared = get_shared();
 	var self_monitor = get_self_monitor();
 	var request_volunteers = get_request_volunteers(); // $('input[name=request-volunteers]',
-	// '#new_area_form').val();
+
 	var accept = get_has_accepted();
 
 	// get and send the viewing parameters of the map
@@ -159,13 +182,13 @@ function save_area(map, is_update) {
 			unwrapped_mapcenter.lng()); // wrapped.
 	var mapzoom = map.getZoom();
 
-	var area_boundary_ft = "";
+	var ft_docid = "";
 	var boundary_type = get_boundary_type();
 
 	switch(boundary_type) {
 		case 'fusion':
-			area_boundary_ft = $('#boundary_ft').val();
-			if ((null === area_boundary_ft) || (area_boundary_ft === "")) {
+			ft_docid = $('#boundary_ft').val();
+			if ((null === ft_docid) || (ft_docid === "")) {
 				// problems += 'Please provide a fusion table id.<br/><br/>';
 			}
 			break;
@@ -182,12 +205,17 @@ function save_area(map, is_update) {
 			break;
 			
 		case 'drawborder':
+			if (map.drawingOverlay === null) {
+				// problems += 'Please mark out the boundary of your area or provide
+				// a fusion table id.<br/><br/>';
+			}
 			break;
 			
 		default: //'unselected'
 	}
 	
 	var new_area_geojson = {
+		// This dictionary should match object returned by server in models.AreaOfInterest.geojsonArea()
 		"type" : "FeatureCollection",
 		"properties" : {
 			"area_name" : area_name,
@@ -211,7 +239,7 @@ function save_area(map, is_update) {
 			"fusion_table" : {
 				// "ft_link": server sets,
 				// "ft_docid": server sets,
-				"boundary_ft" : area_boundary_ft
+				"ft_docid" : ft_docid
 			}
 		},
 		"features" : [ {
@@ -221,7 +249,7 @@ function save_area(map, is_update) {
 				"coordinates" : [ mapcenter.lng(), mapcenter.lat() ]
 			},
 			"properties" : {
-				"featureName" : "mapview",
+				"name" : "mapview",
 				"zoom" : mapzoom
 			}
 		}
@@ -236,41 +264,65 @@ function save_area(map, is_update) {
 
 	if (typeof map.drawingTools.area_location !== 'undefined') {
 		var location_feature = map.drawingTools.area_location.features[0];
-		location_feature.properties.featureName = 'area_location';
+		location_feature.properties.name = 'area_location';
 		new_area_geojson.features.push(location_feature);
-	} else {
+	} 
+	else {
 		console.log('save_area() Error: no location set');
 	}
 
 	var data_to_post = JSON.stringify(new_area_geojson);
 
-	if (is_update) {
-		// replace the entire area with this update".
-		$.ajax({
-			type : "PUT",
-			url : "area",
-			data : 'new_area_geojson_str=' + data_to_post,
-			success : function() {
-				alert('Area Updated OK');
-			},
-			error : function(requestObject, error, errorThrown) {
-				alert(errorThrown);
-				console.log(error, errorThrown);
-			}
-		});
-	} else {
 		// create a new area
 		toastr.clear();
 
 		$('#save-wait-popover').popoverX({
 			target : '#save-area' // container
 		});
+
 		$('#save-wait-popover').popoverX('show');
 
 		$('#close-dialog-save-area-wait').click(function() {
 			$('#save-wait-popover').popoverX('hide');
 		});
 
+		$('#close-dialog-save-boundary').click(function() {
+			$('#save-boundary-popover').popoverX('hide');
+		});
+		
+	    var request = jQuery.ajax({
+	    	type : "POST",
+			url : "area",
+			data : data_to_post,
+		    dataType:"json"
+		});
+	   
+	    request.done(function (data) {
+			$('#save-wait-popover').popoverX('hide');
+			addToasterMessage('alert-success', 'Area ' + area_name +
+					 ' created OK');
+			
+		    try {
+		    	area_json = data;
+				var url = area_json.properties.area_url;
+		    } catch(e){
+		    	addToasterMessage('alert-danger', 'error in area_json ' + e + ', data: ' + data); //error in the string
+		    }
+			saved_area(url);
+	    });
+	    
+	    request.fail(function (xhr, textStatus, error) {
+			//console.log ('patch_area() - failed:', xhr.status,  ', ', xhr.statusText, ' error: ', error);
+
+			$('#save-wait-popover').popoverX('hide');
+			var msg = 'update failed ' + xhr.status + ' ' +
+				xhr.statusText + ' ' +
+				xhr.responseText;
+			console.log(msg);
+			addToasterMessage('alert-danger', msg);
+	    });
+
+		/*
 		var xhr = $.ajax({
 			type : "POST",
 			url : "area",
@@ -292,7 +344,8 @@ function save_area(map, is_update) {
 				addToasterMessage('alert-danger', msg);
 			}
 		});
-	}
+			*/
+
 	return false; // don't call more event handlers
 } /* end-of-save_area */
 
@@ -406,14 +459,14 @@ function zoom_here(map, event) {
 }
 
 
-function save_boundary_mode() {
+function saving_boundary_mode() {
 	"use strict";
 	
 	// Display controls for saving boundary only. Not drawing polygon. 
 	$('.draw-start').hide();
 	$('.draw-second').hide();
 	$('.edit-shape').show();
-	$('#save-ctrols').show();
+	$('.save-ctrls').show();
 
 	// Turn of Draging Mode but keep markers
 	var map = initialize_map.map;
@@ -421,6 +474,9 @@ function save_boundary_mode() {
 	map.drawingTools.stopDrawPolygon(map);
 }
 
+/**
+ * Start to draw a polygon
+ */
 function draw_polygon_mode() {
 	var map = initialize_map.map;
 	
@@ -428,34 +484,82 @@ function draw_polygon_mode() {
 		// too far out
 		$('#zoom-more-popover').show();
 		console.log('zoom in more');
-		return;
+		//return;
 	} else {
 		$('#zoom-more-popover').hide();
 	}
 
 	// Display controls for drawing first marker only. Not save edit or clear.
 	$('.draw-start').show();
-	$('.draw-second').show();
+	$('.draw-second').hide();
 	$('.edit-shape').hide();
-	$('#save-ctrls').hide();
+	$('.save-ctrls').show();
 
-	map.drawingTools.drawPolygon(save_boundary_mode);
+	map.drawingTools.drawPolygon(saving_boundary_mode);
 }
+
+
+function save_boundary(event) {
+
+	var map = initialize_map.map;  
+	var data = initialize_map.map.data;
+	var boundary_type = get_boundary_type();
+
+	var patch_ops =  [];
+	patch_ops.push( { "op": "replace", "path": "/properties/boundary_type", "value": boundary_type});
+
+	if (boundary_type === 'fusion') {
+		ft = {
+			"ft_docid": "docid_here"	
+		};
+		patch_ops.push( { "op": "replace", "path": "/properties/fusion_table", "value": ft, "id": 'notused' });
+	}
+	if ((boundary_type === 'geojson') || ((boundary_type === 'drawborder'))) {
+	
+		map.data.toGeoJson(function(geoJson) {
+			patch_ops.push( { "op": "replace", "path": "/features/geojsonboundary", "value": geoJson, "id": 'boundary' });
+		});
+	}
+	
+	if (patch_ops.length > 1) { 
+
+		$('#save-boundary-popover').popoverX({
+			target : '#save-boundary' // container
+		});
+
+		$('#save-boundary-popover').popoverX('show');
+
+		var request = patch_area(patch_ops, area_json.properties.area_url);  //patch_area(); //ajax call
+
+	    request.done(function (data) {
+	    	if(typeof data !== 'undefined') {
+	    		console.log ('patch_area() - result: ' + data.status + ', ' + data.updates.length + ' updates: ' + data.updates[0].result);
+	    	}
+	    	$('#save-boundary-popover').popoverX('hide');
+			addToasterMessage('alert-success', 'Area ' + get_area_name() +
+					 ' updated OK');
+			activate_tab("#descr-tab");
+	    });
+	    
+	    request.fail(function (xhr, textStatus, error) {
+	    	var msg = 'Error ' + xhr.status + ' ' +
+			xhr.statusText + ' ' +
+			xhr.responseText;
+			console.log ('patch_area() - failed:', xhr.status,  ', ', xhr.statusText, ' error: ', error);
+	    });
+	}
+}
+
 
 function clear_boundary(event) {
 	"use strict";
 	if (typeof (event) !== 'undefined') {
 		event.preventDefault();
 	}
-	var map = initialize_map.map;
 	// Remove Marker
-	map.drawingTools.removePolygon();
+	initialize_map.map.drawingTools.removePolygon();
 
-	// Display controls for dragging map only. Not drop or save. 
-	$('.draw-start').show();
-	$('.draw-second').hide();
-	$('.edit-shape').hide();
-	$('#save-ctrls').hide();
+	draw_polygon_mode();
 
 }
 
@@ -525,25 +629,12 @@ function initialize_map(place, center_prm) {
 		// area_json
 		center_pt = new google.maps.LatLng(center[0], center[1]);
 	}
-
-	var mapOptions = {
-		center : center_pt,
-		zoom : init_zoom,
-		overviewMapControl : true,
-		streetViewControl : false,
-		mapTypeId : google.maps.MapTypeId.HYBRID,
-		mapTypeControl : true,
-		mapTypeControlOptions : {
-			style : google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-			position : google.maps.ControlPosition.TOP_CENTER
-		},
-		zoomControl : true,
-		zoomControlOptions : {
-			position : google.maps.ControlPosition.LEFT_TOP
-		},
-		scaleControl : true,
-		drawingControl : false
-	};
+	
+	/* global map_options */
+	var mapOptions = map_options;
+	mapOptions.center = center_pt;
+	mapOptions.zoom = init_zoom;
+	mapOptions.mapTypeId = google.maps.MapTypeId.HYBRID;
 	var map = new google.maps.Map(document.getElementById("map-canvas"),
 			mapOptions);
 
@@ -563,15 +654,22 @@ function initialize_map(place, center_prm) {
 	// $('#zoom-help-popover["clickover"]').popoverx({ fire_on : 'hover',
 	// hover_delay_close: 3000 });
 
+	if (place !== null) {
+		zoomToPlace(map, place);
+	}
+	initialize_geojson_editor("not used");
+	
 	$('#syntax-errors-popover-close').click(function(event) {
 		event.preventDefault();
 		$('#syntax-errors-popover').popoverX('hide');
+		return false;
 	});
 
 	/* ZOOM-MORE-POPOVER */
 	$('#zoom-more-popover-close').click(function(event) {
 		event.preventDefault();
 		$('#zoom-more-popover').popoverX('hide');
+		return false;
 	});
 
 	/* ZOOM-HELP-POPOVER */
@@ -579,31 +677,41 @@ function initialize_map(place, center_prm) {
 	$('#zoom-help-popover-close').click(function(event) {
 		event.preventDefault();
 		$('#zoom-help-popover').popoverX('hide');
+		return false;
 	});
 
 	/* DRAG-HELP-POPOVER */
 	$('#drag-help-popover-close').click(function(event) {
 		event.preventDefault();
 		$('#drag-help-popover').popoverX('hide');
+		return false;
 	});
 
 	/* ZOOM-HELP */
 	$('#zoom-here').click(function(event) {
 		zoom_here(map, event);
+		return false;
 	});
 
 	$('#drop-pin-mode').click(function(event) {
 		drop_pin_mode(map, event);
+		return false;
 	});
 
 	$('#move-map-mode').click(function(event) {
 		move_map_mode(event);
+		return false;
 	});
 
 	$('#clear-map').click(function(event) {
 		clear_map(event);
+		return false;
 	});
 	
+	$('#save-boundary').click(function(event) {
+		save_boundary(event);
+	});
+
 	$('#clear-boundary').click(function(event) {
 		clear_boundary(event);
 	});
@@ -612,15 +720,18 @@ function initialize_map(place, center_prm) {
 	$('#save-area').click(function(event) {
 		event.preventDefault();
 		save_area(map, false);
+		return false;
 	});
 
 	$('#update-area').click(function(event) {
 		event.preventDefault();
 		updateArea(map, true);
+		return false;
 	});
 
 	$('#advanced').click(function(event) {
 		toggle_advanced();
+		return false;
 	});
 
 	// Checkbox to show/hide overlays
@@ -633,6 +744,7 @@ function initialize_map(place, center_prm) {
 		} else {
 			deleteLandsatGridOverlay(map, 0, true, null);
 		}
+		return false;
 
 	});
 
@@ -675,14 +787,15 @@ function initialize_map(place, center_prm) {
 			$('#drop-pin-mode').addClass('btn-default').removeClass(
 					'btn-primary');
 		}
+		return true;
 	});
-	if (place !== null) {
-		zoomToPlace(map, place);
-	}
+	
 
 	return map;
 }
 initialize_map.map = null;
+initialize_map.boundary_type = 'unselected';
+
 
 function move_map_mode(event) {
 	"use strict";
@@ -709,7 +822,8 @@ function clear_map(event) {
 	
 	// Remove Marker
 	map.drawingTools.removeCenterPointMarker();
-
+	map.drawingTools.removePolygon();
+	
 	// Display controls for dragging map only. Not drop or save. 
 	$('.drag-only').show();
 	$('.drop-only').hide();
@@ -733,7 +847,7 @@ function save_map_mode() {
 	
 }
 
-function initialize_geojson_editor() {
+function initialize_geojson_editor(init_text) {
 	"use strict";
 	/* global CodeMirror */
 	if (typeof initialize_map.editor === 'undefined') {
@@ -762,13 +876,18 @@ function initialize_geojson_editor() {
 			link.download = name;
 			link.click();
 		});
-
 		initialize_map.editor.on("changes", function(editor, changes) {
 			/* load editor with current drawing on map */
 			initialize_map.map.drawingTools.refreshDataFromGeoJson();
 			return true;
 		});
 		initialize_map.map.drawingTools.refreshGeoJsonFromData();
+
+		if(init_text.length > 0 ) {
+			//var g = get_clean_geojson(area_json); 
+			//initialize_map.map.data.addGeoJson(g);
+			//console.log(init_text);
+		}
 		google.maps.event.addDomListener(window, 'resize', resizeEditor);
 		resizeEditor();
 	}
@@ -787,17 +906,17 @@ function toggle_advanced() {
 		$('#geojson-column').hide();
 	} else {
 		$('#geojson-column').show();
-		initialize_geojson_editor();
+		initialize_geojson_editor("no text to start");
 	}
 }
 
-function show_advanced() {
+function show_advanced(init_text) {
 	"use strict";
 
 	var map_column = $('#map-column');
 	map_column.addClass('col-md-9').removeClass('col-md-12');
 	$('#geojson-column').show();
-	initialize_geojson_editor();
+	initialize_geojson_editor(init_text);
 }
 
 function hide_advanced() {
@@ -1282,28 +1401,42 @@ function saved_area(url) {
 	// Display description and boundary form - ask user to enrich info.
 	enable_tab("#boundary-tab");
 	activate_tab("#boundary-tab");
-
-	
 }
 
 
 /**
  * hide or show forms according to selection.
  */
-function boundary_option() {
-	var boundary_type = get_boundary_type();
-	console.log(boundary_type);
+function boundary_type_changed() {
+
+	var old_type = initialize_map.boundary_type;
+	initialize_map.boundary_type = get_boundary_type();
 	
-	switch(boundary_type) {
+	switch(initialize_map.boundary_type) {
+
+	case 'drawborder':
+		$('.drawborder').fadeIn();
+		$('.importing').fadeOut();
+		$('.geojson').hide();
+		$('.fusion').hide();
+		$('.save-ctrls').fadeIn();
+		hide_advanced();
+		if (old_type !== 'drawborder') {
+			$('.select-method').collapse('hide');
+			draw_polygon_mode();
+		}
+		break;
 
 	case 'fusion':
 		$('.drawborder').fadeOut();
 		$('.importing').fadeIn();
 		$('.geojson').fadeOut();
 		$('.fusion').fadeIn();
-		$('.save-ctrls').show();
-		$('.select-method').collapse('hide');
+		$('.save-ctrls').fadeIn();
 		$('#map-row').show();
+		if (old_type !== 'fusion') {
+			$('.select-method').collapse('hide');
+		}
 		hide_advanced();
 		break;
 		
@@ -1313,9 +1446,12 @@ function boundary_option() {
 		$('.geojson').fadeIn();
 		$('.fusion').fadeOut();
 		$('.select-method').collapse('hide');
-		$('.save-ctrls').show();
+		$('.save-ctrls').fadeIn();
 		$('#map-row').show();
 		show_advanced();
+		if (old_type !== 'geojson') {
+			$('.select-method').collapse('hide');
+		}
 		break;
 
 	case 'import':
@@ -1323,23 +1459,12 @@ function boundary_option() {
 		$('.save-ctrls').hide();
 		$('.geojson').hide();
 		$('.fusion').hide();
-		$('.select-method').collapse('hide');
+		$('.select-method').fadeOut('hide');
 		$('.importing').fadeIn();
 		$('#map-row').hide();
 		hide_advanced();
 		break;
-
-	case 'drawborder':
-		$('.drawborder').fadeIn();
-		$('.importing').fadeOut();
-		$('.select-method').collapse('hide');
-		$('.geojson').hide();
-		$('.fusion').hide();
-		hide_advanced();
-		$('.save-ctrls').fadeIn();
-		draw_polygon_mode();
-		break;
-
+	
 	default:
 		boundary_type = 'unselected';
 		$('.select-method').collapse('show');
@@ -1348,6 +1473,90 @@ function boundary_option() {
 		$('.importing').hide();
 		hide_advanced();
 	}
+	return initialize_map.boundary_type;
+}
+
+/**
+ * Only used when editing an existing boundary
+ */
+function displayAreaBoundary(area_json) {
+	
+    //var boundary_coords_str = '<p class="divider small">';
+	
+	var g = get_clean_geojson(area_json); 
+	initialize_map.map.data.addGeoJson(g);
+
+	/*
+    var boundary_feature = get_area_feature(area_json, "boundary");
+    var coords_arr   =  boundary_feature.geometry.coordinates;  // init global.
+    var border_latlngs = [];
+
+    if  (coords_arr.length === 0 ) {   
+    	var latlng = areaLocation(area_json);
+        var marker = new google.maps.Marker({
+    	    position: latlng,
+    	    title: area_json.properties.area_name 
+    	});
+        initialize_map.map.setMap(marker);
+    }
+    else {
+	    //var polygonOptions = boundaryPolygonOptions(area_json);
+		//var areaBoundary = new google.maps.Polygon(polygonOptions); //areaBoundaryPolygonOptions defined in site.js
+	    //areaBoundary.setMap(initialize_map.map);
+		google.maps.event.addListenerOnce(initialize_map.map, 'idle', function(){
+	    	geojson_str =  JSON.stringify(area_json);	
+			show_advanced(geojson_str); // do something only the first time the map is loaded
+			return true;
+		});
+
+    	//initialize_geojson_editor(geojson_str);
+    	/****
+	    var editor = initialize_map.editor;
+		if (typeof editor !== 'undefined') {
+			try {
+				geojson_str =  JSON.dumps(area_json);
+				var value = editor.setValue(geojson_str);
+				initialize_map.map.drawingTools.refreshDataFromGeoJson();
+
+				//var userObject = JSON.parse(this.geoJsonInput.value);
+			} catch (error) {
+				return;
+			}
+		}	
+		*****-/ 	
+    } 
+    */
+
+}
+
+function init_edit_boundary() {
+	console.log('init for edit-boundary');
+
+	var area_json_str = $('#area_json').text();
+	if (area_json_str !== "") {
+		area_json = jQuery.parseJSON( area_json_str);
+	}
+	else	{
+		alert("missing area data");
+		return;
+	}
+	initialize_map.boundary_type = 'geojson';
+	
+	var map_center = center_mapview(area_json);
+    var map_zoom =   zoom_mapview(area_json);
+	initialize_map(null, map_center);
+	initialize_map.map.setZoom(map_zoom);
+	displayAreaBoundary(area_json);
+	set_boundary_type('geojson');
+	
+	// Display controls for saving only. Not drop or drag. 
+	$('.drag-only').hide();
+	$('.drop-only').hide();
+	$('.save-only').show();
+	$('.draw-start').hide();
+	$('.draw-second').hide();
+	$('.edit-shape').show();
+	$('.save-ctrls').show();
 }
 
 function initialize_new_area_form() {
@@ -1368,7 +1577,7 @@ function initialize_new_area_form() {
 	$('#agreementAccord_title').click(agreementAccord_clicked);
 	$('#descriptionAccord_title').click(descriptionAccord_clicked);
 
-	$('#boundary-tab-body').on('change', boundary_option);
+	$('#boundary-tab-body').on('change', boundary_type_changed);
 	
 	disable_tab("#locate-tab");
 	disable_tab("#boundary-tab");
@@ -1379,9 +1588,14 @@ function initialize_new_area_form() {
 	$('.drop-only').hide();
 	$('.save-only').hide();
 
-	$('wizard-container li').click(function() {
+	$('.wizard-container li').click(function() {
 		$(window).scrollTop(0);
 	});
+
+	$('#save-view').click(function() {
+		save_view(initialize_map.map, area_json);
+	});
+
 
 	/*
 	 * $('#info-tab').click(function() { $(window).scrollTop(0); });
@@ -1397,7 +1611,6 @@ function initialize_new_area_form() {
 
 	$('#auto-collapse').click(
 			function() {
-
 				if (auto_collapse) { // if ($(this).is(':checked')){
 
 					// $(this).attr('checked', false);
@@ -1422,7 +1635,10 @@ function initialize_new_area_form() {
 		if (auto_collapse)
 			$('#inner-descr-accordion .in').collapse('hide');
 	});
-
+	
+	if($('#boundary-tab-body').hasClass('in')) {
+		init_edit_boundary();
+	}
 	/* If Testing GeoJson panel */
 	$('#area_name').val('');
 }

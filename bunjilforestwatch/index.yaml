@@ -24,6 +24,17 @@ indexes:
 
 - kind: AreaOfInterest
   properties:
+  - name: owner
+  - name: last_modified
+
+- kind: AreaOfInterest
+  properties:
+  - name: owner
+  - name: last_modified
+    direction: desc
+
+- kind: AreaOfInterest
+  properties:
   - name: share
   - name: owner
 

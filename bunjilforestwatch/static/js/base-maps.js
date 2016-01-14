@@ -81,21 +81,32 @@ function complete_report(drawingManager, event) {
 	console.log(event);
 }
 
+
+
+
+/**
+ * return a center location as a latlng
+ */
+
+function areaLocation(area_json) {
+	var area_location_feature = get_area_feature(area_json, "area_location");
+	var area_location = area_location_feature.geometry.coordinates;  // init global.
+    var latlng = new google.maps.LatLng(area_location[1], area_location[0]);
+    return latlng;
+}
+
+
 /**
  * Collect the Boundary coordinates from the area and convert to a Google Maps object.
- * @param border_latlngs
- * @TODO: Note that Border of AOI does not adjust opacity on both overlays yet.
+ * @TODO: Border of AOI does not adjust opacity on both overlays yet.
 */
 function displayAreaBoundary() {
-	
-    var boundary_coords_str = '<p class="divider small">';
-    var coords_arr   =  area_json.features[1].geometry.coordinates;  // init global.
-    var border_latlngs = [];
 
-    if  (coords_arr.length === 0 ) {        
-    	var area_location = area_json.features[2].geometry.coordinates;  // init global.
-        var latlng = new google.maps.LatLng(area_location[1], area_location[0] );
+	var boundary_feature = get_area_feature(area_json, "boundary_hull");
 
+    if ((boundary_feature === null) || (boundary_feature.geometry.coordinates[0].length === 0))
+    {
+    	var latlng = areaLocation(area_json);
         var marker_under_lhs = new google.maps.Marker({
     	    position: latlng,
     	    title: area_json.properties.area_name 
@@ -104,70 +115,110 @@ function displayAreaBoundary() {
     	    position: latlng,
     	    title: area_json.properties.area_name 
     	});
-
     	// add the marker to the maps
     	marker_under_lhs.setMap(map_under_lhs);
     	marker_over_lhs.setMap(map_over_lhs);
     }
     else {
-	    for (var j=0; j < coords_arr.length; j++)
-	    {
-	        latlng = new google.maps.LatLng(coords_arr[j].lat, coords_arr[j].lng );
-	        //console.logprint parseInt(coords_arr[j].lat. parseInt(coords_arr[j].lng
-	        border_latlngs.push(latlng);
-	        boundary_coords_str += latlng.toUrlValue(5) + '<br>';
+    	
+	    var coords_arr   =  boundary_feature.geometry.coordinates[0];  // init global.
+	    var border_latlngs = [];
+		
+	    if  (coords_arr.length === 0 ) {   
+	    	return;
 	    }
-	  
-	    boundary_coords_str += '</p>'; //fill the accordion.html
-	    //console.log(boundary_coords_str);
-	    $('#boundary_panel').html(boundary_coords_str);
-	 
-		var areaBoundary_over_lhs = new google.maps.Polygon({
-	                paths: border_latlngs,
-	                strokeColor: '#FFFF00',
-	                strokeOpacity: 0.5,
-	                strokeWeight: 2,
-	                fillColor: '#000000',
-	                fillOpacity: 0.05
-	    });
-	    
-	    var areaBoundary_under_lhs= new google.maps.Polygon({
-	                paths: border_latlngs,
-	                strokeColor: '#FFFF00',
-	                strokeOpacity: 0.5,
-	                strokeWeight: 2,
-	                fillColor: '#000000',
-	                fillOpacity: 0.05
-	    });
-	    
-	    var areaBoundary_rhs = new google.maps.Polygon({
-	        paths: border_latlngs,
-	        strokeColor: '#FFFF00',
-	        strokeOpacity: 0.5,
-	        strokeWeight: 2,
-	        fillColor: '#000000',
-	        fillOpacity: 0.05
-	    });
-	    
-	    
-	    areaBoundary_over_lhs.setMap(map_over_lhs);
-	    areaBoundary_under_lhs.setMap(map_under_lhs);
-	    areaBoundary_rhs.setMap(map_rhs);
+	    else {
+	    	
+		    var polygonOptions = boundaryPolygonOptions(boundary_feature);
+		    
+			var areaBoundary_over_lhs = new google.maps.Polygon(polygonOptions); //areaBoundaryPolygonOptions defined in site.js
+		    var areaBoundary_under_lhs= new google.maps.Polygon(polygonOptions);
+		    var areaBoundary_rhs = new google.maps.Polygon(polygonOptions);
+		    areaBoundary_over_lhs.setMap(map_over_lhs);
+		    //areaBoundary_under_lhs.setMap(map_under_lhs);
+		    areaBoundary_rhs.setMap(map_rhs);
+		
+		    areaBoundary_over_lhs.name = "boundary";
+		    
+		    /* global overlayMaps */ 
+		    overlayMaps.push(areaBoundary_over_lhs);
+		    
+		    /* global addLayer */
+		    addLayer(areaBoundary_over_lhs.name, 
+		    		area_json.properties.area_name + " Border", 
+		    		"yellow",  
+		    		50, 
+		    		"Boundary of Area " + area_json.properties.area_name, 
+		    		layerslider_callback);
+	    }  
+    }    
+
+    
+    // get the user provided geometry - risky
+    
+    try {
+    	var boundary_geojson = area_json.boundary_geojson;
+    	if (boundary_geojson.type != 'FeatureCollection') {
+    		return;
+    	}
+    	var length = boundary_geojson['type'];
+    	if (length === 0) {
+    		return;
+    	}
+    } catch(e){
+    	var msg = 'boundary_geojson not a Feature Collection in area_json ' + e + ', data: ' + boundary_geojson;
+    	console.log(msg);
+    	addToasterMessage('alert-danger', msg);
+    	return;
+    }
+
+	var map = map_over_lhs;
+	var styleOptions = areaBoundaryPolygonOptions;
+	styleOptions.editable = false;
+	styleOptions.draggable = false;
+	styleOptions.fillOpacity =  0.5;  //more opacity when drawing.
+	styleOptions.strokeColor =  'green';  //more opacity when drawing.
 	
-	    areaBoundary_over_lhs.name = "boundary";
-	    
-	    /* global overlayMaps */ 
-	    overlayMaps.push(areaBoundary_over_lhs);
-	    
-	    /* global addLayer */
-	    addLayer(areaBoundary_over_lhs.name, 
-	    		area_json.properties.area_name + " Border", 
-	    		"yellow",  
-	    		50, 
-	    		"Boundary of Area " + area_json.properties.area_name, 
-	    		layerslider_callback);
-    }  
+	map.data.setStyle(styleOptions);
+	map.data.setOptions({
+		drawingControl: false,
+		drawingMode: null,
+		controls : null,
+		position: google.maps.ControlPosition.TOP_CENTER,
+	});
+	var newData = new google.maps.Data({
+		map : map,
+		style : map.data.getStyle(),
+		controls : null,
+		drawingMode: null
+	});
+
+	try {
+		//var userObject = JSON.parse(boundary_geojson);
+		//var newFeatures = newData.addGeoJson(boundary_geojson);
+	} catch (error) {
+		//newData.setMap(null);
+		console.log("could not add boundary_geojson to map: " + error.message);
+		return;
+	}
+	// No error means GeoJSON was valid!
+
+	map.data.setMap(null);
+	var newFeatures = newData.addGeoJson(boundary_geojson)
+	map.data = newData;
+		    
+		    /* global overlayMaps */ 
+	overlayMaps.push(newData);
+		    
+    /* global addLayer */
+    addLayer("geometry", 
+    		area_json.properties.area_name + " Geometry", 
+    		"green",  
+    		50, 
+    		"Geometryof Area " + area_json.properties.area_name, 
+    		layerslider_callback);
 }
+
 
 function initialize() {
 	"use strict";
@@ -182,46 +233,24 @@ function initialize() {
 		alert("missing area data");
 		return;
 	}
-	var center_coords = area_json.features[0].geometry.coordinates;  // init global.
-    var map_center = new google.maps.LatLng(center_coords[1], center_coords[0] );
-	var map_zoom = area_json.features[0].properties.map_zoom;  // init global.
-     
-    var mapOptions_latest = {
-        zoom: map_zoom,
-        center: map_center,    
-        mapTypeId: google.maps.MapTypeId.HYBRID,
-        panControl:true,
-        zoomControl:true,
-        mapTypeControl:true,
-        streetViewControl:false,
-        overviewMapControl:false,
-        rotateControl:false,
-        clickable: true,
-        scaleControl: true //        scaleControlOptions: {position: google.maps.ControlPosition.BOTTOM_LEFT}
-    };
+	
+	var map_center = center_mapview(area_json);
+    var map_zoom =   zoom_mapview(area_json);
+	
+    /* global map_options */ 
+    map_options.mapTypeId = google.maps.MapTypeId.TERRAIN;
+    map_options.center = map_center;
+    map_options.zoom = map_zoom;
+    map_under_lhs    = new google.maps.Map(document.getElementById("map-left-prior"), map_options);
+    map_rhs          = new google.maps.Map(document.getElementById("map-right"), map_options);
 
-    var mapOptions_prior = {
-            zoom: map_zoom,
-            center: map_center,    
-            mapTypeId: google.maps.MapTypeId.TERRAIN,
-            panControl:true,
-            zoomControl:true,
-            mapTypeControl:true,
-            streetViewControl:false,
-            overviewMapControl:false,
-            rotateControl:false,
-            clickable: true,
-            scaleControl: true,
-            scaleControlOptions: {position: google.maps.ControlPosition.BOTTOM_RIGHT}
-        };
+    map_options.mapTypeId = google.maps.MapTypeId.HYBRID;
+    map_over_lhs     = new google.maps.Map(document.getElementById("map-left-latest"), map_options);
     
     /* global map_under_lhs */ 
     /* global map_under_lhs */ 
     /* global map_rhs */ 
     /* global single_map*/ 
-    map_under_lhs      = new google.maps.Map(document.getElementById("map-left-prior"), mapOptions_prior);
-    map_over_lhs    = new google.maps.Map(document.getElementById("map-left-latest"), mapOptions_latest);
-    map_rhs               = new google.maps.Map(document.getElementById("map-right"), mapOptions_prior);
     
     if (single_map === true){
         initial_dragger = "10%";
@@ -244,15 +273,15 @@ function initialize() {
     
     if (share === 'public')
     {
-        $("#public").prop("checked", true)          
+        $("#public").prop("checked", true);         
     }
     else if (share === 'unlisted')
     {
-        $("#unlisted").prop("checked", true)          
+        $("#unlisted").prop("checked", true);          
     }
     else    if (share === 'private')
     {
-        $("#private").prop("checked", true)          
+        $("#private").prop("checked", true);          
     }
     else
     {
@@ -282,13 +311,13 @@ function initialize() {
         request.fail(function (xhr, textStatus, error) {
         	$('#area_sharing_heading').html("Sharing: failed");
 			console.log ('patch_area() - request failed:', xhr.status, ' error: ', error);
-        })
+        });
      });
 
     init_area_descriptions(area_json.properties.area_url);
     
     google.maps.event.addListener(map_under_lhs, 'bounds_changed', function() {        
-        update_map_panel(map_under_lhs, '#map_panel_data')    
+        update_map_panel(map_under_lhs, '#map_panel_data');    
     });
 
     google.maps.event.addListener(map_under_lhs, 'mousemove', function (event) {
@@ -311,7 +340,7 @@ function initialize() {
 
     google.maps.event.addListener(map_under_lhs, 'idle', function() {
             //This is needed so the fusion tables query works
-            var map_center = map_under_lhs.getCenter()
+            var map_center = map_under_lhs.getCenter();
             if (map_center.lng() < -180) { 
                 map_under_lhs.setCenter(new google.maps.LatLng(map_center.lat(), map_center.lng()+360));
             }
@@ -360,30 +389,39 @@ function initialize() {
         /* global addJob */
         jobid = addJob(prompt, 'gray');
       
-        $.get(url).done(function(data) {
-                        
-            var getCellsResult = jQuery.parseJSON(data);
-            
-            if (getCellsResult.result === 'success'){
-                cellarray = getCellsResult.cell_list;
-                console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
-         
-                var plurals = (cellarray.length === 1)? ' cell covers': ' cells cover';
-                var plurals_mon = (getCellsResult.monitored_count === 1)? ' cell selected': ' cells selected';
-                /* global updateJob */
-                updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area. " + getCellsResult.monitored_count + plurals_mon + '</p>', 'black');
-                drawLandsatCells(cellarray);
-            }            
-            else
-            {
-                updateJob(jobid,"<p class = 'small'>GetCells Failed:" + getCellsResult.reason + "</p>", 'red');
-                //TODO: Redirect to home?
-            }
-        }).error(function( jqxhr, textStatus, error ) {
-            var err = textStatus + ', ' + error; 
-            console.log( "GetCells Failed: " + err);
-            updateJob(jobid, "<p class = 'small'>GetCells Failed: " + err + "</p>",'red');
-        });
+        var request = jQuery.ajax({
+    	    type: "GET",
+    	    url: url, //area_json.properties.area_url,
+    	    //data: patch_ops_string,
+    	    //dataType:"json",
+    	});
+
+        request.done(function (data) {
+	          var getCellsResult = jQuery.parseJSON(data);
+	            
+	            if (getCellsResult.result === 'success'){
+	                cellarray = getCellsResult.cell_list;
+	                console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
+	         
+	                var plurals = (cellarray.length === 1)? ' cell covers': ' cells cover';
+	                var plurals_mon = (getCellsResult.monitored_count === 1)? ' cell selected': ' cells selected';
+	                /* global updateJob */
+	                updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area. " + getCellsResult.monitored_count + plurals_mon + '</p>', 'black');
+	                drawLandsatCells(cellarray);
+	            }            
+	            else
+	            {
+	                updateJob(jobid,"<p class = 'small'>GetCells Failed:" + getCellsResult.reason + "</p>", 'red');
+	                //TODO: Redirect to home?
+	            }
+	    });
+	    
+	    request.fail(function (xhr, textStatus, error) {
+            var msg = xhr.status + ', ' + error; 
+            console.log( "GetCells Failed: " + msg);
+            updateJob(jobid, "<p class = 'small'>GetCells Failed: " + msg + "</p>",'red');
+	    });
+       
     } //get cells     
     else
     {
@@ -410,11 +448,11 @@ function initialize() {
     	console.log("make report");
         $('#make-report-popover').popoverX('show');
         if (drawingManager  === null){
-        	//map.drawingTools = new DrawingTools(map_over_lhs, mapContainer, dropContainer, geoJsonPanel, geoJsonInput, downloadLink);
-        	//drawingManager  = createDrawingManager(map_over_lhs, google.maps.drawing.OverlayType.MARKER); //FIXME Don't draw more than one.
-        	//google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-        	//	complete_report(drawingManager, event);
-            // });
+        	map.drawingTools = new DrawingTools(map_over_lhs, mapContainer, dropContainer, geoJsonPanel, geoJsonInput, downloadLink);
+        	drawingManager  = createDrawingManager(map_over_lhs, google.maps.drawing.OverlayType.POLYGON); //FIXME Don't draw more than one.
+        	google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+        		complete_report(drawingManager, event);
+            });
         }
      });
     
@@ -423,9 +461,28 @@ function initialize() {
      });
 
      $('#make-report-popover-next').click(function(){
+    	 //load page
          $('#make-report-popover').popoverX('hide');
       });
 
+     $('#edit-boundary').click(function(){
+     	console.log("edit boundary");
+        $('#edit-boundary-popover').popoverX('show');
+      });
+     
+      $('#edit-boundary-popover-close').click(function(){
+         $('#edit-boundary-popover').popoverX('hide');
+      });
+
+      $('#edit-boundary-popover-next').click(function(){
+    	 
+          $('#edit-boundary-popover').popoverX('hide');
+    		var href = '/area/' + area_json.properties.area_name +
+    					 '/boundary'; 
+    		window.location.href = href; //+ mapobj.id;
+    		console.log(event);
+       });
+      
     $('#sign-in').click(function(){
         $('#sign-in-popover').popoverX('show');
      });
@@ -494,6 +551,11 @@ function initialize() {
             e.preventDefault();
         });
         
+        $('#save-view').click(function(){
+        	save_view(map_under_lhs, area_json);
+        });
+
+        
         $(window).resize(function () {
                 //<!--resize tip from //github.com/twitter/bootstrap/issues/2475 -->
                 var h = $(window).height(),
@@ -543,13 +605,12 @@ function initialize() {
         $('#reset-view').click(function(){
         	console.log('reset-view:');
         	var map = map_under_lhs;
-        	
-        	var map_zoom = area_json.features[0].properties.map_zoom;  // init global.
-        	var map_center = new google.maps.LatLng(center_coords[1], center_coords[0] );
-        	 
-            map.setZoom(map_zoom);
+    
+            var map_zoom =   zoom_mapview(area_json);
+	        map.setZoom(map_zoom);
+
+        	var map_center = center_mapview(area_json);
             map.setCenter(map_center);
-            
         });
         
         
@@ -594,7 +655,7 @@ function initialize() {
             mousemove: function(e){
                 var x = e.pageX - lhs_offset_left;
                 var y = e.pageY - lhs_offset_top;
-                $("#rhs_cursor").css({left: x, top: y})
+                $("#rhs_cursor").css({left: x, top: y});
             }
         });
         
@@ -604,7 +665,7 @@ function initialize() {
                 var y = e.pageY - lhs_offset_top;
                 $("#rhs_cursor").css({left: x, top: y});
              }
-        })
+        });
 
         $("#map-left-c").on({
             mouseleave: function(){
@@ -616,7 +677,7 @@ function initialize() {
                 $("#rhs_cursor").show(); 
                 //console.log('show');
             }
-        })
+        });
 
         /* global toggle_edit_cells_lock */ 
         $('#edit-cells-lock').click(function(e){
@@ -660,7 +721,7 @@ google.maps.event.addDomListener(window, 'load', initialize);
 
 function httpgetActionUrl(action)
 {
-	"use strict"
+	"use strict";
 	var satellite = $("#satellite:first-child").text().trim();
 	var algorithm = $("#algorithm:first-child").text().trim();
 	var latest_str= $("#latest:first-child").text().trim();

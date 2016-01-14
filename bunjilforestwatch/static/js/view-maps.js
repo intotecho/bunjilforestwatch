@@ -47,7 +47,7 @@ function jsonStringifySelectedCell(landsat_cell)
   
    var cell_feature = { "type": "Feature",
             "geometry":   {"type": "Polygon","coordinates": cell_coords},
-            "properties": {"featureName": "cell_boundary", "path": landsat_cell.path, "row": landsat_cell.row}
+            "properties": {"name": "cell_boundary", "path": landsat_cell.path, "row": landsat_cell.row}
                  };
    return JSON.stringify(cell_feature);
 }
@@ -99,27 +99,6 @@ $('#instructions').popoverX({
     "Click 'about' in the menu for more info</p>"
     });
 
-$('#save-view').click(function(){
-	
-	/* global initialize_map */
-	var map = map_under_lhs;
-	if (typeof map === 'undefined') {
-		map = initialize_map.map; //new area form.
-	}
-		
-	var url =  area_json['properties']['area_url'] + '/update/view?lat=' + map.getCenter().lat().toFixed(5)+ '&lng=' + map.getCenter().lng().toFixed(5) + '&zoom=' + map.getZoom();
-	console.log('save-view:', url);
-
-	var xhr = $.post(url).done(function(data) {
-		  $('#map_panel_center').empty().append("<p>Saved</p>"); 
-			return data;
-			
-	}).error(function(xhr, textStatus, error){
-			  console.log ('UpdateAreaView() request failed:', xhr.status, error);
-			  $('#map_panel_center').empty().append("<p>UpdateAreaView Failed: " + error + "</p>"); 
-			  return error;
-	});
-});
 
 
 var monitored_cells_are = 

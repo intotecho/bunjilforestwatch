@@ -21,7 +21,7 @@ import math
 import logging
 from google.appengine.ext import db # is it required?
 import cache
-from models import Observation # only required for Observations model.
+#from models import Observation # only required for Observations model.
 import models
 import ndb
 
@@ -40,6 +40,7 @@ import json
 import settings #You have to import your own private keys. 
 import ee
 from ee.oauthinfo import OAuthInfo
+from docutils.parsers import null
     
 # from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
 PRODUCTION_MODE = not os.environ.get(
@@ -743,28 +744,40 @@ def getLandsatCells(area):
         return False;
     
     # Get the area's boundary or location and convert to a FeatureCollection.    
-    park_geom = None
-    if len(area.coordinates) == 0:            
+    #park_geom = None
+    #if len(area.coordinates()) == 0:            
         #cw_feat = ee.Geometry(area.area_location_feature)
         #feat = cw_feat.buffer(0, 1e-8)   
         #boundary_feature = ee.Feature(cw_feat, {'name': 'area_location', 'fill': 1})
-        park_geom = ee.Geometry(area.area_location_feature) 
+    if area.boundary_hull == None or area.boundary_hull == "":
+        #coordinates = area.coordinates()
+        has_boundary = True
+        park_geom = ee.Geometry.Point(area.area_location.lon, area.area_location.lat) 
     else:    
-        boundary_polygon = []
-        for geopt in area.coordinates:
-            boundary_polygon.append([geopt.lon, geopt.lat])
-            
-        cw_feat = ee.Geometry.Polygon(boundary_polygon)
+        boundary_hull_dict = json.loads(area.boundary_hull)
+        eeFeatureCollection, status, errormsg  = area.get_eeFeatureCollection(boundary_hull_dict)
+        if eeFeatureCollection == None:
+            logging.error("getLandsatCells() error %s object", errormsg) 
+            print boundary_hull_dict 
+            print type (boundary_hull_dict)
+            return False
+        
+        park_geom = eeFeatureCollection.geometry()
+        has_boundary = False
+        #boundary_polygon = []
+        #for geopt in area.coordinates:
+        #    boundary_polygon.append([geopt.lon, geopt.lat])
+        '''    
+        cw_feat = ee.Geometry.Polygon(area.coordinates())
         feat = cw_feat.buffer(0, 1e-10)   
     
         boundary_feature = ee.Feature(feat, {'name': 'area_boundary', 'fill': 1}) 
         park_boundary = ee.FeatureCollection(boundary_feature)
         park_geom = boundary_feature.geometry()
-
-    
+        '''
+        
     park_area = park_geom.area(10).getInfo()
-    print park_geom.getInfo(), park_area
-    
+   
     if park_area < 10 : # no boundary defined.
         park_area = 10
         
@@ -820,7 +833,7 @@ def getLandsatCells(area):
                 new_overlap_area  = new_overlap_geom.area(10).getInfo()
                 new_overlap = new_overlap_area/park_area
 
-                cell.monitored = True if ((new_overlap > 0.01) or (len(area.coordinates) == 0)) else False # If overlap is above arbitrary threshold (1%) default is to monitor cell, user can change later.
+                cell.monitored = True if ((new_overlap > 0.01) or (has_boundary  == False)) else False # If overlap is above arbitrary threshold (1%) default is to monitor cell, user can change later.
                 if cell.monitored:
                     remaining_geom = remaining_geom.difference(new_overlap_geom)
                     remaining_area = remaining_geom.area(10).getInfo()

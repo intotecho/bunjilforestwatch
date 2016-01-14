@@ -10,8 +10,12 @@ from google.appengine.api import images
 from google.appengine.ext import ndb
 import webapp2
 
+import eeservice
+import ee
 import hashlib
 import geojson
+import json
+
 class DerefModel(ndb.Model):
 	def get_key(self, prop_name):
 		#return getattr(self.__class__, prop_name).get_value_for_datastore(self)
@@ -133,6 +137,12 @@ class User(ndb.Model):
 	def sources(self):
 		return [i for i in USER_SOURCE_CHOICES if getattr(self, '%s_id' %i)]
 
+	def get_area_count(self):  
+		"""
+		@return: number of areas created by this user (integer)
+		"""
+		return AreaOfInterest.query(AreaOfInterest.owner == self.key).count()
+
 
 class UserFollowersIndex(ndb.Model): 
 	""" UserFollowersIndex - A User has a list of followers (other users) in an UserFollowersIndex(key=user).
@@ -174,8 +184,31 @@ class UserFollowingAreasIndex(ndb.Model):
 
 class AreaOfInterest(ndb.Model):
 
+	"""
+	
+	@cvar PUBLIC_AOI:
+	@cvar UNLISTED_AOI: 
+	@cvar PRIVATE_AOI: 
+	@cvar ENTRIES_PER_PAGE: 
+	@cvar MAX_AREAS:  
+	@todo Move ENTRIES_PER_PAGE and MAX_AREAS to settings.py 
+
+	@group Geometry:
+		max_latlon, min_latlon, total_area, ft_docid, area_location, boundary_geojsonstr, boundary_hull, bounds 
+	@group Users:
+		created_by,	owner, share, followers_count
+
+	@group Monitoring:
+		cells, entry_count 
+
+	@group Decription:
+		name, description, description_why, description_who, description_how, threats, type, wiki
+
+	@deprecated: coordinates
+	"""	
+
 	ENTRIES_PER_PAGE = 5 #TODO Move to Settings.py
-	MAX_AREAS = 24	   #TODO Move to Settings.py
+	MAX_AREAS = 32	   #TODO Move to Settings.py
 	
 	PUBLIC_AOI = 0		
 	"""Everyone can see and follow this area.share
@@ -185,11 +218,13 @@ class AreaOfInterest(ndb.Model):
 	"""Anyone with the link can see and follow this area.share
 	"""
 	
-	
 	PRIVATE_AOI = 2		 
 	"""Only the owner can see or follow this area.share
 	"""
-	
+
+	"""
+	DESCRIPTIVE DATA
+	"""	
 	# Area Description
 	name = ndb.StringProperty(required=True)
 	#description = ndb.StringProperty(multiline=True) # text might be better type as it is not indexed.
@@ -197,12 +232,39 @@ class AreaOfInterest(ndb.Model):
 	description_why = ndb.TextProperty() # text type is longer but is not indexed.
 	description_who = ndb.TextProperty() # #who looks after this area?
 	description_how = ndb.TextProperty() # text type is longer but is not indexed.
-	
 	threats = ndb.TextProperty()	  # text type is longer but is not indexed.
-	
 	type = ndb.StringProperty()
 	wiki = ndb.StringProperty() # beware max url 500 - like to a story about this area.
+
+	"""
+	GEOMETRY
+	"""	
+	max_latlon = ndb.GeoPtProperty(required=True, default=None)
+	min_latlon = ndb.GeoPtProperty(required=True, default=None)
+	total_area = ndb.FloatProperty(required=False, default=0)
+
+	ft_docid =  ndb.StringProperty() 
+	"""A fusion table's document id. Only required if boundary provided in a FT.
+	"""
+	area_location = ndb.GeoPtProperty(required=False, default=None) #make this required one day.
 	
+	#coordinates = ndb.GeoPtProperty(repeated=True, default=None) # When a fusion table is provided in boundary_ft, this is the convexHull of the FT. #Deprecated
+	
+	boundary_geojsonstr = ndb.TextProperty(required = False) # A geojson string encoded FC object who's geometry is the boundary provided by the owner. It may have a complex geometry
+	
+	boundary_hull = ndb.TextProperty(required = False) # A geojson string encoded Feature object of the convex hull of the featureCollection or park boundary in JSON string format.
+
+	bounds = ndb.FloatProperty(repeated=True, default=None) # bounds of rectangle used for mapview.
+	
+	""" 
+	VIEW - Parameters for viewing Area
+	"""
+	map_center = ndb.GeoPtProperty(required=True, default=None)
+	map_zoom	= ndb.IntegerProperty(required=True, default=1)
+
+	"""
+	MONITORING
+	"""
 	cells = ndb.KeyProperty(repeated=True, default=None) 
 	"""list of Landsat cells overlapping this area - calculated on new.
 	"""
@@ -210,28 +272,9 @@ class AreaOfInterest(ndb.Model):
 	"""reports related to this area - not used yet
 	"""
 	
-	max_latlon = ndb.GeoPtProperty(required=True, default=None)
-	min_latlon = ndb.GeoPtProperty(required=True, default=None)
-
-	ft_link =  ndb.StringProperty() 
-	"""link to a fusion table defining the Geometry of area boundary.
 	"""
-	
-	ft_docid =  ndb.StringProperty() 
-	"""A fusion table's document id.
+	USERS & SECURITY
 	"""
-	## Geometry
-	area_location = ndb.GeoPtProperty(required=False, default=None) #make this required.
-	
-	coordinates = ndb.GeoPtProperty(repeated=True, default=None) # When a fusion table is provided in boundary_ft, this is the convexHull of the FT.
-	boundary_fc = ndb.TextProperty(required = True) # ee.FeatureCollection or park boundary in JSON string format
-
-	bound = ndb.FloatProperty(repeated=True, default=None)
-	
-	# Parameters for viewing Area
-	map_center = ndb.GeoPtProperty(required=True, default=None)
-	map_zoom	= ndb.IntegerProperty(required=True, default=1)
-	
 	#User (subscriber) who created AOI 
 	created_by = ndb.UserProperty(verbose_name=None, auto_current_user=False, auto_current_user_add=True)  #set automatically when created. never changes.
 	#owner = ndb.ReferenceProperty(User) #key to subscriber that created area.   # set by caller. could be reassigned.
@@ -240,13 +283,18 @@ class AreaOfInterest(ndb.Model):
 	
 	followers_count = ndb.IntegerProperty(required=True, default=0) # count user following this area.
 	
-	#timestamps
+	"""
+	TIMESTAMPS
+	"""
 	created_date = ndb.DateTimeProperty(auto_now_add=True)
 	last_modified = ndb.DateTimeProperty(auto_now=True)
 	
+	"""
+	PROPERTIES
+	"""
+	
 	def __unicode__(self):
 		return unicode(self.name)
-
 
 	@property
 	def pages(self):
@@ -257,23 +305,55 @@ class AreaOfInterest(ndb.Model):
 	def url(self, page=1):
 		if page > 1:
 			#return webapp2.uri_for('view-area', username=self.key.parent().name(), area_name= self.name, page=page)
-			return webapp2.uri_for('view-area',  area_name= self.name, page=page)
+			return webapp2.uri_for('view-area',  area_name = self.name, page=page)
 		else:
 			#return webapp2.uri_for('view-area', username=self.key.parent().name(),  area_name= self.name)
-			return webapp2.uri_for('view-area', area_name= self.name)
+			return webapp2.uri_for('view-area', area_name = self.name)
 
 	def tasks_url(self, page=1):
 		if page > 1:
 			#return webapp2.uri_for('view-area', username=self.key.parent().name(), area_name= self.name, page=page)
-			return webapp2.uri_for('view-obstasks', area_name= self.name,  page=page)
+			return webapp2.uri_for('view-obstasks', area_name = self.name,  page=page)
 		else:
 			#return webapp2.uri_for('view-area', username=self.key.parent().name(),  area_name= self.name)
-			return webapp2.uri_for('view-obstasks', area_name= self.name)
+			return webapp2.uri_for('view-obstasks', area_name = self.name)
 
 	@property
-	def area_location_feature(self):
-		return { "type": "Point", "coordinates": [self.area_location.lon, self.area_location.lat], "properties": {"featureName": "area_location"} }
+	def area_location_geojson(self):
+		"""
+		returns area_location (place mark provided by user) as a geoJSON Point Feature object
+		"""
+		return {
+	      	"type": "Feature",
+	      	"properties": {
+				"name": "area_location"
+			},
+	      	"geometry": {
+		        "type": "Point",
+		        "coordinates": [
+		         	self.area_location.lon, self.area_location.lat
+		        ]
+	        }
 	
+		}	
+
+	def set_area_location(self, feature):
+		try:
+			coordinates = feature['geometry']['coordinates']
+		except KeyError:
+			logging.error('KeyError in area_location Feature')
+		self.area_location = ndb.GeoPt(
+									float(coordinates[1]), 
+									float(coordinates[0]) )
+		'''
+		area_location_geojson_feature = feature['geometry']
+		area_location_coords = feature['geometry']['coordinates']
+		geom= ee.Geometry(area_location_geojson_feature)
+		feat = ee.Feature(geom, {'fill': 1})
+		park_boundary_fc = ee.FeatureCollection(feat) # so far just a point
+		area_location = ndb.GeoPt(float(area_location_geojson_feature['coordinates'][1]), float(area_location_geojson_feature['coordinates'][0]))
+		'''
+
 	@property
 	def shared_str(self):
 		if self.share == self.PUBLIC_AOI:
@@ -298,10 +378,15 @@ class AreaOfInterest(ndb.Model):
 		else:
 			logging.error('set_shared() invalid value provided.{0!s}'.format(share_str))
 			return 'error'	# no change to database.
-
+		
+	@property
+	def ft_link(self):
+		return 'https://www.google.com/fusiontables/DataSource?docid=' + self.ft_docid
 	
-	#CellList() returns a cached list of the area's cells as a json dictionary
-	def CellList(self):
+	def cell_list(self):
+		"""
+		returns a cached list of the area's cells as a json dictionary
+		"""
 		cell_list = []
 		for cell_key in self.cells:
 			cell = cell_key.get()
@@ -311,13 +396,46 @@ class AreaOfInterest(ndb.Model):
 					celldict['index']  = len(cell_list)
 					cell_list.append(celldict)
 			else:
-				logging.error ("AreaofInterest::CellList() no cell returned from key %s ", cell_key)
+				logging.error ("AreaofInterest::cell_list() no cell returned from key %s ", cell_key)
 			
-		returnstr = 'AreaofInterest::CellList() area {0!s} has cells {1!s}'.format(self.name.encode('utf-8'), cell_list)
+		returnstr = 'AreaofInterest::cell_list() area {0!s} has cells {1!s}'.format(self.name.encode('utf-8'), cell_list)
 		logging.debug(returnstr)
 			
 		return cell_list
 
+	def count_monitored_cells(self):
+		"""
+		returns the count of the area's landsat cells that are monitored.
+		"""
+		cell_count = 0
+		for cell_key in self.cells:
+			cell = cell_key.get()
+			if cell is not None:
+				if cell.monitored == True:
+					cell_count += 1
+			else:
+				logging.error ("AreaofInterest::count_monitored_cells() no cell returned from key %s ", cell_key)
+				return -1
+		logging.debug("AreaofInterest::count_monitored_cells()=%d", cell_count )
+		return cell_count
+	
+	def delete_cells(self):
+		#for cell_key in self.cells:
+		#	cell_key.delete()
+		ndb.delete_multi(self.cells)	
+		self.cells = []
+
+	'''
+	def delete_coordinates(self):
+		#for cell_key in self.cells:
+		#	cell_key.delete()
+		#ndb.delete_multi(self.coordinates)
+		#for pt in self.coordinates:
+		#	pt.key.delete()	
+		#FIXME it there a leak?
+		self.coordinates = []
+    '''
+		
 	def summary_dictionary(self): # main parameters included for list of areas.
 		return {
 				'id': self.key.urlsafe(),			 # unique id for this area.
@@ -330,28 +448,13 @@ class AreaOfInterest(ndb.Model):
 				'share' : self.share
 		}
 
-	"""
-	geojsonArea() returns area as a geojson dictionary
-	After http://google-app-engine-samples.googlecode.com/svn-history/r4/trunk/geodatastore/jsonOutput
-	"""
-	def geojsonArea(self):
+	def toGeoJSON(self):
 
-		coords = []
-		for c in self.coordinates:
-			p = {'lat': c.lat, 'lng': c.lon}
-			coords.append(p)
+		"""
+		returns area as a geojson dictionary
+		After http://google-app-engine-samples.googlecode.com/svn-history/r4/trunk/geodatastore/jsonOutput
+		"""
 		
-		#center = []
-		#center.append(geojson.Point((self.map_center.lat, self.map_center.lon)))
-		center = [self.map_center.lon, self.map_center.lat]
-			
-		#area_locn = []
-		if self.area_location == None:
-			area_locn = geojson.Point(0, 0)
-			locn_defined = False
-		else:	
-			area_locn = [self.area_location.lon, self.area_location.lat]
-			locn_defined = True
 		"""		
 		area_followers_index = cache.get_area_followers(self.name)
             #print 'area_followers ', area_followers_index, 
@@ -360,8 +463,6 @@ class AreaOfInterest(ndb.Model):
             else:
                 area_followers = []
         """
-        
-     
 		
 		geojson_obj =	 { 
 			"type": "FeatureCollection",
@@ -380,77 +481,287 @@ class AreaOfInterest(ndb.Model):
 							   "threats": self.threats
 						},
 						"fusion_table": {
-							   "ft_link": self.ft_link,
-							   "ft_docid": self.ft_docid,
-							   "boundary_fc": self.boundary_fc
-						 }
+							   #"ft_link": self.ft_link(),
+							   #"boundary_fc": self.boundary_fc,
+							   "ft_docid": self.ft_docid
+						 },
+						"stroke": "#550055",
+						"stroke-width": 2,
+						"stroke-opacity": 1,
+						"fill": "#550055",
+						"fill-opacity": 0.5
 			},
 			"features": [
-				  { "type": "Feature",
+				  { "type": "Feature",   # map view
 						"geometry": {
 							"type": "Point", 
-							"coordinates" : center,
+							"coordinates" : [self.map_center.lon, self.map_center.lat],
 						 }, 
 						"properties": {
-							"name": "map_center", 
-							"map_zoom" :self.map_zoom
+							"name": "mapview", 
+							"zoom" :self.map_zoom
 						}
 				  },
-					
-				  { "type": "Feature",
-						"geometry": {
-							"type": "Polygon", 
-						   	"coordinates" : coords,
-						 },
-						 "properties": {
-							   "name": "boundary"
-						 }
-			  	  },
-						
-				  { "type": "Feature",
+				  
+			]
+		}
+		
+		if self.area_location != None:
+			location = { 
+						"type": "Feature",  # area locator point.
 						"geometry": {
 							"type": "Point", 
-							"coordinates" : area_locn,
+							"coordinates" : [self.area_location.lon, self.area_location.lat],
 						 }, 
 						"properties": {
 							"name": "area_location",
-							"descr" :'user specified locn of area',
-							"defined": locn_defined 
+							"descr" :'user specified center location of area',
 						}
-				  }
-			]
-		}
-		geojson_str = geojson.dumps(geojson_obj)
-		logging.debug("area geojson: %s",  geojson_str)
-		return geojson_str
+			}
+			geojson_obj['features'].append(location)
+		
+		if self.boundary_hull != None:
+			geojson_obj['features'].append(json.loads(self.boundary_hull))
+
+		if self.boundary_geojsonstr != None:
+			geojson_obj['boundary_geojson'] = json.loads(self.boundary_geojsonstr)
+		
+		return geojson_obj
 	
-	#CountMonitoredCells() returns a number of cells that are monitored.
-	def CountMonitoredCells(self):
-		#cell_list = []
-		cell_count = 0
-		for cell_key in self.cells:
-			cell = cell_key.get()
-			if cell is not None:
-				if cell.monitored == True:
-					cell_count += 1
+	def coordinates(self):
+		"""
+		@return: returns a list of coordinates as an array of [lon,lat]
+		representing the outer ring of the boundary_hull if defined
+		otherwise the area_location as a single [lon,lat] coordinate.
+		"""
+		if self.boundary_hull != None:
+			try:
+				boundary_hull_dict = json.loads(self.boundary_hull)
+				return boundary_hull_dict['geometry']['coordinates'][0] # outer ring only 
+			except KeyError:
+				return []
+			except ValueError:  
+				return []
+		else:
+			return [self.area_location.lon, self.area_location.lat] 
+	
+
+	def set_boundary_fc(self, eeFeatureCollection, set_view):
+		"""
+		Given an arbitrary ee.FeatureCollection, set area's boundary to a convex hull of the collections geometry.
+		@param eeFeatureCollection an ee.FeatureCollection of arbitrary geometries.
+		@param set_view Optionally sets the mapview and area-Location if True 
+		@attention: updates area but does not store value in NDB.
+		Sets: 		
+			self.boundary_hull (a geojson string)
+			self.bounds 
+			self.maxlatlon
+			self.minlatlon
+			self.total_area
+
+		Optionally sets:
+			self.map_center
+			self.area_location
+			
+		@returns boundary_hull as a dictionary - not a string
+		"""
+		hull = eeFeatureCollection.geometry().convexHull(10);
+		
+		hull_coords = hull.coordinates().getInfo()
+		#print coord_list
+		boundary_hull_dict = {
+	      "type": "Feature",
+	      "properties": {
+			"name": "boundary_hull",			
+	        "stroke": "#555555",
+	        "stroke-width": 2,
+	        "stroke-opacity": 1,
+	        "fill": "#555555",
+	        "fill-opacity": 0.5
+	        },
+         "geometry": {
+         "type": "Polygon",
+         "coordinates": hull_coords
+         }
+		}
+		self.boundary_hull = json.dumps(boundary_hull_dict)	 
+		#self.boundary_fc = ee.FeatureCollection(hull).getInfo() # create a new FC based on the hull geometry.
+		
+		bounds = hull.bounds(10)
+		rectangle = bounds.coordinates().getInfo()
+		
+		self.maxlatlon = ndb.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
+		self.minlatlon =  ndb.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][0]))
+		
+		self.total_area = hull.area(10).getInfo()/1e6#area in sq km
+
+		if set_view == True:
+			centroid = hull.centroid(10).coordinates().getInfo()
+			
+			self.map_center = ndb.GeoPt(float(centroid[1]), float(centroid[0]))
+			self.area_location = self.map_center
+		
+		return boundary_hull_dict
+	
+	def get_fusion_boundary(self, boundary_ft):
+		"""
+		Given a fusion table id query its geometry and save to an eeFeatureCollection
+			@TODO move this function to eeservice as it does not use or set area.	 
+		#boundary_ft = new_area['properties']['fusion_table']['boundary_ft']
+		#ftlink = 'https://www.google.com/fusiontables/DataSource?docid=' + boundary_ft
+		#@TODO ftlink does not beed to be stroed as it can be returned by a function.
+		#logging.debug('AreaHandler name: %s has fusion boundary:%s', boundary_ft)
+		### User Provided a Fusion Table ###
+		#Test the fusion table
+		#authenticate to fusion table API
+		"""
+		coords = [] 
+		total_area = 0
+		zoom = 12 # zoom will be calculated when the map is displayed.
+			
+		http = eeservice.EarthEngineService.credentials.authorize(httplib2.Http(memcache))
+		service = build('fusiontables', 'v2', http=http)
+		
+		result = service.column().list(tableId=boundary_ft).execute(http)
+		message = "Fusion Table Columns: "
+		cols = result.get('items', [])
+		
+		geo_col_name= ""
+		for c in cols:
+			message += c['name']
+			if c['type'] == 'LOCATION':
+				message += '[LOCATION]'
+				geo_col_name = c['name']
+			message +=  "; "
+		logging.debug("results=%s, column names=%s", result, message)
+			
+		# Fusion table EE operations tested at https://ee-api.appspot.com/b8dec39252c0eced49bb085f2b6fcdd4
+		#make a convex hull and store the coordinates in ndb.model.AreoOfInterest.coords
+
+		park_boundary_fc = ee.FeatureCollection(u'ft:' + boundary_ft, 'geometry')
+		self.boundaryFromFC(park_boundary_fc)
+		self.set_boundary_fc(self, park_boundary_fc, True)
+	
+	@staticmethod
+	def get_eeFeatureCollection(geojson_obj):
+		""" Creates an Earth Engine FeatureCollection from a geojson object containing features. 
+		First ensure the App is connected to the EarthEngine API or you get 404
+		Does not modify the area object.
+		
+		@param geojson - A geojson object containing features
+		@returns eeFeatureCollection, status, errormsg
+	    """
+
+		eeFeatureCollection	= None
+		
+		if not eeservice.initEarthEngineService(): # we need earth engine now.
+			return eeFeatureCollection, 503, "Google Earth Engine service not available"
+
+		eeFeatures = []
+		#print 'geojson_obj: ', geojson_obj
+		
+		try:
+			object_type = geojson_obj['type']
+			
+		except (ValueError,KeyError):
+			return eeFeatureCollection, 400, "geojson object does not have a type expected Feature or FeatureCollection"
+
+		try:
+			if object_type == 'Feature':
+				eeFeature = ee.Feature(geojson_obj['geometry'])
+				cw_geom = eeFeature.geometry()
+				ccw_geom = cw_geom.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+				eeFeature = ee.Feature(ccw_geom, {'name': geojson_obj['properties']['name'], 'fill': 1})
+				eeFeatures.append(eeFeature)
+		
+			elif object_type == 'FeatureCollection':
+				features = geojson_obj['features']
+				for feature in features:
+					eeFeature = ee.Feature(feature['geometry'])
+					cw_geom = eeFeature.geometry()
+					ccw_geom = cw_geom.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+					eeFeature = ee.Feature(ccw_geom, {'name': "Border FeatureCollection", 'fill': 1})
+					eeFeatures.append(eeFeature)
 			else:
-				logging.error ("AreaofInterest::CountMonitoredCells() no cell returned from key %s ", cell_key)
-				return -1
-		logging.debug("AreaofInterest::CountMonitoredCells()=%d", cell_count )
-		return cell_count
+				return None, 400, "geojson not a Feature or FeatureCollection"
+							
+			return ee.FeatureCollection(eeFeatures), 200, "object_type"
+		
+		except ee.EEException:
+			return None, 500, "EEException creating FeatureCollection"
+		
+	def getBoundary(self, geojsonBoundary):
+		"""
+		Given a boundary as a geojson Feature, apply it to the area.
+		@deprecated: 		Not Used.
+		"""
+		if not eeservice.initEarthEngineService(): # we need earth engine now.
+			self.response.set_status(503)
+			return self.response.out.write('Sorry, Google Earth Engine not available right now. Please try again later')
+			return [], 0, ndb.GeoPt(0,0), ndb.GeoPt(0,0)
+
+		coords = []
+		tmax_lat = -90
+		tmin_lat = +90
+		tmax_lon = -180
+		tmin_lon = +180
+		
+		#convert the geojson polygon to NDB GeoPt()s
+		#The list of coordinates for Polygons is nested one more level than that for LineStrings.
+		# We only want the first set of coords - as this is the exterior ring.
+
+		polygon=geojsonBoundary['geometry']['coordinates']
+		for p in polygon[0]:
+			lat=p[1]
+			lon=p[0]
+			print lat, lon
+			gp = ndb.GeoPt(float(lat), float(lon))
+			coords.append(gp)
+
+			#get bounds of area.
+			if lat > tmax_lat: 
+				tmax_lat = lat
+			if lat < tmin_lat: 
+				tmin_lat = lat
+			if lon > tmax_lon:
+				tmax_lon = lon
+			if lon < tmin_lon: 
+				tmin_lon = lon
+
+		maxlatlon = ndb.GeoPt(float(tmax_lat), float(tmax_lon))
+		minlatlon = ndb.GeoPt(float(tmin_lat), float(tmin_lon))
+
+		### generate a FeatureCollection and calculate its area
+		if len(coords) > 0:
+			polypoints = []
+			for geopt in coords:
+				polypoints.append([geopt.lon, geopt.lat])
+			cw_geom = ee.Geometry.Polygon(polypoints)
+			ccw_geom = cw_geom.buffer(0, 1e-10) # force polygon to be CCW so search intersects with interior.
+			feat = ee.Feature(ccw_geom, {'name': 'not_used', 'fill': 1})
+
+			total_area = ccw_geom.area().getInfo()/1e6 #area in sq km
+
+			park_boundary_fc = ee.FeatureCollection(feat)
+		else:
+			# no boundary defined yet
+			total_area = 0
+
+		return coords, total_area, maxlatlon, minlatlon
 
 
-'''
-Landsat Cell represents an 170sq km area where each image is captured. 
-Each path and row identifies a unique cell.
-An AOI makes overlaps a set of one or more cells - and creates a constant list of these.
-Each cell has a different schedule when new images arrive.
 
-Note that multiple LandsatCell objects for the same Landsat Cell(p,r) can be created, one for each parent area to which it belongs.
-
-The normal name for a Cell is a Swath.				
-'''
 class LandsatCell(ndb.Model):
+	"""
+	Landsat Cell represents an 170sq km area where each image is captured. 
+	Each path and row identifies a unique cell.
+	An AOI makes overlaps a set of one or more cells - and creates a constant list of these.
+	Each cell has a different schedule when new images arrive.
+	
+	Note that multiple LandsatCell objects for the same Landsat Cell(p,r) can be created, one for each parent area to which it belongs.
+	
+	The normal name for a Cell is a Swath.				
+	"""
 	#constants - not changed once created. Created when AOI is created. 
 	path = ndb.IntegerProperty(required=True, default=0)	 # Landsat Path
 	row  = ndb.IntegerProperty(required=True, default=0)	 # Landsat Row
@@ -465,7 +776,7 @@ class LandsatCell(ndb.Model):
 	monitored = ndb.BooleanProperty(required = True, default = False) # Set if cell is monitored for new data (i.e selected in view-area)
 
 	'''
-	Cell2Dictionary()converts a cell object into a dictionary of the path,row, monitored 
+	Cell2Dictionary() converts a cell object into a dictionary of the path,row, monitored 
 	and date of latest image stored in
 	 datastore for L8 collection (other collections to follow)
 	'''	
