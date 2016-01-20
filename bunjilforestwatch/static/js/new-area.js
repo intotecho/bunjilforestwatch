@@ -2,14 +2,33 @@
  * @name new-area
  * @version 1.0
  * @author Chris Goodman
- * @copyright (c) 2012-2015 Chris Goodman
+ * @copyrdisppaight (c) 2012-2015 Chris Goodman
  * @fileoverview Shows a map and allows user to create a new area.
  */
 
 var area_json = null; // WARNING only defined after a successful save returns
 // an area object.
 
+/**
+ * @returns returns the area_name entered into the input text control.
+ */
+function get_area_name() {
+	var area_name = $('#area_name').val();
+	if (typeof (area_name) === 'undefined') {
+		area_name = '';
+	}
+	// console.log('area_name: ', area_name);
+	return area_name;
+}
 
+
+/*
+ * If the new-area page is opened with an existing area and the boundary route /area_name/boundary
+ * Then return true.
+ */
+function edit_boundary_mode() {
+ 	return ($('#boundary-tab-body').hasClass('in'));
+}
 
 
 /**
@@ -538,7 +557,13 @@ function save_boundary(event) {
 	    	$('#save-boundary-popover').popoverX('hide');
 			addToasterMessage('alert-success', 'Area ' + get_area_name() +
 					 ' updated OK');
-			activate_tab("#descr-tab");
+			if(edit_boundary_mode()) {
+		 		var href = '/area/' + area_json.properties.area_name; 
+		 		window.location.href = href; //+ mapobj.id;
+			}
+			else {
+				activate_tab("#descr-tab");
+			}
 	    });
 	    
 	    request.fail(function (xhr, textStatus, error) {
@@ -716,6 +741,30 @@ function initialize_map(place, center_prm) {
 		clear_boundary(event);
 	});
 
+	$('#change-view').click(function(event) {
+		if (typeof initialize_map.map.is_locked === 'undefined' || initialize_map.map.is_locked === false) {
+			
+			lock_map(initialize_map.map, true);
+			$('#change-view .locked').show();
+			$('#change-view .unlocked').hide();
+			$('#save-boundary').prop('disabled', false);
+			$('#undo-edits').prop('disabled', false);
+			$('#clear-boundary').prop('disabled', false);
+			$('#import-boundary').prop('disabled', false);
+			makeDataLayerEditable(initialize_map.map.data, true); 
+		}
+		else {
+			lock_map(initialize_map.map, false); 
+			$('#change-view .locked').hide();
+			$('#change-view .unlocked').show();
+			$('#save-boundary').prop('disabled', true);
+			$('#undo-edits').prop('disabled', true);
+			$('#clear-boundary').prop('disabled', true);
+			$('#import-boundary').prop('disabled', true);
+			makeDataLayerEditable(initialize_map.map.data, false); 
+		}
+	});
+	
 	/* function to add the polygon coordinates to the form data prior to submit. */
 	$('#save-area').click(function(event) {
 		event.preventDefault();
@@ -876,20 +925,17 @@ function initialize_geojson_editor(init_text) {
 			link.download = name;
 			link.click();
 		});
+
 		initialize_map.editor.on("changes", function(editor, changes) {
 			/* load editor with current drawing on map */
 			initialize_map.map.drawingTools.refreshDataFromGeoJson();
 			return true;
 		});
-		initialize_map.map.drawingTools.refreshGeoJsonFromData();
 
-		if(init_text.length > 0 ) {
-			//var g = get_clean_geojson(area_json); 
-			//initialize_map.map.data.addGeoJson(g);
-			//console.log(init_text);
-		}
 		google.maps.event.addDomListener(window, 'resize', resizeEditor);
 		resizeEditor();
+		initialize_map.editor.getDoc().setValue(JSON.stringify(area_json.boundary_geojson, null, 2));
+		initialize_map.map.drawingTools.refreshGeoJsonFromData();
 	}
 }
 
@@ -1047,6 +1093,7 @@ BJTEST.subns = (function() {
 			// initialize_map(null, center_pt);
 			initialize_map.map.setZoom(7);
 			initialize_map.map.setCenter(center_pt);
+			lock_map(initialize_map.map, true);
 			// drop_pin_mode(initialize_map.map, null);
 		}
 		if (mode == 'A') {
@@ -1062,7 +1109,6 @@ BJTEST.subns = (function() {
 					  }, 300);
 			//$('#locate-tab-body').removeClass('in'); // activating two tabs caused a bug.
 		}
-
 		return "";
 	};
 
@@ -1401,6 +1447,7 @@ function saved_area(url) {
 	// Display description and boundary form - ask user to enrich info.
 	enable_tab("#boundary-tab");
 	activate_tab("#boundary-tab");
+	lock_map(initialize_map.map, true); 
 }
 
 
@@ -1485,48 +1532,6 @@ function displayAreaBoundary(area_json) {
 	
 	var g = get_clean_geojson(area_json); 
 	initialize_map.map.data.addGeoJson(g);
-
-	/*
-    var boundary_feature = get_area_feature(area_json, "boundary");
-    var coords_arr   =  boundary_feature.geometry.coordinates;  // init global.
-    var border_latlngs = [];
-
-    if  (coords_arr.length === 0 ) {   
-    	var latlng = areaLocation(area_json);
-        var marker = new google.maps.Marker({
-    	    position: latlng,
-    	    title: area_json.properties.area_name 
-    	});
-        initialize_map.map.setMap(marker);
-    }
-    else {
-	    //var polygonOptions = boundaryPolygonOptions(area_json);
-		//var areaBoundary = new google.maps.Polygon(polygonOptions); //areaBoundaryPolygonOptions defined in site.js
-	    //areaBoundary.setMap(initialize_map.map);
-		google.maps.event.addListenerOnce(initialize_map.map, 'idle', function(){
-	    	geojson_str =  JSON.stringify(area_json);	
-			show_advanced(geojson_str); // do something only the first time the map is loaded
-			return true;
-		});
-
-    	//initialize_geojson_editor(geojson_str);
-    	/****
-	    var editor = initialize_map.editor;
-		if (typeof editor !== 'undefined') {
-			try {
-				geojson_str =  JSON.dumps(area_json);
-				var value = editor.setValue(geojson_str);
-				initialize_map.map.drawingTools.refreshDataFromGeoJson();
-
-				//var userObject = JSON.parse(this.geoJsonInput.value);
-			} catch (error) {
-				return;
-			}
-		}	
-		*****-/ 	
-    } 
-    */
-
 }
 
 function init_edit_boundary() {
@@ -1540,23 +1545,41 @@ function init_edit_boundary() {
 		alert("missing area data");
 		return;
 	}
-	initialize_map.boundary_type = 'geojson';
 	
 	var map_center = center_mapview(area_json);
     var map_zoom =   zoom_mapview(area_json);
-	initialize_map(null, map_center);
-	initialize_map.map.setZoom(map_zoom);
-	displayAreaBoundary(area_json);
-	set_boundary_type('geojson');
 	
-	// Display controls for saving only. Not drop or drag. 
-	$('.drag-only').hide();
-	$('.drop-only').hide();
-	$('.save-only').show();
-	$('.draw-start').hide();
-	$('.draw-second').hide();
-	$('.edit-shape').show();
-	$('.save-ctrls').show();
+    initialize_map(null, map_center);
+	initialize_map.map.setZoom(map_zoom);
+	lock_map(initialize_map.map, true);
+
+	initialize_map.boundary_type = 'geojson';
+	set_boundary_type('geojson');
+	boundaryFeature = hasFeature(area_json.boundary_geojson, "Polygon");
+	if (boundaryFeature  !== null ) {
+		console.log('area has boundary');
+		//edit existing features mode
+		// Display controls for saving only. Not drop or drag. 
+		$('.drag-only').hide();
+		$('.drop-only').hide();
+		$('.save-only').show();
+		$('.draw-start').hide();
+		$('.draw-second').hide();
+		$('.edit-shape').show();
+		$('.save-ctrls').show();
+	}
+	else {
+		console.log('area has no boundary');
+		//draw new polygon mode
+		// Display controls for saving only. Not drop or drag. 
+		$('.drag-only').hide();
+		$('.drop-only').hide();
+		$('.save-only').show();
+		$('.draw-start').show();
+		$('.draw-second').hide();
+		$('.edit-shape').show();
+		$('.save-ctrls').show();
+	}
 }
 
 function initialize_new_area_form() {
@@ -1636,7 +1659,7 @@ function initialize_new_area_form() {
 			$('#inner-descr-accordion .in').collapse('hide');
 	});
 	
-	if($('#boundary-tab-body').hasClass('in')) {
+	if(edit_boundary_mode()) {
 		init_edit_boundary();
 	}
 	/* If Testing GeoJson panel */

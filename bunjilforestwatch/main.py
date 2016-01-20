@@ -1722,19 +1722,22 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
             cell = cache.get_cell(path, row, area_name)
             if cell is not None:
                 #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-                obs = models.Observation(parent = cell, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], 
-                                         rgb_map_id = map_id['mapid'], rgb_token = map_id['token'],  algorithm = algorithm)
+                obs = models.Observation(parent = area.key, 
+                                         image_collection = map_id['collection'], 
+                                         captured = map_id['capture_datetime'], 
+                                         image_id = map_id['id'])
             else:
                 returnval = {}
                 returnval['result'] = "error"
                 returnval['reason'] = 'LandsatOverlayRequestHandler - cache.get_cell error'
                 self.add_message('danger', returnval['reason'] )
                 logging.error(returnval['reason'])
+                self.response.set_status(500)
                 self.response.write(json.dumps(returnval))
  
         else:
             #TODO: Do we really want some Observation with the parent being aoi instead of cell?
-            obs = models.Observation(parent = area.key, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'],obs_role = 'ad-hoc')
+            obs = models.Observation(parent = area.key, image_collection = map_id['collection'], captured = map_id['capture_datetime'], image_id = map_id['id'], obs_role = 'ad-hoc')
             
         obs.put()
         ovl = models.Overlay(parent = obs.key, 

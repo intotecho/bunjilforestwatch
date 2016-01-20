@@ -13,12 +13,12 @@ var pendingUrls = [];
 var maxPendingUrls = 0;
 
 function createLandsatGridOverlay(map, opacity, clickable, cellarray) { 
-	"use strict"
+	"use strict";
     if ((map.landsatGridOverlay === undefined) || (map.landsatGridOverlay === null)){
         var landsatGridOverlay = new LandsatGridOverlay(map, opacity, clickable, cellarray);
         landsatGridOverlay.name = "grid" ;
         landsatGridOverlay.initialize();       
-        map['landsatGridOverlay'] = landsatGridOverlay;
+        map.landsatGridOverlay = landsatGridOverlay;
         overlayMaps.push(landsatGridOverlay);
         update_cell_panel(landsatGridOverlay);
         
@@ -26,7 +26,7 @@ function createLandsatGridOverlay(map, opacity, clickable, cellarray) {
 }
 
 function deleteLandsatGridOverlay(map, opacity, clickable, cellarray) { 
-	"use strict"
+	"use strict";
     if ((typeof map.landsatGridOverlay !== 'undefined') && (map.landsatGridOverlay !== null)){
         var id;
 		do {
@@ -45,7 +45,7 @@ function deleteLandsatGridOverlay(map, opacity, clickable, cellarray) {
  
 //find overlay in obs matching role and viz algorithm.
 function findOverlay(obs, role, algorithm) {
-	"use strict"
+	"use strict";
     for (var o = 0; o < obs.overlays.length; o++) {
         var overlay = obs.overlays[o];
         if ((overlay.overlay_role == role) && (overlay.algorithm == algorithm)) {
@@ -56,6 +56,7 @@ function findOverlay(obs, role, algorithm) {
 }
 
 function requestAdHocOverlay() { //not assoc with a task...
+	"use strict";
  	var httpget_url = httpgetActionUrl("overlay");
     console.log( "urls", httpget_url);
  	var overlayname = "AdHoc overlay";
@@ -66,6 +67,7 @@ function requestAdHocOverlay() { //not assoc with a task...
 
 
 function fetchOverlay(overlayname, tooltip, prompt, httpget_url) {	
+	"use strict";
 	  
 	  prompt += ' <img src="/static/img/ajax-loader.gif" class="ajax-loader"/>';
       
@@ -98,6 +100,7 @@ function fetchOverlay(overlayname, tooltip, prompt, httpget_url) {
 }
 
 function updateOverlay(ovl, overlayname, tooltip) {
+	"use strict";
     
 	var prompt  = "Updating " + ovl.overlay_role + " "  + ovl.algorithm;
 
@@ -109,7 +112,7 @@ function updateOverlay(ovl, overlayname, tooltip) {
 }
 
 function createObsOverlay(obs, role, algorithm) {
-	"use strict"
+	"use strict";
 	var httpget_url = 'overlay/create/'  + obs.encoded_key + '/' + role + '/' + algorithm; 
 	
 	var prompt  = "Creating " + role + " "  + algorithm + " overlay";
@@ -124,7 +127,7 @@ function createObsOverlay(obs, role, algorithm) {
 
 
 function displayObsOverlay(obs, role, algorithm) { //called from base-maps.html
-	"use strict"
+	"use strict";
     var ovl = findOverlay(obs, role, algorithm);
     
     if (ovl !== null) {
@@ -150,20 +153,20 @@ function displayObsOverlay(obs, role, algorithm) { //called from base-maps.html
 }
 	
 function displayOverlay(ovl, overlayname, tooltip) { //overlay is current so add it to the map.
-	"use strict"
+	"use strict";
     if (ovl.overlay_role == 'latest') 
-    	createImageOverlay("show", map_under_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'red');
+    	createImageOverlay("show", map_over_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'red');
     else if (ovl.overlay_role == 'prior') {	
       	createImageOverlay("show",  map_rhs,        ovl.map_id,  ovl.token, overlayname, tooltip,  'green'  );
-    	createImageOverlay("wipe",   map_over_lhs, ovl.map_id,  ovl.token, overlayname, tooltip,  'brown'  );
+    	createImageOverlay("wipe",   map_under_lhs, ovl.map_id,  ovl.token, overlayname, tooltip,  'brown'  );
     }
     else 
-    	createImageOverlay("show", map_under_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'blue');
-};
+    	createImageOverlay("show", map_over_lhs, ovl.map_id,  ovl.token, overlayname, tooltip, 'blue');
+}
  
 
 function layerslider_callback(layer_id, val) {
-	"use strict"
+	"use strict";
     console.log("layerslider_callback : " + layer_id + ", " + val);
     
     var id = findOverlayLayer(layer_id, overlayMaps);
@@ -181,6 +184,8 @@ function layerslider_callback(layer_id, val) {
 
 function createImageOverlay(operation, google_map, map_id,  token, overlay_name, tooltip, color)
 {
+	"use strict";
+
     if((operation == 'show')||(operation == 'wipe'))
     {
     	//truncate string to chars before the '@', or max 30 if no '@'
@@ -215,7 +220,7 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
              
              if (pendingUrls.length === 1) {   
                   $(overlay).trigger("overlay-busy");   
-             };
+             }
              return url;
            },
            tileSize: new google.maps.Size(256, 256)
@@ -276,7 +281,7 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
 	                var progress = $('#tile-progress');
 	                progress.attr('max', maxPendingUrls);
 	                progress.width(maxPendingUrls);
-	                var waiting = maxPendingUrls-pendingUrls.length
+	                var waiting = maxPendingUrls-pendingUrls.length;
 	                progress.attr('value', waiting);
 	                $('#tile-progress-label').html("Loaded " + waiting.toString() + " of " + maxPendingUrls.toString() + " tiles");
                 }
@@ -306,18 +311,16 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
         google.maps.event.addListenerOnce(google_map, 'idle', function(){
             console.log("map is idle");
         });
-        
+        return overlay;      
     }
     else 
     {
-        removeFromMap(google_map, slider_name.substring(5) );
-    }
-    return overlay;
+        return removeFromMap(google_map, slider_name.substring(5) );
+    }  
 }
 
-
 function findOverlayLayer(layer_id, overlayMaps){
-	"use strict"
+	"use strict";
     for (var i=0; i < overlayMaps.length; i++) {
         if (overlayMaps[i].name == layer_id)
             return i;
@@ -325,20 +328,17 @@ function findOverlayLayer(layer_id, overlayMaps){
     return -1;
 }
 
-
-
-
 function removeFromMap(map, overlay_id)
 {
+	"use strict";
     //TODO: hide slider
     //overlay = overlayMaps.pop(); //needs to be a splice not a pop.
     //overlay.hide();
 }
 
-
 function removeJob(job_id)
 {
-	"use strict"
+	"use strict";
 	var panel = $("#jobs_table");
     //console.log("panel", panel);
     console.log("removeJob id:", job_id);
@@ -349,6 +349,7 @@ function removeJob(job_id)
 
 function updateJob(job_id, text, colour)
 {
+	"use strict";
     var panel = $("#jobs_table");
     var jobid = "#" + job_id;
     console.log("updateJob, id:", jobid);
@@ -365,7 +366,7 @@ function updateJob(job_id, text, colour)
 
 function addJob(text, colour)
 {
-	"use strict"
+	"use strict";
     var newDiv = $("#JobTemplate").clone();
     if (newDiv === 'undefined') {
     	console.log("missing JobTemplate template div in HTML");

@@ -1,15 +1,21 @@
-// functions used by both base-maps and new-area - unlike site.js, this requires googlemaps api.
 /**
+ * Functions common to both new-area and base-maps
+ * unlike site.js, this requires googlemaps api.
+ */
+
+/**
+ * @returns: a promise. 
  * Modify area with new value defined in the patch_ops.
- * http://williamdurand.fr/2014/02/14/please-do-not-patch-like-an-idiot/  
+ * @see: [williamdurand.fr/2014/02/14/please-do-not-patch-like-an-idiot/] for usage.  
  */
 function patch_area(patch_ops, area_url)
 {
-  var patch_ops_string = JSON.stringify(patch_ops);
+	"use strict";
+	var patch_ops_string = JSON.stringify(patch_ops);
 
-  //console.log( "updateAreaDescription() url:", area_json.properties.area_url, ' data:', patch_ops_string);
+	//console.log( "updateAreaDescription() url:", area_json.properties.area_url, ' data:', patch_ops_string);
   
-  return jQuery.ajax({
+	return jQuery.ajax({
 	    type: "POST",
 	    beforeSend: function (request)
         {
@@ -21,6 +27,9 @@ function patch_area(patch_ops, area_url)
 	});
 }
 
+/**
+ * @global: map_options consistent map display controls
+ */
 var map_options = {
 		/* global google */
         mapTypeId: google.maps.MapTypeId.TERRAIN,
@@ -43,9 +52,57 @@ var map_options = {
 		drawingControl : false
     };
 
+/**allow or prevent user to zoom and pan the map 
+ * @param lock: true of false.
+ * useful when drawing finished.
+ * @param map. adds a attribute 'is_mapOptions' to map.
+ */
+function lock_map(map, lock) {
+	var mapOptions = {};
+	if(lock === true) {
+		mapOptions = {
+			    zoomControl: false,
+			    scrollwheel: false,
+			    navigationControl: false,
+			    draggable: false,
+			    disableDoubleClickZoom: true
+		};
+		map.is_locked = true;
+	}
+	else {
+		mapOptions = {
+			    zoomControl: true,
+			    scrollwheel: true,
+			    navigationControl: true,
+			    draggable: true,
+			    disableDoubleClickZoom: false
+		};
+		map.is_locked = false;
+	}
+	return map.setOptions(mapOptions);
+}
+
+/**
+ * prevent user from moving the map
+ * useful when drawing. Does not change the UX button states.
+ * @param map
+ */
+/*
+function is_map_mapOptions(map) {
+
+	var mapOptions = {
+	    zoomControl: false,
+	    scrollwheel: false,
+	    navigationControl: false,
+	    draggable: false,
+	    disableDoubleClickZoom: true,
+	};
+	return map.setOptions(mapOptions);
+}
+*/
+
 
 var areaBoundaryPolygonOptions = {
-  
     strokeColor: '#FFFF00',
     strokeOpacity: 0.5,
     strokeWeight: 2,
@@ -53,12 +110,9 @@ var areaBoundaryPolygonOptions = {
     fillOpacity: 0.05
 };
 
-/**
- * Functions common to both new-area and base-maps
- */
 
 /**
- * @returns a polygonOptions that can be added to a map.
+ * @returns: a polygonOptions that can be added to a map.
  * @usage: var polygon = new google.maps.Polygon(boundaryPolygonOptions(area_json));
  * 	      map.setMap(polygon);
  */
@@ -92,11 +146,14 @@ function boundaryPolygonOptions(input_geosjon) {
     return polygonOptions;
 }
 
+/*
+ * updates the zoom and pan of the map view.
+ */
 function save_view(map, area_json) {
 
 	if (typeof map === 'undefined') {
 		console.log("Save_view() no map");	
-		return;
+		return null;
 	}
 		
 	var url =  area_json.properties.area_url;
@@ -132,7 +189,6 @@ function save_view(map, area_json) {
     	$('#save-boundary-popover').popoverX('hide');
 		addToasterMessage(msg);
 		console.log(msg);
-		//activate_tab("#descr-tab");
     });
     
     request.fail(function (xhr, textStatus, error) {
@@ -146,7 +202,10 @@ function save_view(map, area_json) {
 
 /**
  * return the feature matching the featureName
+ * @param featureName: - the name of a feature
+ * @returns: a feature if found, else null.
  */
+
 function get_area_feature(area_json, featureName) {
 	for (var i=0; i < area_json.features.length; i++) {
 		if (area_json.features[i].properties.name === featureName) {
@@ -156,11 +215,35 @@ function get_area_feature(area_json, featureName) {
 	return null;
 }
 
+/**
+ * hasFeature returns the the first feature found with geometry of the requested featureType.
+ * Used to see if the FeatureCollection contains a boundary or just points.
+ * @param geojson: Must be a FeatureCollection.
+ * @param featureType: string, expected to be one of the GeoJson allowed types such as "Polygon' or "Point"
+ * @returns: null if not found, otherwise the first matching feature found.
+ * @example: map.data.toGeoJson(function(geojson) { if (f=hasFeature(geojson, "Polygon") !== null) {...boundary exists...} }
+ */
+function hasFeature(geojson, featureType) {
+	"use strict";
+	if (geojson.type != 'FeatureCollection') {
+		return null;
+	}
+	for (var i=0; i < geojson.features.length; i++) {
+		if (geojson.features[i].type === 'Feature') {
+			if (geojson.features[i].geometry.type === featureType) {
+				return geojson[i];
+			}
+		}
+	}
+	return null;
+}
 
 /**
- * clone area_json object but only take clean geojson suitable for googlemaps
+ * clone area_json object but only take clean geojson suitable for googlemaps.
+ * removes any unexpected styling
+ * @param: area_json a featureCollection
+ * @returns: a featureCollection
  */
-
 function get_clean_geojson(area_json) {
 	var new_area_json = {
 			"properties" :  area_json.properties,
@@ -183,18 +266,6 @@ function get_clean_geojson(area_json) {
 	return new_area_json;
 }
 
-
-/**
- * @returns returns the area_area in the input text control.
- */
-function get_area_name() {
-	var area_name = $('#area_name').val();
-	if (typeof (area_name) === 'undefined') {
-		area_name = '';
-	}
-	// console.log('area_name: ', area_name);
-	return area_name;
-}
 
 
 /**
@@ -224,4 +295,143 @@ function zoom_mapview(area_json) {
 	return 7;
 }
 
+/**
+ * 
+ */
+/**
+ * Collect the Boundary coordinates from the area and convert to a Google Maps object.
+ * @TODO: Border of AOI does not adjust opacity on both overlays yet.
+*/
+function displayBoundaryHull(map) {
 
+	var boundary_feature = get_area_feature(area_json, "boundary_hull");
+	
+    if ((boundary_feature === null) || (boundary_feature.geometry.coordinates[0].length === 0))
+    {
+    	var latlng = areaLocation(area_json);
+        var marker = new google.maps.Marker({
+    	    position: latlng,
+    	    title: area_json.properties.area_name 
+    	});
+    	// add the marker to the maps
+    	marker.setMap(map);
+    }
+    else {
+	    var coords_arr   =  boundary_feature.geometry.coordinates[0];  // init global.
+	    var border_latlngs = [];
+		
+	    if (coords_arr.length === 0 ) {   
+	    	return null;
+	    }
+	    else {
+	    	
+		    var polygonOptions = boundaryPolygonOptions(boundary_feature);
+		    
+			var areaBoundary = new google.maps.Polygon(polygonOptions); //areaBoundaryPolygonOptions defined in site.js
+		    areaBoundary.name = "boundary hull";
+		    areaBoundary.setMap(map);
+		    return areaBoundary;
+		    
+	    }    
+    }
+}
+
+
+/**
+ * Make the data layer editible or not base on the parameter.
+ * @returns a data layer, or null.
+ */
+function makeDataLayerEditable(data, editable) {
+    try {
+    	var styleOptions = areaBoundaryPolygonOptions;
+    	if (editable) {
+    		styleOptions.editable = true;
+    		styleOptions.draggable = true;
+    		styleOptions.fillOpacity =  0.5;  //more opacity when drawing.
+        	styleOptions.strokeColor =  'yellow';  
+        	styleOptions.fillColor =  'yellow'; 
+    	}
+    	else {
+    		styleOptions.editable = false;
+    		styleOptions.draggable = false;
+    		styleOptions.fillOpacity =  0.2;  
+        	styleOptions.strokeColor =  'green';  
+        	styleOptions.fillColor =  'gray'; 
+    	}	
+    	
+    	data.setStyle(styleOptions);
+    
+    	
+    } catch(e){
+    	var msg = 'makeDataLayerEditable exception: ' + e;
+    	console.log(msg);
+    	return null;
+    }
+}
+
+/**
+ * Draw the boundary provided by user as a google.map.data layer.
+ * @TODO: Data Layers don't adjust opacity on both overlays yet.
+ * @returns a data layer, or null.
+ */
+function createDataLayer(map, editable) {
+    try {
+  
+       	makeDataLayerEditable(map.data, editable);
+        map.data.setOptions({
+    		drawingControl: false,
+    		drawingMode: null,
+    		controls : null,
+    		position: google.maps.ControlPosition.TOP_CENTER,
+    	});
+    	
+    	var newData = new google.maps.Data({
+    		map : map,
+    		style : map.data.getStyle(),
+    		controls : null,
+    		drawingMode: null
+    	});
+    	makeDataLayerEditable(newData, editable);
+        return newData;
+
+    } catch(e){
+    	var msg = 'createDataLayer exception: ' + e;
+    	console.log(msg);
+    	return null;
+    }
+}
+
+
+
+/**
+ * Draws the featureCollection on map with a data layer
+ * @param map: a google map with a data layer.
+ * @param geojson: A FeatureCollection
+ * @returns: The imported features are returned or null if maps throws an exception if the GeoJSON could not be imported.
+ */
+function displayFeatureCollection(map, geojson) {
+    try {
+    	if (typeof map.data === 'undefined') {
+    		console.log('displayFeatureCollection requires data layer ');
+    		return;
+    	}
+    	if (geojson.type != 'FeatureCollection') { /* other types Feature and Geometry could be allowed */
+    		return null;
+    	}
+    	var length = geojson.type;
+    	if (length === 0) {
+    		return null;
+    	}
+    	
+    	try {
+    		var newFeatures = map.data.addGeoJson(geojson);
+            return newFeatures;
+    	} catch (error) {
+    		console.log("could not add geojson to map: " + error.message);
+    		return null;
+    	}    		    
+    } catch(e) {
+    	console.log('displayFeatureCollection coukld not add Feature Collection : ' + e + ', geojson: ' + geojson);
+    	return null;
+    }
+}

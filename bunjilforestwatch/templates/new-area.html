@@ -440,8 +440,8 @@
 														</span> <span class='instruction draw-second'> Click on the next point. </span> <span class='instruction'
 																id='draw-finish'> When you return to the start, click on the first point.<br /> Click Clear to start
 																again. <br />
-														</span> <span class='instruction edit-shape'> Adjust the shape by dragging the small circles.<br /> Click <b>Save
-																		Boundary </b> or <i>Clear</i> to start again. <br /></span>
+														</span> <span class='instruction edit-shape'> Adjust the shape by dragging the small circles.<br /> Click <b>
+														      Save Boundary </b> or <i>Clear</i> to start again. <br /></span>
 												</div>
 												<div class="panel-body collapse importing">
 														<div class="framing-help geojson">
@@ -467,16 +467,16 @@
 												#}
 												<div class="panel-footer save-ctrls">
 														<div class="row save-ctrls">
-																<div class='col-md-4'>
+																<div class='col-md-2'>
 																		<button class="btn btn-primary" id="save-boundary" name="save-boundary">
-																				Save Boundary<span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
+																				Save Boundary <span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
 																		</button>
 
 																		<div class='popover popover-info popover-md hidden-panel' data-placement='right'
 																				data-toggle="popover-x" id="save-boundary-popover">
 																				<div class="arrow" id='save-boundary-popover1'></div>
 																				<div class="popover-content">
-																						Saving Boundary<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
+																						Saving<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
 																				</div>
 
 																				<div class="popover-footer">
@@ -484,11 +484,27 @@
 																				</div>
 																		</div>
 																</div>
-																<div class='col-md-3'>
-																		<button class="btn btn-default" id="clear-boundary" name="cancel-boundary">
-																				Clear <span class="glyphicon glyphicon-remove-sign" style='color: #FA7063'></span>
+                                                                <div class='col-md-2'>
+                                                                        <button class="btn btn-default" id="undo-edits" name="undo-edits">
+                                                                                Undo<span class="glyphicon glyphicon-remove-sign" style='color: #CCCCCC'></span>
+                                                                        </button>
+                                                                </div>
+																<div class='col-md-2'>
+																		<button class="btn btn-default" id="clear-boundary" name="clear-boundary">
+																				Clear <span class="glyphicon glyphicon glyphicon-trash" style='color: #FA7063'></span>
 																		</button>
 																</div>
+                                                                <div class='col-md-2'>
+                                                                        <button class="btn btn-default" id="import-boundary" name="import-boundary">
+                                                                                Import <span class="glyphicon glyphicon glyphicon-import" style='color: #FA7063'></span>
+                                                                        </button>
+                                                                </div>
+                                                                <div class='col-md-2'>
+                                                                        <button class="btn btn-default" id="change-view" name="change-view">
+                                                                                <span class="locked" ><span class="glyphicon glyphicon-lock locked">Change View</span></span>
+                                                                                <span class="unlocked"><span class="glyphicon unlocked glyphicon-screenshot ">Save View</span></span>
+                                                                        </button>
+                                                                </div>
                                                                 <div class="col-md-1">
 																		 <img id='advanced' src="/static/img/gear-icon.png" alt="Advanced" style="width: 20px; height: 20px">
 																</div>

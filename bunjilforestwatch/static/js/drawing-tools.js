@@ -49,21 +49,12 @@ function DrawingTools(map_p, mapContainer_p, dropContainer_p, geoJsonPanel_p, ge
 	this.geoJsonPanel = geoJsonPanel_p;
 	this.geoJsonInput = geoJsonInput_p;
 	this.downloadLink = downloadLink_p;
-	
-	//map_p.data.setControls([ 'Point', 'Polygon' ]);
-	var styleOptions = areaBoundaryPolygonOptions;
-	styleOptions.editable = true;
-	styleOptions.draggable = true;
-	styleOptions.fillOpacity =  0.5;  //more opacity when drawing.
-	
-	map_p.data.setStyle(styleOptions);
-	map_p.data.setOptions({
-		drawingControl: false,
-		drawingMode: null,
-		controls : null,
-		position: google.maps.ControlPosition.TOP_CENTER,
-	});
-	
+		
+    createDataLayer(this.map, true); // not editable 
+    if (displayFeatureCollection(this.map, area_json.boundary_geojson) !== null) {
+    	console.log("error displaying existing boundaries");
+    }
+    
 	this.map = map_p;
 	
 	this.map.mode = "none";
@@ -186,7 +177,9 @@ DrawingTools.prototype.drawPolygon  = function (stop_handler) {
 	
 	//this.removePolygon();
 	/* global areaBoundaryPolygonOptions */ 
-	
+    createDataLayer(this.map, editable);
+    //displayFeatureCollection(map_under_lhs, area_json.boundary_geojson) !== null) {
+	/*
 	var newData = new google.maps.Data({
 		map : this.map,
 		style : this.map.data.getStyle(),
@@ -198,6 +191,7 @@ DrawingTools.prototype.drawPolygon  = function (stop_handler) {
 	});
 	this.map.data.setMap(null);
 	this.map.data = newData;
+	*/
 	this.bindDataLayerListeners();
 	this.setGeoJsonValidity(true, null);
 	//this.map.setOptions({
@@ -277,13 +271,17 @@ DrawingTools.prototype.refreshDataFromGeoJson = function () {
 	"use strict";
 	
 	var map = this.map;
-	
+    var newData = createDataLayer(this.map, true);
+
+    /*
 	var newData = new google.maps.Data({
 		map : map,
 		style : map.data.getStyle(),
 		controls : null,
+		editable : true,
 		drawingMode: null
 	});
+	*/
 	var editor = initialize_map.editor;
 	if (typeof editor !== 'undefined') {
 		var value = editor.getValue();

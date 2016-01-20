@@ -16,19 +16,19 @@ var area_json_str;
 var lhs_offset_top =0;
 var lhs_offset_left =0;
 var drawingManager = null;
-var initial_dragger = "90%";
+var initial_dragger = "10%";
 /* var cellarray = null; not a global*/
 
 
-function drawLandsatCells(cellarray) {
+function drawLandsatCells(cellarray, map) {
 	"use strict";
 	/* global createLandsatGridOverlay */
 	/* global map_over_lhs */
 	/* global layerslider_callback */
     /* global addLayer */
 
-    createLandsatGridOverlay(map_over_lhs, 0.5, true, cellarray);
-    addLayer( map_over_lhs.landsatGridOverlay.name,
+    createLandsatGridOverlay(map, 0.5, true, cellarray);
+    addLayer(map.landsatGridOverlay.name,
             'Landsat Cells',
             'gray',  
             75, 
@@ -89,134 +89,11 @@ function complete_report(drawingManager, event) {
  */
 
 function areaLocation(area_json) {
+	"use strict"
 	var area_location_feature = get_area_feature(area_json, "area_location");
 	var area_location = area_location_feature.geometry.coordinates;  // init global.
     var latlng = new google.maps.LatLng(area_location[1], area_location[0]);
     return latlng;
-}
-
-
-/**
- * Collect the Boundary coordinates from the area and convert to a Google Maps object.
- * @TODO: Border of AOI does not adjust opacity on both overlays yet.
-*/
-function displayAreaBoundary() {
-
-	var boundary_feature = get_area_feature(area_json, "boundary_hull");
-
-    if ((boundary_feature === null) || (boundary_feature.geometry.coordinates[0].length === 0))
-    {
-    	var latlng = areaLocation(area_json);
-        var marker_under_lhs = new google.maps.Marker({
-    	    position: latlng,
-    	    title: area_json.properties.area_name 
-    	});
-        var marker_over_lhs = new google.maps.Marker({
-    	    position: latlng,
-    	    title: area_json.properties.area_name 
-    	});
-    	// add the marker to the maps
-    	marker_under_lhs.setMap(map_under_lhs);
-    	marker_over_lhs.setMap(map_over_lhs);
-    }
-    else {
-    	
-	    var coords_arr   =  boundary_feature.geometry.coordinates[0];  // init global.
-	    var border_latlngs = [];
-		
-	    if  (coords_arr.length === 0 ) {   
-	    	return;
-	    }
-	    else {
-	    	
-		    var polygonOptions = boundaryPolygonOptions(boundary_feature);
-		    
-			var areaBoundary_over_lhs = new google.maps.Polygon(polygonOptions); //areaBoundaryPolygonOptions defined in site.js
-		    var areaBoundary_under_lhs= new google.maps.Polygon(polygonOptions);
-		    var areaBoundary_rhs = new google.maps.Polygon(polygonOptions);
-		    areaBoundary_over_lhs.setMap(map_over_lhs);
-		    //areaBoundary_under_lhs.setMap(map_under_lhs);
-		    areaBoundary_rhs.setMap(map_rhs);
-		
-		    areaBoundary_over_lhs.name = "boundary";
-		    
-		    /* global overlayMaps */ 
-		    overlayMaps.push(areaBoundary_over_lhs);
-		    
-		    /* global addLayer */
-		    addLayer(areaBoundary_over_lhs.name, 
-		    		area_json.properties.area_name + " Border", 
-		    		"yellow",  
-		    		50, 
-		    		"Boundary of Area " + area_json.properties.area_name, 
-		    		layerslider_callback);
-	    }  
-    }    
-
-    
-    // get the user provided geometry - risky
-    
-    try {
-    	var boundary_geojson = area_json.boundary_geojson;
-    	if (boundary_geojson.type != 'FeatureCollection') {
-    		return;
-    	}
-    	var length = boundary_geojson['type'];
-    	if (length === 0) {
-    		return;
-    	}
-    } catch(e){
-    	var msg = 'boundary_geojson not a Feature Collection in area_json ' + e + ', data: ' + boundary_geojson;
-    	console.log(msg);
-    	addToasterMessage('alert-danger', msg);
-    	return;
-    }
-
-	var map = map_over_lhs;
-	var styleOptions = areaBoundaryPolygonOptions;
-	styleOptions.editable = false;
-	styleOptions.draggable = false;
-	styleOptions.fillOpacity =  0.5;  //more opacity when drawing.
-	styleOptions.strokeColor =  'green';  //more opacity when drawing.
-	
-	map.data.setStyle(styleOptions);
-	map.data.setOptions({
-		drawingControl: false,
-		drawingMode: null,
-		controls : null,
-		position: google.maps.ControlPosition.TOP_CENTER,
-	});
-	var newData = new google.maps.Data({
-		map : map,
-		style : map.data.getStyle(),
-		controls : null,
-		drawingMode: null
-	});
-
-	try {
-		//var userObject = JSON.parse(boundary_geojson);
-		//var newFeatures = newData.addGeoJson(boundary_geojson);
-	} catch (error) {
-		//newData.setMap(null);
-		console.log("could not add boundary_geojson to map: " + error.message);
-		return;
-	}
-	// No error means GeoJSON was valid!
-
-	map.data.setMap(null);
-	var newFeatures = newData.addGeoJson(boundary_geojson)
-	map.data = newData;
-		    
-		    /* global overlayMaps */ 
-	overlayMaps.push(newData);
-		    
-    /* global addLayer */
-    addLayer("geometry", 
-    		area_json.properties.area_name + " Geometry", 
-    		"green",  
-    		50, 
-    		"Geometryof Area " + area_json.properties.area_name, 
-    		layerslider_callback);
 }
 
 
@@ -238,13 +115,13 @@ function initialize() {
     var map_zoom =   zoom_mapview(area_json);
 	
     /* global map_options */ 
-    map_options.mapTypeId = google.maps.MapTypeId.TERRAIN;
+    map_options.mapTypeId = google.maps.MapTypeId.HYBRID;
     map_options.center = map_center;
     map_options.zoom = map_zoom;
     map_under_lhs    = new google.maps.Map(document.getElementById("map-left-prior"), map_options);
     map_rhs          = new google.maps.Map(document.getElementById("map-right"), map_options);
 
-    map_options.mapTypeId = google.maps.MapTypeId.HYBRID;
+    map_options.mapTypeId = google.maps.MapTypeId.TERRAIN;
     map_over_lhs     = new google.maps.Map(document.getElementById("map-left-latest"), map_options);
     
     /* global map_under_lhs */ 
@@ -253,7 +130,7 @@ function initialize() {
     /* global single_map*/ 
     
     if (single_map === true){
-        initial_dragger = "10%";
+        initial_dragger = "95%";
         $('#map-right-c').hide();
         $('#map-left-c').removeClass('col-md-5');
         $('#map-left-c').addClass('col-md-10');
@@ -351,8 +228,31 @@ function initialize() {
             //map_rhs.setCenter(map_center);
     });
 
-    displayAreaBoundary(); // draw area's boundary or area_location marker
-     
+    var areaBoundary = displayBoundaryHull(map_under_lhs, area_json); // draw area's boundary or area_location marker
+    /* global overlayMaps */ 
+    overlayMaps.push(areaBoundary);
+    /* global addLayer */
+    addLayer(areaBoundary.name, 
+    		area_json.properties.area_name + " Border", 
+    		"yellow", 
+    		50, 
+    		"Boundary of Area " + area_json.properties.area_name, 
+    		layerslider_callback);
+
+    // draw area's boundary or area_location marker
+    var newData = createDataLayer(map_under_lhs, false); // not editable 
+    if (displayFeatureCollection(map_under_lhs, area_json.boundary_geojson) != null) {
+	    
+	    /* global overlayMaps */ 
+		overlayMaps.push(newData);
+	    /* global addLayer */
+	    addLayer("geometry", 
+	    		area_json.properties.area_name + " Geometry", 
+	    		"green",  
+	    		50, 
+	    		"Geometry of Area " + area_json.properties.area_name, 
+	    		layerslider_callback);
+    }
     /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
      *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
      */ 
@@ -407,7 +307,8 @@ function initialize() {
 	                var plurals_mon = (getCellsResult.monitored_count === 1)? ' cell selected': ' cells selected';
 	                /* global updateJob */
 	                updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area. " + getCellsResult.monitored_count + plurals_mon + '</p>', 'black');
-	                drawLandsatCells(cellarray);
+	                drawLandsatCells(cellarray, map_under_lhs);
+	                drawLandsatCells(cellarray, map_over_lhs);
 	            }            
 	            else
 	            {
@@ -426,7 +327,8 @@ function initialize() {
     else
     {
         //server passed an existing cellarray -  don't wait for ajax - just display it.
-        drawLandsatCells(cellarray);
+        drawLandsatCells(cellarray, map_over_lhs);
+        drawLandsatCells(cellarray, map_under_lhs);
     }
     
     var observations = jQuery.parseJSON($('#obslist').text());
@@ -489,13 +391,13 @@ function initialize() {
    
     $('#close-popover-sign-in').click(function(){
         $('#sign-in-popover').popoverX('hide');
-     });
-   
+    });
+    
     $('#do-popover-sign-in').click(function(){
     	console.log("do sign-in");
         $('#sign-in-popover').popoverX('hide');
     	window.location.href = "/login/google";
-     });
+    });
     
     //Change the text in the drop-down button when a selection is changed.
     $('#algorithm-visual').click(function(e){
@@ -713,11 +615,6 @@ function initialize() {
 
 google.maps.event.addDomListener(window, 'load', initialize); 
 
-/**
- * action/<action> can be 'overlay' or 'download' or image.
- * @todo: satellite is 'l8' or 'l7' but should change to collection name.
- * @todo: latest is still a global var....
- */
 
 function httpgetActionUrl(action)
 {

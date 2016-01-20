@@ -129,6 +129,15 @@ hr {
     font-weight: bold;
 }
 
+ .locked {
+    color: #FA7063 !important;
+}
+
+.unlocked {
+    color: #59DFA6 !important;
+    display: none;
+};
+
 /* area_name displayed in collapsed accordion title */
 .collapsed-content-info {
 	font-style: italic;

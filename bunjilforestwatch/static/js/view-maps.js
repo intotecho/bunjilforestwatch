@@ -11,26 +11,6 @@ var latest = 0;  //latest - 0
 var overlayMaps = [];
 
 
-/* not used
-function setActionUrl(action)
-{
-   // action can be 'overlay' or 'download' strip the old action and append the new action.
-   var url = window.location.href
-   if (url.indexOf("/overlay") !=-1) {
-      url = url.substring(0, url.indexOf("/overlay")); //strip the last action.
-   }
-   if (url.indexOf("/download") !=-1) {
-       url = url.substring(0, url.indexOf("/download")); //strip the last action.
-   }
-   if (url.indexOf("/action") !=-1) {
-          url = url.substring(0, url.indexOf("/action")); //strip the last action.
-    }
-
-   return url + '/action/' + action + '/' + satellite + '/' + algorithm + '/' + latest;
-}
-*/
-
-
 function jsonStringifySelectedCell(landsat_cell)
 {
    var ul=[landsat_cell.selectedLAT_UL, landsat_cell.selectedLON_UL]; //TODO: move these from global to cell 
@@ -98,7 +78,6 @@ $('#instructions').popoverX({
     "If you see a distrurbance, make a report. Otherwise click 'No change' to close your task<br><br>" +
     "Click 'about' in the menu for more info</p>"
     });
-
 
 
 var monitored_cells_are = 
