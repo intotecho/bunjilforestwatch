@@ -1,8 +1,8 @@
 html {
-    overflow-y: scroll; /* show scroll bar */
+   /*  overflow-y: scroll; /* show scroll bar */
     width: 100%;
     margin: 0;
-    padding: 0;
+    padding: 0; 
 }
 
 body {
@@ -12,6 +12,7 @@ body {
     -moz-background-size: cover;
     -o-background-size: cover;
     background-size: cover;
+    overflow-y: scroll;
 }
 
 .btn-form-ctrl {
@@ -64,7 +65,7 @@ body {
     font-size: 13px;
 }
 
-.draw-only,  .drop-only,  .save-only,  .save-ctrls, .importing,  .drawborder, .selected{
+.draw-only,  .drop-only,  .save-only,  .save-ctrls, .importing,  .drawborder, .selected, .moving-map{
 	display: none;
  }
 
@@ -130,12 +131,17 @@ hr {
 }
 
  .locked {
-    color: #FA7063 !important;
+}
+
+.locked-color {
+    color: #BA3D32 !important;
 }
 
 .unlocked {
-    color: #59DFA6 !important;
-    display: none;
+	display:none;
+}
+.unlocked-color {
+    color: #237251 !important;
 };
 
 /* area_name displayed in collapsed accordion title */
@@ -477,8 +483,8 @@ span.CodeMirror-matchhighlight {
 .wizard-container {
     position: relative;
     top: 0px;
-    left:  0px;
-    z-index: 2000;
+    left:  50px;
+    z-index: 000;
     padding-top: 0px;
     padding-left: 0px;
     padding-right: 0px;
@@ -520,12 +526,16 @@ span.CodeMirror-matchhighlight {
 
 #new_area_form  .panel-body {
     padding: 0 5px; /* tighter */
-    /* background-color: hsla(0, 100%, 100%, 0.37); lighter inside collapsibles */
     background-color: hsla(193, 100%, 99%, 0.94);
 }
 
 #new_area_form   .locate-panel {
     min-height: 60px;
     padding: 0 5px 10px 5px; /* tighter */
-    /*background-color: hsla(0, 100%, 100%, 0.37); lighter inside collapsibles */
+}
+
+.boundary-instructions {
+	min-height: 100px; /*fix min so map doesn't move up and down.*/
+    max-height: 100px; /*fix min so map doesn't move up and down. */
+	overflow-y: auto; /* show scroll bar if  too much content.*/
 }

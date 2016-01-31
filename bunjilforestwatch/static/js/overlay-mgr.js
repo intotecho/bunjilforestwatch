@@ -1,6 +1,6 @@
 
 /*******************************************************************************
- * Copyright (c) 2014 Chris Goodman GPLv2 Creative Commons License to share
+ * Copyright (c) 2014 Chris Goodman GPLv2 Creative Commons License
  * See also https://developers.google.com/maps/documentation/javascript/examples/overlay-hideshow
  ******************************************************************************/
 
@@ -12,17 +12,21 @@ var numjobs = 0;
 var pendingUrls = [];
 var maxPendingUrls = 0;
 
-function createLandsatGridOverlay(map, opacity, clickable, cellarray) { 
+/**
+ * returns a new map.landsatGridOverlay based on the cellarray 
+ * does not create a new overlay if map already  has one. (see deleteLandsatGridOverlay)
+ */
+function createLandsatGridOverlay(map, opacity, clickable, cellarray, layer_id) { 
 	"use strict";
-    if ((map.landsatGridOverlay === undefined) || (map.landsatGridOverlay === null)){
+    if ((typeof map.landsatGridOverlay === 'undefined') || (map.landsatGridOverlay === null)){
         var landsatGridOverlay = new LandsatGridOverlay(map, opacity, clickable, cellarray);
-        landsatGridOverlay.name = "grid" ;
+        landsatGridOverlay.name = layer_id;
         landsatGridOverlay.initialize();       
         map.landsatGridOverlay = landsatGridOverlay;
         overlayMaps.push(landsatGridOverlay);
         update_cell_panel(landsatGridOverlay);
-        
     }
+    return map.landsatGridOverlay;
 }
 
 function deleteLandsatGridOverlay(map, opacity, clickable, cellarray) { 

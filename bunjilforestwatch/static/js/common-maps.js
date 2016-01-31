@@ -1,5 +1,5 @@
 /**
- * Functions common to both new-area and base-maps
+ * Functions common to both new-area and base-maps.
  * unlike site.js, this requires googlemaps api.
  */
 
@@ -231,7 +231,7 @@ function hasFeature(geojson, featureType) {
 	for (var i=0; i < geojson.features.length; i++) {
 		if (geojson.features[i].type === 'Feature') {
 			if (geojson.features[i].geometry.type === featureType) {
-				return geojson[i];
+				return geojson.features[i];
 			}
 		}
 	}
@@ -315,6 +315,8 @@ function displayBoundaryHull(map) {
     	});
     	// add the marker to the maps
     	marker.setMap(map);
+    	marker.name = 'location';
+    	return marker;
     }
     else {
 	    var coords_arr   =  boundary_feature.geometry.coordinates[0];  // init global.
@@ -354,6 +356,7 @@ function makeDataLayerEditable(data, editable) {
     	else {
     		styleOptions.editable = false;
     		styleOptions.draggable = false;
+    		
     		styleOptions.fillOpacity =  0.2;  
         	styleOptions.strokeColor =  'green';  
         	styleOptions.fillColor =  'gray'; 
@@ -377,19 +380,20 @@ function makeDataLayerEditable(data, editable) {
 function createDataLayer(map, editable) {
     try {
   
-       	makeDataLayerEditable(map.data, editable);
-        map.data.setOptions({
-    		drawingControl: false,
-    		drawingMode: null,
-    		controls : null,
-    		position: google.maps.ControlPosition.TOP_CENTER,
-    	});
+       	//makeDataLayerEditable(map.data, editable);
     	
     	var newData = new google.maps.Data({
     		map : map,
     		style : map.data.getStyle(),
     		controls : null,
     		drawingMode: null
+    	});
+
+    	newData.setOptions({
+    		drawingControl: false,
+    		drawingMode: null,
+    		controls : null,
+    		position: google.maps.ControlPosition.TOP_CENTER,
     	});
     	makeDataLayerEditable(newData, editable);
         return newData;

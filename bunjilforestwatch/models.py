@@ -235,6 +235,23 @@ class AreaOfInterest(ndb.Model):
 	threats = ndb.TextProperty()	  # text type is longer but is not indexed.
 	type = ndb.StringProperty()
 	wiki = ndb.StringProperty() # beware max url 500 - like to a story about this area.
+	
+	"""
+	WDPA Attributes 
+	"""
+	gov_type = ndb.StringProperty() #'Federal';'national ministry or agency', 'Sub-national ministry or agency', 'Government delegated management', 'Transboundary governance', 'Collaborative governance', 'Joint governance', 'Individual landowners', 'Non-profit organisations', 'For-profit organizations', 'Indigenous peoples', 'Community conserved areas' , 'Not Reported'.
+	orig_name = ndb.StringProperty() # name in original language
+	desig_type  = ndb.StringProperty() # Allowed values: National, Regional, International.
+	desig = ndb.StringProperty() #Name of designation.
+	IUCNcategory = ndb.StringProperty() # Allowed values:Ia, Ib, II, III, IV, V, VI, Not Applicable, Not Applied, Not Reported. https://en.wikipedia.org/wiki/IUCN_protected_area_categories
+	""" 
+	Designation in English. 
+	Allowed values for "international-level designations: Ramsar Site, Wetland of International Importance; UNESCO-MAB Biosphere Reserve ; World Heritage Site. 
+	Allowed values for regional-level designations: Baltic Sea Protected Area (HELCOM) ; Cartagena Special Protected Area ; Marine Protected Area (CCAMLR) ; Marine Protected Area (OSPAR) ; Site of Community Importance (Habitats Directive) ; Special Protection Area (Habitats Directive) ; Specially Protected Area of Mediterranean Importance (Barcelona Convention). 
+	No fixed values for protected areas designated at a national level
+	"""
+	manag_auth = ndb.StringProperty()
+	owner_type = ndb.StringProperty() #State, Communal, Individual landowners, For-profit organizations, Non-profit organizations, Joint ownership, Multiple ownership, Contested, Not Reported.
 
 	"""
 	GEOMETRY

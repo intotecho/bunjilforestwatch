@@ -3,15 +3,17 @@ Fix from http://stackoverflow.com/questions/16708324/google-maps-infowindow-clos
 TODO: Should test to see if this is still required**/
 
 html {
+	/*
     overflow-y: scroll; /* show scroll bar */
     width: 100%;
     margin: 0;
-    padding: 0;
+    padding: 0; */
 }
 
 body {
+	/*
     margin: 0;
-    padding: 63px 0px 0px 0px;
+    padding: 63px 0px 0px 0px; */
 /*    font-family: 'Verdana', "sans-serif !important"; */
     font-size: 14px;
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
@@ -68,6 +70,23 @@ a[class ="popup"] {
 .panel-heading .panel-title:hover {
      cursor: pointer;
      text-decoration:underline;
+}
+
+.popover.in {
+  opacity: 0.9;
+  filter: alpha(opacity=90);
+} 
+
+.popover-title {
+	color: #234196;
+    font-size: 15px;
+    font-weight: 700pw
+}
+
+.popover-content {
+     color: hsla(227, 10%, 55%, 1);
+    font-size: 10px;
+   /*background-color: #C6E0C6; */
 }
 
 .space-behind-form {

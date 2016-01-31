@@ -456,17 +456,18 @@
 				<div></div>
 				{% endblock content %} {%block layer_template %}
 				<!--TEMPLATE DIV  does not display till added by addLayer() call. See layerslider.js ?-->
-				<div class="row" id='LayerTemplate' style='display: none'>
+				<div id="layer-template" class=" row" style='display: none'>
 						<div class="col-xs-1 col-sm-1 col-md-1">
-								<input id='tcheckbox_id' type="checkbox" class="panel-tight checklabel" name="layer_enable" value="On" checked="true" />
+								<input type="checkbox" class="panel-tight checklabel" name="layer_enable" value="On" checked='checked'  data-toggle="tooltip"
+                                title="check tooltip"/>
 						</div>
 
 						<div class="col-xs-3 col-sm-3 col-md-3">
-								<div id='tslider_id' class="slider"></div>
+								<div class="slider slider-div"></div>
 						</div>
-						<div id='tlabel_id' class="panel-tight layerlabel col-xs-5 col-sm-5 col-md-5" data-toggle="tooltip"
+						<div class=" layerlabel panel-tightcol-xs-5 col-sm-5 col-md-5" data-toggle="tooltip"
 								title="template tooltip">
-								<small>template label</small>
+								<small>template_label</small>
 						</div>
 				</div>
 				{% endblock layer_template %} {%block jobs_template %}

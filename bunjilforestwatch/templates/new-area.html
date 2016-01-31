@@ -313,7 +313,7 @@
 																				title="Change map's center view">
 																				<i></i>Move Map<i></i><span class="glyphicon glyphicon glyphicon-hand-up" style='color: #FA7063'></span>
 																		</button>
-																		<button class="btn btn-small save-only" data-toggle="tooltip" id="clear-map" name="clear-map"
+																		<button class="btn btn-small save-only clear-map" data-toggle="tooltip" name="clear-map"
 																				title="Clears marker to try again">
 																				Clear <span class="glyphicon glyphicon glyphicon-erase" style='color: #FA7063'></span>
 																		</button>
@@ -336,178 +336,187 @@
 						#}
 
 						<div class="tab-pane fade {% if edit_boundary %} in active {%endif %}" id="boundary-tab-body">
-								<div class='form-legend'>Add Boundary</div>
+								<div class='form-legend'>Area Boundary</div>
 								<div class="panel-group">
 										{#
 										<!-- SET DEFAULT VIEW -->
-										#}
-										<div class="panel panel-collapse in collapse">
-												<div class="panel-heading panel-title" data-toggle="collapse" data-target=".adjust-view">Change Default View</div>
-
-												<div class="panel-body adjust-view">
-														<div class='framing-sub-help'>This sets the initial map center and zoom to view your area.</div>
-														<div class='framing-sub-help'>
-																<a class="popup" data-target='#drag-help-popover' data-toggle="popover-x" data-trigger='click' id="drag-help">Drag</a>
-																the map below until your area is at the center of the map. <br /> <a class="popup" data-placement="right"
-																		data-target='#zoom-help-popover' data-toggle="popover-x" data-trigger='click' id="zoom-help">Zoom</a> in so
-																your area covers a large part of the map or <br /> Zoom out if the whole area can't be seen on the map.<br />
-																<i>Save View</i> will save this as the default view for your area.
-														</div>
-														<br />
-												</div>
-												<div class="panel-footer adjust-view">
-														<div class='row'>
-																<div class='col-md-1'></div>
-																<div class='col-md-10'>
-																		<button class="btn btn-primary btn-form-ctrl" id="save-view" accesskey="v">
-																				<b>Save View</b>
-																		</button>
-																</div>
-																<br />
-														</div>
-												</div>
-
-										</div>
-
-										{#
+										#} {#
 										<!-- BOUNDARY INPUT METHOD-->
 										#}
 										<div class="panel">
 												<div class="panel-heading" data-toggle="collapse" data-target=".select-method">
 														<div class='panel-title'>Define the Boundary of your area</div>
-														<div class='framing-sub-help select-method'>
-																Your area needs a boundary to define its size and shape. <br /> A boundary ensures all overlapping satelite
-																images are checked and let's volunteers know where the borders are.<br />
-														</div>
 												</div>
+												<div class='panel-body framing-help select-method'>
+														Your area needs a boundary to define its size and shape. <br /> A boundary ensures all overlapping satelite
+														images are checked and let's volunteers know where the borders are.<br />
+												</div>
+										</div>
+								</div>
+								<div class="panel">
 
-												{#
-												<!-- { % DRAW OR IMPORT % } -->
-												#}
-												<div class='panel-body collapsible in select-method'>
-														<div class='framing-help'>
-																Draw a boundary around your area or import it from external data?<br />
-														</div>
+										<div class="panel-footer save-ctrls">
+												<div class="row save-ctrls">
+														<div class='col-md-2'>
+																<button class="btn btn-primary" id="save-boundary" name="save-boundary">
+																		Save Boundary <span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
+																</button>
 
-														<div class="row form-group">
-																<div class="col-md-1"></div>
-																<div class="col-md-6">
-																		<div class="radio">
-																				<label for="private"><input accesskey="d" name="opt-boundary" type="radio" value="drawborder">
-																						Draw boundary now </label>
+																<div class='popover popover-info popover-md hidden-panel' data-placement='right' data-toggle="popover-x"
+																		id="save-boundary-popover">
+																		<div class="arrow" id='save-boundary-popover1'></div>
+																		<div class="popover-content">
+																				Saving<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
 																		</div>
-																		<span class="help-block"> Draw a shape around your area on the map. <br />If you're not sure of the
-																				exact boundary, just draw an approximate one.
-																		</span>
-																		<div class="radio">
-																				<label for="public"><input accesskey="i" name="opt-boundary" type="radio" value="import">
-																						Import Boundary</label>
+																		<div class="popover-footer">
+																				<button class="btn btn-sm btn-default" id='close-dialog-save-boundary'>OK</button>
 																		</div>
-																		<span class="help-block">Import boundary from external data. </span>
 																</div>
 														</div>
+														<div class='col-md-4'>
+																<button class="btn btn-default popper" data-toggle="popover" data-trigger="hover" data-title="Undo Edits"
+																		id="undo-edits">
+																		Undo<span class="glyphicon glyphicon-remove-sign" style='color: #888888'></span>
+																</button>
+																<div class="popper-content hide">Cancels all the changes since the last save.</div>
+
+																<button class="btn btn-default popper clear-map" data-toggle="popover" data-trigger="hover" data-title="Clears Boundary">
+																		Clear <span class="glyphicon glyphicon glyphicon-trash" style='color: #FA7063'></span>
+																</button>
+																<div class="popper-content hide">
+																		<div class="framing-help">Clears all Boundary Data for the area. You should then draw or import a new
+																				boundary.</div>
+																</div>
+																<button class="btn btn-default popper" data-toggle="popover" data-trigger="hover" id="import-boundary"
+																		data-title='Import Boundary'>
+																		Import <span class="glyphicon glyphicon glyphicon-import" style='color: #FA7063'></span>
+																</button>
+																<div class='popper-content hide'>Import boundary from a GeoJSON file or Fusion Table.</div>
+														</div>
+														<div class='col-md-4'>
+																<button class="btn btn-default popper" id="change-view" data-title='Zoom and Pan Map ' data-toggle="popover"
+																		data-trigger="hover">
+																		<span class="locked"><span class="glyphicon glyphicon-screenshot locked-color"> Change View</span></span> <span
+																				class="unlocked"><span class="glyphicon unlocked glyphicon-lock unlocked-color"> Lock View</span></span>
+																</button>
+																<div class='popper-content hide'>
+																		To zoom in more <b>Double Click</b> near your area on the map.<br> Or use the zoom slider on the left
+																		side of the map.
+																</div>
+																<button class="btn btn-default popper" id="save-view" data-title='Save This View'>
+																		<span class="glyphicon glyphicon-save">Save View</span>
+																</button>
+																<div class='popper-content hide'>Saves the current map view as the default view when anyone views this
+																		area</div>
+
+														</div>
+														<div class="col-md-1">
+																<img id='advanced' class=' popper' data-title='GeoJson Text Editor' data-toggle="popover" data-trigger="hover"
+																		src="/static/img/gear-icon.png" alt="Advanced" style="width: 20px; height: 20px">
+																<div class='popper-content hide'>Edit and download the GeoJson or drop your geojson file into the editor</div>
+														</div>
+												</div>
+										</div>
+										<div class='panel-body framing-help boundary-instructions'>
+												<span class='draw-boundary'> Draw a boundary around your area or import it from external data?</span>
+												</span> <span class='edit-boundary'> Click and drag the small circles on your area's border to change the shape.<br />
+														Click <b>Undo</b> if you make a mistake or <b>Clear</b> to delete the border and start again .<br /> Click <b>Save
+																Boundary </b> when you are finished making changes.
+												</span>
+												<div class='moving-map'>
+														<a class="popper" data-title='Drag map' data-toggle="popover" data-trigger="hover">Drag</a>
+														<div class='popper-content hide'>
+																To drag the map <b>Click and Hold</b> the mouse over the map.<br> Or use the arrows on the top left corner
+																of the map.
+														</div>
+														the map below until your area is at the center of the map. <br /> <a class="popper" data-title='Zoom map'
+																data-toggle="popover" data-trigger="hover">Zoom</a>
+														<div class='popper-content hide'>
+																To zoom in more <b>Double Click</b> near your area on the map.<br> Or use the zoom slider on the left side
+																of the map.
+														</div>
+														in so your area covers a large part of the map or  Zoom out if the whole area can't be seen on the map.<br />
+														Click <b>Lock View</b> to continue editing. 
+														<b>Save View</b> will save this as the default view for your area.
+												</div>
+										</div>
+
+										{#
+										<!-- { % DRAW OR IMPORT % } -->
+										#}
+										<div class='panel-body collapsible select-method'>
+												<div class='framing-help'>
+														Draw a boundary around your area or import it from external data?<br />
 												</div>
 
-												<div class="panel-body">
-														<div class="row form-group importing">
-																<div class="col-md-1"></div>
-																<div class="col-md-6">
-
-																		<div class="radio">
-																				<label for="public"><input accesskey="g" name="opt-import" type="radio" value="geojson">
-																						Import GeoJSON</label>
-																		</div>
-																		<span class="help-block">Import boundary from a <a href="http://geojson.org">GeoJSON</a> file.
-																		</span>
-
-																		<div class="radio">
-																				<label for="unlisted"><input accesskey="f" name="opt-import" type="radio" value="fusion">
-																						Import Fusion Table</label>
-																		</div>
-																		<span class="help-block">Import boundary from a <a href="http://tables.googlelabs.com">fusion table</a></span>
+												<div class="row form-group hide">
+														<div class="col-md-1"></div>
+														<div class="col-md-6">
+																<div class="radio">
+																		<label for="private"><input accesskey="d" name="opt-boundary" type="radio" value="drawborder">
+																				Draw boundary now </label>
 																</div>
+																<span class="help-block"> Draw a shape around your area on the map. <br />If you're not sure of the
+																		exact boundary, just draw an approximate one.
+																</span>
+																<div class="radio">
+																		<label for="public"><input accesskey="i" name="opt-boundary" type="radio" value="import">
+																				Import Boundary</label>
+																</div>
+																<span class="help-block">Import boundary from external data. </span>
 														</div>
 												</div>
 										</div>
 
-										<div class="panel ">
-												<div class='panel-heading panel-title drawborder'>Draw a boundary</div>
-												<div class='panel-heading panel-title importing'>Import area boundary</div>
+										<div class="panel-body importing">
+												<div class="row form-group importing">
+														<div class="col-md-1"></div>
+														<div class="col-md-6">
 
-												<div class='panel-body drawborder'>
-														<span class='instruction draw-start'> Click on a starting point anywhere on the boundary of your area. <br />
-																Then move around your area in an <b>anticlockwise</b> direction. <br />
-														</span> <span class='instruction draw-second'> Click on the next point. </span> <span class='instruction'
-																id='draw-finish'> When you return to the start, click on the first point.<br /> Click Clear to start
-																again. <br />
-														</span> <span class='instruction edit-shape'> Adjust the shape by dragging the small circles.<br /> Click <b>
-														      Save Boundary </b> or <i>Clear</i> to start again. <br /></span>
-												</div>
-												<div class="panel-body collapse importing">
-														<div class="framing-help geojson">
-																Drop a GeoJSON file directly onto the map <br />or paste it into the editor
-														</div>
-														<div class="panel-title framing-help fusion">Fusion Table Id</div>
-														<div class="panel-title framing-sub-help fusion">
-																The fusion table must be public to be imported by this app.<br /> Copy <b>Id</b> from table in your Google
-																Drive. Displayed in File-About. Only the outer boundary will be imported.<br />
-														</div>
-														<div class="form-group fusion">
-
-																<label class="col-md-4 control-label" for="fusion_id">Fusion Table Id</label>
-
-																<div class="col-md-4">
-																		<input accesskey="f" class="form-control input-md" id="fusion_id" name="fusion_id" placeholder="" type="text">
-																		<span class="help-block">Enter the key or id</span>
+																<div class="radio">
+																		<label for="public"><input accesskey="g" name="opt-import" type="radio" value="geojson">
+																				Import GeoJSON</label>
 																</div>
+																<span class="help-block">Import boundary from a <a href="http://geojson.org">GeoJSON</a> file.
+																</span>
+
+																<div class="radio">
+																		<label for="unlisted"><input accesskey="f" name="opt-import" type="radio" value="fusion">
+																				Import Fusion Table</label>
+																</div>
+																<span class="help-block">Import boundary from a <a href="http://tables.googlelabs.com">fusion table</a></span>
 														</div>
 												</div>
-												{#
-												<!-- IMPORT FUSION OR GEOJSON-->
-												#}
-												<div class="panel-footer save-ctrls">
-														<div class="row save-ctrls">
-																<div class='col-md-2'>
-																		<button class="btn btn-primary" id="save-boundary" name="save-boundary">
-																				Save Boundary <span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
-																		</button>
+										</div>
+								</div>
+								<div class="panel ">
+										<div class='panel-heading panel-title drawborder'>Draw a boundary</div>
+										<div class='panel-heading panel-title importing'>Import area boundary</div>
 
-																		<div class='popover popover-info popover-md hidden-panel' data-placement='right'
-																				data-toggle="popover-x" id="save-boundary-popover">
-																				<div class="arrow" id='save-boundary-popover1'></div>
-																				<div class="popover-content">
-																						Saving<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
-																				</div>
+										<div class='panel-body drawborder'>
+												<span class='instruction draw-start'> Click on a starting point anywhere on the boundary of your area. <br />
+														Then move around your area in an <b>anticlockwise</b> direction. <br />
+												</span> <span class='instruction draw-second'> Click on the next point. </span> <span class='instruction' id='draw-finish'>
+														When you return to the start, click on the first point.<br /> Click Clear to start again. <br />
+												</span> <span class='instruction edit-shape'> Adjust the shape by dragging the small circles.<br /> Click <b>
+																Save Boundary </b> or <i>Clear</i> to start again. <br /></span>
+										</div>
+										<div class="panel-body collapse importing">
+												<div class="framing-help geojson">
+														Drop a GeoJSON file directly onto the map <br />or paste it into the editor
+												</div>
+												<div class="panel-title framing-help fusion">Fusion Table Id</div>
+												<div class="panel-title framing-sub-help fusion">
+														The fusion table must be public to be imported by this app.<br /> Copy <b>Id</b> from table in your Google Drive.
+														Displayed in File-About. Only the outer boundary will be imported.<br />
+												</div>
+												<div class="form-group fusion">
 
-																				<div class="popover-footer">
-																						<button class="btn btn-sm btn-default" id='close-dialog-save-boundary'>OK</button>
-																				</div>
-																		</div>
-																</div>
-                                                                <div class='col-md-2'>
-                                                                        <button class="btn btn-default" id="undo-edits" name="undo-edits">
-                                                                                Undo<span class="glyphicon glyphicon-remove-sign" style='color: #CCCCCC'></span>
-                                                                        </button>
-                                                                </div>
-																<div class='col-md-2'>
-																		<button class="btn btn-default" id="clear-boundary" name="clear-boundary">
-																				Clear <span class="glyphicon glyphicon glyphicon-trash" style='color: #FA7063'></span>
-																		</button>
-																</div>
-                                                                <div class='col-md-2'>
-                                                                        <button class="btn btn-default" id="import-boundary" name="import-boundary">
-                                                                                Import <span class="glyphicon glyphicon glyphicon-import" style='color: #FA7063'></span>
-                                                                        </button>
-                                                                </div>
-                                                                <div class='col-md-2'>
-                                                                        <button class="btn btn-default" id="change-view" name="change-view">
-                                                                                <span class="locked" ><span class="glyphicon glyphicon-lock locked">Change View</span></span>
-                                                                                <span class="unlocked"><span class="glyphicon unlocked glyphicon-screenshot ">Save View</span></span>
-                                                                        </button>
-                                                                </div>
-                                                                <div class="col-md-1">
-																		 <img id='advanced' src="/static/img/gear-icon.png" alt="Advanced" style="width: 20px; height: 20px">
-																</div>
+														<label class="col-md-4 control-label" for="fusion_id">Fusion Table Id</label>
+
+														<div class="col-md-4">
+																<input accesskey="f" class="form-control input-md" id="fusion_id" name="fusion_id" placeholder="" type="text">
+																<span class="help-block">Enter the key or id</span>
 														</div>
 												</div>
 										</div>
@@ -603,7 +612,6 @@
 								</div>
 
 
-								<div id="boundary-instructions" class='hidden-panel'></div>
 						</div>
 
 
@@ -635,9 +643,10 @@
 					
 				</script>
 				<script type="text/javascript" src="/static/js/area-description.js" defer></script>
-
+                <script src="/static/js/vendor/arcgislink.js" type="text/javascript" defer></script>
+                 <script src="/static/js/vendor/arcgisonline.js" type="text/javascript" defer></script>
+                
 				{% endblock %} {% block footer_js%} {% endblock footer_js %}
-
 				<div></div>
 		</div>
 </div>

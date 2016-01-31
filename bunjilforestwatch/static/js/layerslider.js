@@ -40,58 +40,73 @@ function toggleLayer(e){
 }
 
 
-function addLayer(layer_id, layer_name,  slider_color, slider_value, tooltip, callback) {
-    
-    var newDiv = $("#LayerTemplate").clone();
-    if (newDiv === 'undefined') {
-    	console.log("missing panel div in HTML");
-    	return;
+function addLayer(layer_id_p, layer_name,  slider_color, slider_value, tooltip, callback) {
+    "use strict";
+    if( $(".layer-template") !== 1) {
+    	console.log("missing or duplicate #LayerTemplate in HTML");
     }
-    // This id should be different for each instance.
+    var newDiv = $("#layer-template").clone();
+
+    // layer id should be different for each instance.
+    let layer_id = layer_id_p; 
+    let x=1;
+	while( $('#' + layer_id).length === 1) //check for dups
+	{
+    	layer_id = layer_id_p + x.toString(); x += 1;
+	}
     newDiv.attr("id", layer_id);
-    newDiv.id=layer_id;
-  
-    newDiv.find("#tlabel_id").html("<h6><small>" + layer_name +
+
+   
+    newDiv.find(".layerlabel").html("<h6><small>" + layer_name + 
                             "</small></h6>").attr("id", "label_" + layer_id).attr("title", tooltip);
   
-    var checkbox=newDiv.find("#tcheckbox_id"); 
-    if(slider_value === 0)
-    {
-         checkbox.prop("checked", false);
-    }
-    var checkbox_id = "checkbox_" + layer_id;
-    checkbox.attr("id", checkbox_id);
+    var checkbox = newDiv.find(".checklabel"); 
+    if(checkbox.length === 1) {
+		if(slider_value === 0)
+		{
+			 checkbox.prop("checked", false);
+		}
+		var checkbox_id = "checkbox_" + layer_id;
+		checkbox.attr("title", layer_id);
+		checkbox.attr("id", checkbox_id);
+
+		checkbox.click( toggleLayer);
+    } 
+      
+    var slider = newDiv.find('.slider-div');
     
-    checkbox.click( toggleLayer);
-   
-    var slider = newDiv.find("#tslider_id");
-    slider.noUiSlider({
-        start: slider_value,
-        connect:"lower",
-        range: {    
-            'min': 0,
-            'max': 100
-        },
-        step: 5
-    });
-    slider.css({
-		background: slider_color,
-		color: slider_color
-	});
-    
-    var slider_id = "slider_" + layer_id;
-    slider.attr("id", slider_id);
- 
-    if (typeof callback === 'function') {   
-        if ( callbacks.has(callback) === false)
-        {    
-            //console.log("adding slider callback: " + callback);
-            callbacks.add( callback );
-        }
+    if (slider.length === 1 ) {
+		slider.noUiSlider({
+			start: slider_value,
+			connect:"lower",
+			range: {    
+				'min': 0,
+				'max': 100
+			},
+			step: 5
+		});
+		slider.css({
+			background: slider_color,
+			color: slider_color
+		});
+
+		var slider_id = "slider_" + layer_id;
+		slider.attr("id", slider_id);
+
+		if (typeof callback === 'function') {   
+			if ( callbacks.has(callback) === false)
+			{    
+				//console.log("adding slider callback: " + callback);
+				callbacks.add( callback );
+			}
+		}
+		slider.on('change', setLayerOpacity);// this will also call the supplied callback
     }
-    slider.on('change', setLayerOpacity);// this will also call the supplied callback
-    newDiv.show();
+    else {
+    	console.log("missing slider div for layer" + layer_name);
+    }	
     $("#layer_table").append(newDiv);
+	newDiv.show();
  }
     
  

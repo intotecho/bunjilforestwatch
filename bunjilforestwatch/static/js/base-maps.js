@@ -20,14 +20,14 @@ var initial_dragger = "10%";
 /* var cellarray = null; not a global*/
 
 
-function drawLandsatCells(cellarray, map) {
+function drawLandsatCells(cellarray, map, layer_id) {
 	"use strict";
 	/* global createLandsatGridOverlay */
 	/* global map_over_lhs */
 	/* global layerslider_callback */
     /* global addLayer */
 
-    createLandsatGridOverlay(map, 0.5, true, cellarray);
+    createLandsatGridOverlay(map, 0.5, true, cellarray, layer_id);
     addLayer(map.landsatGridOverlay.name,
             'Landsat Cells',
             'gray',  
@@ -307,8 +307,8 @@ function initialize() {
 	                var plurals_mon = (getCellsResult.monitored_count === 1)? ' cell selected': ' cells selected';
 	                /* global updateJob */
 	                updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area. " + getCellsResult.monitored_count + plurals_mon + '</p>', 'black');
-	                drawLandsatCells(cellarray, map_under_lhs);
-	                drawLandsatCells(cellarray, map_over_lhs);
+	                drawLandsatCells(cellarray, map_over_lhs, "grid_over");
+			        drawLandsatCells(cellarray, map_under_lhs, "grid_under");
 	            }            
 	            else
 	            {
@@ -327,8 +327,8 @@ function initialize() {
     else
     {
         //server passed an existing cellarray -  don't wait for ajax - just display it.
-        drawLandsatCells(cellarray, map_over_lhs);
-        drawLandsatCells(cellarray, map_under_lhs);
+        drawLandsatCells(cellarray, map_over_lhs, "grid_over");
+        drawLandsatCells(cellarray, map_under_lhs, "grid_under");
     }
     
     var observations = jQuery.parseJSON($('#obslist').text());
