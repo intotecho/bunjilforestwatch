@@ -1,7 +1,15 @@
-/* layerslider allows you to add an array of nouisliders to a div called #LayerTemplate*/
+/** Library to append an array of nouisliders to a div called #LayerTemplate
+ * @note EXAMPLE USAGE 
+ * function unit_test_sliderlayer() {
+ *   //create a test case array of sliders.
+ *   addLayer("1", "1st name", "red",  0, "first tooltip", test_callback);
+ *   addLayer("2", "2nd name", "green",100, "second tooltip");
+ *   addLayer("3", "3rd name", "blue", 100, "third tooltip", test_callback);   
+ *   addLayer("funnyname", "4th name", "cyan", 100, "funny tooltip", test_callback);   
+ * }
+ */
 
 var callbacks = $.Callbacks();
-
 
 function setLayerOpacity(e) {  
     //console.log("setLayerOpacity");
@@ -32,7 +40,7 @@ function toggleLayer(e){
   else {
      val = 0;
   }
-  var slider = checkbox.parent().parent().find(".slider");    
+  var slider = checkbox.parent().parent().find(".slider-div");    
   slider.val(val);
   
   var layername = slider.context.id.substr(9); //strip "checkbox_"
@@ -42,8 +50,8 @@ function toggleLayer(e){
 
 function addLayer(layer_id_p, layer_name,  slider_color, slider_value, tooltip, callback) {
     "use strict";
-    if( $(".layer-template") !== 1) {
-    	console.log("missing or duplicate #LayerTemplate in HTML");
+    if( $("#layer-template").length !== 1) {
+    	console.log("missing or duplicate #layer-template in HTML");
     }
     var newDiv = $("#layer-template").clone();
 
@@ -114,12 +122,3 @@ function test_callback(layer_id, val) {
     console.log("test_callback : " + layer_id + ", " + val);
 }
 
-/* EXAMPLE USAGE 
-function unit_test_sliderlayer() {
-    //create a test case array of sliders.
-    addLayer("1", "1st name", "red",  0, "first tooltip", test_callback);
-    addLayer("2", "2nd name", "green",100, "second tooltip");
-    addLayer("3", "3rd name", "blue", 100, "third tooltip", test_callback);   
-    addLayer("funnyname", "4th name", "cyan", 100, "funny tooltip", test_callback);   
-}
-*/

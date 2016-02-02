@@ -91,9 +91,12 @@ function complete_report(drawingManager, event) {
 function areaLocation(area_json) {
 	"use strict"
 	var area_location_feature = get_area_feature(area_json, "area_location");
-	var area_location = area_location_feature.geometry.coordinates;  // init global.
-    var latlng = new google.maps.LatLng(area_location[1], area_location[0]);
-    return latlng;
+	if (area_location_feature !== null) {
+		var area_location = area_location_feature.geometry.coordinates;  // init global.
+		var latlng = new google.maps.LatLng(area_location[1], area_location[0]);
+		return latlng;
+	}
+	return null;
 }
 
 

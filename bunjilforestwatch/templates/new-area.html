@@ -358,43 +358,41 @@
 										<div class="panel-footer save-ctrls">
 												<div class="row save-ctrls">
 														<div class='col-md-2'>
-																<button class="btn btn-primary" id="save-boundary" name="save-boundary">
+																<button class="btn btn-sm btn-primary popper" id="save-boundary" data-trigger="manual" data-toggle="popover" >
 																		Save Boundary <span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
 																</button>
-
-																<div class='popover popover-info popover-md hidden-panel' data-placement='right' data-toggle="popover-x"
-																		id="save-boundary-popover">
-																		<div class="arrow" id='save-boundary-popover1'></div>
+																<div class='popper-content hide' data-placement='right'>
+																		<div class="arrow"  id="save-boundary-popover"></div>
 																		<div class="popover-content">
-																				Saving<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
+																				Saving Boundary<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
 																		</div>
 																		<div class="popover-footer">
-																				<button class="btn btn-sm btn-default" id='close-dialog-save-boundary'>OK</button>
+																				<button class="btn btn-sm btn-default" id='close-dialog-save-boundary'>Close</button>
 																		</div>
 																</div>
 														</div>
 														<div class='col-md-4'>
-																<button class="btn btn-default popper" data-toggle="popover" data-trigger="hover" data-title="Undo Edits"
+																<button class="btn  btn-sm btn-default popper" data-toggle="popover" data-trigger="hover" data-title="Undo Edits"
 																		id="undo-edits">
 																		Undo<span class="glyphicon glyphicon-remove-sign" style='color: #888888'></span>
 																</button>
-																<div class="popper-content hide">Cancels all the changes since the last save.</div>
+																<div class="popper-content hide">Cancels all edits since the last save.</div>
 
-																<button class="btn btn-default popper clear-map" data-toggle="popover" data-trigger="hover" data-title="Clears Boundary">
+																<button class="btn btn-sm  btn-default popper clear-map" data-toggle="popover" data-trigger="hover" data-title="Clears Boundary">
 																		Clear <span class="glyphicon glyphicon glyphicon-trash" style='color: #FA7063'></span>
 																</button>
 																<div class="popper-content hide">
 																		<div class="framing-help">Clears all Boundary Data for the area. You should then draw or import a new
 																				boundary.</div>
 																</div>
-																<button class="btn btn-default popper" data-toggle="popover" data-trigger="hover" id="import-boundary"
+																<button class="btn btn-sm  btn-default popper" data-toggle="popover" data-trigger="hover" id="import-boundary"
 																		data-title='Import Boundary'>
 																		Import <span class="glyphicon glyphicon glyphicon-import" style='color: #FA7063'></span>
 																</button>
 																<div class='popper-content hide'>Import boundary from a GeoJSON file or Fusion Table.</div>
 														</div>
 														<div class='col-md-4'>
-																<button class="btn btn-default popper" id="change-view" data-title='Zoom and Pan Map ' data-toggle="popover"
+																<button class="btn btn-sm btn-default popper" id="change-view" data-title='Zoom and Pan Map ' data-toggle="popover"
 																		data-trigger="hover">
 																		<span class="locked"><span class="glyphicon glyphicon-screenshot locked-color"> Change View</span></span> <span
 																				class="unlocked"><span class="glyphicon unlocked glyphicon-lock unlocked-color"> Lock View</span></span>
@@ -403,12 +401,15 @@
 																		To zoom in more <b>Double Click</b> near your area on the map.<br> Or use the zoom slider on the left
 																		side of the map.
 																</div>
-																<button class="btn btn-default popper" id="save-view" data-title='Save This View'>
+																<button class="btn btn-sm btn-default popper" id="save-view" data-trigger="hover" data-title='Save This View'>
 																		<span class="glyphicon glyphicon-save">Save View</span>
 																</button>
 																<div class='popper-content hide'>Saves the current map view as the default view when anyone views this
 																		area</div>
-
+                                                                <button class="btn  btn-sm btn-default popper" id="protected-areaview" data-trigger="hover" data-title='Show Protected Areas'>
+                                                                        <span id='pa-title'>Parks</span><span class='pa-loading-icon hide'><img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" /></span>
+                                                                </button>
+                                                                <div class='popper-content hide'>Show protected areas from the World Database of Protected Areas at <b>protectedplanet.net</b><br\>This external map can take up to five minutes to load...</div>
 														</div>
 														<div class="col-md-1">
 																<img id='advanced' class=' popper' data-title='GeoJson Text Editor' data-toggle="popover" data-trigger="hover"
@@ -418,7 +419,7 @@
 												</div>
 										</div>
 										<div class='panel-body framing-help boundary-instructions'>
-												<span class='draw-boundary'> Draw a boundary around your area or import it from external data?</span>
+												<span class='draw-boundary'> Draw a boundary around your area or import it from external data...</span>
 												</span> <span class='edit-boundary'> Click and drag the small circles on your area's border to change the shape.<br />
 														Click <b>Undo</b> if you make a mistake or <b>Clear</b> to delete the border and start again .<br /> Click <b>Save
 																Boundary </b> when you are finished making changes.
@@ -445,9 +446,6 @@
 										<!-- { % DRAW OR IMPORT % } -->
 										#}
 										<div class='panel-body collapsible select-method'>
-												<div class='framing-help'>
-														Draw a boundary around your area or import it from external data?<br />
-												</div>
 
 												<div class="row form-group hide">
 														<div class="col-md-1"></div>

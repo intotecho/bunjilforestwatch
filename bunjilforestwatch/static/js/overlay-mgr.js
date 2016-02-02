@@ -21,6 +21,8 @@ function createLandsatGridOverlay(map, opacity, clickable, cellarray, layer_id) 
     if ((typeof map.landsatGridOverlay === 'undefined') || (map.landsatGridOverlay === null)){
         var landsatGridOverlay = new LandsatGridOverlay(map, opacity, clickable, cellarray);
         landsatGridOverlay.name = layer_id;
+        landsatGridOverlay.overlaytype = 'drawing';
+
         landsatGridOverlay.initialize();       
         map.landsatGridOverlay = landsatGridOverlay;
         overlayMaps.push(landsatGridOverlay);
@@ -176,12 +178,19 @@ function layerslider_callback(layer_id, val) {
     var id = findOverlayLayer(layer_id, overlayMaps);
     if (id !== -1) {
         console.log("layerslider_callback:" + overlayMaps[id].name + ", " + val); //overlayMaps[id].name
-        //console.log(typeof overlayMaps[id]); 
+        console.log('type of overlay' + typeof overlayMaps[id]); 
         if(overlayMaps[id].name == 'boundary') { //TODO: Too brittle. Need better way to determine objct type.
         	 overlayMaps[id].setOptions({strokeOpacity :val/100} );	 
         }
         else {
-        	overlayMaps[id].setOpacity(Number(val)/100);
+        	console.log('type' + typeof overlayMaps[id]);
+        	if (overlayMaps[id].overlaytype !== 'datalayer') {
+        		overlayMaps[id].setOpacity(Number(val)/100);
+        	}
+        	else {
+            	console.log("can't fade data layer");
+        	}
+        		
         }
     }
 }
@@ -236,7 +245,7 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
         overlay.name = shortname;
         overlay.color = color;
         overlay.map = google_map;
-
+        overlay.overlaytype = 'image';
         // Listen for our custom events
         $(overlay).bind("overlay-idle", function() {
             console.log("Finished loading overlay tiles"); 
@@ -326,7 +335,7 @@ function createImageOverlay(operation, google_map, map_id,  token, overlay_name,
 function findOverlayLayer(layer_id, overlayMaps){
 	"use strict";
     for (var i=0; i < overlayMaps.length; i++) {
-        if (overlayMaps[i].name == layer_id)
+        if (overlayMaps[i].name === layer_id)
             return i;
     }
     return -1;

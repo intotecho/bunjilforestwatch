@@ -113,17 +113,18 @@ checkForNewObservationInCell() checks the collection for the latest image and co
     If no observation exists, one is created.
 '''
 def checkForNewObservationInCell(area, cell, collection_name):
-    poly = [] #TODO Move poly to a method of models.AOI
-    for geopt in area.coordinates:
-        poly.append([geopt.lon, geopt.lat]) 
+    #poly = [] #TODO Move poly to a method of models.AOI
+    #//for geopt in area.coordinates:
+    #//    poly.append([geopt.lon, geopt.lat]) 
+        
     params = {'path':cell.path, 'row':cell.row}
     #print 'area', area, ' params: ', params
-    latest_image = getLatestLandsatImage(poly, collection_name, 0, params) # most recent image for this cell in the collection
+    latest_image = getLatestLandsatImage(area.get_boundary_hull_fc(), collection_name, 0, params) # most recent image for this cell in the collection
     if latest_image is not None:
         storedlastObs = cell.latestObservation(collection_name)
         if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
             
-            obs = Observation(parent=cell.key, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="latest")
+            obs = models.Observation(parent=cell.key, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="latest")
             obs.put()
             if storedlastObs is None:
                 logging.debug('checkForNewObservationInCell FIRST observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
@@ -140,7 +141,7 @@ def checkForNewObservationInCell(area, cell, collection_name):
     return None
 
 '''
-getLatestLandsatImage(array of points, string as name of ee.imagecollection)
+getLatestLandsatImage(eeFeatureCollection, string as name of ee.imagecollection)
 
     returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
     Could also clip the image to the coordinates to reduce the size.
@@ -149,13 +150,11 @@ getLatestLandsatImage(array of points, string as name of ee.imagecollection)
 '''
 secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
 
-def getLatestLandsatImage(boundary_polygon, collection_name, latest_depth, params):
-    #logging.info('boundary_polygon %s type: %s', boundary_polygon, type(boundary_polygon))
-    cw_feat = ee.Geometry.Polygon(boundary_polygon)
-    feat = cw_feat.buffer(0, 1e-10) # buffer will force polygon to be CCW so search intersects with interior.
+def getLatestLandsatImage(park_boundary, collection_name, latest_depth, params):
+    #feat = boundary_hull_fc.buffer(0, 1e-10) # buffer will force polygon to be CCW so search intersects with interior.
     #logging.info('feat %s', feat)
-    boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-    park_boundary = ee.FeatureCollection(boundary_feature)
+    #boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
+    #park_boundary = ee.FeatureCollection(boundary_feature)
     
     end_date   = datetime.datetime.today()
     start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear/2 )
@@ -670,7 +669,7 @@ def visualizeImage(collection_name, image, algorithm):
             return None
 
 
-def getLandsatOverlay(coords, satellite, algorithm, depth, params):
+def getLandsatOverlay(boundary_fc, satellite, algorithm, depth, params):
     if satellite.lower() == 'l8':
         collection_name = 'LANDSAT/LC8_L1T_TOA'
     elif satellite.lower() == 'l7':
@@ -679,7 +678,7 @@ def getLandsatOverlay(coords, satellite, algorithm, depth, params):
         logging.error('getLandsatOverlay() collection %s not recognised defaulting to L8', satellite.lower())  
         collection_name = 'LANDSAT/LC8_L1T_TOA'
 
-    image = getLatestLandsatImage(coords, collection_name, depth, params)
+    image = getLatestLandsatImage(boundary_fc, collection_name, depth, params)
     
     if not image:
         logging.error('getLatestLandsatImage() no image found')
@@ -730,64 +729,32 @@ getLandsatCells() is given an AreaOfInterest and returns a list of overlapping c
        if percentage is below then deselect cell from auto-monitoring.
        Lastly find any area that is not intersected by any selected cell and find a cell that intersects it.
 
-TODO: Could add the latest observation here. First sort in reverse date order.#obs = image_info['properties']['system_date']
-       
+    @TODO: Could add the latest observation here. First sort in reverse date order.#obs = image_info['properties']['system_date']
+    @TODO: There is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query. 
 '''
-#TODO: There is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query.
 def getLandsatCells(area):
     
     # Test if area already has cellList
     if len(area.cells) != 0 :
-        logging.error("getLandsatCells assumes area has no cells, but it does!") #TODO - turn into an assert.
-        print area.cells
-        #TODO: Instead of returning, delete the cells in the exisitng area.cellLists,  and replace them.
-        return False;
+        logging.error("getLandsatCells -deleting area's existing list of %s cells", area.cells) 
+        area.delete_cells()
     
     # Get the area's boundary or location and convert to a FeatureCollection.    
-    #park_geom = None
-    #if len(area.coordinates()) == 0:            
-        #cw_feat = ee.Geometry(area.area_location_feature)
-        #feat = cw_feat.buffer(0, 1e-8)   
-        #boundary_feature = ee.Feature(cw_feat, {'name': 'area_location', 'fill': 1})
-    if area.boundary_hull == None or area.boundary_hull == "":
-        #coordinates = area.coordinates()
-        has_boundary = True
-        park_geom = ee.Geometry.Point(area.area_location.lon, area.area_location.lat) 
-    else:    
-        boundary_hull_dict = json.loads(area.boundary_hull)
-        eeFeatureCollection, status, errormsg  = area.get_eeFeatureCollection(boundary_hull_dict)
-        if eeFeatureCollection == None:
-            logging.error("getLandsatCells() error %s object", errormsg) 
-            print boundary_hull_dict 
-            print type (boundary_hull_dict)
-            return False
-        
-        park_geom = eeFeatureCollection.geometry()
-        has_boundary = False
-        #boundary_polygon = []
-        #for geopt in area.coordinates:
-        #    boundary_polygon.append([geopt.lon, geopt.lat])
-        '''    
-        cw_feat = ee.Geometry.Polygon(area.coordinates())
-        feat = cw_feat.buffer(0, 1e-10)   
-    
-        boundary_feature = ee.Feature(feat, {'name': 'area_boundary', 'fill': 1}) 
-        park_boundary = ee.FeatureCollection(boundary_feature)
-        park_geom = boundary_feature.geometry()
-        '''
-        
+    fc = area.get_boundary_hull_fc()
+    park_geom = fc.geometry()
     park_area = park_geom.area(10).getInfo()
    
     if park_area < 10 : # no boundary defined.
         park_area = 10
+    print "getLandsatCells():", park_area, park_geom        
         
     # Get an imageCollection of all L7 images from recent years that overlap the area, load just the image metadata ['features'].
     end_date   = datetime.datetime.today()
     start_date = end_date - datetime.timedelta(weeks = 104) # last 2 years.
-    boundCollection = ee.ImageCollection('LANDSAT/LE7_L1T').filterBounds(park_geom).filterDate(start_date, end_date) #.sort('system:time_start', False )
+    boundCollection = ee.ImageCollection('LANDSAT/LE7_L1T').filterBounds(fc).filterDate(start_date, end_date) #.sort('system:time_start', False )
     features = boundCollection.getInfo()['features']
     
-    print features
+    logging.info('getLandsatCells() %s', features)
     #Find one of each cell (p,r) in collection. Calculate and store how much of the park the cell overlaps and add it to a tmp list.
     cellList = [] #local array of unique cells will be later stored in area.cellList.
     
@@ -833,7 +800,7 @@ def getLandsatCells(area):
                 new_overlap_area  = new_overlap_geom.area(10).getInfo()
                 new_overlap = new_overlap_area/park_area
 
-                cell.monitored = True if ((new_overlap > 0.01) or (has_boundary  == False)) else False # If overlap is above arbitrary threshold (1%) default is to monitor cell, user can change later.
+                cell.monitored = True if ((new_overlap > 0.01) or (area.hasBoundary() == False)) else False # If overlap is above arbitrary threshold (1%) default is to monitor cell, user can change later.
                 if cell.monitored:
                     remaining_geom = remaining_geom.difference(new_overlap_geom)
                     remaining_area = remaining_geom.area(10).getInfo()

@@ -23,11 +23,11 @@
                                                         {% for f in following_areas %}
                                                             {% if f.name == j.name %}
                                                                  {% if exists.append(1) %}{%endif %}
-                                                                <tr><td><a href="{{ 'user'|url(user.name) }}/follow/{{ j }}?unfollow=true" class="btn btn-small btn-lightred" data-toggle="tooltip" title="Stop receiving review requests for this area.">Unfollow <span class='red_cross'>&times;</span></a></td></tr>
+                                                                <tr><td><a href="/area/{{ j }}/unfollow" class="btn btn-small btn-lightred" data-toggle="tooltip" title="Stop receiving review requests for this area.">Unfollow <span class='red_cross'>&times;</span></a></td></tr>
 		  							                         {%endif%}
 		  							                    {%endfor %}
 		  							                    {% if not exists %}
-                                                            <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j }}" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a></td></tr>
+                                                            <tr><td><a href="/area/{{ j }}/follow" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a></td></tr>
                                                          {%endif %}
 										            </tbody>        
 										       </table>

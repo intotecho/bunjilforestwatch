@@ -478,7 +478,6 @@ def get_obstask_render(task_key, reload=False):
             'resultstr': debugstr,
             'area' :  area.name.encode('utf-8'),
             'created_date' : obstask.created_date.strftime("%Y-%m-%d"),
-            #'obstask_url': webapp2.uri_for('view-obstask', username=obstask.assigned_owner.urlsafe(), task_name=obstask.key.urlsafe)
             'obstask_url': obstask.taskurl()
             } )
         memcache.add(n, data)

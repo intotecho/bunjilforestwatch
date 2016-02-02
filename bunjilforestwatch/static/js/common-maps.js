@@ -309,13 +309,17 @@ function displayBoundaryHull(map) {
     if ((boundary_feature === null) || (boundary_feature.geometry.coordinates[0].length === 0))
     {
     	var latlng = areaLocation(area_json);
-        var marker = new google.maps.Marker({
-    	    position: latlng,
-    	    title: area_json.properties.area_name 
-    	});
+    	if (latlng === null) {
+    		latlng = map.getCenter();
+    	}
+		var marker = new google.maps.Marker({
+				position: latlng,
+				title: area_json.properties.area_name 
+		});
     	// add the marker to the maps
     	marker.setMap(map);
     	marker.name = 'location';
+    	marker.overlaytype = 'drawing';
     	return marker;
     }
     else {
@@ -331,6 +335,7 @@ function displayBoundaryHull(map) {
 		    
 			var areaBoundary = new google.maps.Polygon(polygonOptions); //areaBoundaryPolygonOptions defined in site.js
 		    areaBoundary.name = "boundary hull";
+		    areaBoundary.overlaytype = 'drawing';
 		    areaBoundary.setMap(map);
 		    return areaBoundary;
 		    
@@ -435,7 +440,7 @@ function displayFeatureCollection(map, geojson) {
     		return null;
     	}    		    
     } catch(e) {
-    	console.log('displayFeatureCollection coukld not add Feature Collection : ' + e + ', geojson: ' + geojson);
+    	console.log('displayFeatureCollection could not add Feature Collection : ' + e + ', geojson: ' + geojson);
     	return null;
     }
 }

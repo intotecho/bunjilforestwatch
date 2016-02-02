@@ -1397,12 +1397,12 @@ class AreaHandler(BaseHandler):
             
             self.populate_user_session()
             
-            if new_area['properties']['self_monitor'] == 'true':
+            if new_area['properties']['self_monitor'] == True:
                 logging.warning('FIXME:Area creator requested self-monitoring but auto-following not yet impletmented for %s' %(area.name))
-                #logging.error('FIXME:Call Ajax Method to follow this area ')
-                #self.redirect(webapp2.uri_for('follow-area', username=user.name, area_name=area.name)) 
+                FollowAreaHandler.followArea(self,  username, area_name, True)
             else:
                 logging.info('Area creator did not request self-monitoring for %s' %(area.name))
+                print new_area['properties']['self_monitor'] 
 
             try:
                 geojson_area = json.dumps(area.toGeoJSON())
@@ -1703,7 +1703,15 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
             logging.error(returnval['reason'])
             self.response.write(json.dumps(returnval))
         
-        map_id = eeservice.getLandsatOverlay(area.coordinates(), satelite, algorithm, latest, opt_params)
+        if area.get_boundary_hull_fc() == None:
+            returnval['result'] = "error"
+            returnval['reason'] = 'Sorry, Cannot creat overlay. Area %s does not have a valid location or boundary' %(area.name) 
+            self.add_message('danger', returnval['reason'] )
+            logging.error(returnval['reason'])
+            self.response.write(json.dumps(returnval))
+            return
+            
+        map_id = eeservice.getLandsatOverlay(area.get_boundary_hull_fc(), satelite, algorithm, latest, opt_params)
         if not map_id:
             returnval = {}
             returnval['result'] = "error"
@@ -2415,43 +2423,32 @@ class FollowHandler(BaseHandler):
             cache.C_FOLLOWING %thisuser: following.users,
         })
 
-class FollowAreaHandler(BaseHandler):
-    def get(self, username, area_name):
-        area = cache.get_area(None, area_name)
-        if not area :
-            self.error(404)
-            return 
-        thisuser = username  #self.session['user']['name']
-   
-        if 'user' not in self.session:
-            logging.error("FollowAreaHandler() Error: user %s not logged in", username)
-            self.error(404)
-            return
-            
-        if username != self.session['user']['name']:
-            logging.error ("FollowAreaHandler() Error: different user logged in %s %s", username, self.session['user']['name'])
-            self.error(403)
-            return
 
-        if 'unfollow' in self.request.GET:
+    
+class FollowAreaHandler(BaseHandler):
+    
+    @staticmethod
+    def followArea(username, area_name, follow):
+        area = cache.get_area(None, area_name)
+        user=cache.get_user(username)
+        if not area :
+            return False
+ 
+        if follow == False:
             op = 'del'
-            unop = 'add'
             #print 'unfollowing'
         else:
             op = 'add'
-            unop = 'del'
             #print 'following'
-
-        #xg_on = ndb.create_transaction_options(xg=True)
 
         def txn(userfollowingareas_key, areafollowers_key, area, op):
             tu, ar = ndb.get_multi([userfollowingareas_key, areafollowers_key])
-            #print("FollowAreaHandler() adding key=", userfollowingareas_key)
+            #print("FollowArea() adding key=", userfollowingareas_key)
             if not tu:
-                logging.error("FollowAreaHandler() user not found: %s", userfollowingareas_key)
+                logging.error("FollowArea() user not found: %s", userfollowingareas_key)
                 tu = models.UserFollowingAreasIndex(key=userfollowingareas_key)
             if not ar:
-                logging.error("FollowAreaHandler() area not found: %s", areafollowers_key)
+                logging.error("FollowArea() area not found: %s", areafollowers_key)
                 ar = models.AreaFollowersIndex(key=areafollowers_key)  # FIXME: This looks wrong, ar is initialised as an area above but an afi here. Probably never executes.
     
             changed = []
@@ -2479,32 +2476,31 @@ class FollowAreaHandler(BaseHandler):
                     try:
                         tu.area_keys.remove(area.key)
                     except:
-                        logging.error("FollowAreaHandler() area.key %s not in area_keys",  area.key)
+                        logging.error("FollowArea() area.key %s not in area_keys",  area.key)
                     changed.append(tu)
 
             ndb.put_multi(changed)
             
             return tu, ar
         
-        following_key = models.UserFollowingAreasIndex.get_key(thisuser) #ndb.Key('User', thisuser, 'models.UserFollowingAreasIndex', thisuser)
+        following_key = models.UserFollowingAreasIndex.get_key(username) #ndb.Key('User', thisuser, 'models.UserFollowingAreasIndex', thisuser)
         followers_key = models.AreaFollowersIndex.get_key(area_name.decode('utf-8')) #ndb.Key('AreaOfInterest', area_name.decode('utf-8'), 'models.AreaFollowersIndex', area_name.decode('utf-8'))
 
         areas_following, followers,  = ndb.transaction( lambda: txn(following_key, followers_key, area, op), xg=True)
 
         if op == 'add':
-            self.add_message('success', 'You are now following area <em>%s</em>.' %area_name.decode('utf-8'))
-            models.Activity.create(cache.get_user(self.session['user']['name']), models.ACTIVITY_FOLLOWING, area.key)
+            models.Activity.create(cache.get_user(username), models.ACTIVITY_FOLLOWING, area.key)
  
             ########### create a journal for each followed area - should be in above txn and a function call as duplicated ##############
-            name = "Observations for " + area_name.decode('utf-8') # name is used by view-obstask.html to make reports.
-            
-            journal = models.Journal(parent=self.session['user']['key'], id=name)
-          
-            for journal_url, journal_name, journal_type in self.session['journals']:
-                if journal.key.string_id == journal_name:
-                    self.add_message('info', 'You already have a journal called <em>%s</em>.' %name.decode('utf-8'))
-                    break
+            journal_name = "Observations for " + area_name.decode('utf-8') # name is used by view-obstask.html to make reports.
+
+            existing_journal = models.Journal.get_journal(username, journal_name)
+            if existing_journal:
+                logging.warning('User already had a journal called <em>%s</em>.' %name.decode('utf-8'))
+                journal = existing_journal
             else:
+                journal = models.Journal(parent=user.key, id=journal_name)
+                #logging.error('FIXME no journal created due to self reference')
                 journal.journal_type = "observations"
                 
                 def txn2(user_key, journal):
@@ -2513,15 +2509,37 @@ class FollowAreaHandler(BaseHandler):
                     ndb.put_multi([user, journal])
                     return user, journal
 
-                user, journal = ndb.transaction(lambda: txn2(self.session['user']['key'], journal))
-                cache.clear_journal_cache(self.session['user']['key'])
+                user, journal = ndb.transaction(lambda: txn2(user.key, journal))
+                cache.clear_journal_cache(user.key)
                 models.Activity.create(user, models.ACTIVITY_NEW_JOURNAL, journal.key)
                 cache.set(cache.pack(user), cache.C_KEY, user.key)
-                self.add_message('success', 'Created journal <em>%s</em>.' %name.decode('utf-8'))
-
-        elif op == 'del':
-            self.add_message('success', 'You are no longer following area <em>%s</em>.' %area_name.decode('utf-8'))
+                #self.add_message('success', 'Created journal <em>%s</em>.' %name.decode('utf-8'))
             
+        return True 
+ 
+    def get(self, area_name):
+        '''
+        @fixme username from request path should be removed and get username from serssion.
+        '''
+        area = cache.get_area(None, area_name)
+        if not area :
+            self.error(404)
+            return 
+        
+        if 'user' not in self.session:
+            logging.error("FollowAreaHandler() Error: user not logged in")
+            self.error(404)
+            return
+        
+        username  = self.session['user']['name']
+            
+        if 'unfollow' in self.request.GET:
+            if FollowAreaHandler.followArea(username, area_name, False) == True:
+                self.add_message('success', 'You are no longer following area <em>%s</em>.' %area_name.decode('utf-8'))
+        else:
+            if FollowAreaHandler.followArea(username, area_name, True) == True:
+                self.add_message('success', 'You are now following area <em>%s</em>.  Journal created.' %area_name.decode('utf-8'))
+        
         cache.flush() # FIXME: Better fix by setting data into the cache as this will be expensive!!!
         #cache.set_multi({
         #    cache.C_AREA_FOLLOWERS %area.name: followers.users,  #doesn't look right.
@@ -2537,10 +2555,10 @@ class FollowAreaHandler(BaseHandler):
         #counters.increment(counters.COUNTER_AREAS) # should be FOLLOW_AREAS
 
         self.populate_user_session()
-        if op == 'add':
-            self.redirect(webapp2.uri_for('view-area', area_name=area.name))
-        else:
+        if 'unfollow' in self.request.GET:
             self.redirect(webapp2.uri_for('main'))
+        else:
+            self.redirect(webapp2.uri_for('view-area', area_name=area.name))
         return
 
 
@@ -3382,9 +3400,9 @@ app = webapp2.WSGIApplication([
     
     webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #ajax
     webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),  # view area.
-    
-    webapp2.Route(r'/<username>/follow/<area_name>', handler=FollowAreaHandler, name='follow-area'),   # start following area
-    webapp2.Route(r'/<username>/unfollow/<area_name>', handler=FollowAreaHandler, name='follow-area'),# stop following area
+
+    webapp2.Route(r'/area/<area_name>/follow', handler=FollowAreaHandler, name='follow-area'),   # start following area @fixme Remove unused <username_path> parameter. 
+    webapp2.Route(r'/area/<area_name>/unfollow', handler=FollowAreaHandler, name='follow-area'),# stop following area @fixme Remove unused <username_path> parameter. 
     
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),

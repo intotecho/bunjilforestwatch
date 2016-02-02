@@ -19,7 +19,7 @@
                                                         <tr><td>created on</td><td>{{ j.created_date|sdate }}</td></tr>
                                                         <tr><td>created by</td><td>{{ j.created_by}}</td></tr>
                                                         <tr><td>followers</td><td>{{ j.follower_count }}</td></tr>
-                                                        <tr><td><a href="{{ "user"|url(user.name) }}/follow/{{ j.name }}" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a></td></tr>
+                                                        <tr><td><a href="/area/{{ j.name }}/follow" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a></td></tr>
                                                     </tbody>        
                                                </table>
                                              </pre> 
@@ -50,7 +50,7 @@
 	                                           <a href="{{ j.tasks_url}}">view tasks</a></br>
 	                                           created {{ j.created_date|sdate }}</br>
 	                                           by {{ j.owner}}</br>
-	                                            <a href="{{ "user"|url(user.name) }}/follow/{{ j.name }}" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a>
+	                                            <a href="/area/{{ j.name }}/follow" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a>
 	                                            Area has {{ j.follower_count }} follower {{ j.follower_count|pluralize }}
 	                                </div> 
 	                       </div>
