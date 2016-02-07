@@ -16,7 +16,6 @@ bfw/*
 keys/*
 PIL/*
 ee/*
-lib/*
 lib2/*
 notused/*
 algorithms/*
@@ -57,7 +56,6 @@ sdist
 develop-eggs
 .installed.cfg
 */.idea/*
-lib
 lib64
 __pycache__
 

@@ -16,22 +16,19 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-import sys
-import math
 import logging
+
 from google.appengine.ext import db # is it required?
+
 import cache
 #from models import Observation # only required for Observations model.
 import models
 
-from google.appengine.ext import ndb
 import os
-from os import environ
 #logging.debug('PYTHONPATH: %s',os.environ['PYTHONPATH'])
 #logging.debug('HTTP_PROXY: %s',os.environ['HTTP_PROXY'])
 #logging.debug('HTTPS_PROXY: %s',os.environ['HTTPS_PROXY'])
 
-import oauth2client.client
 from oauth2client.appengine import AppAssertionCredentials
 from oauth2client import util # to disable positional parameters warning.
 
@@ -40,8 +37,7 @@ import json
 import settings #You have to import your own private keys. 
 import ee
 from ee.oauthinfo import OAuthInfo
-from docutils.parsers import null
-    
+
 # from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')

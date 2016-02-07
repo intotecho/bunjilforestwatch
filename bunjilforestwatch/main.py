@@ -12,15 +12,26 @@ This document is planned to give a tutorial-like overview of all web handlers in
 
 
 from __future__ import with_statement
+import os
 
-from sys import path
-sdk_path = 'C:/Program Files (x86)/Google/google_appengine/' #https://cloud.google.com/appengine/docs/python/tools/libraries27#vendoring
-path.insert(0, sdk_path)
-import dev_appserver
-dev_appserver.fix_sys_path()
+from google.appengine.ext import ndb
+
+PRODUCTION_MODE = not os.environ.get(
+    'SERVER_SOFTWARE', 'Development').startswith('Development')
+
+
+if not PRODUCTION_MODE:
+    from sys import path
+    sdk_path = 'C:/Program Files (x86)/Google/google_appengine/' #https://cloud.google.com/appengine/docs/python/tools/libraries27#vendoring
+    path.insert(0, sdk_path)
+    import dev_appserver
+    dev_appserver.fix_sys_path()
+
+    from google.appengine.tools.devappserver2.python import sandbox
+    sandbox._WHITE_LIST_C_MODULES += ['_ctypes', 'gestalt']
+    disable_ssl_certificate_validation = True # bug in HTTPlib i think
 
 LANSAT_CELL_AREA = (185*170) # sq.km  http://iic.gis.umn.edu/finfo/land/landsat2.htm
-
 import logging
 import urllib
 
@@ -32,7 +43,6 @@ import mailer
 import base64
 import datetime
 import re
-import os
 import geojson
 import bleach
 
@@ -41,7 +51,6 @@ from google.appengine.api import taskqueue
 from google.appengine.api.app_identity import get_default_version_hostname
 from google.appengine.api import users
 from google.appengine.ext import blobstore
-from google.appengine.ext import ndb
 
 from google.appengine.ext.webapp import blobstore_handlers
 from webapp2_extras import sessions
@@ -71,15 +80,6 @@ import facebook
 import twitter
 import utils
 from urlparse import urlparse
-
-
-PRODUCTION_MODE = not os.environ.get(
-    'SERVER_SOFTWARE', 'Development').startswith('Development')
-    
-if not PRODUCTION_MODE:
-    from google.appengine.tools.devappserver2.python import sandbox
-    sandbox._WHITE_LIST_C_MODULES += ['_ctypes', 'gestalt']
-    disable_ssl_certificate_validation = True # bug in HTTPlib i think
 
 
 
@@ -3419,7 +3419,7 @@ app = webapp2.WSGIApplication([
 
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
-            
+
     # this section must be last, since the regexes below will match one and two -level URLs
     webapp2.Route(r'/<username>/journals',  handler=ViewJournalsHandler, name='view-journals'),
     webapp2.Route(r'/<username>', handler=UserHandler, name='user'),

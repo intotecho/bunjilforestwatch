@@ -1,0 +1,20 @@
+#Third party packages required by the app that are not included in the default google app engine environment.
+#pip install -t . httplib2
+#pip install -t . docutils
+#pip install -t . bleach
+#pip install -t . apiclient
+#pip install -t . urllib3
+#pip install -t . discover
+#pip install -t . earthengine-api # loads ee/
+
+httplib2
+html5lib
+docutils
+bleach
+apiclient
+urllib3
+discover
+earthengine-api
+markdown
+simplejson
+geojson
