@@ -3,6 +3,7 @@
 	<name>bunjilae</name>
 	<comment></comment>
 	<projects>
+		<project>earthengine-api</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

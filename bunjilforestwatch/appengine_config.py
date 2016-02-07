@@ -52,3 +52,10 @@ def webapp_add_wsgi_middleware(app):
 	from google.appengine.ext.appstats import recording
 	app = recording.appstats_wsgi_middleware(app)
 	return app
+
+from google.appengine.ext import vendor
+
+# Add any libraries installed in the "lib" folder.
+vendor.add('lib')
+#$ pip install -t lib gcloud
+#https://cloud.google.com/appengine/docs/python/tools/libraries27?hl=en#vendoring

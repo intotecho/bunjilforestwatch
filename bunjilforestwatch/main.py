@@ -9,7 +9,15 @@ This document is planned to give a tutorial-like overview of all web handlers in
 """
 #from jsonpointer import resolve_pointer
 
+
+
 from __future__ import with_statement
+
+from sys import path
+sdk_path = 'C:/Program Files (x86)/Google/google_appengine/' #https://cloud.google.com/appengine/docs/python/tools/libraries27#vendoring
+path.insert(0, sdk_path)
+import dev_appserver
+dev_appserver.fix_sys_path()
 
 LANSAT_CELL_AREA = (185*170) # sq.km  http://iic.gis.umn.edu/finfo/land/landsat2.htm
 
@@ -19,7 +27,7 @@ import urllib
 from django.utils import html # used for entry.html markup
 import models
 import eeservice
-import ee
+
 import mailer
 import base64
 import datetime
@@ -30,13 +38,16 @@ import bleach
 
 from google.appengine.api import files
 from google.appengine.api import taskqueue
+from google.appengine.api.app_identity import get_default_version_hostname
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 from google.appengine.ext import ndb
+
 from google.appengine.ext.webapp import blobstore_handlers
 from webapp2_extras import sessions
 from google.appengine.api import memcache
-from apiclient.discovery import build
+
+#from apiclient.discovery import build
 #from oauth2client.appengine import OAuth2Decorator
 #from oauth2client.appengine import AppAssertionCredentials
 
@@ -50,13 +61,13 @@ decorator = OAuth2Decorator(
     scope="https://www.googleapis.com/auth/fusiontables",
     user_agent='bunjilfw')
 '''
-import httplib2
+
 import json
 import webapp2
 import cache
 import counters
 import facebook
-#import filters
+
 import twitter
 import utils
 from urlparse import urlparse
@@ -70,7 +81,9 @@ if not PRODUCTION_MODE:
     sandbox._WHITE_LIST_C_MODULES += ['_ctypes', 'gestalt']
     disable_ssl_certificate_validation = True # bug in HTTPlib i think
 
-    
+
+
+
 def rendert(s, p, d={}):
     session = s.session
     d['session'] = session
@@ -220,10 +233,14 @@ class BaseHandler(webapp2.RequestHandler):
             self.add_message("warning", "Test Instance - Production is now at bunjilforestwatch.net")
             ga = secrets.GOOGLE_ANALYTICS_TEST
         
-        if 'appbfw' in self.request.url:
+        if 'appbfw-test' in self.request.url:
             self.add_message("info", "Production is now at bunjilforestwatch.net")
+            ga = secrets.GOOGLE_ANALYTICS_TEST
+
+        if 'appbfw' in self.request.url:
+            self.add_message("warning", "Warning not using sercure url bunjilforestwatch.net")
             ga = secrets.GOOGLE_ANALYTICS_PROD
-        
+
         if 'bunjilforestwatch' in self.request.url:
             ga = secrets.GOOGLE_ANALYTICS_PROD
             #self.add_message("info", "Production")
@@ -703,10 +720,6 @@ class AccountHandler(BaseHandler): #superseded for now by user.html. no menu pat
                 u.twitter_secret = None
                 u.twitter_enable = None
                 self.add_message('success', 'Twitter posting deauthorized.')
-            elif deauthorize == models.USER_BACKUP_DROPBOX:
-                u.dropbox_token = None
-                u.dropbox_enable = None
-                self.add_message('success', 'Dropbox backup deauthorized.')
             elif deauthorize == models.USER_BACKUP_GOOGLE_DOCS:
                 utils.google_revoke(u.google_docs_token)
                 u.google_docs_token = None
@@ -776,6 +789,7 @@ class AccountHandler(BaseHandler): #superseded for now by user.html. no menu pat
 
         self.redirect(webapp2.uri_for('account'))
 
+        
 class ViewArea(BaseHandler):
 
     #owner can update existing area        
@@ -1399,7 +1413,7 @@ class AreaHandler(BaseHandler):
             
             if new_area['properties']['self_monitor'] == True:
                 logging.warning('FIXME:Area creator requested self-monitoring but auto-following not yet impletmented for %s' %(area.name))
-                FollowAreaHandler.followArea(self,  username, area_name, True)
+                FollowAreaHandler.followArea(username, area_name, True)
             else:
                 logging.info('Area creator did not request self-monitoring for %s' %(area.name))
                 print new_area['properties']['self_monitor'] 
@@ -2066,8 +2080,11 @@ class CheckForNewInAllAreasHandler(BaseHandler):
         returnstr = initstr
 
         all_areas = cache.get_all_areas() # includes unlisted and private areas.
+
+        hostname = get_default_version_hostname()
+
         for area in all_areas:
-            returnstr += checkForNewInArea(area,  self.request.headers.get('host', 'no host'))
+            returnstr += checkForNewInArea(area,  hostname)
 
         self.response.write(returnstr.encode('utf-8')) 
 
@@ -2098,8 +2115,8 @@ class CheckForNewInAreaHandler(BaseHandler):
             #self.add_message('danger', initstr)
             return self.response.write(initstr) 
             
-
-        returnstr = initstr + checkForNewInArea(area, self.request.headers.get('host', 'no host'))
+        hostname = get_default_version_hostname()
+        returnstr = initstr + checkForNewInArea(area, hostname) #  self.request.headers.get('host', 'no host'))
         return self.response.write(returnstr.encode('utf-8')) 
 
 '''
@@ -2927,11 +2944,6 @@ class SaveEntryHandler(BaseHandler):
                 cache.C_ENTRY %(username, journal_name, entry_id): (cache.pack(entry), cache.pack(content), cache.pack(blobs)),
             })
 
-            #if user.dropbox_enable and user.dropbox_token:
-            #    taskqueue.add(queue_name='retry-limit', url=webapp2.uri_for('backup'), params={'entry_key': entry.key, 'network': models.USER_BACKUP_DROPBOX, 'journal_name': journal_name, 'username': username})
-            #if user.google_docs_enable and user.google_docs_token:
-            #    taskqueue.add(queue_name='retry-limit', url=webapp2.uri_for('backup'), params={'entry_key': entry.key, 'network': models.USER_BACKUP_GOOGLE_DOCS, 'journal_name': journal_name, 'username': username})
-
             self.add_message('success', 'Your entry has been saved.')
 
         cache.clear_entries_cache(entry.key.parent())
@@ -3212,7 +3224,7 @@ class DownloadJournalHandler(BaseHandler):
             'from': self.request.get('from', from_date.strftime(DATE_FORMAT)),
             'to': self.request.get('to', to_date.strftime(DATE_FORMAT)),
         })
-
+'''
 class DropboxCallback(BaseHandler):
     def get(self):
         if 'user' not in self.session:
@@ -3246,6 +3258,7 @@ class DropboxCallback(BaseHandler):
 
         self.redirect(webapp2.uri_for('account'))
 
+        
 class BackupHandler(BaseHandler):
     def post(self):
         entry_key = ndb.Key(self.request.get('entry_key'))
@@ -3290,7 +3303,8 @@ class BackupHandler(BaseHandler):
                     entry = ndb.run_in_transaction(txn, entry_key, doc_id)
             except Exception, e:
                 logging.error('Google Docs upload error: %s', e)
-
+'''
+        
 class GoogleSiteVerification(BaseHandler):
     def get(self):
         self.response.out.write('google-site-verification: %s.html' %settings.GOOGLE_SITE_VERIFICATION)
@@ -3346,7 +3360,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/admin/checknew/<area_name>', handler=CheckForNewInAreaHandler, name='check-new-area-images'),
     webapp2.Route(r'/blob/<key>', handler=BlobHandler, name='blob'),
     webapp2.Route(r'/donate', handler=DonateHandler, name='donate'),
-    webapp2.Route(r'/dropbox', handler=DropboxCallback, name='dropbox'),
+   
     webapp2.Route(r'/facebook', handler=FacebookCallback, name='facebook'),
     webapp2.Route(r'/google', handler=GoogleCallback, name='google'),
     webapp2.Route(r'/feeds/<feed>', handler=FeedsHandler, name='feeds'),
@@ -3383,7 +3397,7 @@ app = webapp2.WSGIApplication([
     
     # taskqueue
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
-    webapp2.Route(r'/tasks/backup', handler=BackupHandler, name='backup'),
+    #webapp2.Route(r'/tasks/backup', handler=BackupHandler, name='backup'),
     
     # google site verification
     webapp2.Route(r'/%s.html' %settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
@@ -3401,13 +3415,11 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'), #ajax
     webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),  # view area.
 
-    webapp2.Route(r'/area/<area_name>/follow', handler=FollowAreaHandler, name='follow-area'),   # start following area @fixme Remove unused <username_path> parameter. 
-    webapp2.Route(r'/area/<area_name>/unfollow', handler=FollowAreaHandler, name='follow-area'),# stop following area @fixme Remove unused <username_path> parameter. 
-    
+    webapp2.Route(r'/area/<area_name>/follow',  handler=FollowAreaHandler, name='follow-area'),   # start following area
+
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>', handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
-   
-         
+            
     # this section must be last, since the regexes below will match one and two -level URLs
     webapp2.Route(r'/<username>/journals',  handler=ViewJournalsHandler, name='view-journals'),
     webapp2.Route(r'/<username>', handler=UserHandler, name='user'),
@@ -3432,14 +3444,12 @@ RESERVED_NAMES = set([
     'area',
     'areas',
     'admin',
-    'backup',
     'blob',
     'checknew',
     'contact',
     'delete',
     'docs',
     'donate',
-    'dropbox',
     'entry',
     'engine',
     'facebook',

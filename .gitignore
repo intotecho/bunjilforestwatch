@@ -11,13 +11,18 @@ build/*
 source/*
 out/*
 ut/*
-
-
+examples/*
+bfw/*
 keys/*
 PIL/*
 ee/*
 lib/*
+lib2/*
 notused/*
+algorithms/*
+
+bunjilforestwatch/lib2/*
+bunjilforestwatch/notused/*
 .svn/*
 */.settings/*
 .secrets/
@@ -37,6 +42,7 @@ notused/*
 *.py[cod]
 *.swp
 *.zip
+*.info
 
 # Packages
 *.egg
@@ -50,6 +56,7 @@ var
 sdist
 develop-eggs
 .installed.cfg
+*/.idea/*
 lib
 lib64
 __pycache__

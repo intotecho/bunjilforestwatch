@@ -1,11 +1,10 @@
-
 # Bunjil Forest Watch
 ----
 * Application: {@link http://www.bunjilforestwatch.net}
 * Blog:        {@link http://blog.bunjilforestwatch.net}
 * Jira:        {@link http://bunjilforestwatch.atlassian.net (Issues Tracking)}
 * Contact:     chris [at] bunjilforestwatch.net (Chris Goodman, Developer)
-
+* License:     GPLv2.0:
 # APPLICATION NOTES
 
 Bunjil Forest Watch continuously checks for new satellite images covering a conservation area of interest. It scans public databases, such as LANDSAT images published at USGS. The boundary coordinates of an area to be monitored is provided by local conservation groups when they subscribe to the free service. When the solution finds new images covering their area it emails a volunteer to check for recent disturbances.

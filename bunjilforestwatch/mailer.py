@@ -58,10 +58,11 @@ def new_image_email(task, hosturl):
     
     #captured_date = datetime.datetime.fromtimestamp(obs.captured) #convert ms
     captured_date = obs.captured #convert ms
-    
-    completion_date = captured_date + datetime.timedelta(3,0) 
-    
-    date_str = captured_date.strftime("%Y-%m-%d @ %H:%M")
+    completion_date = captured_date + datetime.timedelta(3,0)
+    captured_str = '{0:%B} {0:%d}'.format(captured_date)
+    completion_date_str = '{0:%B} {0:%d}'.format(completion_date)
+
+    #date_str = captured_date.strftime("%Y-%m-%d @ %H:%M")
     
     task_url = task.taskurl() #hosturl + "/obs/" + user.name + "/" + str(task.key())
     #print task_url
@@ -79,45 +80,48 @@ def new_image_email(task, hosturl):
         else:
             message.to = thesender #user does not exist
 
-        message.body = """
-Dear  {0!s},
+        message.body = ("\n"
+                        "{0!s}, \n\n"
+                        "You have a new task from Bunjil Forest Watch.\n"
+                        "\n"
+                        "A new image was captured on {1!s} for an area you follow: {3!s}.\n"
+                        " \n"
+                        "Your task is to check it for recent changes to forest cover and save your report by {6!s}. \n"
+                        "\n"
+                        "Copy this link into your browser to start the task:\n"
+                        "{4!s}{2!s}\n\n"
+                        "Alternatively, visit {4!s} and navigate to mytasks\n\n"
+                        "You are receiving this email because you have registered as a Bunjil Forest Watch Volunteer and are following the area {3!s}\n\n"
+                        "To stop receiving emails about tasks for this area, go to the application and unfollow the area.<br>\n"
+                        "Or forward this email to {5!s} with \"UNSUBSCRIBE\" in the subject.\n\n"
+                        "This is an automatically generated email from Bunjil Forest Watch \n\n"
+                        "{4!s}\n").format(user.name, captured_str, task_url, task.aoi.string_id().encode('utf-8'), hosturl, thesender, completion_date_str)
 
-BUNJIL PROTOTYPE TASK NOTIFICATION !!!
+        message.html = ("\n"
+                        "<b>{0!s}</b>,<br>\n"
+                        "\n"
+                        "You have a new task from <em>Bunjil Forest Watch</em>.\n"
+                        "\n"
+                        "A new image was captured on <i>{1!s}</i> for an area you follow: <b>{3!s}</b><br/><br/>\n"
+                        " \n"
+                        "Your task is to check it for recent changes to forest cover and save your report by <b>{6!s}</b>.<br><br> \n"
+                        "Click this link to "
+                        "<a href={4!s}{2!s}>start your task</a>.<br/><br/><br/>\n"
+                        "\n"
+                        "You are receiving this email because you have registered as a <em>Bunjil Forest Watch Volunteer>/em> and are following the area  <b>{3!s}</b>.<br/><br/>\n"
+                        "To stop receiving emails about tasks for this area, the easiest way is to unfollow the area.<br>\n"
+                        "Alternatively forward this email to {5!s} with \"UNSUBSCRIBE\" in the subject.<br>\n"
+                        "<a href=\"mailto:{5!s}u'?'subject=UNSUBSCRIBE\" target=\"_top\"></a><br>\n"
+                        "<br>This is an automatically generated email from <b><i><a href=\"{4!s}\">Bunjil Forest Watch</a></b></i><br>\n").format(user.name, captured_str, task_url, task.aoi.string_id().encode('utf-8'), hosturl, thesender, completion_date_str)
+        try:
+            message.send()
+        except:
+            returnstr = "SMTP ERROR - Could not send mail Sent mail to user: {0!s}, with email: {1!s} from sender: {2!s} with subject: {3!s}".format(user.name, message.to, thesender, message.subject)
+            logging.error(returnstr)
+            logging.debug(message.body)
+            returnstr += "<br> {0!s}".format(message.html)
+            return returnstr
 
-A new image was taken on {1!s} of an area you follow: {3!s}.
- 
-Your new task is to check it for recent changes to forest cover and save your report by next {6!s} 
-
-Please copy this link into your browser to start your task:
-{2!s}">{2!s}</a><br><b>
-Alternatively, visit {4!s} and navigate to mytasks
-
-You are receiving this email because you have registered as a Bunjil Forest Watch Volunteer and are following the area {3!s}
-
-To stop receiving emails you can unfollow the area or send an email to {5!s} with "UNSUBSCRIBE" in the subject.
-From  Bunjil Forest Watch 
-{4!s}
-""".format(user.name, captured_date, task_url, task.aoi.string_id().encode('utf-8'), hosturl, thesender,completion_date )
-
-        message.html = """
-Dear  <b>{0!s}:</b><br><b>
-
-<b>PROTOTYPE !!!</b><br>
-
-A new image was taken on <i>{1!s}</i> of an area you follow: <b>{3!s}</b><br><br>
- 
-Your new task is to check it for recent changes to forest cover and save your report by next <b>{6!s}</b>.<br><br> 
-Please click this link to start your task.<br>
-<a href={2!s}>{2!s}</a><br><br><br>
-
-You are receiving this email because you have registered as a Bunjil Forest Watch Volunteer and are following the area  <b>{3!s}</b>.<br>
-To stop receiving emails you can unfollow the area or send an email to {5!s} with "UNSUBSCRIBE" in the subject.<br>
-<a href="mailto:{5!s}u'?'subject=UNSUBSCRIBE" target="_top"></a><br>
-<br>From <b><i><a href="{4!s}">Bunjil Forest Watch</a></b></i><br>
-""".format(user.name, captured_date, task_url, task.aoi.string_id().encode('utf-8'), hosturl, thesender,completion_date )
-
-        message.send()
-        
     except mail.InvalidEmailError:
         returnstr = 'Invalid email recipient.'
         logging.error(returnstr)    

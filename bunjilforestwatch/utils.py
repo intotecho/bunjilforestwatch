@@ -32,16 +32,15 @@ import settings
 import fix_path
 fix_path.fix_sys_path()
 
-from docutils.core import publish_parts
-import dropbox
-import gdata.data
-import gdata.docs.client
-import gdata.docs.data
-import gdata.docs.service
-import gdata.gauth
+#from docutils.core import publish_parts
+#import gdata.data
+#import gdata.docs.client
+#import gdata.docs.data
+#import gdata.docs.service
+#import gdata.gauth
 import markdown
 #import rst_directive
-import textile
+#import textile
 
 #env = jinja2.Environment(loader=jinja2.FileSystemLoader('templates'))
 #env = jinja2.Environment(loader=jinja2.FileSystemLoader( 'templates'))
@@ -101,8 +100,8 @@ def markup(text, format):
 		return html.linebreaks(html.escape(text))
 	elif format == models.RENDER_TYPE_MARKDOWN:
 		return markdown.Markdown().convert(text)
-	elif format == models.RENDER_TYPE_TEXTILE:
-		return textile.textile(text)
+	#elif format == models.RENDER_TYPE_TEXTILE:
+    #		return textile.textile(text)
 	elif format == models.RENDER_TYPE_RST:
 		warning_stream = cStringIO.StringIO()
 		parts = publish_parts(text, writer_name='html4css1',
@@ -148,25 +147,6 @@ def convert_html(f, title, entries, output_type='application/pdf'):
 def absolute_uri(*args, **kwargs):
 	return '//' + os.environ['HTTP_HOST'] + webapp2.uri_for(*args, **kwargs)
 
-def dropbox_session():
-	return dropbox.session.DropboxSession(settings.DROPBOX_KEY, settings.DROPBOX_SECRET, 'app_folder')
-
-def dropbox_url():
-	sess = dropbox_session()
-	request_token = sess.obtain_request_token()
-	url = sess.build_authorize_url(request_token, oauth_callback=absolute_uri('dropbox'))
-	return request_token, url
-
-def dropbox_token(request_token):
-	sess = dropbox_session()
-	return sess.obtain_access_token(request_token)
-
-def dropbox_put(access_token, path, content, rev=None):
-	tokens = dict([i.split('=', 1) for i in access_token.split('&')])
-	sess = dropbox_session()
-	sess.set_token(tokens['oauth_token'], tokens['oauth_token_secret'])
-	client = dropbox.client.DropboxClient(sess)
-	return client.put_file(path, content, parent_rev=rev)
 
 GOOGLE_DATA_SCOPES = ['//docs.google.com/feeds/']
 def google_url():

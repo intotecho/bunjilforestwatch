@@ -333,7 +333,12 @@ def get_obstask(task_name):
 ''' get a single ObserevationTask by its key name.
 '''
 def get_task(task_key_name):
-   
+
+    """
+
+    Returns:
+        ObsTask or None: 
+    """
     n = C_OBS_TASK %(task_key_name)
     data = memcache.get(n)
     if data is None:
@@ -456,22 +461,36 @@ def get_obstask_render(task_key, reload=False):
         obstask = get_task(task_key)
         obslist = []  
         if obstask is not None:
-            area = obstask.aoi.get() 
-            resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.assigned_owner.string_id(), area.name.encode('utf-8') )
-            resultstr += "{0!s} Task assigned to: <i>{1!s}</i><br>".format(obstask.shared_str(), obstask.assigned_owner.string_id())
-            resultstr += "Status <em>{0!s}</em>. ".format(obstask.status)
-            if obstask.priority != None:
-                resultstr += "Priority <em>{0:d}.</em> ".format(obstask.priority)
-            
-            #debugstr = resultstr + " task: " + str(obstask.key) + " has " + str(len(obstask.observations)) + " observations"
-            debugstr = resultstr + "Task has " + str(len(obstask.observations)) + " observations"
-            for obs_key in obstask.observations:
-                obs = obs_key.get() 
-                if obs is not None:
-                    obslist.append(obs.Observation2Dictionary()) # includes a list of precomputed overlays
-                else:
-                    logging.error("Missing Observation from cache")        
-        
+            area = obstask.aoi.get()
+            if area != None:
+                resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.assigned_owner.string_id(), area.name.encode('utf-8') )
+                resultstr += "{0!s} Task assigned to: <i>{1!s}</i><br>".format(obstask.shared_str(), obstask.assigned_owner.string_id())
+                resultstr += "Status <em>{0!s}</em>. ".format(obstask.status)
+                if obstask.priority != None:
+                    resultstr += "Priority <em>{0:d}.</em> ".format(obstask.priority)
+
+                #debugstr = resultstr + " task: " + str(obstask.key) + " has " + str(len(obstask.observations)) + " observations"
+                debugstr = resultstr + "Task has " + str(len(obstask.observations)) + " observations"
+                for obs_key in obstask.observations:
+                    obs = obs_key.get()
+                    if obs is not None:
+                        obslist.append(obs.Observation2Dictionary()) # includes a list of precomputed overlays
+                    else:
+                        logging.error("Missing Observation from cache")
+            else:
+                resultstr = 'Observation Task for deleted area! area key: {0:s} <br>'.format(obstask.aoi)
+                debugstr = resultstr
+                logging.error(resultstr)
+                data = utils.render('obstask-render.html', {
+                            'obstask': obstask,
+                            'obslist': obslist,
+                            'resultstr': resultstr,
+                            'area' :  'Deleted',
+                            'created_date' : obstask.created_date.strftime("%Y-%m-%d"),
+                            'obstask_url': obstask.taskurl()
+                            } )
+                memcache.add(n, data)
+
         data = utils.render('obstask-render.html', {
             'obstask': obstask,
             'obslist': obslist,

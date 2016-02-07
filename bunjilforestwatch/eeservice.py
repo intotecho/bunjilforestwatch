@@ -23,8 +23,8 @@ from google.appengine.ext import db # is it required?
 import cache
 #from models import Observation # only required for Observations model.
 import models
-import ndb
 
+from google.appengine.ext import ndb
 import os
 from os import environ
 #logging.debug('PYTHONPATH: %s',os.environ['PYTHONPATH'])
@@ -746,7 +746,7 @@ def getLandsatCells(area):
    
     if park_area < 10 : # no boundary defined.
         park_area = 10
-    print "getLandsatCells():", park_area, park_geom        
+    #print "getLandsatCells():", park_area, park_geom
         
     # Get an imageCollection of all L7 images from recent years that overlap the area, load just the image metadata ['features'].
     end_date   = datetime.datetime.today()

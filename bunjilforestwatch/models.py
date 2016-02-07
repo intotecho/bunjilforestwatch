@@ -8,6 +8,8 @@ import logging
 import re
 from google.appengine.api import images
 from google.appengine.ext import ndb
+from google.appengine.api import app_identity
+
 import webapp2
 
 import eeservice
@@ -331,6 +333,7 @@ class AreaOfInterest(ndb.Model):
     def tasks_url(self, page=1):
         if page > 1:
             #return webapp2.uri_for('view-area', username=self.key.parent().name(), area_name= self.name, page=page)
+            #hostname = google.appengine.api.app_identity.app_identity.get_default_version_hostname()
             return webapp2.uri_for('view-obstasks', area_name = self.name,  page=page)
         else:
             #return webapp2.uri_for('view-area', username=self.key.parent().name(),  area_name= self.name)
@@ -561,12 +564,13 @@ class AreaOfInterest(ndb.Model):
             except ValueError:  
                 logging.error('get_boundary_hull_fc(): ValueError in boundary_hull')
                 return None
+            logging.debug('get_boundary_hull_fc %s boundary defined by polygon', self.name)
         else:
-            print 'get_boundary_hull_fc loading point'
             
             if self.area_location == None:
                 logging.error('get_boundary_hull_fc(): Area %s has neither boundary nor location', self.name)
                 return None
+            logging.debug('get_boundary_hull_fc %s boundary defined by point', self.name)
             park_geom = self.area_location_as_geojson()
             #ee.Geometry.Point([self.area_location.lon, self.area_location.lat]) 
         
@@ -574,8 +578,6 @@ class AreaOfInterest(ndb.Model):
         if eeFeatureCollection == None:
             logging.error("boundaryFC(%s) error %s object status %s input: %s", self.name, errormsg, status, park_geom) 
         return eeFeatureCollection
-
-
 
     def set_boundary_fc(self, eeFeatureCollection, set_view):
         """
@@ -1095,7 +1097,6 @@ class Entry(ndb.Model):
     words = ndb.IntegerProperty(required=True, default=0)
     sentences = ndb.IntegerProperty(required=True, default=0)
 
-    dropbox_rev = ndb.StringProperty(indexed=False)
     google_docs_id = ndb.StringProperty(indexed=False)
 
     WORD_RE = re.compile("[A-Za-z0-9']+")
