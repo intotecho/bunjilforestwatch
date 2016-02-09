@@ -68,6 +68,7 @@ function update_map_cursor(map, pnt, panel) {
  */
 function complete_report(drawingManager, event) {
 	'use strict';
+	var user_name = $('#user_name').text();
 	var href = '/' + user_name +
 				 '/journal/Observations for ' + 
 				area_json.properties.area_name; 
@@ -90,6 +91,7 @@ function complete_report(drawingManager, event) {
 
 function areaLocation(area_json) {
 	"use strict"
+    "global get_area_feauture"
 	var area_location_feature = get_area_feature(area_json, "area_location");
 	if (area_location_feature !== null) {
 		var area_location = area_location_feature.geometry.coordinates;  // init global.
@@ -113,8 +115,9 @@ function initialize() {
 		alert("missing area data");
 		return;
 	}
-	
-	var map_center = center_mapview(area_json);
+	/* global center_mapview */
+	/* global zoom_mapview */
+  	var map_center = center_mapview(area_json);
     var map_zoom =   zoom_mapview(area_json);
 	
     /* global map_options */ 
@@ -122,6 +125,7 @@ function initialize() {
     map_options.center = map_center;
     map_options.zoom = map_zoom;
     map_under_lhs    = new google.maps.Map(document.getElementById("map-left-prior"), map_options);
+	/* global map_rhs */
     map_rhs          = new google.maps.Map(document.getElementById("map-right"), map_options);
 
     map_options.mapTypeId = google.maps.MapTypeId.TERRAIN;
@@ -142,7 +146,6 @@ function initialize() {
         initial_dragger = "90%";
     }
     $('#dragger').css('left', initial_dragger );
-    
     map_rhs.bindTo('center', map_under_lhs);
     map_rhs.bindTo('zoom', map_under_lhs);
     
@@ -180,7 +183,7 @@ function initialize() {
         var patch_ops = [
             { "op": "replace", "path": "/properties/shared", "value": selection, "id": "shared_form"}
     	];
-
+        /* global patch_area */
         var request = patch_area(patch_ops, area_json.properties.area_url);  //patch_area(); //ajax call
         request.done(function (data) {
         	if(typeof data !== 'undefined') {
@@ -231,36 +234,34 @@ function initialize() {
             //map_rhs.setCenter(map_center);
     });
 
-    var areaBoundary = displayBoundaryHull(map_under_lhs, area_json); // draw area's boundary or area_location marker
-    /* global overlayMaps */ 
-    overlayMaps.push(areaBoundary);
+    /* displayBoundaryHull */
+    /* global overlayMaps */
     /* global addLayer */
-    addLayer(areaBoundary.name, 
-    		area_json.properties.area_name + " Border", 
-    		"yellow", 
-    		50, 
-    		"Boundary of Area " + area_json.properties.area_name, 
-    		layerslider_callback);
+    var areaBoundary = displayBoundaryHull(map_under_lhs, area_json); // draw area's boundary or area_location marker
+    overlayMaps.push(areaBoundary);
+    addLayer(areaBoundary.name,
+        area_json.properties.area_name + " Border",
+        "yellow",
+        50,
+        "Boundary of Area " + area_json.properties.area_name,
+        layerslider_callback);
 
     // draw area's boundary or area_location marker
-    var newData = createDataLayer(map_under_lhs, false); // not editable 
-    if (displayFeatureCollection(map_under_lhs, area_json.boundary_geojson) != null) {
-	    
-	    /* global overlayMaps */ 
+    var newData = createDataLayer(map_under_lhs, false); // not editable
+    if (displayFeatureCollection(map_under_lhs, area_json.boundary_geojson) !== null) {
 		overlayMaps.push(newData);
-	    /* global addLayer */
-	    addLayer("geometry", 
+	    addLayer("geometry",
 	    		area_json.properties.area_name + " Geometry", 
 	    		"green",  
 	    		50, 
 	    		"Geometry of Area " + area_json.properties.area_name, 
 	    		layerslider_callback);
     }
-    /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI. 
+
+    /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI.
      *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
      */ 
-    
-    var cellarray = jQuery.parseJSON($('#celllist').text()); 
+    var cellarray = jQuery.parseJSON($('#celllist').text());
   
     var jobid = -1;
 
@@ -353,7 +354,7 @@ function initialize() {
     	console.log("make report");
         $('#make-report-popover').popoverX('show');
         if (drawingManager  === null){
-        	map.drawingTools = new DrawingTools(map_over_lhs, mapContainer, dropContainer, geoJsonPanel, geoJsonInput, downloadLink);
+        	map_over_lhs.drawingTools = new DrawingTools(map_over_lhs, mapContainer, dropContainer, geoJsonPanel, geoJsonInput, downloadLink);
         	drawingManager  = createDrawingManager(map_over_lhs, google.maps.drawing.OverlayType.POLYGON); //FIXME Don't draw more than one.
         	google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
         		complete_report(drawingManager, event);

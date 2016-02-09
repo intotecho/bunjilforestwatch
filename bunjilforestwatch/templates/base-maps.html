@@ -16,6 +16,7 @@
 <div id='user_name' class='django-template'>{{ user.name }}</div>
 <div id='user_url' class='django-template'>{{ "user"|url(user.name) }}</div>
 {% endif %}
+
 <div class="container-fluid">
 
 		<!--  AREA NAME HEADING  -->
@@ -419,15 +420,11 @@
 												</div>
 										</div>
 										<!-- END-PERMANENT-AREA-ACCORDION-->
+
 								</div>
-
-
 						</div>
-				</div>
-				<div></div>
 
-
-
+        </div>
 				<!-- MAP CANVAS  -->
 
 				<div id="map-left-c" class="col-md-5 lesspadding map-canvas">
@@ -452,8 +449,8 @@
 						</div>
 						<div id="map-right"></div>
 				</div>
-				<div></div>
-				<div></div>
+    </div>
+</div>
 				{% endblock content %} {%block layer_template %}
 				<!--TEMPLATE DIV  does not display till added by addLayer() call. See layerslider.js ?-->
 				<div id="layer-template" class=" row" style='display: none'>

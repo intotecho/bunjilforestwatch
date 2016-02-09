@@ -1690,9 +1690,9 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
 
     def get(self, area_name, action, satelite, algorithm, latest, **opt_params):
         area = cache.get_area(None, area_name)
+        returnval = {}
 
         if not area:
-            returnval = {}
             returnval['result'] = "error"
             returnval['reason'] = 'LandsatOverlayRequestHandler: Invalid area ' + area_name
             self.add_message('danger', returnval['reason'] )
@@ -1710,13 +1710,13 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
             return
     
         if not eeservice.initEarthEngineService(): # we need earth engine now.
-            returnval = {}
             returnval['result'] = "error"
             returnval['reason'] = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
             self.add_message('danger', returnval['reason'] )
             logging.error(returnval['reason'])
             self.response.write(json.dumps(returnval))
-        
+            return
+
         if area.get_boundary_hull_fc() == None:
             returnval['result'] = "error"
             returnval['reason'] = 'Sorry, Cannot creat overlay. Area %s does not have a valid location or boundary' %(area.name) 
@@ -1727,7 +1727,6 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
             
         map_id = eeservice.getLandsatOverlay(area.get_boundary_hull_fc(), satelite, algorithm, latest, opt_params)
         if not map_id:
-            returnval = {}
             returnval['result'] = "error"
             returnval['reason'] = 'Sorry, Cannot creat overlay.  Google Earth Engine did not provide a map_id. Please come back later'
             self.add_message('danger', returnval['reason'] )
@@ -1749,7 +1748,6 @@ class LandsatOverlayRequestHandler(BaseHandler):  #'new-landsat-overlay'
                                          captured = map_id['capture_datetime'], 
                                          image_id = map_id['id'])
             else:
-                returnval = {}
                 returnval['result'] = "error"
                 returnval['reason'] = 'LandsatOverlayRequestHandler - cache.get_cell error'
                 self.add_message('danger', returnval['reason'] )
