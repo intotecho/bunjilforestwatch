@@ -41,16 +41,16 @@ def url(ob, name=''):
 
 
 def user_area_url(username, area_name):
-	return webapp2.uri_for('view-area', username=username, area_name=area_name)
+	return webapp2.uri_for('view-area', username=username.decode('utf-8'), area_name=area_name.encode('utf-8'))
 
 def area_tasks_url(area):
-	return webapp2.uri_for('view-obstasks', area_name=area.name)
+	return webapp2.uri_for('view-obstasks', area_name=area.name.encode('utf-8'))
 
 def area_url(area, page=1):
 	return area.url(page)
 
 def user_task_url(username, task_name):
-	return webapp2.uri_for('view-task', username=username, task_name=task_name)
+	return webapp2.uri_for('view-task', username=username, task_name=task_name.encode('utf-8'))
 
 def task_url(task, page=1):
 	return task.url(page)
@@ -63,7 +63,7 @@ def area_next(ob, page):
 	return area_url(ob, str(page + 1))
 
 def user_journal_url(username, journal_name):
-	return webapp2.uri_for('view-journal', username=username, journal_name=journal_name)
+	return webapp2.uri_for('view-journal', username=username.encode('utf-8'), journal_name=journal_name.encode('utf-8'))
 
 def journal_url(journal, page=1):
 	return journal.url(page)

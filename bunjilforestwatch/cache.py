@@ -459,11 +459,13 @@ def get_obstask_render(task_key, reload=False):
     data = memcache.get(n)
     if data is None or reload == True:
         obstask = get_task(task_key)
-        obslist = []  
+        obslist = []
+        area_name = 'unknown'
         if obstask is not None:
             area = obstask.aoi.get()
             if area != None:
-                resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.assigned_owner.string_id(), area.name.encode('utf-8') )
+                area_name = area.name.encode('utf-8')
+                resultstr = "Observation Task for {0!s} to check area {1!s} <br>".format(obstask.assigned_owner.string_id(), area_name)
                 resultstr += "{0!s} Task assigned to: <i>{1!s}</i><br>".format(obstask.shared_str(), obstask.assigned_owner.string_id())
                 resultstr += "Status <em>{0!s}</em>. ".format(obstask.status)
                 if obstask.priority != None:
@@ -495,7 +497,7 @@ def get_obstask_render(task_key, reload=False):
             'obstask': obstask,
             'obslist': obslist,
             'resultstr': debugstr,
-            'area' :  area.name.encode('utf-8'),
+            'area' :  area_name,
             'created_date' : obstask.created_date.strftime("%Y-%m-%d"),
             'obstask_url': obstask.taskurl()
             } )
@@ -755,7 +757,7 @@ def get_area(username, area_name):
     n = C_AREA %(username, area_name)
     data = memcache.get(n)
     if data is None:
-        data = models.AreaOfInterest.get_by_id(area_name.decode('utf-8'))
+        data = models.AreaOfInterest.get_by_id(area_name)
         if data is None:
             logging.error("get_area() no area found for %s %s", username, area_name)
             return None
@@ -769,7 +771,7 @@ def get_area_key(username, area_name):
         data = memcache.get(n)
         if data is None:
             #data = models.AreaOfInterest.all(keys_only=True).filter('name', area_name.decode('utf-8')).get()
-            data = models.AreaOfInterest.query(models.AreaOfInterest.name == area_name.decode('utf-8')).fetch(keys_only=True)
+            data = models.AreaOfInterest.query(models.AreaOfInterest.name == area_name).fetch(keys_only=True)
             memcache.add(n, data)
     else:
         n = C_AREA_KEY %(username, area_name)
@@ -800,7 +802,7 @@ def get_cells(area_key):
         memcache.add(n, pack(data))
     return data
 
-
+'''
 def get_all_cells(): #FIXME - Doesn't work - too much data returned. 
     n = C_CELLS_ALL
     data = unpack(memcache.get(n))
@@ -808,7 +810,7 @@ def get_all_cells(): #FIXME - Doesn't work - too much data returned.
         data = models.LandsatCell.all() #TODO This is a big load from ndb.
         memcache.add(n, pack(data))
     return data
-
+'''
 def get_journal_key(username, journal_name):
     n = C_JOURNAL_KEY %(username, journal_name)
     data = memcache.get(n)

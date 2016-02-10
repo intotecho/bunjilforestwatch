@@ -971,7 +971,7 @@ class ViewArea(BaseHandler):
         
         
     def get(self, area_name):
-        
+        area_name = area_name.decode('utf-8')
         current_user = users.get_current_user()
         if  not current_user:
             abs_url  = urlparse(self.request.uri)
@@ -1198,10 +1198,9 @@ class AreaHandler(BaseHandler):
        
         ### read geojson dict of area properties
         try:
-            new_area_geojson_str = self.request.body.decode('utf-8')
+            new_area_geojson_str = self.request.body #.decode('utf-8')
             logging.debug("AreaHandler() new_area_geojson_str: %s ", new_area_geojson_str)
-            new_area = geojson.loads(new_area_geojson_str)
-
+            new_area = geojson.loads(new_area_geojson_str, encoding="utf-8")
         except (ValueError, KeyError) as e:
             logging.error("AreaHandler() Exception : {0!s}".format(e)) 
             if isinstance(e, KeyError):
@@ -1216,7 +1215,8 @@ class AreaHandler(BaseHandler):
         logging.info("AreaHandler() request to create new area %s", new_area)
 
         try:         
-            area_name = new_area['properties']['area_name'].decode('utf-8') #allow non-english area names.
+            area_name = new_area['properties']['area_name'] #.decode('utf-8') #allow non-english area names.
+
         except KeyError, e:    
             self.response.set_status(400)
             return self.response.out.write('Create area requires a name.')
@@ -1412,7 +1412,7 @@ class AreaHandler(BaseHandler):
             self.populate_user_session()
             
             if new_area['properties']['self_monitor'] == True:
-                logging.warning('FIXME:Area creator requested self-monitoring but auto-following not yet impletmented for %s' %(area.name))
+                logging.debug('Requesting self-monitoring for %s' %(area.name))
                 FollowAreaHandler.followArea(username, area_name, True)
             else:
                 logging.info('Area creator did not request self-monitoring for %s' %(area.name))
@@ -1953,14 +1953,22 @@ class ObservationTaskHandler(BaseHandler):
             if current_user.nickname != obstask.assigned_owner:
                 self.add_message('info', "You {0!s} are not assigned to this task. Task assigned to {1!s}".format(current_user.nickname , obstask.assigned_owner.string_id()))
             self.populate_user_session(user)
-        area      = obstask.aoi.get() 
-        cell_list  = area.cell_list()
-          
         owner = obstask.assigned_owner.string_id()
-          
-        resultstr = "New Task for {0!s} to check area {1!s}".format(owner, area.name.encode('utf-8') )
+
+        area      = obstask.aoi.get()
+        if area is None:
+            self.add_message('danger', "ObservationTaskHandler: Task for deleted area. ")
+            resultstr = "Task's area not found. ObservationTaskHandler: key {0!s}".format(task_id)
+            logging.error(resultstr)
+            return self.response.write(resultstr)
+
+        area_name =  area.name.encode('utf-8')
+        cell_list  = area.cell_list()
+        geojson_area = json.dumps(area.toGeoJSON())
+
+        resultstr = "New Task for {0!s} to check area {1!s}".format(owner, area_name)
         
-        debugstr = resultstr + " task: " + str(task_id) + " has " + str(len(obstask.observations)) + "observations"
+        #debugstr = resultstr + " task: " + str(task_id) + " has " + str(len(obstask.observations)) + "observations"
         obslist = []
         for obs_key in obstask.observations:
             obs = obs_key.get() #cache.get_by_key(obs_key) messy double cache
@@ -1969,8 +1977,6 @@ class ObservationTaskHandler(BaseHandler):
             else:
                 logging.error("Missing Observation from cache")
         
-        geojson_area = json.dumps(area.toGeoJSON())
-        print 'geojson_area: ', geojson_area
         return self.render('view-obstask.html', {
             'username':  username,
             'area_json' : geojson_area,
