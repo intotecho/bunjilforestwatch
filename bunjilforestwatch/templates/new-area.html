@@ -11,27 +11,23 @@
 <link rel="stylesheet" href="/static/css/lint.css">
 <link rel="stylesheet" href="/static/css/new-area.css">
 <link rel="stylesheet" href="/static/css/area-description.css">
-
 <script type="text/javascript">
 	var single_map = true;
 	var view_mode = "view-area";
 	var initial_dragger = "100%";
 </script>
 
-
 {% endblock %} {% block map_head %} {% endblock map_head %} {% block content %}
 
 <!-- NO BREADCRUMBS REQUIRED FOR THIS PAGE -->
 
 <div id='area_json' class='django-template'>{{ area_json}}</div>
+<div id='edit_boundary_mode' class='django-template'>{{ edit_boundary}}</div>
 <div id='celllist' class='django-template'>{{ celllist }}</div>
 <div id='latlng' class='django-template'>{{ latlng}}</div>
 <div id='user_name' class='django-template'>{{ user.name }}</div>
 <div id='user_url' class='django-template'>{{ "user"|url(user.name) }}</div>
-
-
 <div class="space-above-form"></div>
-
 <div class="container new-area-container">
 		<div class="locate-tab-bodyform-horizontal" id="new_area_form">
 
@@ -349,7 +345,7 @@
 												</div>
 												<div class='panel-body framing-help select-method'>
 														Your area needs a boundary to define its size and shape. <br /> A boundary ensures all overlapping satelite
-														images are checked and let's volunteers know where the borders are.<br />
+														images are checked and lets volunteers know where the borders are.<br />
 												</div>
 										</div>
 								</div>
@@ -376,13 +372,13 @@
 																		id="undo-edits">
 																		Undo<span class="glyphicon glyphicon-remove-sign" style='color: #888888'></span>
 																</button>
-																<div class="popper-content hide">Cancels all edits since the last save.</div>
+																<div class="popper-content hide">Cancel all edits since the last save.</div>
 
 																<button class="btn btn-sm  btn-default popper clear-map" data-toggle="popover" data-trigger="hover" data-title="Clears Boundary">
 																		Clear <span class="glyphicon glyphicon glyphicon-trash" style='color: #FA7063'></span>
 																</button>
 																<div class="popper-content hide">
-																		<div class="framing-help">Clears all Boundary Data for the area. You should then draw or import a new
+																		<div class="framing-help">Clear the boundary around the area. You should then draw or import a new
 																				boundary.</div>
 																</div>
 																<button class="btn btn-sm  btn-default popper" data-toggle="popover" data-trigger="hover" id="import-boundary"
@@ -419,7 +415,10 @@
 												</div>
 										</div>
 										<div class='panel-body framing-help boundary-instructions'>
-												<span class='draw-boundary'> Draw a boundary around your area or import it from external data...</span>
+												<span class='draw-boundary'>Draw a boundary around your area or import it from external data.<br/>
+                          To draw a boundary, click on the points around your area. You don't need to be too exact.<br/>
+                          When you have clicked the last point, click on the first point again to complete the area.
+                        </span>
 												</span> <span class='edit-boundary'> Click and drag the small circles on your area's border to change the shape.<br />
 														Click <b>Undo</b> if you make a mistake or <b>Clear</b> to delete the border and start again .<br /> Click <b>Save
 																Boundary </b> when you are finished making changes.

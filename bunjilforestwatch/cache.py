@@ -195,7 +195,9 @@ def get_other_areas(user_key): # returns list of areas user neither created nor 
         all_area_keys = models.AreaOfInterest.query(). \
             filter(models.AreaOfInterest.owner != user_key). \
             filter(models.AreaOfInterest.share == models.AreaOfInterest.PUBLIC_AOI ).  \
-            fetch(keys_only=True)
+            fetch(models.AreaOfInterest.MAX_OTHER_AREAS, keys_only=True)
+            #order(-models.AreaOfInterest.last_modified). \ # first sort property is last_modified but the inequality filter is on owner
+
         af = get_following_area_keys(user_key) # a list of area keys.
         other_areas_keys = [x for x in all_area_keys if x not in af] # remove areas user is following from list of all_areas
         otherareas = ndb.get_multi(other_areas_keys)
@@ -217,7 +219,6 @@ def get_areas_list(user_key):
         areas= get_areas(user_key)
         data = [(i.url(), i.name) for i in areas]
         memcache.add(n, data)
-
     return data
 
 #get_all_areas() returns a list of keys for all areas - inlcuding private and unlisted areas.
@@ -227,10 +228,10 @@ def get_all_areas():
     if data is None:
         data = models.AreaOfInterest.query().fetch(300) #FIXME limit of 300 will be a problem in future. This is used by CheckNew cron job.
         memcache.add(n, data)
-
     return data
 
 # returns a list of user's area names
+#todo: Not Called.
 def get_all_areas_list():
     n = C_AREA_ALL_LIST
     data = memcache.get(n)
@@ -238,7 +239,6 @@ def get_all_areas_list():
         areas= get_areas()
         data = [(i.url(), i.name) for i in areas] #add i.user and i.followers
         memcache.add(n, data)
-
     return data
 
 
@@ -247,9 +247,7 @@ def get_journals(user_key):
     data = memcache.get(n)
     if data is None:
         data = models.Journal.query(ancestor=user_key).fetch(models.Journal.MAX_JOURNALS)
-        
         memcache.add(n, data)
-
     return data
 
 # returns a list of journal names
@@ -388,10 +386,10 @@ def get_obstasks_keys(username=None, areaname=None):
         elif areaname is not None:
             area = get_area(username, areaname) 
             area_key = ndb.Key('AreaOfInterest', areaname)
-            
+            owner = area.owner.get()
             #print ("area_key ", area_key)
-            if (area.share == area.PRIVATE_AOI ) and (area.owner.name != username):
-                logging.debug("get_obstasks_keys PERMISSION ERROR for %s area %s %s", area.shared_str, areaname, area_key, )
+            if (area.share == area.PRIVATE_AOI ) and (owner.name != username):
+                logging.debug("get_obstasks_keys PERMISSION ERROR for %s area %s %s", area.shared_str, areaname, area_key)
                 data = None
             else:
                 #data = models.ObservationTask.all(keys_only=True).filter('aoi =', area_key).order('-created_date').fetch(200)

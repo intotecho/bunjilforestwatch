@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 {% block content %}
 <div class="container">
@@ -7,25 +8,25 @@
 			<ul class="breadcrumb">
 				<li><a href="{{ "user"|url(username) }}">{{ username }}</a></li>
                 <li>Journal</li>
-				<li class="active"><a href="{{ journal|journal_url }}">{{ journal.key.string_id() }}</a></li>
+				<li class="active"><a href={{ journal|journal_url}}>{{ journal.name.decode('utf-8') }}</a></li>
 			</ul>
 	
 	</div>
 	<div class="row well well-sm">
-        <h2>Journal <a href="{{ journal|journal_url }}">{{ journal.key.string_id()  }}</a></h2>
+        <h2>Journal <a href="{{ journal|journal_url }}">{{ journal.name.decode('utf-8')  }}</a></h2>
 		<div class="col-md-4">
 			<a href="{{ "new-entry"|url(journal) }}" class="btn btn-primary">Add New Entry</a>
 		</div>
         <div class="col-md-6">
 	         <table class="table table-condensed">
 	           <tbody>
-                    <tr><td>Journal type</td><td>{{ journal.journal_type }}</td></tr>
-                    <tr><td>Created on</td><td>{{ journal.created_date|sdate }}</td></tr>
-			        <tr><td>Entries</td><td>{{ journal.entry_count }}</td></tr>
-			        {% if journal.last_entry %}<tr><td>Last entry</td><td>{{ journal.last_entry|sdate }}</td></tr>{% endif %}
-			        {% if journal.first_entry %}<tr><td>First entry</td><td>{{ journal.first_entry|sdate }}</td></tr>{% endif %}
-			        {% if journal.entry_days %}<tr><td>Entries spanning</td><td>{{ journal.entry_days }} day{{ journal.entry_days|pluralize }}</td></tr>{% endif %}
-	           </tbody>
+             <tr><td>Journal type</td><td>{{ journal.journal_type }}</td></tr>
+             <tr><td>Created on</td><td>{{ journal.created_date|sdate }}</td></tr>
+             <tr><td>Entries</td><td>{{ journal.entry_count }}</td></tr>
+			       {% if journal.last_entry %}<tr><td>Last entry</td><td>{{ journal.last_entry|sdate }}</td></tr>{% endif %}
+			       {% if journal.first_entry %}<tr><td>First entry</td><td>{{ journal.first_entry|sdate }}</td></tr>{% endif %}
+			       {% if journal.entry_days %}<tr><td>Entries spanning</td><td>{{ journal.entry_days }} day{{ journal.entry_days|pluralize }}</td></tr>{% endif %}
+ 	           </tbody>
 	        </table> 
 	   </div>
 	</div>

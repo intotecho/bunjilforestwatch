@@ -93,7 +93,7 @@
 																						data-toggle="collapse">Boundary</h4>
 																		</div>
 
-
+                                    {% if is_owner %}
 																		<div class="panel-collapse collapse" id="manage-accord-boundary">
 																				<div class="panel-body">Edit Area's Border</div>
 																				<a id='not-used' class="btn btn-small btn-lightblue" style='width: 80%' data-toggle="popover-x"
@@ -111,6 +111,11 @@
 																						</div>
 																				</div>
 																		</div>
+                                    {% else %}
+                                    <div class="panel-collapse collapse" id="manage-accord-boundary">
+                                      <div class="panel-body">Border Coordinates</div>
+                                    </div>
+                                    {% endif %}
 																</div>
 
 																<!-- ACTIVATE CELLS FOR MONITORING -->
@@ -226,7 +231,8 @@
 
 																		<div class="panel-collapse collapse" id="monitor-accord-reports">
 																				<div class="panel-body">
-																						Not Implemented {% if user %} <a id='make-report' class="btn btn-small btn-lightblue confirm"
+																						Reports Not Implemented
+                                            {% if user %} <a id='make-report' class="btn btn-small btn-lightblue confirm"
 																								style='width: 80%' data-toggle="popover-x" data-target='#make-report-popover' data-placement="right">Make
 																								report</a>
 																						<div id="make-report-popover" class='popover popover-info' data-toggle="popover-x">
@@ -241,25 +247,24 @@
 																										<button id='make-report-popover-close' class="btn btn-sm btn-info">Close</button>
 																								</div>
 																						</div>
-																				</div>
 																				{% else%} <br />
-																				<div>
-																						<a id='sign-in' class="btn btn-small btn-lightblue confirm" style='width: 80%' data-toggle="popover-x"
-																								data-target='#sign-in-popover' data-placement="right">Report changes</a>
-																						<div id="sign-in-popover" class='popover popover-info' data-toggle="popover-x">
-																								<div class="arrow"></div>
-																								<h3 class="popover-title">Report a change or disturbance</h3>
-																								<div class="popover-content">
-																										<a href='/login/google'><i>Sign in</i></a> to make a report.<br />
-																								</div>
-																								<div class="popover-footer">
-																										<button id='do-popover-sign-in' class="btn btn-sm btn-default">Sign in</button>
-																										<button id='close-popover-sign-in' class="btn btn-sm btn-info">Close</button>
-																								</div>
-																						</div>
-																				</div>
+                                            <div>
+                                                <a id='sign-in' class="btn btn-small btn-lightblue confirm" style='width: 80%' data-toggle="popover-x"
+                                                    data-target='#sign-in-popover' data-placement="right">Report changes</a>
+                                                <div id="sign-in-popover" class='popover popover-info' data-toggle="popover-x">
+                                                    <div class="arrow"></div>
+                                                    <h3 class="popover-title">Report a change or disturbance</h3>
+                                                    <div class="popover-content">
+                                                        <a href='/login/google'><i>Sign in</i></a> to make a report.<br />
+                                                    </div>
+                                                    <div class="popover-footer">
+                                                        <button id='do-popover-sign-in' class="btn btn-sm btn-default">Sign in</button>
+                                                        <button id='close-popover-sign-in' class="btn btn-sm btn-info">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
 																				{% endif %}
-
+                                        </div>
 																		</div>
 																</div>
 														</div>
@@ -285,8 +290,6 @@
 																		<h4 class="panel-title" data-parent="#3monitor-area-accordion" data-target="#monitor-accord-followers"
 																				data-toggle="collapse">Followers {{area_followers|length}}</h4>
 																</div>
-
-
 																<div class="panel-collapse collapse" id="monitor-accord-followers">
 																		<div class="panel-body">
 																				Volunteers who monitor this area {% for j in area_followers%}

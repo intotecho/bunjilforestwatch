@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 <meta name="description" content="Community based forest monitoring">
 <meta name="author" content="Chris Goodman">
@@ -119,7 +119,8 @@
 								     {% else %} 
 								            <span class="glyphicon glyphicon-book"></span> 
 								     {% endif %} 
-							     {{ j.1 }}</a>
+                      {{ j.1.decode('utf-8') }} </a>
+                   </a>
 							 </li>
 							{% endfor %}
 						</ul>

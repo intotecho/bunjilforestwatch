@@ -27,7 +27,7 @@ function get_area_name() {
  * Then return true.
  */
 function edit_boundary_mode() {
- 	return ($('#boundary-tab-body').hasClass('in'));
+ 	return $('#edit_boundary_mode').text() == 'True';
 }
 
 
@@ -557,7 +557,7 @@ function save_boundary(event) {
 	    	$('#save-boundary').popover('hide');
 			addToasterMessage('alert-success', 'Area ' + get_area_name() +
 					 ' updated OK');
-			if(edit_boundary_mode()) {
+			if (edit_boundary_mode()) {
 		 		var href = '/area/' + area_json.properties.area_name; 
 		 		window.location.href = href; //+ mapobj.id;
 			}
@@ -794,7 +794,9 @@ function setup_handlers(map) {
 function add_protected_areas(map) {
 	
 	var opacity = 1.0;
-	var url = 'http://maps.natureserve.org/biodashgis1/rest/services/Reference/WDPA/MapServer';
+	//var url = '//maps.natureserve.org/biodashgis1/rest/services/Reference/WDPA/MapServer';
+
+	var url = 'https://ec2-54-204-216-109.compute-1.amazonaws.com:6080/arcgis/rest/services/wdpa/wdpa/MapServer/0';
 	 //var url = 'http://sampleserver[4].arcgisonline.com/ArcGIS/rest/services/Portland/ESRI_LandBase_WebMercator/MapServer';
 	 //var url = 'http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/Petroleum/KGS_OilGasFields_Kansas/MapServer';
 	var dynamap = new gmaps.ags.MapOverlay(url, {
@@ -804,7 +806,7 @@ function add_protected_areas(map) {
 	dynamap.setMap(map);
 	
 	google.maps.event.addListener(dynamap, 'drawstart', function(){
-	    $('.pa-loading-icon').removeClass('hide').show();
+	    // DONT SHOW ICON TILL FIXED - $('.pa-loading-icon').removeClass('hide').show();
 	});
 	
 	google.maps.event.addListener(dynamap, 'drawend', function(){
