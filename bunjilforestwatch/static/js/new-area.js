@@ -1454,6 +1454,12 @@ function descriptionAccord_clicked(event) {
 	$('#descriptionAccord').collapse('toggle');
 }
 
+function skipDescription_clicked(event) {
+	var href = '/area/' + area_json.properties.area_name;
+	window.location.href = href; //+ mapobj.id;
+}
+
+
 function helplocateAccord_clicked(event) {
 	$('#helplocateAccord').collapse('toggle');
 }
@@ -1743,7 +1749,9 @@ function initialize_new_area_form() {
 	$('#descriptionAccord_title').click(descriptionAccord_clicked);
 
 	$('#boundary-tab-body').on('change', boundary_type_changed);
-	
+	$('#skip-description').click(skipDescription_clicked);
+
+
 	disable_tab("#locate-tab");
 	disable_tab("#boundary-tab");
 	disable_tab("#description-tab");
