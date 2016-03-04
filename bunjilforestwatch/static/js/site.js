@@ -65,6 +65,11 @@ $(document).ready(function() {
 	for(var i = 0; i < divs.length; i++){
 		console.log(divs[i].innerHTML);
 		addToasterMessage(divs[i].className, divs[i].innerHTML);
+
+	if (check_msie())
+	{
+		addToasterMessage('alert-warning', "This app has not been tested with Internet Explorer, only Firefox and Chrome");
+	}
 }
 
 /**
@@ -83,8 +88,8 @@ function addToasterMessage(alert_p, message)
 			  "debug": false,
 			  "newestOnTop": true,
 			  "progressBar": false,
-			  "positionClass": "toast-top-center",
-			  "preventDuplicates": false,
+			  "positionClass": "toast-top-full-width",
+			  "preventDuplicates": true,
 			  "onclick": null,
 			  "showDuration": "300",
 			  "hideDuration": "1000",
@@ -180,3 +185,18 @@ function isURL(str) {
 
 // don't fade out alert-error or alert-danger.
 
+/**
+ *
+ * @returns {boolean} true if IE or Trident is detected in UserAgent string
+ */
+function check_msie() {
+	var ms_ie = false;
+    var ua = window.navigator.userAgent;
+    var old_ie = ua.indexOf('MSIE ');
+    var new_ie = ua.indexOf('Trident/');
+
+    if ((old_ie > -1) || (new_ie > -1)) {
+        return true;
+    }
+	return false;
+}

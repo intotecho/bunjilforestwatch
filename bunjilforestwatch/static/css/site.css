@@ -95,27 +95,42 @@ a[class ="popup"] {
 }
 
 .toast-top-center {
-  top: 45px;
+  top: 10px;
 }
 
 .toast-top-full-width {
-  top: 45px;
+    top: 30px;
+    width: 40%;
 }
 
+.toast-top-right {
+  top: 12px;
+  right: 12px;
+}
 
+.toast-title {
+    font-weight: bold;
+    color: #000000;
+}
+.toast-message {
+    color: #000000;
+}
 .toast-success {
-	
-  background-color: #C6E0C6;
+  background-color: #C1E477;
 }
+
 .toast-error {
-  background-color: #FBA9A9;
+
+    background-color: #EE7053;
 }
+
 .toast-info {
-  background-color: #9DC3CE;
+    background-color: #9DC3CE;
 }
+
 .toast-warning {
-    color: #0;
-	background-color: #EDE6B4;
+
+	background-color: #edb96f;
 }
 
 /*
@@ -434,7 +449,11 @@ textarea {
             box-shadow:  0px 0px 0px 0px #000;
 }
 
-
+.sat-logo {
+    position: fixed;
+    right: 120px;
+    top: 308px;
+}
 iframe { /* retain video aspect ratio */
   width: 100%;
 }
