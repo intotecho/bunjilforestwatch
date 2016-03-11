@@ -1,2 +1,3 @@
 # Bunjil Forest Watch
-Repo has moved to [github.com/intotecho/bunjilforestwatch]
+Repo has moved to http://github.com/intotecho/bunjilforestwatch
+
