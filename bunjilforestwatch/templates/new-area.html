@@ -28,7 +28,7 @@
 <div id='user_name' class='django-template'>{{ user.name }}</div>
 <div id='user_url' class='django-template'>{{ "user"|url(user.name) }}</div>
 <div class="space-above-form"></div>
-<div class="container new-area-container">
+<div class="container forest-container">
 		<div class="locate-tab-bodyform-horizontal" id="new_area_form">
 
 				<div class="tab-content">
@@ -191,7 +191,7 @@
 										<div class="panel panel-collapse collapse in" id='subform-find-help'>
 												<div class="panel-heading">
 														<div class='panel-title' data-toggle="collapse" data-target=".find-panel">Find your area</div>
-														<div class='framing-sub-help  find-panel'>Jump to you current location or a place name</div>
+														<div class='framing-sub-help  find-panel'>Jump to your current location or a place name</div>
 												</div>
 												<div class="panel-body  find-panel">
 														<div class="row">
@@ -559,7 +559,7 @@
 
 
 						<!-- MAP PANEL (MAY ALSO SHOW  EDITOR)-->
-						<div class="row" id='map-row hidden-panel'>
+						<div id='map-row' class='row hidden-panel'>
 
 								<div class='col-md-12 nopadding' id='map-column'>
 										<div class='map-canvas' id='map-canvas-c'>
@@ -593,13 +593,10 @@
 								</div>
 						</div>
 
-
-
 						<div class="control-group">
 								<div class="controls">
 										<input id="coordinates_id" name="coordinates" type="hidden" value="undefined">
 								</div>
-
 
 								<div class="map-panel-fusiontable hidden-panel" id="fusiontable-form-c">
 										<label class="control-label map-panel-controls" data-toggle="tooltip" for="boundary_ft"
@@ -607,12 +604,7 @@
 												style="color: #ff0000">*</span>
 										</label> <input class="map-panel-controls" id="boundary_ft" name="boundary_ft" type="text">
 								</div>
-
-
 						</div>
-
-
-						<form action=""></form>
 				</div>
 
 
