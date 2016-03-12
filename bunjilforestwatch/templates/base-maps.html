@@ -12,7 +12,7 @@
 <div id='area_json' class='django-template'>{{ area_json}}</div>
 <div id='celllist' class='django-template'>{{ celllist }}</div>
 <div id='obslist' class='django-template'>{{ obslist }}</div>
-{% if show_navbar == True %}
+{% if user %}
 <div id='user_name' class='django-template'>{{ user.name }}</div>
 <div id='user_url' class='django-template'>{{ "user"|url(user.name) }}</div>
 {% endif %}
@@ -96,8 +96,8 @@
                                     {% if is_owner %}
 																		<div class="panel-collapse collapse" id="manage-accord-boundary">
 																				<div class="panel-body">Edit Area's Border</div>
-																				<a id='not-used' class="btn btn-small btn-lightblue" style='width: 80%' data-toggle="popover-x"
-																						data-target='#edit-boundary-popover' data-placement="right">Edit Boundary</a>
+																				<a id='not-used' class="btn btn-small btn-lt-blue" style='width: 80%' data-toggle="popover-x"
+                                           data-target='#edit-boundary-popover' data-placement="right">Edit Boundary</a>
 																				<div id="edit-boundary-popover" class='popover popover-info' data-toggle="popover-x">
 																						<div class="arrow"></div>
 																						<h3 class="popover-title">Edit Boundary?</h3>
@@ -171,7 +171,7 @@
 																								<!-- Filled by update_map_panel()  -->
 																						</div>
 																						<div id='map_panel_controls' class='map-panel-controls'>
-																								{% if is_owner%} <a id='save-view' class='btn btn-small btn-lightblue confirm glyphicon glyphicon-save'
+																								{% if is_owner%} <a id='save-view' class='btn btn-small btn-lt-blue confirm glyphicon glyphicon-save'
 																										style='width: 40%' data-toggle='tooltip' title='Update saved view to current view'>Save</a> {% endif
 																								%} <a id='reset-view' class='btn btn-small btn-lightred confirm glyphicon glyphicon-open'
 																										style='width: 40%' data-toggle='tooltip' title='Restore view to area default '>Return</a>
@@ -232,7 +232,7 @@
 																		<div class="panel-collapse collapse" id="monitor-accord-reports">
 																				<div class="panel-body">
 																						Reports Not Implemented
-                                            {% if user %} <a id='make-report' class="btn btn-small btn-lightblue confirm"
+                                            {% if user %} <a id='make-report' class="btn btn-small btn-lt-blue confirm"
 																								style='width: 80%' data-toggle="popover-x" data-target='#make-report-popover' data-placement="right">Make
 																								report</a>
 																						<div id="make-report-popover" class='popover popover-info' data-toggle="popover-x">
@@ -249,8 +249,8 @@
 																						</div>
 																				{% else%} <br />
                                             <div>
-                                                <a id='sign-in' class="btn btn-small btn-lightblue confirm" style='width: 80%' data-toggle="popover-x"
-                                                    data-target='#sign-in-popover' data-placement="right">Report changes</a>
+                                                <a id='sign-in' class="btn btn-small btn-lt-blue confirm" style='width: 80%' data-toggle="popover-x"
+                                                   data-target='#sign-in-popover' data-placement="right">Report changes</a>
                                                 <div id="sign-in-popover" class='popover popover-info' data-toggle="popover-x">
                                                     <div class="arrow"></div>
                                                     <h3 class="popover-title">Report a change or disturbance</h3>
@@ -351,7 +351,7 @@
 																						</div>
 																						<p class="white-font">`</p>
 																						<div class="btn-group">
-																								<button id='get_overlay_btn' type="button" style="padding: 4px" class="btn btn-xs btn-lightblue"
+																								<button id='get_overlay_btn' type="button" style="padding: 4px" class="btn btn-xs btn-lt-blue"
 																										data-toggle="tooltip" title="Fetch the image matching the above settings.">Create Overlay</button>
 																						</div>
 																				</div>
