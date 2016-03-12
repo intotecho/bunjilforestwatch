@@ -4,7 +4,14 @@
                 <div class="panel panel-default">
                   <div class="panel-heading">
 	                <h4 class="panel-title">
-                    <a class="accordion-toggle" data-toggle="collapse" href="#a_{{ j.key.urlsafe() }}">{{ j }}</a>
+                    <a class="accordion-toggle" data-toggle="collapse" href="#a_{{ j.key.urlsafe() }}">
+                      {{ j }} </a> {% if j.share == 2 %}
+                                    <span data-toggle="tooltip" title="Private Area - Only you can see it"
+                                          class="area-share-ind glyphicon glyphicon-lock"></span>
+                                  {% elif j.share == 0 %}
+                                    <span data-toggle="tooltip" title="Public Area - Anyone can see it"
+                                          class="area-share-ind glyphicon glyphicon-share-alt"></span>
+                                  {% endif %}
     	            </h4>
                 </div>
 
@@ -16,21 +23,27 @@
      						                      <div class="table-myareabackground">
 
 
-					                      <a href="{{ j|area_url }}">view area</a><br/>
-					                      <a href="{{ j|area_tasks_url}}">view tasks</a><br/>
+					                      <a href="{{ j|area_url }}">View area</a><br/>
+					                      <a href="{{ j|area_tasks_url}}">View tasks</a><br/>
 												        created {{ j.created_date|sdate }}<br/>
 												        by {{ j.created_by}}<br/>
 
-                                {{ j.num_followers or 0 }} follower{{ j.num_followers|pluralize }}<br/>
+                                {{ j.num_followers or 0 }} watcher{{ j.num_followers|pluralize }}<br/>
                                 {% set exists = [] %}
                                   {% for f in following_areas %}
                                       {% if f.name == j.name %}
-                                           {% if exists.append(1) %}{%endif %}
-                                          <a href="/area/{{ j }}/follow/?unfollow=true" class="btn btn-small btn-lightred" data-toggle="tooltip" title="Stop receiving review requests for this area.">Unfollow <span class='red_cross'>&times;</span></a><br/>
+                                           {% if exists.append(1) %}{% endif %}
+                                          <a href="/area/{{ j }}/follow?unfollow=true"
+                                             class="btn btn-small btn-lt-orange" data-toggle="tooltip"
+                                             title="Stop receiving review requests for this area.">Stop Watching
+                                            <span class="glyphicon glyphicon-eye-close"></span>
+                                          </a><br/>
                                       {%endif%}
 		  		                        {%endfor %}
                                   {% if not exists %}
-                                    <a href="/area/{{ j }}/follow" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a>
+                                    <a href="/area/{{ j }}/follow" class="btn btn-small btn-lt-blue" data-toggle="tooltip"
+                                       title="Watch Area will create a journal for this area. You will be asked to review new images for this area.">Watch Area
+                                      <span class="glyphicon glyphicon-eye-open"></span></a>
                                   {%endif %}
 							                 </div>
                                   </div>

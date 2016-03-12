@@ -12,12 +12,14 @@
 	               <div class="container-fluid">
 	                   <div class="row">
 	                       <div class=" panel-tight">
-                         <a href="{{ j.url }}">view area</a></br>
-                         <a href="{{ j.tasks_url}}">view tasks</a></br>
+                         <a href="{{ j.url }}">View area  </a></br>
+                         <a href="{{ j.tasks_url}}">View tasks</a></br>
                          created {{ j.created_date|sdate }}</br>
                          by {{ j.owner}}</br>
-                         <a href="/area/{{ j.name }}/follow" class="btn btn-small btn-lightgreen"  data-toggle="tooltip" title="Follow Area will create a journal for this area. You will be asked to review new images for this area.">Follow</a>
-                         {{ j.num_followers or 0 }} follower{{ j.num_followers|pluralize }}
+                         <a href="/area/{{ j.name }}/follow" class="btn btn-small btn-lt-blue"  data-toggle="tooltip"
+                            title="Watch Area will create a journal for this area. You will be asked to review new images for this area.">Watch Area
+                         <span class="glyphicon glyphicon-eye-open"></span></a>
+                         {{ j.num_followers or 0 }} watcher{{ j.num_followers|pluralize }}
 	                       </div>
 	                   </div>
 	               </div>
