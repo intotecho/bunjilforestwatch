@@ -1,4 +1,4 @@
-'''
+"""
 #Wrappers for Earth Engine Routines Commenced 25/05/2013
 @author: cgoodman can be shared.
 # Copyright (c) 2013-14 Chris Goodman <bunjilforestwatch@gmail.com>
@@ -14,7 +14,7 @@
 # WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-'''
+"""
 
 import logging
 
@@ -37,6 +37,7 @@ import json
 import settings #You have to import your own private keys. 
 import ee
 from ee.oauthinfo import OAuthInfo
+from google.appengine.api import urlfetch #change timeout from 5 to 60 s. https://stackoverflow.com/questions/13051628/gae-appengine-deadlineexceedederror-deadline-exceeded-while-waiting-for-htt
 
 # from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
 PRODUCTION_MODE = not os.environ.get(
@@ -71,7 +72,9 @@ def reallyinitEarthEngineService():
             logging.info("Initialising Earth Engine authenticated connection from App Engine")
             EE_CREDENTIALS = AppAssertionCredentials(OAuthInfo.SCOPE)
         ee.Initialize(EE_CREDENTIALS) 
-        print EE_CREDENTIALS
+        #print EE_CREDENTIALS
+        # permit long wait for response from earth engine
+        urlfetch.set_default_fetch_deadline(60)
         return EE_CREDENTIALS
     except Exception, e:
         logging.error("Failed to connect to Earth Engine Google API. Exception: %s", e)
@@ -164,26 +167,22 @@ def getLatestLandsatImage(park_boundary, collection_name, latest_depth, params):
         path = int(params['path'])
         row = int(params['row'])
         logging.debug("filter Landsat Collection by Path=%d Row=%d and date", path, row)
-        #image_name =  collection_name[8:11] + "%03d%03d" %(path, row)
         resultingCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row)#) #latest image form this cell.
     else:
         logging.debug("filter Landsat Collection by date and bounds only")
         resultingCollection = image_collection.filterDate(start_date, end_date).filterBounds(park_boundary) # latest image from any cells that overlaps the area. 
     
     sortedCollection = resultingCollection.sort('system:time_start', False )
-    #print sortedCollection
     #logging.debug('sortedCollection: %s', sortedCollection)
     scenes  = sortedCollection.getInfo()
-    #logging.info('Scenes: %s', sortedCollection)
-    
+
     try:
         feature = scenes['features'][int(latest_depth)]
-        #print 'feature: ', feature
     except IndexError:
         try:
             feature = scenes['features'][0]
         except IndexError:
-            logging.error("No Scenes in Filtered Collection")
+            logging.warning("No Scenes in Filtered Collection")
             logging.debug("scenes: ", scenes)
             return None
  
@@ -527,7 +526,7 @@ def getVisualMapId(image, red, green, blue):
     return mapid
 
 def getThumbnailPath(image): # Function Not Used.
-        
+
         crs = image.getInfo()['bands'][0]['crs']
         imgbands = image.getInfo()['bands']
         for b in imgbands:
