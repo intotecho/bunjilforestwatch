@@ -21,7 +21,7 @@ def feed(feed, token):
 				'%s %s' %(i.user, i.get_action()),
 				None,
 				'%s %s' %(i.user, i.get_action()),
-				i.key().id(),
+				i.key.id,
 				i.date
 			))
 
@@ -36,14 +36,14 @@ def feed(feed, token):
 				i.title,
 				i.url,
 				i.rendered,
-				i.key().id(),
+				i.key.id,
 				i.date
 			))
 
 	elif feed.startswith('user-'):
 		username = feed.partition('-')[2]
-		user_key = db.Key.from_path('User', username)
-		user = cache.get_by_key(user_key)
+		#user_key = db.Key.from_path('User', username)
+		user = cache.get_user(username)
 
 		if user.token == token:
 			title = '%s\'s journalr feed' %username
@@ -56,7 +56,7 @@ def feed(feed, token):
 					'%s %s' %(i.user, i.get_action()),
 					None,
 					'%s %s' %(i.user, i.get_action()),
-					i.key().id(),
+					i.key.id(),
 					i.date
 				))
 		else:
@@ -70,7 +70,7 @@ def feed(feed, token):
 					'%s %s' %(i.user, i.get_action()),
 					None,
 					'%s %s' %(i.user, i.get_action()),
-					i.key().id(),
+					i.key.id(),
 					i.date
 				))
 
