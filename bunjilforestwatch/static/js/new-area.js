@@ -563,6 +563,7 @@ function save_boundary(event) {
 			}
 			else {
 				activate_tab("#descr-tab");
+				$('#map-row').hide();
 			}
 	    });
 	    
@@ -1452,6 +1453,7 @@ function agreementAccord_clicked(event) {
 
 function descriptionAccord_clicked(event) {
 	$('#descriptionAccord').collapse('toggle');
+	console.log('descriptionAccord_clicked');
 }
 
 function skipDescription_clicked(event) {
@@ -1581,6 +1583,7 @@ function saved_area(url) {
 	//disable_tab("#locate-tab");
 
 	// Display description and boundary form - ask user to enrich info.
+	$('#map-row').show();
 	enable_tab("#boundary-tab");
 	activate_tab("#boundary-tab");
 	lock_map(initialize_map.map, true); 
