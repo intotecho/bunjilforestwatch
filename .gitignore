@@ -24,7 +24,6 @@ bunjilforestwatch/lib2/*
 bunjilforestwatch/notused/*
 .svn/*
 */.settings/*
-.secrets/
 .metadata/*
 */photothumb.db
 *.bak
@@ -42,7 +41,7 @@ bunjilforestwatch/notused/*
 *.swp
 *.zip
 *.info
-
+*.ini
 # Packages
 *.egg
 *.egg-info
@@ -56,6 +55,7 @@ sdist
 develop-eggs
 .installed.cfg
 */.idea/*
+
 lib64
 __pycache__
 
