@@ -18,12 +18,13 @@
                                 {% else %}
                                     {{ j }}
                                 {% endif %}<br/>
-                                  <a href="{{ j|area_url }}">view area</a><br/>
-                                  <a href="{{ j|area_tasks_url}}">view tasks</a><br/>
+                                  <a href="{{ j|area_url }}">View area</a><br/>
+                                  <a href="{{ j|area_tasks_url}}">View tasks</a><br/>
                                   created {{ j.created_date|sdate }}<br/>
                                   by {{ j.created_by}}<br/>
-                                  {{ j.num_followers or 0}} follower{{ j.num_followers|pluralize }}<br/>
-                                  <a href="/area/{{ j }}/follow?unfollow=true" class="btn btn-small btn-lightred" data-toggle="tooltip" title="Stop receiving review requests for this area.">Unfollow <span class='red_cross'>&times;</span></a></td></tr>
+                                  {{ j.num_followers or 0}} watcher{{ j.num_followers|pluralize }}<br/>
+                                  <a href="/area/{{ j }}/follow?unfollow=true" class="btn btn-small btn-lt-orange" data-toggle="tooltip"
+                                     title="Stop receiving review requests for this area.">Stop Watching <span class="glyphicon glyphicon-eye-close"></span> </a>
                             </div>
                         </div>
                     </div>
