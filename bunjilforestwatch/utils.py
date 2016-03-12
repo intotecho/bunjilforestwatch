@@ -12,18 +12,12 @@ import os
 import os.path
 import re
 import unicodedata
+from google.appengine.api import modules # for get_hostname
 
 from django.utils import html
-#from google.appengine.api import conversion
-from google.appengine.ext import blobstore
 from google.appengine.ext import db
-#from google.appengine.ext.webapp import template
-import jinja2
 import webapp2
 
-import cache
-#import facebook
-import filters
 import models
 import settings
 
@@ -31,22 +25,9 @@ import settings
 import fix_path
 fix_path.fix_sys_path()
 
-#from docutils.core import publish_parts
-#import gdata.data
-#import gdata.docs.client
-#import gdata.docs.data
-#import gdata.docs.service
-#import gdata.gauth
-import markdown
-#import rst_directive
-#import textile
 
-#env = jinja2.Environment(loader=jinja2.FileSystemLoader('templates'))
-#env = jinja2.Environment(loader=jinja2.FileSystemLoader( 'templates'))
-#env.filters.update(filters.filters)
+import markdown
 env = settings.jinja_env
-#show all templates in router 
-#logging.debug(env.list_templates())
 
 def prefetch_refprops(entities, *props):
 	fields = [(entity, prop) for entity in entities for prop in props]
@@ -201,3 +182,16 @@ def syspath():
 	#from pprint import pprint as pp
 	#logging.error(pp(sys.path))
 	return
+
+def get_custom_hostname():
+
+	'''
+	hostname = self.request.host  - doesn't work for cron tasks.
+	and get_default_version_hostname() returns 1.default.appbfw.appspot.com - which is no good either.
+	'''
+	hostname = modules.get_hostname()
+	if u'appspot.com' in hostname: # woops!
+		logging.error('get_custom_hostname() - updating custom hostname from %s', hostname)
+		hostname = u'www.bunjilforestwatch.net'
+	return hostname
+

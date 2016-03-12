@@ -516,10 +516,11 @@ class RegisterUserHandler(BaseHandler):
             errors = {}
             if 'role' in self.request.POST:
                 role = self.request.get('role')
-                #print 'post'
             elif 'role' in self.request.GET:
                 role = self.request.get('role')
-                #print 'get '  + role
+            else:
+                role = "unknown"
+
             if not role or role=='unknown':
                 role = self.request.get('roleoptionsRadios')
                 #print 'options ' + role
@@ -870,7 +871,8 @@ class ViewArea(BaseHandler):
                 
             if operation['path'] == "/features/geojsonboundary":
                 
-                print 'update boundary with: ', operation['value']
+                #print 'update boundary with: ', operation['value']
+
                 eeFeatureCollection, status, errormsg = models.AreaOfInterest.get_eeFeatureCollection(operation['value'])
                 #print  eeFeatureCollection, status, errormsg
                 if eeFeatureCollection == None:
@@ -930,7 +932,7 @@ class ViewArea(BaseHandler):
                     return self.response.write('{"status": "error", "reason": "bad value for shared" }')
                     
                 op_results.append({"result": "Updated shared", "value": safe_value, "id":operation['id']})
-                status = 200 
+                status = 200
                     
         if status != 200:
             self.response.set_status(status)
@@ -946,8 +948,9 @@ class ViewArea(BaseHandler):
             return self.response.out.write('{"status": "error", "reason": ' + message + '}')
 
         try:
-            cache.delete([cache.C_AREA %(username, area.name),
-                          cache.C_AREA %(None, area.name)])
+            cache.clear_area_cache(username, area.key )
+            #cache.delete([cache.C_AREA %(username, area.name),
+            #              cache.C_AREA %(None, area.name)])
         except Exception, e:
             self.response.set_status(500)
             message = 'Exception clearing cache {0!s}'.format(e)
@@ -967,7 +970,7 @@ class ViewArea(BaseHandler):
         
         
     def get(self, area_name):
-        area_name = area_name.decode('utf-8')
+        area_name = area_name
         current_user = users.get_current_user()
         if  not current_user:
             abs_url  = urlparse(self.request.uri)
@@ -996,7 +999,7 @@ class ViewArea(BaseHandler):
             self.redirect(webapp2.uri_for('main'))
         else:
             if (area.share == area.PRIVATE_AOI and area.owner.string_id()   != user.name and users.is_current_user_admin()):
-                self.add_message('warning', "Only admin and owner can view this area: '{0:s}'!".format(area_name))
+                self.add_message(u'warning', "Only admin and owner can view this area: '{0:s}'!".format(area_name.decode('utf-8')))
     
             # Make a list of the cells that overlap the area with their path, row and status. 
             #This may be an empty list for a new area.
@@ -1032,7 +1035,7 @@ class ViewArea(BaseHandler):
                 show_delete = True
             
             geojson_area = json.dumps(area.toGeoJSON())
-            print 'geojson_area: ', geojson_area     
+            #print 'geojson_area: ', geojson_area
             self.render('view-area.html', {
                 'username': user.name,
                 'area_json' : geojson_area,
@@ -1047,63 +1050,6 @@ class ViewArea(BaseHandler):
                 'obslist': json.dumps(observations)
             })
             
-
-class AreaBoundaryHandler(BaseHandler):
-
-    def get(self, area_name):
-        logging.info('edit boundary form')
-        
-        current_user = users.get_current_user()
-        if  not current_user:
-            abs_url  = urlparse(self.request.uri)
-            original_url = abs_url.path
-            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
-            self.add_message('danger', 'You must log in to edit the boundary .')
-            return self.redirect(users.create_login_url(original_url))
-        user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
- 
-        if not registered:
-            return self.redirect(webapp2.uri_for('register'))
-
-        try:
-            username = self.session['user']['name']
-        except:
-            logging.error('Should never get this exception')
-            self.add_message('danger', 'You must log in to edit an new area.')
-            
-            if 'user' not in self.session:
-                self.redirect(webapp2.uri_for('main'))
-                return
-
-        #send a blank area for templates
-        
-        area = cache.get_area(None, area_name)
-
-        if not area:
-            self.add_message('danger', 'Edit Boundary failed - Area not found.')
-            logging.error('EditBoundary: Area not found! %s', area_name) # XSS should not return area to client.
-            return self.error(404)
-        else:
-            if area.ft_docid is not None and len(area.ft_docid) != 0:
-                area.isfusion = True
-            else:
-                area.isfusion = False
-        
-        # if user does not own area or user is not admin - disallow
-        if (area.owner.string_id()   != user.name) and (user.role != 'admin'):
-            logging.error("Only the owner of an area or admin can edit an area's boundary %s %s", area.owner, user)
-            self.add_message('danger', "Only the owner of an area or admin can edit an area's boundary. owner:'{0!s}' user:'{1!s}'".format(area.owner, user))
-        geojson_area = json.dumps(area.toGeoJSON())
-        self.render('new-area.html', {
-                   #'country': country,
-                   'area': area,
-                   'area_json': geojson_area,
-                   'username': username,
-                   'show_navbar': True,
-                   'edit_boundary' : True,
-                   'wizard'   : False # area already created 
-               })    
-        
 class AreaHandler(BaseHandler):
     def delete(self):
         #return DeleteAreaHandler() #TODO Make deleteArea RESTFUL
@@ -1194,22 +1140,22 @@ class AreaHandler(BaseHandler):
        
         ### read geojson dict of area properties
         try:
-            new_area_geojson_str = self.request.body #.decode('utf-8')
+            new_area_geojson_str = self.request.body.decode('utf-8', 'replace') #.decode('utf-8')
             logging.debug("AreaHandler() new_area_geojson_str: %s ", new_area_geojson_str)
             new_area = geojson.loads(new_area_geojson_str)
         except (ValueError, KeyError) as e:
-            logging.error("AreaHandler() Exception : {0!s}".format(e)) 
+            logging.error("AreaHandler() Exception : {0!s}".format(e))
             if isinstance(e, KeyError):
                 self.response.set_status(400, message='No new_area_geojson_str parameter provided')
             elif isinstance(e, ValueError):
-                logging.error("AreaHandler() Exception : {0!s} parsing new_area_geojson_str: {1!s}".format(e, new_area_geojson_str)) 
+                logging.error("AreaHandler() Value Exception : {0!s} parsing new_area_geojson_str".format(e))
                 self.response.set_status(400, message='Error parsing new_area data E1184')
             return self.response.out.write('Error reading new area data E1189')
 
         ### area_name
         logging.info("AreaHandler() request to create new area %s", new_area)
         try:
-            area_name = new_area['properties']['area_name'] #.decode('utf-8') #allow non-english area names.
+            area_name = new_area['properties']['area_name'].encode('utf-8') #allow non-english area names.
         except KeyError, e:
             self.response.set_status(400)
             return self.response.out.write('Create area requires a name.')
@@ -1355,14 +1301,15 @@ class AreaHandler(BaseHandler):
 
         ### if auto-follow, add user as follower or area
         if new_area['properties']['self_monitor'] == True:
-            try:
-                logging.debug('Requesting self-monitoring for %s' %(area.name))
-                FollowAreaHandler.followArea(username, area.name, True)
-            except Exception, e:
-                message = "Area created but exception in followArea() auto-following area Exception:{0!s}".format(e)
-                self.response.set_status(500, message=message)
-                logging.error(message)
-                return self.response.out.write(message)
+            #try:
+            logging.debug('Requesting self-monitoring for %s' %(area.name))
+            FollowAreaHandler.followArea(username, area.name, True)
+            #except Exception, e:
+            #    message = "Area created but exception in followArea() auto-following area Exception:{0!s}".format(e)
+            #    self.response.set_status(500, message=message)
+            #    logging.error(message)
+            #    return self.response.out.write(message)
+            #    raise e
         else:
             logging.info('Area creator did not request self-monitoring for %s' %(area.name))
 
@@ -1890,7 +1837,9 @@ class ObservationTaskHandler(BaseHandler):
             #original_url = abs_url.path
             #logging.info('No user logged in. Cannot access protected url' + original_url)
             #return self.redirect(users.create_login_url(original_url))
-            show_nav = False
+            show_nav = True
+            is_owner = False # not area owner
+            user = None
         else:
             user, registered = self.process_credentials(current_user.nickname(), current_user.email(), models.USER_SOURCE_GOOGLE, current_user.user_id())           
             username =  self.session['user']['name']
@@ -1898,20 +1847,20 @@ class ObservationTaskHandler(BaseHandler):
             if current_user.nickname != obstask.assigned_owner:
                 self.add_message('info', "You {0!s} are not assigned to this task. Task assigned to {1!s}".format(current_user.nickname , obstask.assigned_owner.string_id()))
             self.populate_user_session(user)
-        owner = obstask.assigned_owner.string_id()
+        task_owner = obstask.assigned_owner.string_id()
 
-        area      = obstask.aoi.get()
+        area = obstask.aoi.get()
         if area is None:
             self.add_message('danger', "ObservationTaskHandler: Task for deleted area. ")
             resultstr = "Task's area not found. ObservationTaskHandler: key {0!s}".format(task_id)
             logging.error(resultstr)
             return self.response.write(resultstr)
 
-        area_name =  area.name.encode('utf-8')
-        cell_list  = area.cell_list()
+        area_name = area.name.encode('utf-8')
+        cell_list = area.cell_list()
         geojson_area = json.dumps(area.toGeoJSON())
 
-        resultstr = "New Task for {0!s} to check area {1!s}".format(owner, area_name)
+        resultstr = "New Task for {0!s} to check area {1!s}".format(task_owner, area_name)
         
         #debugstr = resultstr + " task: " + str(task_id) + " has " + str(len(obstask.observations)) + "observations"
         obslist = []
@@ -1921,14 +1870,20 @@ class ObservationTaskHandler(BaseHandler):
                 obslist.append(obs.Observation2Dictionary()) # includes a list of precomputed overlays
             else:
                 logging.error("Missing Observation from cache")
-        
+
+        if user and area.owner.string_id() == user.name:
+            is_owner = True
+        else:
+            is_owner = False
+
         return self.render('view-obstask.html', {
             'username':  username,
             'area_json' : geojson_area,
             'area': area,
-            'owner': owner,
-            'show_delete':False,
             'task': obstask,
+            'owner': task_owner,
+            'is_owner': is_owner, #area owner
+            'show_delete': False,
             'show_navbar': show_nav,
             #'area_followers': area_followers,
             'obslist': json.dumps(obslist),
@@ -2024,14 +1979,13 @@ class CheckForNewInAllAreasHandler(BaseHandler):
         
         if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
             initstr =u'CheckForNewInAllAreasHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
-            self.response.write(initstr) 
-            return
+            self.response.set_status(503)
+            return self.response.write(initstr)
+
         returnstr = initstr
 
         all_areas = cache.get_all_areas() # includes unlisted and private areas.
-
-        hostname = get_default_version_hostname()
-
+        hostname = utils.get_custom_hostname()
         for area in all_areas:
             returnstr += checkForNewInArea(area,  hostname)
 
@@ -2060,11 +2014,13 @@ class CheckForNewInAreaHandler(BaseHandler):
         initstr += u"<p>If an observation task is created, the first follower of the area receives an email with an observation task.</p>"
         
         if not eeservice.initEarthEngineService(): # we need earth engine now. logging.info(initstr)        
-            initstr =u'CheckForNewInAreaHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
+            initstr =u'CheckForNewInAreaHandler: Sorry, Cannot contact Google Earth Engine now. Please try again later'
             #self.add_message('danger', initstr)
-            return self.response.write(initstr) 
+            self.response.set_status(500)
+            return self.response.write(initstr)
             
-        hostname = get_default_version_hostname()
+        hostname = utils.get_custom_hostname()
+
         returnstr = initstr + checkForNewInArea(area, hostname) #  self.request.headers.get('host', 'no host'))
         return self.response.write(returnstr.encode('utf-8')) 
 
@@ -2212,7 +2168,11 @@ class ActivityHandler(BaseHandler):
         username = self.session['user']['name']
         logging.debug('ActivityHandler: %s', username)
         #if users.is_current_user_admin():
-        self.render('activity.html', {'activities': cache.get_activities(username )})
+        self.render('activity.html',
+                    {
+                        'show_navbar': True,
+                        'activities': cache.get_activities(username)
+                    })
 
 class FeedsHandler(BaseHandler):
     def get(self, feed):
@@ -2381,10 +2341,10 @@ class FollowHandler(BaseHandler):
         following, followers = ndb.run_in_transaction_options(xg_on, txn, following_key, followers_key, op)
 
         if op == 'add':
-            self.add_message('success', 'You are now following %s.' %username)
+            self.add_message('success', 'You are now watching %s.' %username)
             models.Activity.create(cache.get_by_key(self.session['user']['key']), models.ACTIVITY_FOLLOWING, user)
         elif op == 'del':
-            self.add_message('success', 'You are no longer following %s.' %username)
+            self.add_message('success', 'You are no longer watching %s.' %username)
 
         cache.set_multi({
             cache.C_FOLLOWERS %username: followers.users,
@@ -2397,73 +2357,97 @@ class FollowAreaHandler(BaseHandler):
     
     @staticmethod
     def followArea(username, area_name, follow):
+        '''
+        If follow, add user to area's followers
+        else remove user from area's followers
+        user is added to (removed from) an index of the area's followers and area is added to (removed from) a list of areas the user is following.
+        The areas's list of users: AreaFollowersIndex, is created if necessary
+        The users's list of areas: UserFollowingAreasIndex, is created if necessary
+
+        If follow is true, a journal is created for storing reports called Observations for {area_name}.
+        The journal is not deleted in an unfollow, and if it already exists it is not an error.
+
+        Args:
+            username: The user who is to be added/removed from the areas followers.
+            area_name: The area to be followed.
+            follow: True to follow, False to unfollow.
+
+        Returns:
+        '''
+
         area = cache.get_area(None, area_name)
-        user=cache.get_user(username)
         if not area:
             return False
- 
+
+        user = cache.get_user(username)
+        if not user:
+            logging.error("followArea(): User not found")
+            return False
+
         if follow == False:
             op = 'del'
-            #print 'unfollowing'
         else:
             op = 'add'
-            #print 'following'
 
-        def txn(userfollowingareas_key, areafollowers_key, area, op):
-            tu, ar = ndb.get_multi([userfollowingareas_key, areafollowers_key])
-            #print("FollowArea() adding key=", userfollowingareas_key)
-            if not tu:
-                logging.error("FollowArea() user not found: %s", userfollowingareas_key)
-                tu = models.UserFollowingAreasIndex(key=userfollowingareas_key)
-            if not ar:
-                logging.info("FollowArea() adding first follower for: %s", areafollowers_key.string_id())
-                ar = models.AreaFollowersIndex(key=areafollowers_key)
+        def txn(userfollowingareas_key, areafollowers_key, area, user, op):
+            areasUserFollows, areasFollowers = ndb.get_multi([userfollowingareas_key, areafollowers_key])
+            if not areasUserFollows:
+                logging.info(u"FollowArea() User %s is following their first area", user.name)
+                areasUserFollows = models.UserFollowingAreasIndex(key = userfollowingareas_key)
+            if not areasFollowers:
+                logging.info(u"FollowArea() adding first follower to area {0:s}".format(area.name))
+                areasFollowers = models.AreaFollowersIndex(key = areafollowers_key)
 
             changed = []
-
             if op == 'add':
-                if userfollowingareas_key.string_id() not in ar.users:
-                    ar.users.append(userfollowingareas_key.string_id())
-                    changed.append(ar)
-                if areafollowers_key.string_id() not in tu.areas:
-                    #print areafollowers_key.string_id()
-                    #print tu.areas
+                if user.name not in areasFollowers.users:
+                    areasFollowers.users.append(user.name)
+                    changed.append(areasFollowers)
+                    #print 'user.name type', type(user.name)
 
-                    tu.areas.append(areafollowers_key.string_id())
-                    tu.area_keys.append(area.key)
-                    changed.append(tu)
-
+                if area.name not in areasUserFollows.areas:
+                    #print 'area.name type', type(area.name)
+                    #print 'area string_id() type', type(area.key.string_id())
+                    #print 'area id() type', type(area.key.id())
+                    areasUserFollows.areas.append(area.name)
+                    areasUserFollows.area_keys.append(area.key)
+                    changed.append(areasUserFollows)
                     changed.append(area)
+                models.Activity.create(user, models.ACTIVITY_FOLLOWING, area.key)
+
             elif op == 'del':
-                if userfollowingareas_key.string_id() in ar.users:
-                    ar.users.remove(userfollowingareas_key.string_id())
-                    changed.append(ar)
-                if areafollowers_key.string_id() in tu.areas:
+                if user.name in areasFollowers.users:
+                    areasFollowers.users.remove(user.name)
+                    changed.append(areasFollowers)
+                else:
+                    logging.error(u"FollowArea() user not in area's followers! {0:s}".format(userfollowingareas_key.string_id()))
 
+                if area.name in areasUserFollows.areas:
                     changed.append(area)
-                    tu.areas.remove(areafollowers_key.string_id())
+                    areasUserFollows.areas.remove(area.name)
                     try:
-                        tu.area_keys.remove(area.key)
+                        areasUserFollows.area_keys.remove(area.key)
                     except:
-                        logging.error("FollowArea() area.key %s not in area_keys",  area.key)
-                    changed.append(tu)
+                        logging.error(u"FollowArea() Cannot remove follower - area.key {0:s} not in area_keys".format(area.key))
+                    changed.append(areasUserFollows)
+                else:
+                    logging.error(u"FollowArea() Cannot remove area. Area not in user's list of areas")
 
+                models.Activity.create(user, models.ACTIVITY_UNFOLLOWING, area.key)
             ndb.put_multi(changed)
-            
-            return tu, ar
-        following_key = models.UserFollowingAreasIndex.get_key(username) #ndb.Key('User', thisuser, 'models.UserFollowingAreasIndex', thisuser)
-        followers_key = models.AreaFollowersIndex.get_key(area_name) #ndb.Key('AreaOfInterest', area_name.decode('utf-8'), 'models.AreaFollowersIndex', area_name.decode('utf-8'))
-        areas_following, followers,  = ndb.transaction( lambda: txn(following_key, followers_key, area, op), xg=True)
+            return areasUserFollows, areasFollowers
+
+        UserFollowingAreas_key = models.UserFollowingAreasIndex.get_key(username)
+        AreaFollowersIndex_key = models.AreaFollowersIndex.get_key(area_name)
+        #print 'AreaFollowersIndex_key.encoded', AreaFollowersIndex_key
+        areas_following, followers = ndb.transaction(lambda: txn(UserFollowingAreas_key, AreaFollowersIndex_key, area, user, op), xg=True)
 
         if op == 'add':
-            models.Activity.create(cache.get_user(username), models.ACTIVITY_FOLLOWING, area.key)
- 
             ########### create a journal for each followed area - should be in above txn and a function call as duplicated ##############
-            journal_name = u'Observations for ' + area_name # name is used by view-obstask.html to make reports.
-
+            journal_name = 'Observations for ' + area_name # .decode('utf-8') # name is used by view-obstask.html to make reports.
             existing_journal = models.Journal.get_journal(username, journal_name)
             if existing_journal:
-                logging.warning('User already had a journal called <em>%s</em>.' %name)
+                logging.warning('User already has a journal called {0:s}!'.format(journal_name))
                 journal = existing_journal
             else:
                 journal = models.Journal(parent=user.key, id=journal_name)
@@ -2480,9 +2464,8 @@ class FollowAreaHandler(BaseHandler):
                 cache.clear_journal_cache(user.key)
                 models.Activity.create(user, models.ACTIVITY_NEW_JOURNAL, journal.key)
                 cache.set(cache.pack(user), cache.C_KEY, user.key)
-                #self.add_message('success', 'Created journal <em>%s</em>.' %name.decode('utf-8'))
-            
-        return True 
+
+        return True
  
     def get(self, area_name):
         '''
@@ -2502,24 +2485,14 @@ class FollowAreaHandler(BaseHandler):
             
         if 'unfollow' in self.request.GET:
             if FollowAreaHandler.followArea(username, area_name, False) == True:
-                self.add_message('success', 'You are no longer following area <em>%s</em>.' %area_name.decode('utf-8'))
+                self.add_message('success', u'You are no longer watching area <em>{0:s}</em>.'.format(area_name.decode('utf-8')))
+                self.add_message('success', u'Created journal <em>{0:s}</em>.'.format(name.decode('utf-8')))
         else:
             if FollowAreaHandler.followArea(username, area_name, True) == True:
-                self.add_message('success', 'You are now following area <em>%s</em>.  Journal created.' %area_name.decode('utf-8'))
-        
-        cache.flush() # FIXME: Better fix by setting data into the cache as this will be expensive!!!
-        #cache.set_multi({
-        #    cache.C_AREA_FOLLOWERS %area.name: followers.users,  #doesn't look right.
-        #    cache.C_FOLLOWING_AREAS %thisuser: areas_following #areas_following.areas,
-        #})
-        # For newJournal cache.set(cache.pack(user), cache.C_KEY, user.key)
-        # cache.C_FOLLOWERS %username: followers.users,
-        # cache.C_FOLLOWING %thisuser: following.users,
+                self.add_message('success', u'You are now watching area <em>{0:s}</em>. Journal created'.format(area_name.decode('utf-8')))
 
+        cache.flush() # FIXME: Better fix by setting data into the cache as this will be expensive!!!
         cache.clear_area_cache(self.session['user']['key'], area.key )
-        #cache.clear_area_followers(area.key)
-    
-        #counters.increment(counters.COUNTER_AREAS) # should be FOLLOW_AREAS
 
         self.populate_user_session()
         if 'unfollow' in self.request.GET:
@@ -2532,7 +2505,7 @@ class FollowAreaHandler(BaseHandler):
 class NewEntryHandler(BaseHandler):
     def get(self, username, journal_name, images=""): #journal=None
         images = self.request.GET.get('sat_image', '')
-        print "NewEntryHandler: ", journal_name, images
+        #print "NewEntryHandler: ", journal_name, images
         ownername = username
         author = self.session['user']['name'] # current user
         if author != ownername:
@@ -2932,7 +2905,7 @@ class UploadHandler(BaseUploadHandler):
             return user, entry
 
         blob_key = models.Blob.get_blob_key(entry)
-        print 'blob_key', blob_key
+        #print 'blob_key', blob_key
         
       
         new_blob = models.Blob(key=blob_key, blob=blob.key(), type=blob_type, name=blob.filename, size=blob.size)
@@ -3357,7 +3330,6 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/<username>/myareas', handler=ViewAllAreas, name='view-areas'), # view someone else's areas.
 
     webapp2.Route(r'/area', handler=AreaHandler, name='new-area'),                             # create area
-    webapp2.Route(r'/area/<area_name>/boundary', handler=AreaBoundaryHandler, name='edit-boundary'),  # dialog to edit boundary
 
     webapp2.Route(r'/area/<area_name>/delete', handler=DeleteAreaHandler, name='delete-area'),  # delete area (owner or admin)
     #webapp2.Route(r'/area/<area_name>/update/view/<lat:\d+>/<lng:\d+>/<zoom:\d+>/', handler=UpdateAreaViewHandler, name='area-save-view'),
