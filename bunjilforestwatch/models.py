@@ -409,6 +409,11 @@ class AreaOfInterest(ndb.Model):
             return 'error'
 
     def set_shared(self, share_str):
+
+        if self.share == self.PUBLIC_AOI and share_str == 'public':
+            logging.error('BPA-138 Need to remove all followers except owner')
+            #FIXME: Need to remove all followers except owner BPA-138
+
         if share_str == 'public':
             self.share = self.PUBLIC_AOI
             return self.share
@@ -419,7 +424,7 @@ class AreaOfInterest(ndb.Model):
             self.share = self.PRIVATE_AOI
             return self.share
         else:
-            logging.error('set_shared() invalid value provided.{0!s}'.format(share_str))
+            logging.error('set_shared() invalid value provided: {0!s}'.format(share_str))
             return 'error'  # no change to database.
 
     @property
@@ -578,7 +583,7 @@ class AreaOfInterest(ndb.Model):
             try:
                 park_geom = json.loads(self.boundary_hull)
                 # return boundary_hull_dict['geometry'] #['coordinates'] # outer ring only
-                print 'get_boundary_hull_fc loading boundary'
+                #print 'get_boundary_hull_fc loading boundary'
                 # park_geom = ee.Geometry(boundary_hull_dict['geometry'])
             except KeyError:
                 logging.error('get_boundary_hull_fc(): KeyError in boundary_hull')
@@ -618,7 +623,7 @@ class AreaOfInterest(ndb.Model):
             self.map_center
             self.area_location
             
-        @returns boundary_hull as a dictionary - not a string
+        @return boundary_hull as a dictionary - not a string
         """
         hull = eeFeatureCollection.geometry().convexHull(10);
 
@@ -731,6 +736,9 @@ class AreaOfInterest(ndb.Model):
 
             elif object_type == 'FeatureCollection':
                 features = geojson_obj['features']
+                if len(features) == 0:
+                    return eeFeatureCollection, 400, "geojson FeatureCollection contains no Featuress"
+
                 for feature in features:
                     eeFeature = ee.Feature(feature['geometry'])
                     cw_geom = eeFeature.geometry()
@@ -769,7 +777,7 @@ class AreaOfInterest(ndb.Model):
         for p in polygon[0]:
             lat = p[1]
             lon = p[0]
-            print lat, lon
+            #print lat, lon
             gp = ndb.GeoPt(float(lat), float(lon))
             coords.append(gp)
 
@@ -1221,6 +1229,7 @@ ACTIVITY_NEW_OBS = 6
 ACTIVITY_NEW_REPORT = 7
 ACTIVITY_NEW_FEEDBACK = 8
 ACTIVITY_DELETE_AREA = 9
+ACTIVITY_UNFOLLOWING = 10
 
 ACTIVITY_CHOICES = [
     ACTIVITY_NEW_JOURNAL,
@@ -1231,7 +1240,8 @@ ACTIVITY_CHOICES = [
     ACTIVITY_NEW_OBS,
     ACTIVITY_NEW_REPORT,
     ACTIVITY_NEW_FEEDBACK,
-    ACTIVITY_DELETE_AREA
+    ACTIVITY_DELETE_AREA,
+    ACTIVITY_UNFOLLOWING
 ]
 
 ACTIVITY_ACTION = {
@@ -1243,7 +1253,8 @@ ACTIVITY_ACTION = {
     ACTIVITY_NEW_OBS: 'created a new observation',
     ACTIVITY_NEW_REPORT: 'created a new report',
     ACTIVITY_NEW_FEEDBACK: 'created new feedback',
-    ACTIVITY_DELETE_AREA: 'deleted an area of interest'
+    ACTIVITY_DELETE_AREA: 'deleted an area of interest',
+    ACTIVITY_UNFOLLOWING: 'stopped following',
 }
 
 
@@ -1259,10 +1270,20 @@ class Activity(DerefModel):
     def get_action(self):
         r = ACTIVITY_ACTION[self.action]
 
-        if self.action == ACTIVITY_FOLLOWING:
-            # name = self.get_key('object').name()
-            name = self.get_key('object')
-            r += ' <a href="%s">%s</a>' % (webapp2.uri_for('user', username=name), name)
+        if self.action in [ACTIVITY_FOLLOWING, ACTIVITY_UNFOLLOWING]:
+            obj= self.object.get()
+            if obj:
+                r += ' <a href="%s">%s</a>' % (obj.url(), obj.name)
+
+        if self.action in [ACTIVITY_NEW_JOURNAL]:
+            obj= self.object.get()
+            if obj:
+                r += ' <a href="%s">%s</a>' % (obj.url(), self.object.string_id().decode('utf-8'))
+
+        #if self.action == ACTIVITY_NEW_JOURNAL:
+        #    journal= self.object.get()
+        #    name = self.object.string_id().decode('utf-8')
+        #    r += ' <a href="%s">%s</a>' % (journal.url(), journal.name)
 
         return r
 
