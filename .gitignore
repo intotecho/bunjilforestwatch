@@ -54,6 +54,7 @@ var
 sdist
 develop-eggs
 .installed.cfg
+.idea/*
 */.idea/*
 
 lib64
