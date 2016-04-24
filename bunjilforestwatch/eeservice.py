@@ -74,7 +74,7 @@ def reallyinitEarthEngineService():
         ee.Initialize(EE_CREDENTIALS) 
         #print EE_CREDENTIALS
         # permit long wait for response from earth engine
-        urlfetch.set_default_fetch_deadline(60)
+        #urlfetch.set_default_fetch_deadline(60000)
         return EE_CREDENTIALS
     except Exception, e:
         logging.error("Failed to connect to Earth Engine Google API. Exception: %s", e)
@@ -189,6 +189,10 @@ def getLatestLandsatImage(park_boundary, collection_name, latest_depth, params):
     iid = feature['id']   
     logging.info('getLatestLandsatImage found scene: %s', iid)
     latest_image = ee.Image(iid)
+    urlfetch.set_default_fetch_deadline(120000)
+
+    ee.data.setDeadline(60000)
+
     props = latest_image.getInfo()['properties'] #logging.info('image properties: %s', props)
     system_time_start= datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
     date_str = system_time_start.strftime("%Y-%m-%d @ %H:%M")

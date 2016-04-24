@@ -6,6 +6,10 @@ Makefile
 */.project
 */.pydevproject
 
+/.ipynb_checkpoints/
+*.ipynb
+/notused1/
+
 # Documentation Building
 build/*
 source/*
@@ -21,7 +25,9 @@ notused/*
 algorithms/*
 
 bunjilforestwatch/lib2/*
+bunjilforestwatch/gfw/*
 bunjilforestwatch/notused/*
+node_modules/*
 .svn/*
 */.settings/*
 .metadata/*

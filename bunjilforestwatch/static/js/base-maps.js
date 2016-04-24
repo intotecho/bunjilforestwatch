@@ -137,7 +137,7 @@ function initialize() {
     /* global single_map*/ 
     
     if (single_map === true){
-        initial_dragger = "95%";
+        initial_dragger = "5%";
         $('#map-right-c').hide();
         $('#map-left-c').removeClass('col-md-5');
         $('#map-left-c').addClass('col-md-10');
@@ -145,6 +145,12 @@ function initialize() {
     else {
         initial_dragger = "90%";
     }
+
+    $('#dragger').dblclick( function(){
+        console.log('double clicked handle');
+    });
+
+
     $('#dragger').css('left', initial_dragger );
     map_rhs.bindTo('center', map_under_lhs);
     map_rhs.bindTo('zoom', map_under_lhs);
@@ -553,6 +559,10 @@ function initialize() {
             drag: function(e, u) {
               var left = u.position.left;
               $('#map-left-c-prior').width(left);
+                if(left < 20) {
+                    console.log(left);
+                    $('#draghandle').attr("{background-color:blue}");
+                }
               //$('#draghandle').width('11px').height('11px');
             }
         });

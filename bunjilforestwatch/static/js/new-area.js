@@ -797,7 +797,7 @@ function add_protected_areas(map) {
 	var opacity = 1.0;
 	//var url = '//maps.natureserve.org/biodashgis1/rest/services/Reference/WDPA/MapServer';
 
-	var url = 'https://ec2-54-204-216-109.compute-1.amazonaws.com:6080/arcgis/rest/services/wdpa/wdpa/MapServer/0';
+	var url = 'http://ec2-54-204-216-109.compute-1.amazonaws.com:6080/arcgis/rest/services/wdpa/wdpa/MapServer/0';
 	 //var url = 'http://sampleserver[4].arcgisonline.com/ArcGIS/rest/services/Portland/ESRI_LandBase_WebMercator/MapServer';
 	 //var url = 'http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/Petroleum/KGS_OilGasFields_Kansas/MapServer';
 	var dynamap = new gmaps.ags.MapOverlay(url, {

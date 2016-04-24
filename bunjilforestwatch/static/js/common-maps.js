@@ -288,6 +288,7 @@ function center_mapview(area_json) {
  */
 function zoom_mapview(area_json) {
 	var mapview = get_area_feature(area_json, "mapview");
+
 	if (mapview !== null) {
 		return mapview.properties.zoom;
 	}
@@ -433,8 +434,7 @@ function displayFeatureCollection(map, geojson) {
     	}
     	
     	try {
-    		var newFeatures = map.data.addGeoJson(geojson);
-            return newFeatures;
+    		return map.data.addGeoJson(geojson);
     	} catch (error) {
     		console.log("could not add geojson to map: " + error.message);
     		return null;
@@ -444,3 +444,8 @@ function displayFeatureCollection(map, geojson) {
     	return null;
     }
 }
+
+var loss_types =
+[
+	'mechanical', 'harvesting', 'fire', 'disease', 'storm'
+];

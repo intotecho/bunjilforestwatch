@@ -191,7 +191,7 @@ def get_custom_hostname():
 	'''
 	hostname = modules.get_hostname()
 	if u'appspot.com' in hostname: # woops!
-		logging.error('get_custom_hostname() - updating custom hostname from %s', hostname)
+		logging.warning('get_custom_hostname() - updating custom hostname from %s', hostname)
 		hostname = u'www.bunjilforestwatch.net'
 	return hostname
 

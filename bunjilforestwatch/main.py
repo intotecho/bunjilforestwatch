@@ -2053,8 +2053,7 @@ class ViewJournal(BaseHandler):
     def get(self, username, journal_name):
         page = int(self.request.get('page', 1))
         journal= models.Journal.get_journal(username, journal_name.decode('utf-8'))
-        #journals = cache.get_journals(user_key)
-        if username != self.session['user']['name']:
+        if 'user' not in self.session or username != self.session['user']['name']:
             self.error(403)
             return
 
