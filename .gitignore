@@ -75,6 +75,14 @@ bunjilforestwatch/lib/simplejson/
 bunjilforestwatch/lib/test.txt
 bunjilforestwatch/lib/uritemplate/
 bunjilforestwatch/test/
+bunjilforestwatch/lib/OpenSSL/
+bunjilforestwatch/lib/html5lib/
+bunjilforestwatch/lib/httplib2/
+bunjilforestwatch/lib/markdown/
+bunjilforestwatch/lib/oauth2client/
+bunjilforestwatch/lib/six.py
+
+
 
 bunjilforestwatch/gfw/*
 bunjilforestwatch/notused/*
