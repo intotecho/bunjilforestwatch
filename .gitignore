@@ -5,6 +5,8 @@ Makefile
 */.pylintrc
 */.project
 */.pydevproject
+*/.pyc
+*/*/.pyc
 
 /.ipynb_checkpoints/
 *.ipynb
@@ -24,7 +26,56 @@ lib2/*
 notused/*
 algorithms/*
 
-bunjilforestwatch/lib2/*
+# lib - don't add to repo, build from pip.
+lib/.*.dist-info
+lib/ee/.*
+Markdown-2.6.5.dist-info
+
+_cffi_backend.pyd
+alllibs_pip_freeze_requirements.txt
+apiclient
+bleach
+bleach-1.4.2.dist-info
+bunjilforestwatch - Shortcut.lnk
+cffi
+cffi-1.6.0.dist-info
+cli
+cryptography
+cryptography-1.4.dist-info
+dateutil
+docutils
+docutils-0.12.dist-info
+earthengine_api-0.1.83.dist-info
+easy_install.py
+easy_install.pyc
+ee
+enum
+enum34-1.1.6.dist-info
+geojson
+
+
+
+bunjilforestwatch/doc/
+bunjilforestwatch/lib/googleapiclient/
+bunjilforestwatch/lib/idna/
+bunjilforestwatch/lib/ipaddress.py
+bunjilforestwatch/lib/matplotlib-1.4.0-py2.7-nspkg.pth
+bunjilforestwatch/lib/matplotlib/
+bunjilforestwatch/lib/mpl_toolkits/
+bunjilforestwatch/lib/numpy/
+bunjilforestwatch/lib/pkg_resources/
+bunjilforestwatch/lib/pyasn1/
+bunjilforestwatch/lib/pyasn1_modules/
+bunjilforestwatch/lib/pycparser/
+bunjilforestwatch/lib/pylab.py
+bunjilforestwatch/lib/pyparsing.py
+bunjilforestwatch/lib/rsa/
+bunjilforestwatch/lib/setuptools/
+bunjilforestwatch/lib/simplejson/
+bunjilforestwatch/lib/test.txt
+bunjilforestwatch/lib/uritemplate/
+bunjilforestwatch/test/
+
 bunjilforestwatch/gfw/*
 bunjilforestwatch/notused/*
 node_modules/*
@@ -51,6 +102,9 @@ node_modules/*
 # Packages
 *.egg
 *.egg-info
+*.dist-info/*
+*.dist-info
+
 dist
 build
 eggs
@@ -84,3 +138,6 @@ nosetests.xml
 /Git Bash.lnk
 /npm-debug.log
 /Git Shell sc.lnk
+
+glad_alerts.py
+

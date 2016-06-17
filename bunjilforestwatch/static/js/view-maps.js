@@ -5,7 +5,7 @@ var map_rhs;
 var map_center;
 var map_zoom;
 
-var satellite = 'l8'
+var satellite = 'l8';
 var algorithm = 'rgb'; // ndvi 
 var latest = 0;  //latest - 0
 var overlayMaps = [];

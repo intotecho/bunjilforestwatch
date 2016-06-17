@@ -426,12 +426,12 @@ break;
 case 13:this.$ = {}; Object.defineProperty(this.$, '__line__', {
             value: this._$.first_line,
             enumerable: false
-        })
+        });
 break;
 case 14:this.$ = $$[$0-1]; Object.defineProperty(this.$, '__line__', {
             value: this._$.first_line,
             enumerable: false
-        })
+        });
 break;
 case 15:this.$ = [$$[$0-2], $$[$0]];
 break;
@@ -442,12 +442,12 @@ break;
 case 18:this.$ = []; Object.defineProperty(this.$, '__line__', {
             value: this._$.first_line,
             enumerable: false
-        })
+        });
 break;
 case 19:this.$ = $$[$0-1]; Object.defineProperty(this.$, '__line__', {
             value: this._$.first_line,
             enumerable: false
-        })
+        });
 break;
 case 20:this.$ = [$$[$0]];
 break;
@@ -826,7 +826,7 @@ next:function () {
                         return token;
                     } else if (this._backtrack) {
                         match = false;
-                        continue; // rule action called reject() implying a rule MISmatch.
+                         // rule action called reject() implying a rule MISmatch.
                     } else {
                         // else: this is a lexer rule which consumes input without producing a token (e.g. whitespace)
                         return false;
@@ -915,31 +915,31 @@ var YYSTATE=YY_START;
 switch($avoiding_name_collisions) {
 case 0:/* skip whitespace */
 break;
-case 1:return 6
+case 1:return 6;
 break;
-case 2:yy_.yytext = yy_.yytext.substr(1,yy_.yyleng-2); return 4
+case 2:yy_.yytext = yy_.yytext.substr(1,yy_.yyleng-2); return 4;
 break;
-case 3:return 17
+case 3:return 17;
 break;
-case 4:return 18
+case 4:return 18;
 break;
-case 5:return 23
+case 5:return 23;
 break;
-case 6:return 24
+case 6:return 24;
 break;
-case 7:return 22
+case 7:return 22;
 break;
-case 8:return 21
+case 8:return 21;
 break;
-case 9:return 10
+case 9:return 10;
 break;
-case 10:return 11
+case 10:return 11;
 break;
-case 11:return 8
+case 11:return 8;
 break;
-case 12:return 14
+case 12:return 14;
 break;
-case 13:return 'INVALID'
+case 13:return 'INVALID';
 break;
 }
 },
@@ -1261,7 +1261,7 @@ process.emit = noop;
 
 process.binding = function (name) {
     throw new Error('process.binding is not supported');
-}
+};
 
 // TODO(shtylman)
 process.cwd = function () { return '/' };

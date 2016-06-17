@@ -140,20 +140,23 @@
         || namespace_list[0] === ""
       ) { namespace_list = ["000"]; }
 
-      NSPACE_00:
-      for ( idx = 0; idx < namespace_list.length; idx++ ) {
+      for (idx = 0; idx < namespace_list.length; idx++) {
         namespace_key = namespace_list[idx];
 
-        if ( ! namespace_key ) { continue NSPACE_00; }
-        if ( seen_map.hasOwnProperty(namespace_key) ) { continue NSPACE_00; }
+        if (!namespace_key) {
+          continue;
+        }
+        if (seen_map.hasOwnProperty(namespace_key)) {
+          continue;
+        }
 
         seen_map[namespace_key] = true;
 
         ue_namespace_code = '.__ue' + namespace_key;
 
-        $to_bind.bind( 'mousedown'  + ue_namespace_code, onMouse  );
-        $to_bind.bind( 'touchstart' + ue_namespace_code, onTouch );
-        $to_bind.bind( 'mousewheel' + ue_namespace_code, onMousewheel );
+        $to_bind.bind('mousedown' + ue_namespace_code, onMouse);
+        $to_bind.bind('touchstart' + ue_namespace_code, onTouch);
+        $to_bind.bind('mousewheel' + ue_namespace_code, onMousewheel);
       }
 
       boundList.push_uniq( this_el ); // record as bound element
@@ -261,16 +264,17 @@
       namespace_list = makeListPlus(a_names);
       namespace_list.push_uniq('000');
 
-      NSPACE_01:
-      for ( idx = 0; idx < namespace_list.length; idx++ ) {
+      for (idx = 0; idx < namespace_list.length; idx++) {
         namespace_key = namespace_list[idx];
 
-        if ( ! namespace_key ) { continue NSPACE_01; }
+        if (!namespace_key) {
+          continue;
+        }
 
         ue_namespace_code = '.__ue' + namespace_key;
-        $bound.unbind( 'mousedown'  + ue_namespace_code );
-        $bound.unbind( 'touchstart' + ue_namespace_code );
-        $bound.unbind( 'mousewheel' + ue_namespace_code );
+        $bound.unbind('mousedown' + ue_namespace_code);
+        $bound.unbind('touchstart' + ue_namespace_code);
+        $bound.unbind('mousewheel' + ue_namespace_code);
       }
 
       $.removeData( elem_bound, optionKey );

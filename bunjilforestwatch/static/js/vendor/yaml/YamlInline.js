@@ -378,7 +378,7 @@ YamlInline.prototype =
 				}
 			}
 			
-			if ( doContinue ) continue;
+			if ( doContinue ) 
 		}
 
 		throw new YamlParseException('Malformed inline YAML string "'+mapping+'"');

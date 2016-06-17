@@ -1,14 +1,14 @@
 $(function () {
 
-    module("bootstrap-dropdowns")
+    module("bootstrap-dropdowns");
 
       test("should be defined on jquery object", function () {
         ok($(document.body).dropdown, 'dropdown method is defined')
-      })
+      });
 
       test("should return element", function () {
         ok($(document.body).dropdown()[0] == document.body, 'document.body returned')
-      })
+      });
 
       test("should not open dropdown if target is disabled", function () {
         var dropdownHTML = '<ul class="tabs">'
@@ -22,10 +22,10 @@ $(function () {
           + '</ul>'
           + '</li>'
           + '</ul>'
-          , dropdown = $(dropdownHTML).find('[data-toggle="dropdown"]').dropdown().click()
+          , dropdown = $(dropdownHTML).find('[data-toggle="dropdown"]').dropdown().click();
 
         ok(!dropdown.parent('.dropdown').hasClass('open'), 'open class added on click')
-      })
+      });
 
       test("should not open dropdown if target is disabled", function () {
         var dropdownHTML = '<ul class="tabs">'
@@ -39,10 +39,10 @@ $(function () {
           + '</ul>'
           + '</li>'
           + '</ul>'
-          , dropdown = $(dropdownHTML).find('[data-toggle="dropdown"]').dropdown().click()
+          , dropdown = $(dropdownHTML).find('[data-toggle="dropdown"]').dropdown().click();
 
         ok(!dropdown.parent('.dropdown').hasClass('open'), 'open class added on click')
-      })
+      });
 
       test("should add class open to menu if clicked", function () {
         var dropdownHTML = '<ul class="tabs">'
@@ -56,10 +56,10 @@ $(function () {
           + '</ul>'
           + '</li>'
           + '</ul>'
-          , dropdown = $(dropdownHTML).find('[data-toggle="dropdown"]').dropdown().click()
+          , dropdown = $(dropdownHTML).find('[data-toggle="dropdown"]').dropdown().click();
 
         ok(dropdown.parent('.dropdown').hasClass('open'), 'open class added on click')
-      })
+      });
 
       test("should remove open class if body clicked", function () {
         var dropdownHTML = '<ul class="tabs">'
@@ -77,11 +77,11 @@ $(function () {
             .appendTo('#qunit-fixture')
             .find('[data-toggle="dropdown"]')
             .dropdown()
-            .click()
-        ok(dropdown.parent('.dropdown').hasClass('open'), 'open class added on click')
-        $('body').click()
-        ok(!dropdown.parent('.dropdown').hasClass('open'), 'open class removed')
+            .click();
+        ok(dropdown.parent('.dropdown').hasClass('open'), 'open class added on click');
+        $('body').click();
+        ok(!dropdown.parent('.dropdown').hasClass('open'), 'open class removed');
         dropdown.remove()
       })
 
-})
+});

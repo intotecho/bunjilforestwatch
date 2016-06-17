@@ -72,12 +72,12 @@ function geojson_validate(editor, text, found) { /* not used */
  
     if (err instanceof Error) {
         handleError(err.message);
-        return;
+        
     } else if (err.length) {
         handleErrors(err);
         
     } else {
-    	return;
+    	
     }
 
 }

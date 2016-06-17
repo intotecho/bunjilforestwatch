@@ -185,7 +185,7 @@ function save_view(map, area_json) {
     	if(typeof data !== 'undefined') {
     		console.log ('patch_area() - result: ' + data.status + ', ' + data.updates.length + ' updates: ' + data.updates[0].result);
     	}
-    	var msg = 'Area ' + get_area_name() + ' updated view'
+    	var msg = 'Area ' + get_area_name() + ' updated view';
     	$('#save-boundary-popover').popoverX('hide');
 		addToasterMessage(msg);
 		console.log(msg);

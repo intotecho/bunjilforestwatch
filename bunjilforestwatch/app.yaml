@@ -1,5 +1,5 @@
 application: appbfw #bunjilfw #appbfw #application: appbfw #bunjilfw
-version: 2
+version: 1
 runtime: python27
 api_version: 1
 threadsafe: true
@@ -20,6 +20,7 @@ skip_files:
 - ^(.*/)?.*/build/.*$
 - ^(.*/)?.*/source/.*$
 - ^(.*/)?.*\.db$
+- ^(.*/)?.*\.dist-info$
 
 libraries:
 - name: jinja2
@@ -36,6 +37,8 @@ libraries:
   version: latest
 - name: django
   version: "1.5"
+- name: numpy
+  version: "1.6.1"
 
 inbound_services:
 - warmup
@@ -52,13 +55,15 @@ handlers:
 - url: /static
   static_dir: static
 
+- url: /.well-known/.*
+  script: main.app
 
 - url: /login/google
   script: main.app
   login: required
   secure: always
 
-- url: /obs/*
+- url: /obs/.*
   script: main.app
   login: optional
   secure: always
@@ -69,6 +74,7 @@ handlers:
 
 - url: /tasks/.*
   script: main.app
+
 
 - url: /.*
   script: main.app

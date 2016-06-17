@@ -112,25 +112,30 @@ parse: function parse(input) {
         }
 
         // handle parse error
-        _handle_error:
         if (typeof action === 'undefined' || !action.length || !action[0]) {
 
             if (!recovering) {
                 // Report error
                 expected = [];
                 for (p in table[state]) if (this.terminals_[p] && p > 2) {
-                    expected.push("'"+this.terminals_[p]+"'");
+                    expected.push("'" + this.terminals_[p] + "'");
                 }
                 var errStr = '';
                 if (this.lexer.showPosition) {
-                    errStr = 'Parse error on line '+(yylineno+1)+":\n"+this.lexer.showPosition()+"\nExpecting "+expected.join(', ') + ", got '" + this.terminals_[symbol]+ "'";
+                    errStr = 'Parse error on line ' + (yylineno + 1) + ":\n" + this.lexer.showPosition() + "\nExpecting " + expected.join(', ') + ", got '" + this.terminals_[symbol] + "'";
                 } else {
-                    errStr = 'Parse error on line '+(yylineno+1)+": Unexpected " +
-                                  (symbol == 1 /*EOF*/ ? "end of input" :
-                                              ("'"+(this.terminals_[symbol] || symbol)+"'"));
+                    errStr = 'Parse error on line ' + (yylineno + 1) + ": Unexpected " +
+                        (symbol == 1 /*EOF*/ ? "end of input" :
+                            ("'" + (this.terminals_[symbol] || symbol) + "'"));
                 }
                 this.parseError(errStr,
-                    {text: this.lexer.match, token: this.terminals_[symbol] || symbol, line: this.lexer.yylineno, loc: yyloc, expected: expected});
+                    {
+                        text: this.lexer.match,
+                        token: this.terminals_[symbol] || symbol,
+                        line: this.lexer.yylineno,
+                        loc: yyloc,
+                        expected: expected
+                    });
             }
 
             // just recovered from another error
@@ -157,12 +162,12 @@ parse: function parse(input) {
                     throw new Error(errStr || 'Parsing halted.');
                 }
                 popStack(1);
-                state = stack[stack.length-1];
+                state = stack[stack.length - 1];
             }
 
             preErrorSymbol = symbol; // save the lookahead token
             symbol = TERROR;         // insert generic error symbol as new lookahead
-            state = stack[stack.length-1];
+            state = stack[stack.length - 1];
             action = table[state] && table[state][TERROR];
             recovering = 3; // allow 3 real symbols to be shifted before reporting a new error
         }
@@ -326,7 +331,7 @@ next:function () {
             this.yylloc = {first_line: this.yylloc.last_line,
                            last_line: this.yylineno+1,
                            first_column: this.yylloc.last_column,
-                           last_column: lines ? lines[lines.length-1].length-1 : this.yylloc.last_column + match[0].length}
+                           last_column: lines ? lines[lines.length-1].length-1 : this.yylloc.last_column + match[0].length};
             this.yytext += match[0];
             this.match += match[0];
             this.yyleng = this.yytext.length;
@@ -371,35 +376,35 @@ pushState:function begin(condition) {
 lexer.options = {};
 lexer.performAction = function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
 
-var YYSTATE=YY_START
+var YYSTATE=YY_START;
 switch($avoiding_name_collisions) {
 case 0:/* skip whitespace */
 break;
-case 1:return 6
+case 1:return 6;
 break;
-case 2:yy_.yytext = yy_.yytext.substr(1,yy_.yyleng-2); return 4
+case 2:yy_.yytext = yy_.yytext.substr(1,yy_.yyleng-2); return 4;
 break;
-case 3:return 17
+case 3:return 17;
 break;
-case 4:return 18
+case 4:return 18;
 break;
-case 5:return 23
+case 5:return 23;
 break;
-case 6:return 24
+case 6:return 24;
 break;
-case 7:return 22
+case 7:return 22;
 break;
-case 8:return 21
+case 8:return 21;
 break;
-case 9:return 10
+case 9:return 10;
 break;
-case 10:return 11
+case 10:return 11;
 break;
-case 11:return 8
+case 11:return 8;
 break;
-case 12:return 14
+case 12:return 14;
 break;
-case 13:return 'INVALID'
+case 13:return 'INVALID';
 break;
 }
 };
@@ -407,14 +412,13 @@ lexer.rules = [/^(?:\s+)/,/^(?:(-?([0-9]|[1-9][0-9]+))(\.[0-9]+)?([eE][-+]?[0-9]
 lexer.conditions = {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13],"inclusive":true}};
 
 
-;
-return lexer;})()
+    return lexer;})();
 parser.lexer = lexer;
 return parser;
 })();
 if (typeof require !== 'undefined' && typeof exports !== 'undefined') {
 exports.parser = jsonlint;
-exports.parse = function () { return jsonlint.parse.apply(jsonlint, arguments); }
+exports.parse = function () { return jsonlint.parse.apply(jsonlint, arguments); };
 exports.main = function commonjsMain(args) {
     if (!args[1])
         throw new Error('Usage: '+args[0]+' FILE');
@@ -425,7 +429,7 @@ exports.main = function commonjsMain(args) {
         var source = cwd.join(args[1]).read({charset: "utf-8"});
     }
     return exports.parser.parse(source);
-}
+};
 if (typeof module !== 'undefined' && require.main === module) {
   exports.main(typeof process !== 'undefined' ? process.argv.slice(1) : require("system").args);
 }

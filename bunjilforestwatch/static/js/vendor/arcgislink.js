@@ -1331,9 +1331,8 @@ function Albers(params) {
     this.n_ = (m1 * m1 - m2 * m2) / (q2 - q1);
     this.C_ = m1 * m1 + this.n_ * q1;
     this.rho0_ = this.calc_rho_(this.a_, this.C_, this.n_, q0);
-};
-  
-Albers.prototype = new SpatialReference();
+  }
+  Albers.prototype = new SpatialReference();
   /**
    * calc_m_
  * @param {number} phi
@@ -2047,7 +2046,7 @@ Layer.prototype.queryRelatedRecords = function(qparams, callback, errback) {
    */
   MapService.prototype.hasLoaded = function () {
     return this.loaded_;
-  }
+  };
   /**
    * get a  list of visible layer's Ids
    * @return {Array.number} null if not initialized
@@ -2100,7 +2099,7 @@ Layer.prototype.queryRelatedRecords = function(qparams, callback, errback) {
    */
   MapService.prototype.getFullBounds = function () {
     if (this.fullExtent) {
-      this.fullBounds_ = this.fullBounds_ || fromEnvelopeToLatLngBounds_(this.fullExtent)
+      this.fullBounds_ = this.fullBounds_ || fromEnvelopeToLatLngBounds_(this.fullExtent);
       return this.fullBounds_;
     }
     return null;
@@ -3731,7 +3730,7 @@ Layer.prototype.queryRelatedRecords = function(qparams, callback, errback) {
   ImageOverlay.prototype.onRemove = function() {
     this.div_.parentNode.removeChild(this.div_);
     this.div_ = null;
-  }
+  };
   /**
  * Creates a copyright control
  * @name CopyrightControl
@@ -3778,4 +3777,4 @@ Layer.prototype.queryRelatedRecords = function(qparams, callback, errback) {
     CopyrightControl:CopyrightControl
   };
 
-window.gmaps = gmaps; })()  
+window.gmaps = gmaps; })();  

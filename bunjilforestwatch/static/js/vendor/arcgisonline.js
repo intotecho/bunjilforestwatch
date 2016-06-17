@@ -36,7 +36,7 @@ function init() {
       style: google.maps.MapTypeControlStyle.DROPDOWN_MENU
 
     }
-  }
+  };
   var map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
   for (var i = 1; i < agsIds.length; i++) {
     map.mapTypes.set(agsIds[i], agsTypes[i-1]);

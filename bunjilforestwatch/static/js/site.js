@@ -99,7 +99,7 @@ function addToasterMessage(alert_p, message)
 			  "hideEasing": "linear",
 			  "showMethod": "fadeIn",
 			  "hideMethod": "fadeOut"
-			}
+			};
 	switch(alert_p) {
 	case 'alert-success':
 		toastr.success(message);

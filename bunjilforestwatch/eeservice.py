@@ -29,15 +29,18 @@ import os
 #logging.debug('HTTP_PROXY: %s',os.environ['HTTP_PROXY'])
 #logging.debug('HTTPS_PROXY: %s',os.environ['HTTPS_PROXY'])
 
-from oauth2client.appengine import AppAssertionCredentials
+#from oauth2client.contrib.appengine import AppAssertionCredentials
 from oauth2client import util # to disable positional parameters warning.
 
 import datetime
 import json
 import settings #You have to import your own private keys. 
 import ee
-from ee.oauthinfo import OAuthInfo
+import oauth2client.client
 from google.appengine.api import urlfetch #change timeout from 5 to 60 s. https://stackoverflow.com/questions/13051628/gae-appengine-deadlineexceedederror-deadline-exceeded-while-waiting-for-htt
+from ee.oauthinfo import OAuthInfo
+
+#from oauth2client.service_account import ServiceAccountCredentials
 
 # from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
 PRODUCTION_MODE = not os.environ.get(
@@ -54,7 +57,9 @@ When running on App Engine, this value is "Google App Engine/X.Y.Z".
 def reallyinitEarthEngineService():
     util.positional_parameters_enforcement = util.POSITIONAL_IGNORE   # avoid the WARNING [util.py:129] new_request() takes at most 1 positional argument (4 given)
     OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/fusiontables.readonly'
-    print  OAuthInfo.SCOPE
+    OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/fusiontables'
+    OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/drive'
+    OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/drive.file'
     try:
         if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
             logging.info("Initialising Earth Engine authenticated connection from devserver")
@@ -71,12 +76,14 @@ def reallyinitEarthEngineService():
         else:
             logging.info("Initialising Earth Engine authenticated connection from App Engine")
             EE_CREDENTIALS = AppAssertionCredentials(OAuthInfo.SCOPE)
+            #EE_CREDENTIALS= ServiceAccountCredentials.from_json_keyfile_name(key, OAuthInfo.SCOPE)
+
         ee.Initialize(EE_CREDENTIALS) 
         #print EE_CREDENTIALS
         # permit long wait for response from earth engine
         #urlfetch.set_default_fetch_deadline(60000)
         return EE_CREDENTIALS
-    except Exception, e:
+    except TypeError, e: #Exception, e:
         logging.error("Failed to connect to Earth Engine Google API. Exception: %s", e)
         return False
 
@@ -98,7 +105,9 @@ class EarthEngineService():
                 logging.debug("Dev: EarthEngineService is Ready")
                 
         return EarthEngineService.earthengine_intialised
-   
+
+
+
 #to maintain backward compatibility with existing calls ...
 def initEarthEngineService():
     return EarthEngineService.isReady()
@@ -174,7 +183,7 @@ def getLatestLandsatImage(park_boundary, collection_name, latest_depth, params):
     
     sortedCollection = resultingCollection.sort('system:time_start', False )
     #logging.debug('sortedCollection: %s', sortedCollection)
-    scenes  = sortedCollection.getInfo()
+    scenes = sortedCollection.getInfo()
 
     try:
         feature = scenes['features'][int(latest_depth)]
@@ -828,5 +837,8 @@ def getLandsatCells(area):
 
     cache.flush() # FIXME: get user to call cache.set(area, cells)
     return True
+
+
+
 
 ################# EOF ############################################

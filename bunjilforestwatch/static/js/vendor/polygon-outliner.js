@@ -15,11 +15,11 @@
 
 		 this.showData = function(){
 		 	return this.pen.getData();
-		 }
+		 };
 
 		 this.showColor = function(){
 		 	return this.pen.getColor();
-		 }
+		 };
 
 		 //destroy the pen
 		 this.destroy = function(){
@@ -35,7 +35,7 @@
 	  */
 	 function Pen(map){
 	 	this.map= map;
-	 	this.listOfDots = new Array();
+	 	this.listOfDots = [];
 		this.polyline =null;
 		this.polygon = null;
 		this.currentDot = null;
@@ -60,12 +60,12 @@
 					}
 				}
 			}
-		}
+		};
 		//draw ploygon
 		this.drawPloygon = function (listOfDots,color,des,id){
 			this.polygon = new Polygon(listOfDots,this.map,this,color,des,id);
 			this.deleteMis();
-		}
+		};
 		//delete all dots and polylines
 		this.deleteMis = function(){
 			//delete dots
@@ -78,7 +78,7 @@
 				this.polyline.remove();
 				this.polyline=null;
 			}
-		}
+		};
 		//cancel
 		this.cancel = function(){
 			if(null!=this.polygon){
@@ -86,15 +86,15 @@
 			}
 			this.polygon=null;
 			this.deleteMis();
-		}
+		};
 		//setter		
 		this.setCurrentDot = function(dot){
 			this.currentDot = dot;
-		}
+		};
 		//getter
 		this.getListOfDots = function(){
 			return this.listOfDots;
-		}
+		};
 		//get plots data
 		this.getData = function(){
 			if(this.polygon!=null){
@@ -108,7 +108,7 @@
 			}else {
 				return null;
 			}
-		}
+		};
 		//get color
 		this.getColor = function(){
 				if(this.polygon!=null){
@@ -143,17 +143,17 @@
 				    parent.setCurrentDot(thisDot);
 					parent.draw(thisMarker.getPosition());
 				});				
-		}	
+		};	
 		this.addListener();
 
 		//getter 
 		this.getLatLng = function(){
 				return this.latLng;
-		}
+		};
 
 		this.getMarkerObj = function(){
 				return this.markerObj;
-		}
+		};
 
 		this.remove = function(){
 			this.markerObj.setMap(null);
@@ -166,7 +166,7 @@
 	 function Line(listOfDots,map){
 	 	this.listOfDots = listOfDots;
 		this.map = map;
-		this.coords = new Array();
+		this.coords = [];
 		this.polylineObj=null;
 
 		if (this.listOfDots.length > 1) {
@@ -196,7 +196,7 @@
 	 function Polygon(listOfDots,map,pen,color){
 		this.listOfDots = listOfDots;
 		this.map = map;
-		this.coords = new Array();
+		this.coords = [];
 		this.parent = pen;
 		this.des = 'Hello';
 
@@ -221,29 +221,29 @@
 		this.remove = function(){
 			this.info.remove();
 			this.polygonObj.setMap(null);
-		}
+		};
 
 		//getter
 		this.getContent = function(){
 			return this.des;
-		}
+		};
 
 
 		this.getPolygonObj= function(){
 			return this.polygonObj;
-		}
+		};
 
 		this.getListOfDots = function (){
 			return this.listOfDots;
-		}
+		};
 
 		this.getPlots = function(){
 			return this.polygonObj.getPaths();
-		}
+		};
 
 		this.getColor=function(){
 			return 	this.getPolygonObj().fillColor;
-		}
+		};
 
 		//setter
 		this.setColor = function(color){
@@ -257,7 +257,7 @@
 							 fillOpacity: 0.4
 							 }
 						);
-		}
+		};
 
 
 		this.info = new Info(this,this.map);
@@ -269,7 +269,7 @@
 				google.maps.event.addListener(thisPolygon, 'rightclick', function(event) { 					
 				    info.show(event.latLng);
 				});				
-		}	
+		};	
 		this.addListener();
 
 	 }
@@ -293,7 +293,7 @@
 		//change color action
 		this.changeColor= function(){
 			thisOjb.parent.setColor($(thisOjb.color).val());
-		}
+		};
 
 		//get content
 		this.getContent = function(){
@@ -307,7 +307,7 @@
 			$(content).append(this.color);		
 			$(content).append(this.button);
 			return content;
-		}
+		};
 
 		thisObj=this;
 		this.infoWidObj = new google.maps.InfoWindow({
@@ -317,7 +317,7 @@
 		this.show = function(latLng){
 			this.infoWidObj.setPosition(latLng);
 			this.infoWidObj.open(this.map);
-		}
+		};
 
 		this.remove = function(){
 	 		this.infoWidObj.close();

@@ -315,10 +315,19 @@ class AreaOfInterest(ndb.Model):
     #followers_count = ndb.IntegerProperty(required=True, default=0)  # see num_followers()
 
     """
+    ALERTS - Parameters for viewing Area
+    """
+    last_alerts_date = ndb.DateTimeProperty(auto_now=False)
+    last_alerts_raw_ft = ndb.StringProperty()
+    lastProcessedGladAlerts = ndb.JsonProperty()
+
+    """
     TIMESTAMPS
     """
     created_date = ndb.DateTimeProperty(auto_now_add=True)
     last_modified = ndb.DateTimeProperty(auto_now=True)
+
+    last_alerts_date = ndb.DateTimeProperty(auto_now=False)
 
     """
     PROPERTIES
@@ -575,31 +584,42 @@ class AreaOfInterest(ndb.Model):
         else:
             return True
 
-    def get_boundary_hull_fc(self):
+    def get_boundary_hull_geojson(self):
         """
-        @return the area's boundary hull or location as a FeatureCollection, or None on error.
+        @return the area's boundary hull or location as a GeoJson dictionary, or None on error.
         """
         if self.hasBoundary() == True:
             try:
                 park_geom = json.loads(self.boundary_hull)
                 # return boundary_hull_dict['geometry'] #['coordinates'] # outer ring only
-                #print 'get_boundary_hull_fc loading boundary'
+                # print 'get_boundary_hull_fc loading boundary'
                 # park_geom = ee.Geometry(boundary_hull_dict['geometry'])
             except KeyError:
-                logging.error('get_boundary_hull_fc(): KeyError in boundary_hull')
+                logging.error('get_boundary_hull_geojson(): KeyError in boundary_hull')
                 return None
             except ValueError:
-                logging.error('get_boundary_hull_fc(): ValueError in boundary_hull')
+                logging.error('get_boundary_hull_geojson(): ValueError in boundary_hull')
                 return None
-            logging.debug('get_boundary_hull_fc %s boundary defined by polygon', self.name)
+            logging.debug('get_boundary_hull_geojson %s boundary defined by polygon', self.name)
         else:
-
             if self.area_location == None:
-                logging.error('get_boundary_hull_fc(): Area %s has neither boundary nor location', self.name)
+                logging.error('get_boundary_hull_geojson(): Area %s has neither boundary nor location', self.name)
                 return None
-            logging.debug('get_boundary_hull_fc %s boundary defined by point', self.name)
+            logging.debug('get_boundary_hull_geojson %s boundary defined by point', self.name)
             park_geom = self.area_location_as_geojson()
             # ee.Geometry.Point([self.area_location.lon, self.area_location.lat])
+
+        return park_geom
+
+    def get_boundary_hull_fc(self):
+        """
+        @return the area's boundary hull or location as a FeatureCollection, or None on error.
+        """
+
+        park_geom = self.area_location_geojson
+
+        if park_geom == None:
+            return None
 
         eeFeatureCollection, status, errormsg = self.get_eeFeatureCollection(park_geom)
         if eeFeatureCollection == None:

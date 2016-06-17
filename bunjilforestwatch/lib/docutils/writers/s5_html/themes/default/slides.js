@@ -8,7 +8,7 @@ var undef;
 var slideCSS = '';
 var snum = 0;
 var smax = 1;
-var slideIDs = new Array();
+var slideIDs = [];
 var incpos = 0;
 var number = undef;
 var s5mode = true;
@@ -45,7 +45,7 @@ function addClass(object,className) {
 
 function GetElementsWithClassName(elementName,className) {
 	var allElements = document.getElementsByTagName(elementName);
-	var elemColl = new Array();
+	var elemColl = [];
 	for (var i = 0; i< allElements.length; i++) {
 		if (hasClass(allElements[i], className)) {
 			elemColl[elemColl.length] = allElements[i];
@@ -465,7 +465,7 @@ function notOperaFix() {
 }
 
 function getIncrementals(obj) {
-	var incrementals = new Array();
+	var incrementals = [];
 	if (!obj) 
 		return incrementals;
 	var children = obj.childNodes;
@@ -500,7 +500,7 @@ function getIncrementals(obj) {
 }
 
 function createIncrementals() {
-	var incrementals = new Array();
+	var incrementals = [];
 	for (var i = 0; i < smax; i++) {
 		incrementals[i] = getIncrementals(document.getElementById(slideIDs[i]));
 	}
@@ -555,4 +555,4 @@ function startup() {
 }
 
 window.onload = startup;
-window.onresize = function(){setTimeout('fontScale()', 50);}
+window.onresize = function(){setTimeout('fontScale()', 50);};

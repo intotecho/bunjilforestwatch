@@ -1,3 +1,4 @@
+
 # PYTHON PACKAGES
 This folder contains libraries that are used by the bunjilforestwatch project.
 It does not contain libraries that Google App Engine includes via [app.yaml](https://github.com/intotecho/bunjilforestwatch/blob/master/bunjilforestwatch/app.yaml) library directives.
@@ -8,15 +9,10 @@ These files are uploaded to appengine during deplyoment of the app.
 
 Instead of maintaining copies of these packages in this github repo, and downloading them, the  directory could instead be created by executing **pip** package manager commands in a script. 
 
-- cd path/to/bunjilforestwatch/lib
-- pip install -t . bleach
-- pip install -t . docutils
- -pip install -t . ee
- -pip install -t . geojson
- -pip install -t . html5lib
- -pip install -t . httplib2
- -pip install -t . markdown
- -pip install -t . oauth2client
- -pip install -t . six
+cd to <$project$>/bunjilforestwatch/lib
+pip install -U -t . -r requirements.txt
 
->However, this is not guranteed to be updated to be the correct list of commands, whereas the packages in the repo have been tested with the project.
+This will install all the libraries into the lib folder. 
+
+The gitignore should prevent these files being added to the repo.
+

@@ -90,8 +90,8 @@ function complete_report(drawingManager, event) {
  */
 
 function areaLocation(area_json) {
-	"use strict"
-    "global get_area_feauture"
+	"use strict";
+    "global get_area_feauture";
 	var area_location_feature = get_area_feature(area_json, "area_location");
 	if (area_location_feature !== null) {
 		var area_location = area_location_feature.geometry.coordinates;  // init global.

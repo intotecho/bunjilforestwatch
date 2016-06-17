@@ -51,7 +51,7 @@ var edit_cells_mode = true; // toggled by initialise to false.
  */
 
 function LandsatGridOverlay(map, opacity, clickable, cellarray) {
-  "use strict"
+  "use strict";
   this.map = map;
   this.cellarray = cellarray;
   this.opacity = opacity;
@@ -89,7 +89,7 @@ LandsatGridOverlay.prototype.constructor = google.maps.OverlayView;
  */
 
 LandsatGridOverlay.prototype.initialize = function () {
-   "use strict"
+   "use strict";
    console.log( "LandsatGridOverlay() initialising");
 	if (this.initialized) {
 		return;
@@ -123,38 +123,38 @@ LandsatGridOverlay.prototype.initialize = function () {
      	    console.log( "LandsatGridOverlay() initialise Failed: " + err);
          }
 	});
-}
+};
 
 /** hide a LandsatGridOverlay
  * 
  */
 LandsatGridOverlay.prototype.hide = function () {
-	"use strict"
+	"use strict";
 	this.visible = false;
 	//make each cell hidden
 	for (var i = 0; i < this.landsat_overlays.length; i++ ) {
 		this.landsat_overlays[i].setVisible(false)
 	}
-}
+};
 
 /** show a LandsatGridOverlay
  * 
  */
 LandsatGridOverlay.prototype.show = function () {
-	"use strict"
+	"use strict";
 	//this.initialize();
 	this.visible = true;
 	//make each cell visible
 	for (var i = 0; i < this.landsat_overlays.length; i++ ) {
 		this.landsat_overlays[i].setVisible(true)
 	}
-}
+};
 
 /** setOpacity 
  * op from 0 (totally transparent so invisible) to 100 (non transparent or opaque).
  */
 LandsatGridOverlay.prototype.setOpacity = function (op) {
-	"use strict"
+	"use strict";
 	console.log("LandsatGridOverlay::setOpacity(): " + op);
 	this.opacity = op;
 	//set opacity of each cell 
@@ -167,7 +167,7 @@ LandsatGridOverlay.prototype.setOpacity = function (op) {
 		this.landsat_overlays[i].setVisible(true);
 	}
 	google.maps.event.trigger(this.map,'resize');
-}
+};
 	
 
 /** 
@@ -175,7 +175,7 @@ LandsatGridOverlay.prototype.setOpacity = function (op) {
  */
 function queryLandsatFusionTableRadius(map) {
 	
-	"use strict"
+	"use strict";
 	var map_center = map.getCenter();
 
 	var map_distance = google.maps.geometry.spherical.computeDistanceBetween(
@@ -214,7 +214,7 @@ function queryLandsatFusionTableRadius(map) {
  * 
  */
 function queryLandsatFusionTableBounds(map, latlngbounds) {
-	"use strict"
+	"use strict";
 	var url = [ 'https://www.googleapis.com/fusiontables/v1/query?' ];
 	url.push('sql=');
 
@@ -241,7 +241,7 @@ function queryLandsatFusionTableBounds(map, latlngbounds) {
  */
 
 function queryLandsatFusionTableCellArray(map, cellarray) {
-	"use strict"
+	"use strict";
 	
 	var url = [ 'https://www.googleapis.com/fusiontables/v1/query?' ];
 	url.push('sql=');
@@ -415,7 +415,7 @@ function polygon2LatLngCoordinates(polygon) {
  */
 
 function getCellArrrayCell(selectedPath, selectedRow, cellarray) {
-	"use strict"
+	"use strict";
 	if (cellarray !== null) {
 		for (var i = 0; i < cellarray.length; i++) {
 			if ((cellarray[i].path === selectedPath)
@@ -439,7 +439,7 @@ function getCellArrrayCell(selectedPath, selectedRow, cellarray) {
  */
 
 function isMonitored(selectedPath, selectedRow, cellarray) {
-	"use strict"
+	"use strict";
 	if (cellarray !== null) {
 		for (var i = 0, len = cellarray.length; i < len; i++) {
 			if ((cellarray[i].path === selectedPath)
@@ -461,7 +461,7 @@ function isMonitored(selectedPath, selectedRow, cellarray) {
  */
 
 function monitor_cell(landsat_cell, isMonitored) {
-	"use strict"
+	"use strict";
 	
 	landsat_cell.Monitored = isMonitored;
 		
@@ -485,7 +485,7 @@ function monitor_cell(landsat_cell, isMonitored) {
  */
 function landsatGrid_mouseover(e) {
 	"use strict";
-	var this_target = event.currentTarget
+	var this_target = event.currentTarget;
 	/* @todo replace this with this_target */
 	
 	if (this.Monitored) {
@@ -512,7 +512,7 @@ function landsatGrid_mouseout(e) {
 	"use strict";
 	this.setOptions({
 		fillOpacity : 0
-	})
+	});
 	this.parent.hoverPath = -1;
 	this.parent.hoverRow = -1;	
 	
@@ -547,7 +547,7 @@ function cellSelected(landsat_cell)
   "use strict";
   var cell = getCellArrrayCell(landsat_cell.path, landsat_cell.row, landsat_cell.parent.cellarray);
   var div_id = '#cell-panel-' + cell.index;
-  var httpget_url = "/selectcell/" + area_json.properties.area_name + "/" + jsonStringifySelectedCell(landsat_cell)
+  var httpget_url = "/selectcell/" + area_json.properties.area_name + "/" + jsonStringifySelectedCell(landsat_cell);
   
   console.log( "cellSelected() %d %d %s %s %s", landsat_cell.path, landsat_cell.row, div_id, (edit_cells_mode === true)?"editing cells":"locked", httpget_url);
   
@@ -555,7 +555,7 @@ function cellSelected(landsat_cell)
   var panel = $(div_id);
   if (panel === null)
   {
-	  console.log("error in DOM. missing Cell panel.")
+	  console.log("error in DOM. missing Cell panel.");
 	  return;
   }
   //panel.collapse('show').css('overflow', 'scroll');
@@ -630,14 +630,14 @@ function update_cell_panel(landsatGridOverlay) {
 	panel.addClass('cell-panel'); 
 	panel.empty();
 
-	var panel_str = ""	
+	var panel_str = "";
 	var monitored_cells_count= 0;
 	
 	var cellarray = landsatGridOverlay.cellarray;
 	if (cellarray !== null) {
 		for (var i = 0; i < cellarray.length; i++) {
 	
-			var path = cellarray[i].path
+			var path = cellarray[i].path;
             var row  = cellarray[i].row;
 			var monitored = cellarray[i].monitored;
 			var hover = ((path === landsatGridOverlay.hoverPath)
@@ -676,7 +676,7 @@ function update_cell_panel(landsatGridOverlay) {
 			panel_str += "<br></div>"; // end-row
 		}
 		if (monitored_cells_count === 0) {
-			panel_str += "<div class='cell-panel-warn'>You won't receive any notifications as no cells monitored!</div>" 
+			panel_str += "<div class='cell-panel-warn'>You won't receive any notifications as no cells monitored!</div>";
 			panel.parent().collapse('show');
 		}
 	}
