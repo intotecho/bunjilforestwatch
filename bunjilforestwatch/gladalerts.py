@@ -428,7 +428,7 @@ def alerts2Clusters(area):
         distance = 10,
         leftField = '.geo',
         rightField = '.geo',
-        maxError = 10 
+        maxError = 10
     )
     distSaveAll = ee.Join.saveAll(matchesKey = 'points', measureKey ='distance')
     clustersWithPoints = distSaveAll.apply(clusters, alerts_fc, distFilter)

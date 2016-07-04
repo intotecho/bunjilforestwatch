@@ -95,7 +95,7 @@ LandsatGridOverlay.prototype.initialize = function () {
 		return;
 	}
 	var self = this.self;
-	
+
 	if (this.map === undefined){
 		console.log('requestLandsatGrid() map is undefined');
 		return;
@@ -156,7 +156,7 @@ LandsatGridOverlay.prototype.show = function () {
 LandsatGridOverlay.prototype.setOpacity = function (op) {
 	"use strict";
 	console.log("LandsatGridOverlay::setOpacity(): " + op);
-	this.opacity = op;
+	this.opacity = op/100;
 	//set opacity of each cell 
 	for (var i = 0; i < this.landsat_overlays.length; i++ ) {	
 		this.landsat_overlays[i].setOptions(
@@ -360,6 +360,7 @@ function createLandsatGrid(data, landsatGridOverlay) {
 		}
 	} // each row of cell data
 	landsatGridOverlay.initialized = true;
+	landsatGridOverlay.overlaytype = 'cells'; // for layerslider_callback
 }
 
 
@@ -490,12 +491,12 @@ function landsatGrid_mouseover(e) {
 	
 	if (this.Monitored) {
 		this.setOptions({
-			fillOpacity : 0.3 * this.parent.opacity
+			fillOpacity : 0.2 * this.parent.opacity
 		})
 	} 
 	else {
 		this.setOptions({
-			fillOpacity : 0.1 * this.parent.opacity 
+			fillOpacity : 0.05 * this.parent.opacity
 		})
 	}
 	this.parent.hoverPath = this.path;

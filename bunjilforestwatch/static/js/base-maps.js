@@ -27,12 +27,12 @@ function drawLandsatCells(cellarray, map, layer_id) {
 	/* global layerslider_callback */
     /* global addLayer */
 
-    createLandsatGridOverlay(map, 0.5, true, cellarray, layer_id);
+    createLandsatGridOverlay(map, 0.0, true, cellarray, layer_id);
     addLayer(map.landsatGridOverlay.name,
             'Landsat Cells',
             'gray',  
-            75, 
-            "Each Landsat image covers one of these cells.", 
+            0,
+            "Each Landsat image covers one of these cells that overlap the area", 
             layerslider_callback );
 }
 
@@ -273,7 +273,7 @@ function initialize() {
 	    		layerslider_callback);
     }
 
-    if (area_json.glad_alerts !== null) {
+    if (typeof(area_json.glad_alerts) !== 'undefined' ) {
         console.log(area_json.glad_alerts);
         var layer = new google.maps.FusionTablesLayer({
             query: {
@@ -300,98 +300,40 @@ function initialize() {
 			"Alerts" + area_json.properties.glad_alerts,
 			layerslider_callback);
     }
+ 	if (typeof(area_json.glad_alerts) !== 'undefined' ) {
+ 	
+		newData = displayFeatureCollection(map_under_lhs, jQuery.parseJSON(area_json.glad_clusters));
+		if (newData !== null) {
+			newData.name = "clusters";
+			newData.overlaytype = 'data';
+			newData.setMap(map_under_lhs);
+			overlayMaps.push(newData); //map_over_lhs.data
+			addLayer("clusters",
+					"Alert Clusters",
+					"pink",
+					100,
+					"Clusters" + area_json.properties.area_name,
+					layerslider_callback);
+		}
+ 	}
 
-	newData = displayFeatureCollection(map_under_lhs, jQuery.parseJSON(area_json.glad_clusters));
-    if (newData !== null) {
-        newData.name = "clusters";
-        newData.overlaytype = 'data';
-        newData.setMap(map_under_lhs);
-		overlayMaps.push(newData); //map_over_lhs.data
-	    addLayer("clusters",
-	    		"Alert Clusters",
-	    		"pink",
-	    		100,
-	    		"Clusters" + area_json.properties.area_name,
-	    		layerslider_callback);
-    }
-
-
-    /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI.
+        /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI.
      *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.
-     */ 
+     */
     var cellarray = jQuery.parseJSON($('#celllist').text());
-  
-    var jobid = -1;
+ 
+   
+   if(cellarray.length === 0) {
+        // calculate and fetch the overlapping cells from server.
+        fetch_landsat_cells(area_json);
+   }
+   else
+   {
+       // server passed an existing cellarray -  don't wait for ajax - just display it.
+       drawLandsatCells(cellarray, map_over_lhs, "grid_over");
+       //drawLandsatCells(cellarray, map_under_lhs, "grid_under");
+   }
 
-    
-    $('#close-dialog-new-cells').click(function(){    
-        $('#dialog-new-cells').popoverX('hide');
-    }); 
-
-    $('#close-dialog-new-cells-open-accordion').click(function(){
-        $('#cell_panel_title').collapse('show');       //open  cell_panel_title
-        $('#dialog-new-cells').popoverX('hide');
-   }); 
-    
-   if(cellarray.length === 0) { // Then fetch the overlapping cells from server.
-        console.log("Init: Fetching Overlapping Cells for Area");
-        var url = area_json.properties.area_url + '/getcells';
-        
-        $('#cell_panel_title').collapse('show');       //open  cell_panel_title to set height.
-        
-        $('#dialog-new-cells').popoverX({
-            target: '#cell_panel_t'  //container
-        });
-        $('#dialog-new-cells').popoverX('show');
-        setTimeout(function() {
-            $('#dialog-new-cells').popoverX('hide');
-        }, 80000);
-		
-        var prompt = "<h6><small>Calculating Cells</small></h6><img src='/static/img/ajax-loader.gif' class='ajax-loader'/>";
-        /* global addJob */
-        jobid = addJob(prompt, 'gray');
-      
-        var request = jQuery.ajax({
-    	    type: "GET",
-    	    url: url, //area_json.properties.area_url,
-    	    //data: patch_ops_string,
-    	    //dataType:"json",
-    	});
-
-        request.done(function (data) {
-	          var getCellsResult = jQuery.parseJSON(data);
-	            
-	            if (getCellsResult.result === 'success'){
-	                cellarray = getCellsResult.cell_list;
-	                console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
-	         
-	                var plurals = (cellarray.length === 1)? ' cell covers': ' cells cover';
-	                var plurals_mon = (getCellsResult.monitored_count === 1)? ' cell selected': ' cells selected';
-	                /* global updateJob */
-	                updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area. " + getCellsResult.monitored_count + plurals_mon + '</p>', 'black');
-	                drawLandsatCells(cellarray, map_over_lhs, "grid_over");
-			        drawLandsatCells(cellarray, map_under_lhs, "grid_under");
-	            }            
-	            else
-	            {
-	                updateJob(jobid,"<p class = 'small'>GetCells Failed:" + getCellsResult.reason + "</p>", 'red');
-	                //TODO: Redirect to home?
-	            }
-	    });
-	    
-	    request.fail(function (xhr, textStatus, error) {
-            var msg = xhr.status + ', ' + error; 
-            console.log( "GetCells Failed: " + msg);
-            updateJob(jobid, "<p class = 'small'>GetCells Failed: " + msg + "</p>",'red');
-	    });
-       
-    } //get cells     
-    else
-    {
-        //server passed an existing cellarray -  don't wait for ajax - just display it.
-        drawLandsatCells(cellarray, map_over_lhs, "grid_over");
-        drawLandsatCells(cellarray, map_under_lhs, "grid_under");
-    }
     
     var observations = jQuery.parseJSON($('#obslist').text());
     /* global displayObsOverlay */
@@ -654,6 +596,75 @@ function initialize() {
         toggle_edit_cells_lock();  // call during init to draw div
     
 } //end-of-initialize
+
+/**
+ *  Fetching outline of landsat cells overlapping Area
+ *  These need to be calculated by the server. See send a request that adds a job.
+ */
+function fetch_landsat_cells(area_json) {
+        console.log("Init: Fetching Overlapping Cells for Area");
+        var url = area_json.properties.area_url + '/getcells';
+        
+        $('#cell_panel_title').collapse('show');       //open  cell_panel_title to set height.
+        
+        $('#dialog-new-cells').popoverX({
+            target: '#cell_panel_t'  //container
+        });
+        $('#dialog-new-cells').popoverX('show');
+        setTimeout(function() {
+            $('#dialog-new-cells').popoverX('hide');
+        }, 80000);
+		
+        var prompt = "<h6><small>Calculating Cells</small></h6><img src='/static/img/ajax-loader.gif' class='ajax-loader'/>";
+        /* global addJob */
+        var jobid = addJob(prompt, 'gray');
+
+		$('#close-dialog-new-cells').click(function(){
+			$('#dialog-new-cells').popoverX('hide');
+		});
+
+		$('#close-dialog-new-cells-open-accordion').click(function(){
+			$('#cell_panel_title').collapse('show');       //open  cell_panel_title
+			$('#dialog-new-cells').popoverX('hide');
+	    }); 
+
+        var request = jQuery.ajax({
+    	    type: "GET",
+    	    url: url //area_json.properties.area_url,
+    	});
+
+        request.done(function (data) {
+	          var getCellsResult = jQuery.parseJSON(data);
+	            
+	            if (getCellsResult.result === 'success'){
+	                cellarray = getCellsResult.cell_list;
+	                console.log('GetCells result: ' + getCellsResult.result + ' reason: ' + getCellsResult.reason);
+	         
+	                var plurals = (cellarray.length === 1)? ' cell covers': ' cells cover';
+	                var plurals_mon = (getCellsResult.monitored_count === 1)? ' cell selected': ' cells selected';
+	                /* global updateJob */
+	                updateJob(jobid, "<p class = 'small'>" + cellarray.length  + plurals + "  your area. " + getCellsResult.monitored_count + plurals_mon + '</p>', 'black');
+	                drawLandsatCells(cellarray, map_over_lhs, "grid_over");
+			        drawLandsatCells(cellarray, map_under_lhs, "grid_under");
+	            }            
+	            else
+	            {
+	                updateJob(jobid,"<p class = 'small'>GetCells Failed:" + getCellsResult.reason + "</p>", 'red');
+	                //TODO: Redirect to home?
+	            }
+	    });	
+	        
+	    request.fail(function (xhr, textStatus, error) {
+            var msg = xhr.status + ', ' + error; 
+            console.log( "GetCells Failed: " + msg);
+            updateJob(jobid, "<p class = 'small'>GetCells Failed: " + msg + "</p>",'red');
+	    });
+}
+
+
+
+
+
 
 google.maps.event.addDomListener(window, 'load', initialize); 
 

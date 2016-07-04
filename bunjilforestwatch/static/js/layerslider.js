@@ -47,7 +47,15 @@ function toggleLayer(e){
   callbacks.fire(layername, val);
 }
 
-
+/**
+ *
+ * @param layer_id_p
+ * @param layer_name    name to display
+ * @param slider_color  color of slider.
+ * @param slider_value: 0-100 does not affect or init the underlying property in the call back
+ * @param tooltip       on hover see this message.
+ * @param callback      when slider changes call this function.
+ */
 function addLayer(layer_id_p, layer_name,  slider_color, slider_value, tooltip, callback) {
     "use strict";
     if( $("#layer-template").length !== 1) {

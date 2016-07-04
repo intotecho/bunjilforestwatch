@@ -527,16 +527,6 @@ function save_boundary(event) {
 	var data = initialize_map.map.data;
 	var boundary_type = get_boundary_type();
 
-	$('#save-boundary').prop('disabled', true); //disable Save Boundary Button till response
-
-	$('#save-boundary-wait-popover').popoverX({
-		target : '#save-boundary' // container
-	}).popoverX('show');
-
-	$('#close-dialog-save-boundary-wait').click(function() {
-		$('#save-boundary-wait-popover').popoverX('hide');
-	});
-
 	/*
 	$('#close-dialog-save-boundary').click(function() {
 		$('#save-boundary-wait-popover').popover('hide');
@@ -555,11 +545,30 @@ function save_boundary(event) {
 	if ((boundary_type === 'geojson') || (boundary_type === 'drawborder') || (boundary_type === 'unselected')) {
 	
 		map.data.toGeoJson(function(geoJson) {
-			patch_ops.push( { "op": "replace", "path": "/features/geojsonboundary", "value": geoJson, "id": 'boundary' });
+			if (geoJson.features.length > 0) {
+				patch_ops.push( { "op": "replace", "path": "/features/geojsonboundary", "value": geoJson, "id": 'boundary' });
+			}
+			else {
+				addToasterMessage('alert-warning', "Draw a polygon around your area then click Save Boundary");
+				//$('#save-boundary').prop('disabled', false); //reenable Save Boundary button
+				//$('#save-boundary-wait-popover').popover('hide');
+				return;
+			}
 		});
 	}
 	
 	if (patch_ops.length > 1) { 
+
+		$('#save-boundary').prop('disabled', true); //disable Save Boundary Button till response
+
+		$('#save-boundary-wait-popover').popoverX({
+			target : '#save-boundary' // container
+		}).popoverX('show');
+
+		$('#close-dialog-save-boundary-wait').click(function() {
+			$('#save-boundary-wait-popover').popoverX('hide');
+		});
+
 
 		//$('#save-boundary').popover({
 		//	target : '#save-boundary-popover' // container
@@ -1478,9 +1487,43 @@ function descriptionAccord_clicked(event) {
 	console.log('descriptionAccord_clicked');
 }
 
-function skipDescription_clicked(event) {
+/** 
+ * When all changes are done, open the View Area Form.
+ */
+function close_form() {
 	var href = '/area/' + area_json.properties.area_name;
 	window.location.href = href; //+ mapobj.id;
+}
+
+/**
+ * Check for unsaved changes in descripiton form 
+ */
+function done_description_clicked(event) {
+	if (area_description_dirty() > 0)
+	{
+		  bootbox.dialog({
+			  message: "Unsaved Description fields are marked with an asterix <b>'*'</b><br/>If you continue, these will be discarded.<br/>Are You Sure?",
+			  title: "You have unsaved changes!",
+			  buttons: {
+				success: {
+				  label: "Cancel",
+				  className: "btn-info",
+				  callback: function() {
+				  }
+				},
+				danger: {
+				  label: "Discard Changes and Continue",
+				  className: "btn-danger",
+				  callback: function() {
+					close_form();
+				  }
+				}
+			  }
+		});
+	}
+	else{
+		close_form();
+	}
 }
 
 
@@ -1783,12 +1826,12 @@ function initialize_new_area_form() {
 	$('#descriptionAccord_title').click(descriptionAccord_clicked);
 
 	$('#boundary-tab-body').on('change', boundary_type_changed);
-	$('#skip-description').click(skipDescription_clicked);
+	$('.done-description').click(done_description_clicked);
 
 
 	disable_tab("#locate-tab");
 	disable_tab("#boundary-tab");
-	disable_tab("#description-tab");
+	disable_tab("#descr-tab");
 
 	// Display controls for dragging map only. Not drop or save. 
 	$('.drag-only').show();
@@ -1810,7 +1853,7 @@ function initialize_new_area_form() {
 	$('#locate-tab').click(function() {
 		$('#map-row').show();
 	});
-	$('#description-tab').click(function() {
+	$('#descr-tab').click(function() {
 		$('#map-row').hide();
 	});
 	/*
@@ -1820,7 +1863,7 @@ function initialize_new_area_form() {
 	 * 
 	 * $('#boundary-tab').click(function() { $(window).scrollTop(0); });
 	 * 
-	 * $('#description-tab').click(function() { $(window).scrollTop(0); });
+	 * $('#descr-tab').click(function() { $(window).scrollTop(0); });
 	 */
 
 	var auto_collapse = true;

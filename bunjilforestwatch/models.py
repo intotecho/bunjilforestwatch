@@ -605,8 +605,10 @@ class AreaOfInterest(ndb.Model):
             geojson_obj['boundary_geojson'] = geoboundary
 
         geojson_obj['glad_clusters'] = self.get_gladcluster()
+
         if self.last_alerts_raw_ft:
             geojson_obj['glad_alerts'] = self.last_alerts_raw_ft
+
         return geojson_obj
 
     '''@TODO move this function to eeservice as it does not use or set area.

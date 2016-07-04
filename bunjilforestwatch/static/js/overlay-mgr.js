@@ -21,6 +21,8 @@ function createLandsatGridOverlay(map, opacity, clickable, cellarray, layer_id) 
     if ((typeof map.landsatGridOverlay === 'undefined') || (map.landsatGridOverlay === null)){
         var landsatGridOverlay = new LandsatGridOverlay(map, opacity, clickable, cellarray);
         landsatGridOverlay.name = layer_id;
+        landsatGridOverlay.type = 'cells';
+
         landsatGridOverlay.overlaytype = 'drawing';
 
         landsatGridOverlay.initialize();       
@@ -180,8 +182,11 @@ function layerslider_callback(layer_id, val) {
         console.log("layerslider_callback:" + overlayMaps[id].name + ", " + val); //overlayMaps[id].name
         console.log('type of overlay' + typeof overlayMaps[id]); 
 
-        if(overlayMaps[id].overlaytype == 'drawing') { //TODO: Too brittle. Need better way to determine objct type.
+        if(overlayMaps[id].overlaytype == 'drawing') { //Drawing Geometric (LandsatCells, Border etc)
         	 overlayMaps[id].setOptions({strokeOpacity :val/100} );	 
+        }
+        if(overlayMaps[id].overlaytype == 'cells') { //Drawing Geometric (LandsatCells, Border etc)
+        	 overlayMaps[id].setOpacity(val);
         }
         else if(overlayMaps[id].overlaytype == 'data') { //TODO: Too brittle. Need better way to determine objct type.
             //overlayMaps[id].style.strokeOpacity = val/100;

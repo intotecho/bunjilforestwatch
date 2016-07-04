@@ -911,9 +911,10 @@ class ExistingAreaHandler(BaseHandler):
                 # print  eeFeatureCollection, status, errormsg
                 if eeFeatureCollection == None:
                     self.response.set_status(status)
-                    op_results.append({"result": "Could not update boundary", "value": errormsg, "id": "n/a"})
+                    #op_results.append({"result": "Could not update boundary", "value": errormsg, "id": "n/a"})
                     #return self.response.out.write("Could not convert boundary to feature collection: " + errormsg)
-                    status = 501
+                    status = 400
+                    return self.response.write('{"status": "error", "reason": "Could not convert boundary to feature collection %s":  }' %(errormsg))
                 else:
 
                     def update_txn(area, boundary_hull_dict):

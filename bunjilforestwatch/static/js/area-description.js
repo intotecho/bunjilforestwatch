@@ -59,7 +59,7 @@ function init_area_descriptions(url) {
         						+ data.updates.length + ' updates: ' + data.updates[0].result);
         	}
     		gp.find('.dirty-flag').hide(); //move to ajax response.
-    	    gp.find('.update-area-btn').attr('disabled', true).html('Saved');
+    	    gp.find('.update-area-btn').prop('disabled', true).html('Saved');
         });
         
         request.fail(function (xhr, textStatus, error) {
@@ -71,7 +71,15 @@ function init_area_descriptions(url) {
     $('#area-description-panel textarea').on('change', function(e) {
     	var p =  $(e.target).parent().parent().parent();
         p.find('.dirty-flag').show();
-        p.find('.update-area-btn').attr('disabled', false).html('Save');
+        p.find('.update-area-btn').prop('disabled', false).html('Save');
     });
 
+
 } //end-of-init-area-description
+
+/**
+ * returns: 0 if all changes saved. Else number of textareas fields to save .
+ */
+function area_description_dirty() {
+	return $('#area-description-panel').find('.dirty-flag').filter(":visible").length
+}
