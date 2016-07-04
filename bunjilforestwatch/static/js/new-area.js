@@ -714,7 +714,7 @@ function setup_handlers(map) {
 			$('#undo-edits').prop('disabled', false);
 			$('.clear-map').prop('disabled', false);
 			$('#import-boundary').prop('disabled', false);
-			makeDataLayerEditable(initialize_map.map.data, true); 
+			makeDataLayerEditable(initialize_map.map.data, true, 'yello');
 			//need to set_mode so edit-boundary or draw-boundary shows again.
 			initialize_map.map.data.toGeoJson(function(geojson) {
 				var boundaryFeature = hasFeature(geojson, "Polygon");
@@ -742,7 +742,7 @@ function setup_handlers(map) {
 			$('#undo-edits').prop('disabled', true);
 			$('.clear-map').prop('disabled', true);
 			$('#import-boundary').prop('disabled', true);
-			makeDataLayerEditable(initialize_map.map.data, false); 
+			makeDataLayerEditable(initialize_map.map.data, false, 'green');
 			$('#save-view').prop('disabled', false);
 		}
 	});
@@ -1708,7 +1708,12 @@ function init_edit_boundary() {
 	var boundaryFeature = null;
 	var area_json_str = $('#area_json').text();
 	if (area_json_str !== "") {
-		area_json = jQuery.parseJSON( area_json_str);
+	    try {
+		    area_json = jQuery.parseJSON( area_json_str);
+		} catch(e){
+		    addToasterMessage('alert-danger', 'init_edit_boundary() error ' + e + ' in area_json ' + area_json_str ); 
+		    return;
+		}
 		initialize_map(null,  center_mapview(area_json));
 		initialize_map.map.setZoom(zoom_mapview(area_json));
 		initialize_map.boundary_type = 'geojson';

@@ -187,6 +187,30 @@ function layerslider_callback(layer_id, val) {
             //overlayMaps[id].style.strokeOpacity = val/100;
             overlayMaps[id].setStyle({strokeOpacity :val/100});
         }
+        else if(overlayMaps[id].overlaytype == 'fusion') { //TODO: Too brittle. Need better way to determine objct type.
+            //overlayMaps[id].style.strokeOpacity = val/100;
+            if (val === 0) {
+                overlayMaps[id].tmpmap = overlayMaps[id].map;
+  		        overlayMaps[id].setMap(null);
+                overlayMaps[id].set('styles',[
+                    {
+                        markerOptions: {
+                            iconName: "none"
+                        }
+                    }
+                ]);
+            }
+            else {
+  		        overlayMaps[id].setMap(overlayMaps[id].tmpmap);
+                overlayMaps[id].set('styles',[
+                    {
+                        markerOptions: {
+                            iconName: "small_purple"
+                        }
+                    }
+                ]);
+            }
+        }
         else {
             console.log("can't fade data layer" + overlayMaps.name);
         }

@@ -109,12 +109,14 @@ function initialize() {
 	var user_name = $('#user_name').text();
 	area_json_str = $('#area_json').text();
 	if (area_json_str !== "") {
-		area_json = jQuery.parseJSON( area_json_str);
+		try {
+			area_json = jQuery.parseJSON( area_json_str);
+		} catch(e){
+			addToasterMessage('alert-danger', 'initialized() error ' + e + ' in area_json ' + area_json_str ); 
+			return;
+		}
 	}
-	else	{
-		alert("missing area data");
-		return;
-	}
+
 	/* global center_mapview */
 	/* global zoom_mapview */
   	var map_center = center_mapview(area_json);
@@ -257,7 +259,7 @@ function initialize() {
 
     var newData = createDataLayer(map_over_lhs, false); // not editable
 
-	var newData = displayFeatureCollection(map_over_lhs, area_json.boundary_geojson);
+	newData = displayFeatureCollection(map_over_lhs, area_json.boundary_geojson);
     if (newData !== null) {
         newData.name = "geometry";
         newData.overlaytype = 'data';
@@ -271,6 +273,34 @@ function initialize() {
 	    		layerslider_callback);
     }
 
+    if (area_json.glad_alerts !== null) {
+        console.log(area_json.glad_alerts);
+        var layer = new google.maps.FusionTablesLayer({
+            query: {
+                select: 'latlong',
+                from: area_json.glad_alerts
+            },
+             styles: [
+             {
+                markerOptions: {
+                    iconName: "small_pink"
+                }
+             }
+            ]
+        });
+
+        layer.overlaytype = 'fusion';
+        layer.name = 'gladalerts';
+		overlayMaps.push(layer); //map_over_lhs.data
+  		layer.setMap(map_under_lhs);
+		addLayer("gladalerts",
+			"Glad Alerts",
+			"pink",
+			100,
+			"Alerts" + area_json.properties.glad_alerts,
+			layerslider_callback);
+    }
+
 	newData = displayFeatureCollection(map_under_lhs, jQuery.parseJSON(area_json.glad_clusters));
     if (newData !== null) {
         newData.name = "clusters";
@@ -278,8 +308,8 @@ function initialize() {
         newData.setMap(map_under_lhs);
 		overlayMaps.push(newData); //map_over_lhs.data
 	    addLayer("clusters",
-	    		area_json.properties.area_name + " Clusters",
-	    		"blue",
+	    		"Alert Clusters",
+	    		"pink",
 	    		100,
 	    		"Clusters" + area_json.properties.area_name,
 	    		layerslider_callback);
@@ -622,31 +652,7 @@ function initialize() {
             toggle_edit_cells_lock();
         });
         toggle_edit_cells_lock();  // call during init to draw div
-        
-        $('#delete_area_id').click(function(e) {
-            	/* global bootbox */
-                bootbox.dialog({
-                      message: "<b>Warning!</b> Deleting this area cannot be undone.<br/>Data contained with the area will also be deleted.<br/>Volunteers who follow this area will be notified.",
-                      title: "Delete Area <b>" + area_json.properties.area_name + "</b> - Are You Sure?",
-                      buttons: {
-                        success: {
-                          label: "Cancel",
-                          className: "btn-info",
-                          callback: function() {
-                          }
-                        },
-                        danger: {
-                          label: "Delete",
-                          className: "btn-danger",
-                          callback: function() {
-                              console.log("Deleting area");
-                              window.location.href =  area_json.properties.area_url  + "/delete" ;
-                          }
-                        }
-                      }
-                    });
-            }     
-        );//delete-are-you-sure handler
+    
 } //end-of-initialize
 
 google.maps.event.addDomListener(window, 'load', initialize); 

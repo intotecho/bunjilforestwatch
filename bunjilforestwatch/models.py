@@ -409,9 +409,12 @@ class AreaOfInterest(ndb.Model):
         if self.folder_id == None:
             self.folder_id = apiservices.create_folder(self.name, parentID=secrets.CLUSTERS_FOLDER_ID, drive_service=apiservices.create_drive_service())
             self.put()
-            cache.flush();
+            #cache.flush();
         return self.folder_id
 
+    '''
+    sets location as a feature -does not store in datastore
+    '''
     def set_area_location(self, feature):
         try:
             coordinates = feature['geometry']['coordinates']
@@ -533,16 +536,17 @@ class AreaOfInterest(ndb.Model):
             },
             "properties": {
                 "name": "area_location",
-                "descr": 'user specified center location of area',
+                "descr": 'user specified center location of area'
             }
         }
         return location_geojsonobj
 
     def get_gladcluster(self):
         if self.glad_monitored == True:
-            return apiservices.read_file("0B-lTullYuWZ_MUUtR1JOV09pbVU")
-        else:
-            return None
+            file_id = apiservices.get_latest_file(self.folder())
+            if file_id:
+                return apiservices.read_file(file_id) #Example: "0B-lTullYuWZ_MUUtR1JOV09pbVU")
+        return None
 
     def toGeoJSON(self):
 
@@ -558,7 +562,7 @@ class AreaOfInterest(ndb.Model):
                 "area_name": self.name,
                 "shared": self.shared_str,
                 "area_url": self.url(),
-                'owner': self.owner.string_id(),  # area owner.
+                "owner": self.owner.string_id(),  # area owner.
                 "area_description": {
                     "description": self.description,
                     "description_why": self.description_why,
@@ -571,27 +575,22 @@ class AreaOfInterest(ndb.Model):
                     # "ft_link": self.ft_link(),
                     # "boundary_fc": self.boundary_fc,
                     "ft_docid": self.ft_docid
-                },
-                "stroke": "#550055",
-                "stroke-width": 2,
-                "stroke-opacity": 1,
-                "fill": "#550055",
-                "fill-opacity": 0.5
+                }
             },
             "features": [
-                {"type": "Feature",  # map view
-                 "geometry": {
-                     "type": "Point",
-                     "coordinates": [self.map_center.lon, self.map_center.lat],
-                 },
-                 "properties": {
-                     "name": "mapview",
-                     "zoom": self.map_zoom
-                 }
-                 },
+                {
+                    "type": "Feature",  # map view
+                    "geometry": {
+                         "type": "Point",
+                         "coordinates": [self.map_center.lon, self.map_center.lat],
+                     },
+                     "properties": {
+                         "name": "mapview",
+                         "zoom": self.map_zoom
+                     }
+                },
             ]
         }
-
 
         location_geojson = self.area_location_as_geojson()
         if location_geojson != None:
@@ -602,12 +601,12 @@ class AreaOfInterest(ndb.Model):
             geojson_obj['features'].append(hull)
 
         if self.boundary_geojsonstr != None:
-            geoboundary = json.loads(self.boundary_geojsonstr)
+            geoboundary = geojson.loads(self.boundary_geojsonstr)
             geojson_obj['boundary_geojson'] = geoboundary
 
         geojson_obj['glad_clusters'] = self.get_gladcluster()
-        geojson_obj['glad_alerts'] = self.last_alerts_raw_ft
-
+        if self.last_alerts_raw_ft:
+            geojson_obj['glad_alerts'] = self.last_alerts_raw_ft
         return geojson_obj
 
     '''@TODO move this function to eeservice as it does not use or set area.
@@ -659,6 +658,25 @@ class AreaOfInterest(ndb.Model):
             return False
         else:
             return True
+
+    '''
+    Adds a name to the geojson and stores it with the area.
+    Client can style.
+    Caller must call area.put().
+    On exception, sets boundary_geojsonstr to None
+    '''
+    def set_boundary_geojsonstr(self, geojson_dict):
+        try:
+            #geojson_dict = geojson.loads(geojson_str)
+            geojson_dict["name"] = 'geojsonboundary'
+            self.boundary_geojsonstr = geojson.dumps(geojson_dict)
+        except (ValueError, KeyError) as e:
+            if isinstance(e, KeyError):
+                logging.error("set_boundary_geojsonstr() KeyError Exception : {0!s}".format(e))
+            elif isinstance(e, ValueError):
+                logging.error("set_boundary_geojsonstr() ValueError Exception : {0!s}".format(e))
+            self.boundary_geojsonstr = None
+            return self.boundary_geojsonstr
 
     def get_boundary_hull_geojson(self):
         """
@@ -756,6 +774,7 @@ class AreaOfInterest(ndb.Model):
         rectangle = bounds.coordinates().getInfo()
 
         boundary_hull_dict = {
+            "name": 'boundaryhull',
             "type": "Feature",
             "properties": {
                 "name": "boundary_hull",
@@ -827,6 +846,7 @@ class AreaOfInterest(ndb.Model):
         except ee.EEException:
             return None, 500, "EEException creating FeatureCollection"
 
+    '''
     def getBoundary(self, geojsonBoundary):
         """
         Given a boundary as a geojson Feature, apply it to the area.
@@ -885,7 +905,7 @@ class AreaOfInterest(ndb.Model):
             total_area = 0
 
         return coords, total_area, maxlatlon, minlatlon
-
+    '''
 
 class LandsatCell(ndb.Model):
     """

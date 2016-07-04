@@ -347,25 +347,22 @@ function displayBoundaryHull(map) {
  * Make the data layer editible or not base on the parameter.
  * @returns a data layer, or null.
  */
-function makeDataLayerEditable(data, editable) {
+function makeDataLayerEditable(data, editable, color) {
     try {
     	var styleOptions = areaBoundaryPolygonOptions;
     	if (editable) {
     		styleOptions.editable = true;
     		styleOptions.draggable = true;
     		styleOptions.fillOpacity =  0.5;  //more opacity when drawing.
-        	styleOptions.strokeColor =  'yellow';  
-        	styleOptions.fillColor =  'yellow'; 
     	}
     	else {
     		styleOptions.editable = false;
     		styleOptions.draggable = false;
-    		
-    		styleOptions.fillOpacity =  0.2;  
-        	styleOptions.strokeColor =  'green';  
-        	styleOptions.fillColor =  'gray'; 
-    	}	
-    	
+    		styleOptions.fillOpacity =  0.1;
+    	}
+		styleOptions.strokeColor =  color;
+		styleOptions.fillColor =  '#fffff';
+
     	data.setStyle(styleOptions);
     
     	
@@ -407,7 +404,6 @@ function createDataLayer(map, editable) {
     	console.log(msg);
     	return null;
     }
-	
 }
 
 
@@ -442,7 +438,18 @@ function displayFeatureCollection(map, geojson) {
 				controls : null,
 				position: google.maps.ControlPosition.TOP_CENTER,
     		});
-	    	makeDataLayerEditable(map.data, false);
+			var color = 'magenta';
+			if (typeof(geojson.properties) !== 'undefined') {
+				switch (geojson.properties.name) {
+					case "geojsonboundary":
+						color = 'blue';
+						break;
+					case "gladclusters":
+						color = 'blue';
+						break;
+				}
+			}
+	    	makeDataLayerEditable(map.data, false, color);
 			return map.data;
     	} catch (error) {
     		console.log("could not add geojson to map: " + error.message);

@@ -835,6 +835,7 @@ def getLandsatCells(area):
     except:
         logging.error('error getting GLAD footprint')
 
+
     #Store the cells and the area's cellList.
     def txn_saveCellList(cellList, area):
         for cell in cellList:
@@ -844,6 +845,7 @@ def getLandsatCells(area):
         return cellList
 
     db.run_in_transaction(txn_saveCellList, cellList, area)
+
 
     cache.flush() # FIXME: get user to call cache.set(area, cells)
     return True

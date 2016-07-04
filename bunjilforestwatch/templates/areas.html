@@ -45,6 +45,12 @@
                                        title="Watch Area will create a journal for this area. You will be asked to review new images for this area.">Watch Area
                                       <span class="glyphicon glyphicon-eye-open"></span></a>
                                   {%endif %}
+                                    {% if user.admin %}
+                                        <div id='user-is-admin-div'>
+																						<a id="{{ j }}" class="delete_area_btn btn btn-small btn-lightred map-panel-oops-button confirm" style='width: 60%'
+																								data-toggle="tooltip" title="Delete Area (Can't be undone) "> Delete area <span class='red_cross'>&times;</span></a>
+																				</div>
+                                    {% endif %}
 							                 </div>
                                   </div>
                                 </div>

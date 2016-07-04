@@ -918,7 +918,7 @@ class ExistingAreaHandler(BaseHandler):
 
                     def update_txn(area, boundary_hull_dict):
                         area.set_boundary_fc(boundary_hull_dict, True)
-                        area.boundary_geojsonstr = json.dumps(operation['value'])
+                        area.set_boundary_geojsonstr(operation['value'])
                         area.put()
                         return
 
@@ -1159,11 +1159,11 @@ class NewAreaHandler(BaseHandler):
             "wiki": ""
         }
 
-        test_area = cache.get_area(None, 'kali35').toGeoJSON()
+        #test_area = cache.get_area(None, 'kali35').toGeoJSON()
         self.render('new-area.html', {
             # 'country': country,
             'area': default_area,
-            'area_json': test_area,
+            #'area_json': test_area,
             'latlng': latlng,
             'username': username,
             'show_navbar': True,
@@ -1336,7 +1336,7 @@ class NewAreaHandler(BaseHandler):
                 boundary_geojsonstr=boundary_geojsonstr,
                 map_center=center, map_zoom=zoom,
                 max_latlon=maxlatlon, min_latlon=minlatlon,
-                glad_monitored = False
+                glad_monitored=False
             )
         except e:
             self.add_message('danger', 'Error creating area. %s' % (e))
@@ -1429,8 +1429,12 @@ class DeleteAreaHandler(BaseHandler):
         area = cache.get_area(None, area_name)
 
         if not area:
-            self.add_message('danger', 'Delete Area failed - Area not found.')
-            logging.error('DeleteArea: Area not found! %s', area_name)  # XSS should not return area to client.
+            #self.add_message('danger', 'Delete Area failed - Area not found.')
+            #logging.error('DeleteArea: Area not found! %s', area_name)  # XSS should not return area to client.
+            results = {
+                "status": "error",
+                "updates":  "Area not found"
+            }
             return self.error(404)
         else:
             cell_list = area.cell_list()
@@ -1444,11 +1448,19 @@ class DeleteAreaHandler(BaseHandler):
         # if user does not own area or user is not admin - disallow
 
         if (area.owner.string_id() != user.name) and (user.role != 'admin'):
-            logging.error('Only the owner of an area or admin can delete an area %s %s', area.owner, user)
-            self.add_message('danger',
-                             "Only the owner of an area or admin can delete an area. owner:'{0!s}' user:'{1!s}'".format(
-                                 area.owner, user))
+            msg = 'Only the owner of an area or admin can delete an area %s %s' %(area.owner, user)
+            #logging.error('Only the owner of an area or admin can delete an area %s %s', area.owner, user)
+            #self.add_message('danger',
+            #                 "Only the owner of an area or admin can delete an area. owner:'{0!s}' user:'{1!s}'".format(
+            #                     area.owner, user))
 
+            results = {
+                "status": "error",
+                "updates": msg
+            }
+            self.response.set_status(403)
+            return self.response.out.write(json.dumps(results))
+            '''
             geojson_area = area.toGeoJSON()
 
             return self.redirect(webapp2.uri_for('view-area', area_name=area_name), {
@@ -1463,7 +1475,7 @@ class DeleteAreaHandler(BaseHandler):
                 'area_followers': area_followers,
                 'obslist': json.dumps(observations)
             })
-
+            '''
         # remove area from other user's area_following lists.
         area_followers_index = cache.get_area_followers(area_name)
 
@@ -1493,17 +1505,29 @@ class DeleteAreaHandler(BaseHandler):
             models.Activity.create(user, models.ACTIVITY_DELETE_AREA, area.key)
             counters.increment(counters.COUNTER_AREAS, -1)
 
+            msg = 'Deleted area of interest: {0!s}'.format(area_name)
+            results = {
+                "status": "ok",
+                "updates": msg
+            }
+            self.response.set_status(200)
+            return self.response.out.write(json.dumps(results))
+
+            geojson_area = area.toGeoJSON()
+
             self.populate_user_session()
-            self.add_message('info', 'Deleted area of interest: {0!s}'.format(area_name))
             self.redirect(webapp2.uri_for('main'))
             # raise Exception('test', 'exception')
+
             return
         except Exception, e:
-            message = 'Sorry, Could not delete area: Exception {0!s}'.format(e)  # XSS safe
-            self.add_message('danger', message)
-            logging.error(message)
-            self.redirect(webapp2.uri_for('view-area', area_name=area.name))
-            return
+            msg= 'Sorry, Could not delete area: Exception {0!s}'.format(e)  # XSS safe
+            results = {
+            "status": "error",
+            "updates": msg
+            }
+            self.response.set_status(500)
+            return self.response.out.write(json.dumps(results))
 
 
 '''
@@ -1649,8 +1673,10 @@ class GetLandsatCellsHandler(BaseHandler):
                 monitored_count = sum(c['monitored'] == 'true' for c in cell_list)
                 reason = 'Your area is covered by {0:d} Landsat Cells of which {1:d} were selected for monitoring\n'.format(
                     len(area.cells), monitored_count)
-                if area.glad_monitored:
-                    reason += 'GLAD alerts Enabled'
+                if area.glad_monitored & area.hasBoundary():
+                    reason += 'GLAD alerts Enabled. '
+                    reason += gladalerts.handleCheckForGladAlertsInArea(self, area);
+
                 else:
                     reason += 'GLAD alerts Not available'
                 self.add_message('success', reason)
@@ -3458,7 +3484,7 @@ class ListFolders(BaseHandler):
 
 class ListFolder(BaseHandler):
     def get(self, folder_id):
-        return apiservices.list_folder(self, folder_id)
+        return apiservices.get_latest_file(folder_id)
 
 
 class ListExportTasks(BaseHandler):

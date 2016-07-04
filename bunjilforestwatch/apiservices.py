@@ -54,7 +54,6 @@ def delete_file(file_id):
     return 'Error deleting file : %s' % error
 
 
-
 def create_folder(folderName, parentID=None, drive_service=None ):
     # Create a folder on Drive, returns the newely created folders ID
     if not drive_service:
@@ -72,7 +71,28 @@ def create_folder(folderName, parentID=None, drive_service=None ):
     return root_folder['id']
 
 
-
+'''
+returns id of the latest file whose parent is folder_id, and matching mime_type - or None
+'''
+def get_latest_file(folder_id):
+    page_token = None
+    drive_service = create_drive_service()
+    query = "'%s' in parents and mimeType='application/json'" %folder_id
+    print query
+    while True:
+        response = drive_service.files().list(q=query,
+                                              #orderBy='modifiedTime',
+                                              pageSize=10,
+                                              fields='nextPageToken, files(id, name)',
+                                              pageToken=page_token).execute()
+        for file in response.get('files', []):
+            # Process change
+            print 'Found file: %s (%s)' % (file.get('name'), file.get('id'))
+            return file.get('id')
+        return None
+        #page_token = response.get('nextPageToken', None)
+        #if page_token is None:
+        #    break;
 
 import ee
 
