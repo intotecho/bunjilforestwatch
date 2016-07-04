@@ -333,14 +333,12 @@ function displayBoundaryHull(map) {
 	    else {
 	    	
 		    var polygonOptions = boundaryPolygonOptions(boundary_feature);
-		    
 			var areaBoundary = new google.maps.Polygon(polygonOptions); //areaBoundaryPolygonOptions defined in site.js
 		    areaBoundary.name = "boundary hull";
 		    areaBoundary.overlaytype = 'drawing';
 		    areaBoundary.setMap(map);
 		    return areaBoundary;
-		    
-	    }    
+	    }
     }
 }
 
@@ -409,6 +407,7 @@ function createDataLayer(map, editable) {
     	console.log(msg);
     	return null;
     }
+	
 }
 
 
@@ -434,7 +433,17 @@ function displayFeatureCollection(map, geojson) {
     	}
     	
     	try {
-    		return map.data.addGeoJson(geojson);
+    		result = map.data.addGeoJson(geojson);
+			map.data.name = "geometry";
+			map.data.overlaytype = 'data';
+			map.data.setOptions({
+				drawingControl: false,
+				drawingMode: null,
+				controls : null,
+				position: google.maps.ControlPosition.TOP_CENTER,
+    		});
+	    	makeDataLayerEditable(map.data, false);
+			return map.data;
     	} catch (error) {
     		console.log("could not add geojson to map: " + error.message);
     		return null;

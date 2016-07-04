@@ -380,7 +380,7 @@ class EarthEngineWarmUpHandler(BaseHandler):
         logging.debug('main.py EarthEngineWarmUpHandler')
         initEarthEngine.isReady()
         self.response.status = 202  # The request has been accepted for processing
-        self.response.write("")
+        self.response.write("EarthEngineWarmUpHandler")
         return
 
 
@@ -801,8 +801,22 @@ class AccountHandler(BaseHandler):  # superseded for now by user.html. no menu p
         self.redirect(webapp2.uri_for('account'))
 
 
-class ViewArea(BaseHandler):
-    # owner can create or update existing area
+'''
+ExistingAreaHandler supports GET to View the Area and PUT(PATCH) to update the area.
+DELETE is not supported.
+'''
+
+class ExistingAreaHandler(BaseHandler):
+
+    def delete(self, area_name):
+        #TODO Make deleteArea RESTFUL
+        self.response.set_status(400)
+        return self.response.out.write("Sorry HTTP DELETE not supported. Use:  /area/< area_name >/delete")
+
+    '''
+    PATCH Area - owner can update an existing area
+    The method is post but it is actually overriden to a PATCH, x-http-method-override
+    '''
     def post(self, area_name):
 
         if self.request.headers['x-http-method-override'] == 'PATCH':
@@ -833,9 +847,9 @@ class ViewArea(BaseHandler):
             self.response.set_status(500)
             return self.response.out.write('{"status": "error", "reason": "exception in user session" }')
 
-            if 'user' not in self.session:
-                self.response.set_status(403)
-                return self.response.out.write('{"status": "error", "reason": "user not in session" }')
+        if 'user' not in self.session:
+            self.response.set_status(403)
+            return self.response.out.write('{"status": "error", "reason": "user not in session" }')
 
         area = cache.get_area(None, area_name)
         if not area:
@@ -897,11 +911,25 @@ class ViewArea(BaseHandler):
                 # print  eeFeatureCollection, status, errormsg
                 if eeFeatureCollection == None:
                     self.response.set_status(status)
-                    return self.response.out.write("Could not convert boundary to feature collection: " + errormsg)
+                    op_results.append({"result": "Could not update boundary", "value": errormsg, "id": "n/a"})
+                    #return self.response.out.write("Could not convert boundary to feature collection: " + errormsg)
+                    status = 501
                 else:
-                    area.set_boundary_fc(eeFeatureCollection, True)
-                    area.boundary_geojsonstr = json.dumps(operation['value'])
-                    op_results.append({"result": "Updated boundary", "value": "boundary provided", "id": "n/a"})
+
+                    def update_txn(area, boundary_hull_dict):
+                        area.set_boundary_fc(boundary_hull_dict, True)
+                        area.boundary_geojsonstr = json.dumps(operation['value'])
+                        area.put()
+                        return
+
+                    boundary_hull_dict = models.AreaOfInterest.calc_boundary_fc(eeFeatureCollection)
+                    ndb.transaction(lambda: update_txn(area, boundary_hull_dict), xg=True)
+
+                    #area.set_boundary_fc(eeFeatureCollection, True)
+                    #area.boundary_geojsonstr = json.dumps(operation['value'])
+                    op_results.append({"result": "Updated boundary_geojsonstr",
+                                       "value":  area.boundary_geojsonstr,
+                                       "id": "n/a"})
                     status = 200
 
             if operation['path'] == "/properties/fusion_table":
@@ -910,7 +938,10 @@ class ViewArea(BaseHandler):
                 status = 200
 
             if operation['path'] == "/properties/boundary_type":
-                area.boundary_type = safe_value
+                def update_txn_boundary_type(area):
+                    area.boundary_type = safe_value
+                    area.put()
+                ndb.transaction(lambda: update_txn_boundary_type(area), xg=True)
                 op_results.append({"result": "Updated boundary_type", "value": safe_value, "id": "n/a"})
                 status = 200
 
@@ -961,7 +992,8 @@ class ViewArea(BaseHandler):
             return self.response.write('{"status": "error", "reason": "Error No valid path found for op" }')
 
         try:
-            area.put()
+            key = area.put()
+            print 'put area key %s', key
         except Exception, e:
             self.response.set_status(500)
             message = 'Exception saving area to db {0!s}'.format(e)
@@ -969,7 +1001,8 @@ class ViewArea(BaseHandler):
             return self.response.out.write('{"status": "error", "reason": ' + message + '}')
 
         try:
-            cache.clear_area_cache(username, area.key)
+            cache.clear_area_cache(self.session['user']['key'], area.key) #@fixme DOES IT WORK?
+            #cache.flush()
             # cache.delete([cache.C_AREA %(username, area.name),
             #              cache.C_AREA %(None, area.name)])
         except Exception, e:
@@ -981,14 +1014,18 @@ class ViewArea(BaseHandler):
         results = {
             "status": "ok",
             "updates": op_results
-        };
+        }
 
         # response_str = results
-        logging.info('Updated : {0!s} with result {1!s} '.format(area_name, results))
+        logging.info('Patched Area: {0!s} with result {1!s} '.format(area_name, results))
 
         self.response.set_status(200)
         return self.response.out.write(json.dumps(results))
 
+
+    '''
+    GET: to View Existing Area
+    '''
     def get(self, area_name):
         area_name = area_name
         current_user = users.get_current_user()
@@ -1020,8 +1057,7 @@ class ViewArea(BaseHandler):
             logging.error('AreaHandler: Area not found! %s', area_name)
             self.redirect(webapp2.uri_for('main'))
         else:
-            if (
-                        area.share == area.PRIVATE_AOI and area.owner.string_id() != user.name and users.is_current_user_admin()):
+            if (area.share == area.PRIVATE_AOI and area.owner.string_id() != user.name and users.is_current_user_admin()):
                 self.add_message(u'warning',
                                  "Only admin and owner can view this area: '{0:s}'!".format(area_name.decode('utf-8')))
 
@@ -1075,12 +1111,12 @@ class ViewArea(BaseHandler):
             })
 
 
-class AreaHandler(BaseHandler):
-    def delete(self):
-        # return DeleteAreaHandler() #TODO Make deleteArea RESTFUL
-        return
+'''
+NewAreaHandler supports GET to show the new area form and POST to create a new area
+'''
+class NewAreaHandler(BaseHandler):
 
-    # get the New Area form
+    # get - display New Area form
     def get(self):
 
         logging.info('get new area form')
@@ -1123,9 +1159,11 @@ class AreaHandler(BaseHandler):
             "wiki": ""
         }
 
+        test_area = cache.get_area(None, 'kali35').toGeoJSON()
         self.render('new-area.html', {
             # 'country': country,
             'area': default_area,
+            'area_json': test_area,
             'latlng': latlng,
             'username': username,
             'show_navbar': True,
@@ -1136,17 +1174,15 @@ class AreaHandler(BaseHandler):
 
         })
 
-
-
         # New Area form submitted.
 
     # @decorator.oauth_aware
     def post(self):
-        """
-        Create a new Area
+        '''
+        POST to Create a new Area
         @param new_area_geojson_str - defines the new area as a geojson string.
-               This may optionally contain a boundary_feature named 'boundary'
-        """
+               This may optionally contain a boundary_feature named 'boundary' - depending on the new area form design
+        '''
 
         ### get logged in user
         try:
@@ -1156,14 +1192,12 @@ class AreaHandler(BaseHandler):
                 raise KeyError
 
         except KeyError:
-            self.response.set_status(403, message='You must log in to create an area E1149')
-            return self.response.write('You must log in to create an area E1150')
-            '''# client should redirect
+            # Redirect to login page.
             abs_url  = urlparse(self.request.uri)
             original_url = abs_url.path
-            logging.error('No user logged in to protected url: ' + original_url)
-            self.response.set_status(403, message='You must log in to create an area E1086')
-            '''
+            logging.info('No user logged in. Redirecting from protected url: ' + original_url)
+            return self.redirect(users.create_login_url(original_url))
+
 
         ### read geojson dict of area properties
         try:
@@ -1187,6 +1221,10 @@ class AreaHandler(BaseHandler):
             self.response.set_status(400)
             return self.response.out.write('Create area requires a name.')
 
+        existing_area = cache.get_area(None, area_name)
+        if existing_area:
+            logging.error('Cannot POST to Area - name already exists')
+            return self.error(404)
         ### check if too many areas created.
         areas_count = user.get_area_count()
         logging.debug('User has created %d area.', areas_count)
@@ -1213,7 +1251,7 @@ class AreaHandler(BaseHandler):
         minlatlon = ndb.GeoPt(0, 0)
         area_location = ndb.GeoPt(0, 0)
         boundary_hull = None
-        boundary_geojsonstr = None
+        boundary_geojsonstr = None # no boundary defined yet.
         boundary_type = new_area['properties']['boundary_type']
         boundary_feature = None  # client may optionally pass boundary on a Feature named 'boundary'
         total_area = 0
@@ -1275,10 +1313,12 @@ class AreaHandler(BaseHandler):
             self.response.set_status(403, message='')
             return self.response.out.write('Area too big (%d sq km = %d Landsat images!)' % (total_area, area_in_cells))
 
+
         def txn(user_key, area):
             user = user_key.get()
             ndb.put_multi([user, area])
             return user, area
+
 
         try:
             area = models.AreaOfInterest(
@@ -1295,7 +1335,8 @@ class AreaHandler(BaseHandler):
                 boundary_hull=boundary_hull,
                 boundary_geojsonstr=boundary_geojsonstr,
                 map_center=center, map_zoom=zoom,
-                max_latlon=maxlatlon, min_latlon=minlatlon
+                max_latlon=maxlatlon, min_latlon=minlatlon,
+                glad_monitored = False
             )
         except e:
             self.add_message('danger', 'Error creating area. %s' % (e))
@@ -1574,12 +1615,11 @@ class NewJournal(BaseHandler):
 
 
 '''
-Use Earth Engine to work out which cells belong to an AreaOfInterest.
+Use Earth Engine to work out which cells overlap an AreaOfInterest.
 Store the result in aoi.cells.
 Each cell identified by landsat Path and Row.
+Also checks if area is in glad footprint and stores result.
 '''
-
-
 class GetLandsatCellsHandler(BaseHandler):
     # This handler responds to Ajax request, hence it returns a response.write()
 
@@ -1605,12 +1645,14 @@ class GetLandsatCellsHandler(BaseHandler):
 
             else:
                 eeservice.getLandsatCells(area)
-                area = cache.get_area(None,
-                                      area_name)  # refresh the cache as it has been updated by getLandsatCells(). #TODO test this works
                 cell_list = area.cell_list()
                 monitored_count = sum(c['monitored'] == 'true' for c in cell_list)
-                reason = 'Your area is covered by {0:d} Landsat Cells of which {1:d} were selected for monitoring'.format(
+                reason = 'Your area is covered by {0:d} Landsat Cells of which {1:d} were selected for monitoring\n'.format(
                     len(area.cells), monitored_count)
+                if area.glad_monitored:
+                    reason += 'GLAD alerts Enabled'
+                else:
+                    reason += 'GLAD alerts Not available'
                 self.add_message('success', reason)
                 logging.debug(reason)
         else:
@@ -1800,7 +1842,7 @@ class CreateOverlayHandler(BaseHandler):
 
 
 # if Image is known.
-class UpdateOverlayHandler(BaseHandler):
+class UpdateOverlayAjaxHandler(BaseHandler):
     # This handler responds to Ajax request, hence it returns a response.write()
 
     def get(self, ovlkey, algorithm):
@@ -1875,7 +1917,7 @@ ObservationTaskHandler() when a user clicks on a link in an obstask email they c
 '''
 
 
-class ObservationTaskHandler(BaseHandler):
+class ObservationTaskAjaxHandler(BaseHandler):
     def get(self, task_id):
 
         obstask = models.ObservationTask.get_by_id(long(task_id))
@@ -1955,8 +1997,6 @@ returns a HTML formatted string
 
 This is not a handler and can be moved to another file
 '''
-
-
 def checkForNewInArea(area, hosturl):
     area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
     linestr = u'<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
@@ -2032,8 +2072,6 @@ It checks each monitored cell to see if there is a new image in EE since the las
 This is called by the cron task, but may be kicked of by admin.
 Not: Includes private and unlisted areas in the check. So the tasks lists must be filtered.
 '''
-
-
 class CheckForNewInAllAreasHandler(BaseHandler):
     def get(self):
         logging.info("Cron CheckForNewInAllAreasHandler check-new-images")
@@ -2063,8 +2101,6 @@ It checks if there is a new image in EE since the last check.
 This function is called by admin only.
 #TODO: It could be refactored with CheckAllAreasHadler.
 '''
-
-
 class CheckForNewInAreaHandler(BaseHandler):
     def get(self, area_name):
 
@@ -2092,31 +2128,37 @@ class CheckForNewInAreaHandler(BaseHandler):
         return self.response.write(returnstr.encode('utf-8'))
 
 
-
-'''
-GLAD-ALERT Handlers
-	webapp2.Route(r'/admin/alerts/glad', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
-	webapp2.Route(r'/admin/alerts/glad/<area_name>', handler=CheckForGladAlertsInAreaHandler, name='alerts-glad-area'),
-'''
-
-
 '''
 CheckForGladAlertsInAllAreasHandler() looks at a single area of interest and gets GLAD-ALERTS
 '''
 class CheckForGladAlertsInAllAreasHandler(BaseHandler):
 
     def get(self):
-        #for a in areas
-        return gladalerts.handleCheckForGladAlertsInAllAreas(self)
+        returnstr = '<h1>CheckForGladAlertsInAllAreasHandler</h1>'
+
+        all_areas = cache.get_all_glad_areas()  # includes unlisted and private areas in GLAD footprint.
+
+        for area in all_areas:
+            if area.glad_monitored & area.hasBoundary():
+                returnstr += '<h2>' + area.name + ' </h3><br/>' + gladalerts.handleCheckForGladAlertsInArea(self, area) + '<br/>'
+        cache.flush()
+        self.response.write(returnstr.encode('utf-8'))
 
 '''
 CheckForGladAlertsInAreaHandler() looks at a single area of interest and gets GLAD-ALERTS
 '''
-
 class CheckForGladAlertsInAreaHandler(BaseHandler):
 
     def get(self, area_name):
-        return gladalerts.handleCheckForGladAlertsInArea(self, area_name)
+        area = cache.get_area(None, area_name)
+        if not area:
+            area = cache.get_area(None, area_name)
+            logging.error('CheckForGladAlertsInAreaHandler: Area not found!')
+            return self.error(400)
+        else:
+            logging.debug('CheckForGladAlertsInAreaHandler: check-new-area-images for area_name %s', area_name)
+
+        return gladalerts.handleCheckForGladAlertsInArea(self, area)
 
 
 '''
@@ -2127,6 +2169,15 @@ class ProcessAlerts2ClustersHandler(BaseHandler):
     def get(self, area_name):
         # for a in areas
         return gladalerts.handleAlerts2Clusters(self, area_name)
+
+'''
+DistributeGladClusters() takes a GLAD-ALERT cluster and sends it to volunteers as tasks
+'''
+class DistributeGladClusters(BaseHandler):
+
+    def get(self, area_name):
+        # for a in areas
+        return gladalerts.distributeGladClusters(self, area_name)
 
 
 '''
@@ -3410,6 +3461,10 @@ class ListFolder(BaseHandler):
         return apiservices.list_folder(self, folder_id)
 
 
+class ListExportTasks(BaseHandler):
+    def get(self):
+        return self.response.write(apiservices.list_exports()) #json.dumps(list, indent=4, sort_keys=True)
+
 SECS_PER_WEEK = 60 * 60 * 24 * 7
 
 config = {
@@ -3421,107 +3476,106 @@ config = {
 }
 
 app = webapp2.WSGIApplication([
-  webapp2.Route(r'_ah/warmup', handler=EarthEngineWarmUpHandler, name='earth-engine'),
-  webapp2.Route(r'/', handler=MainPage, name='main'),
+    webapp2.Route(r'_ah/warmup', handler=EarthEngineWarmUpHandler, name='earth-engine'),
+    webapp2.Route(r'/', handler=MainPage, name='main'),
 
-  webapp2.Route('/.well-known/acme-challenge/<challenge_id>', AcmeChallengeHandler, methods=['GET', 'POST']),
-  webapp2.Route(r'/about', handler=AboutHandler, name='about'),
-  webapp2.Route(r'/account', handler=AccountHandler, name='account'),
-  webapp2.Route(r'/activity', handler=ActivityHandler, name='activity'),
-  webapp2.Route(r'/admin/flush', handler=FlushMemcache, name='flush-memcache'),
-  webapp2.Route(r'/admin/update/users', handler=UpdateUsersHandler, name='update-users'),
-  webapp2.Route(r'/admin/checknew', handler=CheckForNewInAllAreasHandler, name='check-new-all-images'),
-  webapp2.Route(r'/admin/checknew/<area_name>', handler=CheckForNewInAreaHandler, name='check-new-area-images'),
-  webapp2.Route(r'/admin/assets', handler=ListAssetsHandler, name='list-assets'),
-  webapp2.Route(r'/admin/assets/delete/<file_id>', handler=DeleteAssetHandler, name='delete-asset'),
+    webapp2.Route('/.well-known/acme-challenge/<challenge_id>', AcmeChallengeHandler, methods=['GET', 'POST']),
+    # google site verification
+    webapp2.Route(r'/%s.html' % settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
 
-  webapp2.Route(r'/admin/folders', handler=ListFolders, name='list-drive-folders'),
-  webapp2.Route(r'/admin/folder/create/<parent_id>/<folder_name>', handler=CreateFolder, name='create-drive-folder'),
-  webapp2.Route(r'/admin/folder/list/<folder_id>', handler=ListFolder, name='list-drive-folder'),
+    # webapp2.Route(r'/login/google/<protected_url>', handler=GoogleLogin, name='login-google'),
+    webapp2.Route(r'/login/google', handler=GoogleLogin, name='login-google'),
+    webapp2.Route(r'/login/facebook', handler=FacebookLogin, name='login-facebook'),
+    webapp2.Route(r'/logout', handler=Logout, name='logout'),
+    webapp2.Route(r'/logout/google', handler=GoogleSwitch, name='logout-google'),
 
-  webapp2.Route(r'/admin/alerts/glad', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
-  webapp2.Route(r'/admin/alerts/glad/<area_name>', handler=CheckForGladAlertsInAreaHandler, name='alerts-glad-area'),
-  webapp2.Route(r'/admin/alerts/glad2clusters/<area_name>', handler=ProcessAlerts2ClustersHandler, name='alerts-glad2cluster-area'),
+    webapp2.Route(r'/about', handler=AboutHandler, name='about'),
+    webapp2.Route(r'/account', handler=AccountHandler, name='account'),
+    webapp2.Route(r'/activity', handler=ActivityHandler, name='activity'),
 
-  webapp2.Route(r'/admin/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
-                name='view-obstasks'),
-  webapp2.Route(r'/blob/<key>', handler=BlobHandler, name='blob'),
-  webapp2.Route(r'/donate', handler=DonateHandler, name='donate'),
+    webapp2.Route(r'/blob/<key>', handler=BlobHandler, name='blob'),
+    webapp2.Route(r'/donate', handler=DonateHandler, name='donate'),
 
-  webapp2.Route(r'/facebook', handler=FacebookCallback, name='facebook'),
-  webapp2.Route(r'/google', handler=GoogleCallback, name='google'),
-  webapp2.Route(r'/feeds/<feed>', handler=FeedsHandler, name='feeds'),
-  webapp2.Route(r'/following/<username>', handler=FollowingHandler, name='following'),
+    webapp2.Route(r'/facebook', handler=FacebookCallback, name='facebook'),
+    webapp2.Route(r'/google', handler=GoogleCallback, name='google'),
+    webapp2.Route(r'/feeds/<feed>', handler=FeedsHandler, name='feeds'),
+    webapp2.Route(r'/following/<username>', handler=FollowingHandler, name='following'),
 
-  webapp2.Route(r'/register', handler=RegisterUserHandler, name='register'),
-  webapp2.Route(r'/new/user', handler=NewUserHandler, name='new-user'),
-  # webapp2.Route(r'/login/google/<protected_url>', handler=GoogleLogin, name='login-google'),
-  webapp2.Route(r'/login/google', handler=GoogleLogin, name='login-google'),
-  webapp2.Route(r'/login/facebook', handler=FacebookLogin, name='login-facebook'),
-  webapp2.Route(r'/logout', handler=Logout, name='logout'),
-  webapp2.Route(r'/logout/google', handler=GoogleSwitch, name='logout-google'),
-  webapp2.Route(r'/markup', handler=MarkupHandler, name='markup'),
+    webapp2.Route(r'/register', handler=RegisterUserHandler, name='register'),
+    webapp2.Route(r'/new/user', handler=NewUserHandler, name='new-user'),
 
-  # webapp2.Route(r'/api-docs', include('rest_framework.urls', namespace='rest_framework')),
-  webapp2.Route(r'/new/journal', handler=NewJournal, name='new-journal'),
-  webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
-  webapp2.Route(r'/mailtest', handler=MailTestHandler, name='mail-test'),
-  webapp2.Route(r'/selectcell/<area_name>/<celldata>', handler=SelectCellHandler, name='select-cell'),
+    webapp2.Route(r'/admin/flush', handler=FlushMemcache, name='flush-memcache'),
+    webapp2.Route(r'/admin/update/users', handler=UpdateUsersHandler, name='update-users'),
+    webapp2.Route(r'/admin/checknew', handler=CheckForNewInAllAreasHandler, name='check-new-all-images'),
+    webapp2.Route(r'/admin/checknew/<area_name>', handler=CheckForNewInAreaHandler, name='check-new-area-images'),
+    webapp2.Route(r'/admin/assets', handler=ListAssetsHandler, name='list-assets'),
+    webapp2.Route(r'/admin/assets/delete/<file_id>', handler=DeleteAssetHandler, name='delete-asset'),
+    webapp2.Route(r'/admin/folders', handler=ListFolders, name='list-drive-folders'),
+    webapp2.Route(r'/admin/folder/create/<parent_id>/<folder_name>', handler=CreateFolder, name='create-drive-folder'),
+    webapp2.Route(r'/admin/folder/list/<folder_id>', handler=ListFolder, name='list-drive-folder'),
+    webapp2.Route(r'/admin/exports', handler=ListExportTasks, name='list-exports-tasks'),
 
-  webapp2.Route(r'/twitter/<action>', handler=TwitterHandler, name='twitter'),
-  webapp2.Route(r'/upload/file/<username>/<journal_name>/<entry_id>', handler=UploadHandler, name='upload-file'),
-  webapp2.Route(r'/upload/success', handler=UploadSuccess, name='upload-success'),
-  webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
+    webapp2.Route(r'/admin/alerts/glad', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
+    webapp2.Route(r'/admin/alerts/glad/<area_name>', handler=CheckForGladAlertsInAreaHandler, name='alerts-glad-area'),
+    webapp2.Route(r'/admin/alerts/glad2clusters/<area_name>', handler=ProcessAlerts2ClustersHandler, name='alerts-glad2cluster-area'),
+    webapp2.Route(r'/admin/alerts/glad/distribute_cluster/<area_name>', handler=DistributeGladClusters,
+                                                          name='alerts-glad2cluster-area'),
 
-  # observation tasks see also admin/obs/list
-  webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
-                name='view-obstasks'),
-  webapp2.Route(r'/obs/overlay/create/<obskey_encoded>/<role>/<algorithm>', handler=CreateOverlayHandler,
-                name='create-overlay'),
-  # AJAX call
-  webapp2.Route(r'/obs/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayHandler, name='update-overlay'),
-  # AJAX call
-  # webapp2.Route(r'/obs/<username>/overlay/create/<obskey>/<role>/<algorithm>', handler=CreateOverlayHandler, name='create-overlay'), #AJAX call
-  # webapp2.Route(r'/obs/<username>/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayHandler, name='update-overlay'), #AJAX call
-  webapp2.Route(r'/obs/<task_id>', handler=ObservationTaskHandler, name='view-obstask'),
+    webapp2.Route(r'/admin/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
+                    name='view-obstasks'),
+    webapp2.Route(r'/markup', handler=MarkupHandler, name='markup'),
 
-  # taskqueue
-  webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
-  # webapp2.Route(r'/tasks/backup', handler=BackupHandler, name='backup'),
+    # webapp2.Route(r'/api-docs', include('rest_framework.urls', namespace='rest_framework')),
+    webapp2.Route(r'/new/journal', handler=NewJournal, name='new-journal'),
+    webapp2.Route(r'/save', handler=SaveEntryHandler, name='entry-save'),
+    webapp2.Route(r'/mailtest', handler=MailTestHandler, name='mail-test'),
 
-  # google site verification
-  webapp2.Route(r'/%s.html' % settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
+    webapp2.Route(r'/selectcell/<area_name>/<celldata>', handler=SelectCellHandler, name='select-cell'),
 
-  webapp2.Route(r'/myareas', handler=ViewAllAreas, name='view-areas'),  # view my areas
-  webapp2.Route(r'/<username>/myareas', handler=ViewAllAreas, name='view-areas'),  # view someone else's areas.
+    webapp2.Route(r'/twitter/<action>', handler=TwitterHandler, name='twitter'),
+    webapp2.Route(r'/upload/file/<username>/<journal_name>/<entry_id>', handler=UploadHandler, name='upload-file'),
+    webapp2.Route(r'/upload/success', handler=UploadSuccess, name='upload-success'),
+    webapp2.Route(r'/upload/url/<username>/<journal_name>/<entry_id>', handler=GetUploadURL, name='upload-url'),
 
-  webapp2.Route(r'/area', handler=AreaHandler, name='new-area'),  # create area
 
-  webapp2.Route(r'/area/<area_name>/delete', handler=DeleteAreaHandler, name='delete-area'),
-  # delete area (owner or admin)
-  # webapp2.Route(r'/area/<area_name>/update/view/<lat:\d+>/<lng:\d+>/<zoom:\d+>/', handler=UpdateAreaViewHandler, name='area-save-view'),
+    webapp2.Route(r'/myareas', handler=ViewAllAreas, name='view-areas'),  # view my areas
+    webapp2.Route(r'/<username>/myareas', handler=ViewAllAreas, name='view-areas'),  # view someone else's areas.
 
-  webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'),  # ajax
-  webapp2.Route(r'/area/<area_name>', handler=ViewArea, name='view-area'),  # view area.
+    webapp2.Route(r'/area', handler=NewAreaHandler, name='new-area'),  # create area
+    webapp2.Route(r'/area/<area_name>/delete', handler=DeleteAreaHandler, name='delete-area'),
+    # delete area (owner or admin)
+    # webapp2.Route(r'/area/<area_name>/update/view/<lat:\d+>/<lng:\d+>/<zoom:\d+>/', handler=UpdateAreaViewHandler, name='area-save-view'),
 
-  webapp2.Route(r'/area/<area_name>/follow', handler=FollowAreaHandler, name='follow-area'),  # start following area
+    webapp2.Route(r'/area/<area_name>/getcells', handler=GetLandsatCellsHandler, name='get-cells'),  # ajax
+    webapp2.Route(r'/area/<area_name>', handler=ExistingAreaHandler, name='view-area'),  # view area.
+    webapp2.Route(r'/area/<area_name>/follow', handler=FollowAreaHandler, name='follow-area'),  # start following area
+    webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>',
+                    handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
+    webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>',
+                    handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
 
-  webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>',
-                handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
-  webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>',
-                handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
+    # observation tasks see also admin/obs/list
+    webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
+                  name='view-obstasks'),
+    webapp2.Route(r'/obs/overlay/create/<obskey_encoded>/<role>/<algorithm>', handler=CreateOverlayHandler,
+                  name='create-overlay'),
+    webapp2.Route(r'/obs/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
+    webapp2.Route(r'/obs/<task_id>', handler=ObservationTaskAjaxHandler, name='view-obstask'),
 
-  # this section must be last, since the regexes below will match one and two -level URLs
-  webapp2.Route(r'/<username>/journals', handler=ViewJournalsHandler, name='view-journals'),
-  webapp2.Route(r'/<username>', handler=UserHandler, name='user'),
-  webapp2.Route(r'/<username>/journal/<journal_name>', handler=ViewJournal, name='view-journal'),
-  webapp2.Route(r'/<username>/journal/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
-  webapp2.Route(r'/<username>/journal/<journal_name>/download', handler=DownloadJournalHandler,
-                name='download-journal'),
-  webapp2.Route(r'/<username>/journal/<journal_name>/new/<images:[^/]+>', handler=NewEntryHandler, name='new-entry'),
-  webapp2.Route(r'/<username>/journal/<journal_name>/new', handler=NewEntryHandler, name='new-entry')
+    webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
+    # this section must be last, since the regexes below will match one and two -level URLs
+    webapp2.Route(r'/<username>/journals', handler=ViewJournalsHandler, name='view-journals'),
+    webapp2.Route(r'/<username>', handler=UserHandler, name='user'),
+    webapp2.Route(r'/<username>/journal/<journal_name>', handler=ViewJournal, name='view-journal'),
+    webapp2.Route(r'/<username>/journal/<journal_name>/<entry_id:\d+>', handler=ViewEntryHandler, name='view-entry'),
+    webapp2.Route(r'/<username>/journal/<journal_name>/download', handler=DownloadJournalHandler,
+                    name='download-journal'),
+    webapp2.Route(r'/<username>/journal/<journal_name>/new/<images:[^/]+>', handler=NewEntryHandler, name='new-entry'),
+    webapp2.Route(r'/<username>/journal/<journal_name>/new', handler=NewEntryHandler, name='new-entry')
 
-  # (decorator.callback_path, decorator.callback_handler())
+
+    # webapp2.Route(r'/tasks/backup', handler=BackupHandler, name='backup'),
+    # (decorator.callback_path, decorator.callback_handler())
 
 ], debug=True, config=config)
 
@@ -3547,6 +3601,7 @@ RESERVED_NAMES = set([
   'donate',
   'entry',
   'engine',
+  'exports',
   'facebook',
   'features',
   'feeds',

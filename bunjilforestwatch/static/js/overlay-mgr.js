@@ -179,8 +179,25 @@ function layerslider_callback(layer_id, val) {
     if (id !== -1) {
         console.log("layerslider_callback:" + overlayMaps[id].name + ", " + val); //overlayMaps[id].name
         console.log('type of overlay' + typeof overlayMaps[id]); 
+
+        if(overlayMaps[id].overlaytype == 'drawing') { //TODO: Too brittle. Need better way to determine objct type.
+        	 overlayMaps[id].setOptions({strokeOpacity :val/100} );	 
+        }
+        else if(overlayMaps[id].overlaytype == 'data') { //TODO: Too brittle. Need better way to determine objct type.
+            //overlayMaps[id].style.strokeOpacity = val/100;
+            overlayMaps[id].setStyle({strokeOpacity :val/100});
+        }
+        else {
+            console.log("can't fade data layer" + overlayMaps.name);
+        }
+
+		/*
+		
         if(overlayMaps[id].name == 'boundary') { //TODO: Too brittle. Need better way to determine objct type.
         	 overlayMaps[id].setOptions({strokeOpacity :val/100} );	 
+        }
+        else if(overlayMaps[id].name == 'geometry') { //TODO: Too brittle. Need better way to determine objct type.
+        	 overlayMaps[id].style.strokeOpacity = val/100;
         }
         else {
         	console.log('type' + typeof overlayMaps[id]);
@@ -190,8 +207,10 @@ function layerslider_callback(layer_id, val) {
         	else {
             	console.log("can't fade data layer");
         	}
-        		
         }
+ 
+
+		*/ 
     }
 }
 

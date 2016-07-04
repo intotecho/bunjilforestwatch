@@ -2,7 +2,7 @@
  * @name site.js
  * @version 1.0
  * @author Chris Goodman 
- * @fileoverview tools use throughout the site - loaded on every page.
+ * @fileoverview tools use throughout the site - loaded on ever` page.
  * e.g timeouts for the toaster messages.
  */
 

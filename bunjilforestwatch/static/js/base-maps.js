@@ -41,24 +41,24 @@ function update_map_panel(map, panel) {
 	/* global map_over_lhs */
 	/* global map_under_lhs */
     var htmlString = "<span class=divider small><strong>zoom:</strong>   " + map.getZoom() + " <br/>";
-    htmlString += "Center(" + map_under_lhs.getCenter().lat().toFixed(3) + ",  " + map_under_lhs.getCenter().lng().toFixed(3) + ")</span>";
+    htmlString += "Center(" + map_under_lhs.getCenter().lat().toFixed(3) + "\u00B0,  " + map_under_lhs.getCenter().lng().toFixed(3) + "\u00B0)</span>";
     $(panel).empty().html(htmlString); 
 }
 
 
 /**
  * Updates the panel div with lat lng values of the cursor - Called after mouse moves over the map to [position pnt.
+ * Shows in the View Area/Manage Tab, MapView Accordion
  */
 
 function update_map_cursor(map, pnt, panel) {   
 	"use strict";
-    var lat = pnt.lat();
-    lat = lat.toFixed(4);
-    var lng = pnt.lng();
-    lng = lng.toFixed(4);
-    var htmlString  = "Cursor( " + lat + ", " + lng + ")";
+    var lat = pnt.lat().toFixed(4);
+    var lng = pnt.lng().toFixed(4);
+    var htmlString  = "Cursor( " + lat + "\u00B0, " + lng + "\u00B0)";
+    //Set htmlString into the panel.
     $(panel).empty().html(htmlString);
-    console.log(htmlString);
+    //console.log(htmlString);
 }
 
 /**
@@ -243,6 +243,7 @@ function initialize() {
     /* displayBoundaryHull */
     /* global overlayMaps */
     /* global addLayer */
+
     var areaBoundary = displayBoundaryHull(map_under_lhs, area_json); // draw area's boundary or area_location marker
     overlayMaps.push(areaBoundary);
     addLayer(areaBoundary.name,
@@ -253,16 +254,37 @@ function initialize() {
         layerslider_callback);
 
     // draw area's boundary or area_location marker
-    var newData = createDataLayer(map_under_lhs, false); // not editable
-    if (displayFeatureCollection(map_under_lhs, area_json.boundary_geojson) !== null) {
-		overlayMaps.push(newData);
+
+    var newData = createDataLayer(map_over_lhs, false); // not editable
+
+	var newData = displayFeatureCollection(map_over_lhs, area_json.boundary_geojson);
+    if (newData !== null) {
+        newData.name = "geometry";
+        newData.overlaytype = 'data';
+        newData.setMap(map_over_lhs);
+		overlayMaps.push(newData); //map_over_lhs.data
 	    addLayer("geometry",
-	    		area_json.properties.area_name + " Geometry", 
-	    		"green",  
-	    		50, 
-	    		"Geometry of Area " + area_json.properties.area_name, 
+	    		area_json.properties.area_name + " Geometry",
+	    		"green",
+	    		50,
+	    		"Geometry of Area " + area_json.properties.area_name,
 	    		layerslider_callback);
     }
+
+	newData = displayFeatureCollection(map_under_lhs, jQuery.parseJSON(area_json.glad_clusters));
+    if (newData !== null) {
+        newData.name = "clusters";
+        newData.overlaytype = 'data';
+        newData.setMap(map_under_lhs);
+		overlayMaps.push(newData); //map_over_lhs.data
+	    addLayer("clusters",
+	    		area_json.properties.area_name + " Clusters",
+	    		"blue",
+	    		100,
+	    		"Clusters" + area_json.properties.area_name,
+	    		layerslider_callback);
+    }
+
 
     /*  if AOI is new, then need to ask earthengine to calculate what cells overlap the areaAOI.
      *  This is done here the first time the area is viewed. But could be part of constructor for AreaOfInterest.

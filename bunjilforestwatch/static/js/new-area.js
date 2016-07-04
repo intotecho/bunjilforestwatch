@@ -294,6 +294,8 @@ function save_area(map, is_update) {
 		// create a new area
 		toastr.clear();
 
+		$('#save-area').prop('disabled', true); //disable Save Button till response
+
 		$('#save-wait-popover').popoverX({
 			target : '#save-area' // container
 		});
@@ -303,11 +305,11 @@ function save_area(map, is_update) {
 		$('#close-dialog-save-area-wait').click(function() {
 			$('#save-wait-popover').popoverX('hide');
 		});
-
+		/*
 		$('#close-dialog-save-boundary').click(function() {
 			$('#save-boundary').popover('hide');
 		});
-		
+		*/
 	    var request = jQuery.ajax({
 	    	type : "POST",
 			url : "area",
@@ -316,6 +318,7 @@ function save_area(map, is_update) {
 		});
 	   
 	    request.done(function (data) {
+			$('#save-area').prop('disabled', false); //reenable Save Button
 			$('#save-wait-popover').popoverX('hide');
 			addToasterMessage('alert-success', 'Area ' + area_name +
 					 ' created OK');
@@ -331,7 +334,7 @@ function save_area(map, is_update) {
 	    
 	    request.fail(function (xhr, textStatus, error) {
 			//console.log ('patch_area() - failed:', xhr.status,  ', ', xhr.statusText, ' error: ', error);
-
+			$('#save-area').prop('disabled', false); //reenable Save Button
 			$('#save-wait-popover').popoverX('hide');
 			var msg = 'update failed ' + xhr.status + ' ' +
 				xhr.statusText + ' ' +
@@ -524,6 +527,22 @@ function save_boundary(event) {
 	var data = initialize_map.map.data;
 	var boundary_type = get_boundary_type();
 
+	$('#save-boundary').prop('disabled', true); //disable Save Boundary Button till response
+
+	$('#save-boundary-wait-popover').popoverX({
+		target : '#save-boundary' // container
+	}).popoverX('show');
+
+	$('#close-dialog-save-boundary-wait').click(function() {
+		$('#save-boundary-wait-popover').popoverX('hide');
+	});
+
+	/*
+	$('#close-dialog-save-boundary').click(function() {
+		$('#save-boundary-wait-popover').popover('hide');
+	});
+	*/
+
 	var patch_ops =  [];
 	patch_ops.push( { "op": "replace", "path": "/properties/boundary_type", "value": boundary_type});
 
@@ -551,10 +570,12 @@ function save_boundary(event) {
 		var request = patch_area(patch_ops, area_json.properties.area_url);  //patch_area(); //ajax call
 
 	    request.done(function (data) {
+			$('#save-boundary').prop('disabled', false); //reenable Save Boundary button
+			$('#save-boundary-wait-popover').popover('hide');
+
 	    	if(typeof data !== 'undefined') {
 	    		console.log ('patch_area() - result: ' + data.status + ', ' + data.updates.length + ' updates: ' + data.updates[0].result);
 	    	}
-	    	$('#save-boundary').popover('hide');
 			addToasterMessage('alert-success', 'Area ' + get_area_name() +
 					 ' updated OK');
 			if (edit_boundary_mode()) {
@@ -568,7 +589,9 @@ function save_boundary(event) {
 	    });
 	    
 	    request.fail(function (xhr, textStatus, error) {
-	    	
+			$('#save-boundary').prop('disabled', false); //reenable Save Boundary button
+			$('#save-boundary-wait-popover').popover('hide');
+
 			setTimeout(
 					  function() 
 					  {
@@ -738,7 +761,6 @@ function setup_handlers(map) {
  		if ((area_json !== null) && (displayFeatureCollection(map, area_json.boundary_geojson) !== null)) {
     		console.log("error displaying existing boundaries");
     	}
-
 		return false;
 	});
 
@@ -1474,7 +1496,11 @@ function helplocateAccord_clicked(event) {
  * @example Use '#locate-tab' as param'
  */
 function activate_tab(target) {
+
+	var area_name = get_area_name();
+	$('.area-name').html(" for " + area_name);
 	return $('.wizard-container a[href="' + target + '-body"]').tab('show');
+
 	//$(window).scrollTop(0);	
 }
 
@@ -1773,6 +1799,15 @@ function initialize_new_area_form() {
 	});
 
 
+	$('#boundary-tab').click(function() {
+		$('#map-row').show();
+	});
+	$('#locate-tab').click(function() {
+		$('#map-row').show();
+	});
+	$('#description-tab').click(function() {
+		$('#map-row').hide();
+	});
 	/*
 	 * $('#info-tab').click(function() { $(window).scrollTop(0); });
 	 * 

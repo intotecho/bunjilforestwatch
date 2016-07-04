@@ -3,6 +3,9 @@ import httplib2
 import settings
 import eeservice
 from googleapiclient import errors
+from googleapiclient.http import MediaIoBaseDownload
+import io
+
 
 def create_table_service():
     if not eeservice.initEarthEngineService():
@@ -17,6 +20,39 @@ def create_drive_service():
     credentials = eeservice.EarthEngineService.credentials
     http = credentials.authorize(httplib2.Http())
     return build(serviceName='drive', version='v3', http=http, credentials=credentials)
+
+
+'''
+get_file(id)
+'''
+def read_file(file_id):
+    #media_body = MediaIoBaseUpload(fh, mimetype='application/octet-stream', chunksize=1024 * 1024, resumable=False)
+
+    drive_service = create_drive_service()
+    request = drive_service.files().get_media(fileId=file_id)
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    data = ""
+    while done is False:
+        status, done = downloader.next_chunk()
+        print "Download %d%%." % int(status.progress() * 100)
+    return fh.getvalue()
+
+def delete_file(file_id):
+  """Permanently delete a file, skipping the trash.
+
+  Args:
+    service: Drive API service instance.
+    file_id: ID of the file to delete.
+  """
+  drive_service = create_drive_service()
+  try:
+    drive_service.files().delete(fileId=file_id).execute()
+    return None
+  except errors.HttpError, error:
+    return 'Error deleting file : %s' % error
+
 
 
 def create_folder(folderName, parentID=None, drive_service=None ):
@@ -35,8 +71,14 @@ def create_folder(folderName, parentID=None, drive_service=None ):
     make_file_public(drive_service, root_folder['id'] )
     return root_folder['id']
 
+
+
+
 import ee
-def list_tasks():
+
+def list_exports():
+    if not eeservice.initEarthEngineService():
+        return logging.error('Earth Engine Credentials Error')
     listing = "<h2>Earth Engine Export Tasks</h2><br/>"
     tasks = ee.batch.Task.list()
     for t in tasks:
@@ -50,7 +92,11 @@ def list_folders():
         pageSize=10, fields="nextPageToken, files(id, name)").execute()
     items = results.get('files', [])
 
-    listing = list_tasks() #TODO move to new url
+    listing = ""
+    #listing = list_tasks() #TODO move to new url
+
+    listing += '<h2><a href= "https://www.google.com/fusiontables/showtables">User\'s Fusion Tables</a></h2>'
+    listing += '<h2><a href= "/admin/exports">List Earth Engine Export Tasks</a></h2>'
 
     if not items:
         listing += '<h2> No files found.</h2>'
@@ -59,7 +105,8 @@ def list_folders():
         for item in items:
             #make_file_public(service, item['id'])
             listing += '<ul>' +  '<a href="https://drive.google.com/open?id=' + item['id'] + '">' + item['name'] + '</a>' + " " +\
-                     '<a href = "/admin/assets/delete/' + item['id'] + '" target="_blank"> DELETE<a></ul>'
+                     '<a href = "/admin/assets/delete/' + item['id'] + '" target="_blank"> [DELETE]<a>'
+            listing += '<em>' + list_file_metadata(service, item['id']) + '</em></ul>'
     return listing
     #       'mimeType': "application/vnd.google-apps.folder"
 
@@ -79,38 +126,6 @@ def list_files_infolder(folder_id = None):
             print('{0} ({1})'.format(item['name'], item['id']))
 
             #GET https://www.googleapis.com/drive/v2/files?q='BB0CHANGEDIDF5waGdzbUQ5aWs'+in+parents&key={YOUR_API_KEY}
-
-def list_tables():
-    service = create_table_service()
-    return service.table().list().execute()
-    #GET https://www.googleapis.com/drive/v2/files?q='BB0CHANGEDIDF5waGdzbUQ5aWs'+in+parents&key={YOUR_API_KEY}
-
-def make_file_public(drive_service, fileId):
-    permissions = drive_service.permissions()
-    permissions.create(fileId=fileId,
-                       body={"type": "anyone", "role": "writer"},
-                       sendNotificationEmail=False).execute()
-
-def make_files_public(items):
-    service = create_drive_service()
-    permissions = drive_service.permissions()
-    permissions.create(fileId=fileId,
-                       body={"type": "anyone", "role": "reader"},
-                       sendNotificationEmail=False).execute()
-
-def delete_file(file_id):
-  """Permanently delete a file, skipping the trash.
-
-  Args:
-    service: Drive API service instance.
-    file_id: ID of the file to delete.
-  """
-  drive_service = create_drive_service()
-  try:
-    drive_service.files().delete(fileId=file_id).execute()
-    return None
-  except errors.HttpError, error:
-    return 'Error deleting file : %s' % error
 
 
 def list_file_by_owner():
@@ -136,10 +151,43 @@ def list_file_by_owner():
     return output
 
 
+def list_file_metadata(service, file_id):
+    """
+    Return a file's metadata as a string.
+    Args:
+      service: Drive API service instance.
+      file_id: ID of the file to print metadata for.
+    """
+    msg = ""
+    try:
+        file = service.files().get(fileId=file_id).execute()
+        msg += '<br/>: %s' % file['mimeType']
+    except errors.HttpError, error:
+        msg += 'list_file_metadata() error : %s' % error
+    return msg
+
+
+def list_tables():
+    service = create_table_service()
+    return service.table().list().execute()
+    #GET https://www.googleapis.com/drive/v2/files?q='BB0CHANGEDIDF5waGdzbUQ5aWs'+in+parents&key={YOUR_API_KEY}
+
+
 def fusiontable_url(id, name):
     return '<a href="https://www.google.com/fusiontables/data?docid=' + id + '">' + name + '</a> '
 
+def make_file_public(drive_service, fileId):
+    permissions = drive_service.permissions()
+    permissions.create(fileId=fileId,
+                       body={"type": "anyone", "role": "writer"},
+                       sendNotificationEmail=False).execute()
 
+def make_files_public(items):
+    service = create_drive_service()
+    permissions = drive_service.permissions()
+    permissions.create(fileId=fileId,
+                       body={"type": "anyone", "role": "reader"},
+                       sendNotificationEmail=False).execute()
 
 '''
 NOT USED
@@ -150,8 +198,6 @@ def _makePublic_callback(request_id, response, exception):
         print exception
     else:
         print "Permission Id: %s" % response.get('id')
-
-
 
 #FUNCTION NOT USED
 def makePublic(drive_service, file_id, name):
@@ -193,3 +239,4 @@ def makePublic(drive_service, file_id, name):
     ))
     batch.execute()
     return batch
+

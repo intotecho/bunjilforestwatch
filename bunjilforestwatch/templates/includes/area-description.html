@@ -23,7 +23,6 @@
 	</div>
 	
 	<!-- DESCR WHY -->
-
 	{% if is_owner or area.description_why %}
 	<div class="panel panel-default">
 
@@ -41,7 +40,7 @@
 			</div>
 		</div>
 	</div>
-{%  endif %}
+  {%  endif %}
   <!--   endif  -->
  
 	<!-- DESCR THREATS -->
@@ -68,6 +67,22 @@
 	</div>
     {% endif %}
 
+	<!-- DESCR ALERTS -->
+	<div class="panel panel-default">
+
+        <div class="panel-heading">
+            <h4 class="panel-title" data-toggle="collapse" data-parent="#area-description-panel" data-target="#area_descr_alerts">Alerts  {% if area.glad_monitored %}<span class="glyphicon glyphicon-ok gladalert-color">{% endif %}</h4>
+        </div>
+    <div id="area_descr_alerts" class="panel-collapse collapse">
+			<div class="panel-body">
+        {% if area.glad_monitored %}
+            <p>UMD GLAD ALERTS enabled for this area</p>
+        {%  else %}
+            <p>GLAD ALERTS not available for this area</p>
+        {% endif %}
+			</div>
+		</div>
+	</div>
 	<!-- DESCR WHO -->
 	<div class="panel panel-default">
         {% if is_owner or area.description_who%} 
@@ -101,7 +116,6 @@
 	<!-- DESCR HOW -->
 	{% if is_owner or area.description_how%} 
 	<div class="panel panel-default">
-
 		<div class="panel-heading">
 			<h4 class="panel-title" data-toggle="collapse" data-parent="#area-description-panel" data-target="#area_descr_how">How's
 				it protected?<span class='dirty-flag'>*</span></h4>

@@ -485,7 +485,7 @@ function monitor_cell(landsat_cell, isMonitored) {
  */
 function landsatGrid_mouseover(e) {
 	"use strict";
-	var this_target = event.currentTarget;
+	//var this_target = e.currentTarget;
 	/* @todo replace this with this_target */
 	
 	if (this.Monitored) {

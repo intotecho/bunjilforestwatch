@@ -17,6 +17,7 @@
 """
 
 import logging
+import gladalerts
 
 from google.appengine.ext import db # is it required?
 
@@ -744,17 +745,19 @@ def getLandsatCells(area):
     
     # Test if area already has cellList
     if len(area.cells) != 0 :
-        logging.error("getLandsatCells -deleting area's existing list of %s cells", area.cells) 
+        logging.error("getLandsatCells() - deleting area's existing list of %s cells", area.cells)
         area.delete_cells()
     
     # Get the area's boundary or location and convert to a FeatureCollection.    
     fc = area.get_boundary_hull_fc()
     park_geom = fc.geometry()
-    park_area = park_geom.area(10).getInfo()
-   
+    park_area = park_geom.area(100).getInfo()
+
     if park_area < 10 : # no boundary defined.
+        logging.warning("getLandsatCells() - No Park Area %d", park_area)
         park_area = 10
-    #print "getLandsatCells():", park_area, park_geom
+
+     #print "getLandsatCells():", park_area, park_geom
         
     # Get an imageCollection of all L7 images from recent years that overlap the area, load just the image metadata ['features'].
     end_date   = datetime.datetime.today()
@@ -797,7 +800,8 @@ def getLandsatCells(area):
         
     remaining_geom = park_geom #Each time a cell is selected, it's footprint is removed from the park.
     remaining_area = park_area   #When zero, the whole park has been covered.
-    
+
+
     for cell in cellList:
         if remaining_area > 0: # select more cells
             try:
@@ -824,7 +828,13 @@ def getLandsatCells(area):
 
         logging.debug("Cell {0:s} overlaps {1:.1f}% of your park's area, {2:.1f}% uniquely. {3:s}. Remaining area {4:.1f}% ".format( \
                    cell.key.string_id(), (cell.overlap*100), (new_overlap*100), ('Monitored' if cell.monitored else 'Unmonitored'), (remaining_area/park_area*100)) )
-    
+
+    area.glad_monitored = False
+    try:
+        area.glad_monitored = gladalerts.geometryIsInGladAlertsFootprint(park_geom) # area.get_boundary_hull_fc().geometry()
+    except:
+        logging.error('error getting GLAD footprint')
+
     #Store the cells and the area's cellList.
     def txn_saveCellList(cellList, area):
         for cell in cellList:

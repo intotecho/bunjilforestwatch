@@ -17,7 +17,10 @@ import ee
 import hashlib
 import geojson
 import json
-
+import apiservices
+import secrets
+import cache
+import apiservices
 
 # from contrib.gis.geos import coords
 
@@ -302,6 +305,11 @@ class AreaOfInterest(ndb.Model):
     """reports related to this area - not used yet
     """
 
+    glad_monitored = ndb.BooleanProperty(default=False)  # Set if cell is monitored for new data (i.e selected in view-area)
+    """True if inside the GLAD footprint
+    Initiates GLAD checks only if true
+    """
+
     """
     USERS & SECURITY
     """
@@ -328,6 +336,12 @@ class AreaOfInterest(ndb.Model):
     last_modified = ndb.DateTimeProperty(auto_now=True)
 
     last_alerts_date = ndb.DateTimeProperty(auto_now=False)
+
+    """
+    FOLDER FOR DRIVE DATA
+    """
+    folder_id = ndb.StringProperty(default=None)
+
 
     """
     PROPERTIES
@@ -373,7 +387,7 @@ class AreaOfInterest(ndb.Model):
     @property
     def area_location_geojson(self):
         """
-        returns area_location (place mark provided by user) as a geoJSON Point Feature object
+        returns area_location's lat and lon (place mark provided by user) as a geoJSON Point Feature object
         """
         return {
             "type": "Feature",
@@ -386,8 +400,17 @@ class AreaOfInterest(ndb.Model):
                     self.area_location.lon, self.area_location.lat
                 ]
             }
-
         }
+
+    def folder(self):
+        """
+        Create a folder under clusters
+        """
+        if self.folder_id == None:
+            self.folder_id = apiservices.create_folder(self.name, parentID=secrets.CLUSTERS_FOLDER_ID, drive_service=apiservices.create_drive_service())
+            self.put()
+            cache.flush();
+        return self.folder_id
 
     def set_area_location(self, feature):
         try:
@@ -515,6 +538,12 @@ class AreaOfInterest(ndb.Model):
         }
         return location_geojsonobj
 
+    def get_gladcluster(self):
+        if self.glad_monitored == True:
+            return apiservices.read_file("0B-lTullYuWZ_MUUtR1JOV09pbVU")
+        else:
+            return None
+
     def toGeoJSON(self):
 
         """
@@ -560,20 +589,67 @@ class AreaOfInterest(ndb.Model):
                      "zoom": self.map_zoom
                  }
                  },
-
             ]
         }
+
+
         location_geojson = self.area_location_as_geojson()
         if location_geojson != None:
             geojson_obj['features'].append(location_geojson)
 
         if self.boundary_hull != None:
-            geojson_obj['features'].append(json.loads(self.boundary_hull))
+            hull = json.loads(self.boundary_hull)
+            geojson_obj['features'].append(hull)
 
         if self.boundary_geojsonstr != None:
-            geojson_obj['boundary_geojson'] = json.loads(self.boundary_geojsonstr)
+            geoboundary = json.loads(self.boundary_geojsonstr)
+            geojson_obj['boundary_geojson'] = geoboundary
+
+        geojson_obj['glad_clusters'] = self.get_gladcluster()
+        geojson_obj['glad_alerts'] = self.last_alerts_raw_ft
 
         return geojson_obj
+
+    '''@TODO move this function to eeservice as it does not use or set area.
+    def get_fusion_boundary(self, boundary_ft):
+        """
+        Given a fusion table id query its geometry and save to an eeFeatureCollection
+
+        #boundary_ft = new_area['properties']['fusion_table']['boundary_ft']
+        #ftlink = 'https://www.google.com/fusiontables/DataSource?docid=' + boundary_ft
+        #@TODO ftlink does not beed to be stroed as it can be returned by a function.
+        #logging.debug('AreaHandler name: %s has fusion boundary:%s', boundary_ft)
+        ### User Provided a Fusion Table ###
+        #Test the fusion table
+        #authenticate to fusion table API
+        """
+        # coords = []
+        # total_area = 0
+        # zoom = 12 # zoom will be calculated when the map is displayed.
+
+        http = eeservice.EarthEngineService.credentials.authorize(httplib2.Http(memcache))
+        service = build('fusiontables', 'v2', http=http)
+
+        result = service.column().list(tableId=boundary_ft).execute(http)
+        message = "Fusion Table Columns: "
+        cols = result.get('items', [])
+
+        geo_col_name = ""
+        for c in cols:
+            message += c['name']
+            if c['type'] == 'LOCATION':
+                message += '[LOCATION]'
+                geo_col_name = c['name']
+            message += "; "
+        logging.debug("results=%s, column names=%s", result, message)
+
+        # Fusion table EE operations tested at https://ee-api.appspot.com/b8dec39252c0eced49bb085f2b6fcdd4
+        # make a convex hull and store the coordinates in ndb.model.AreoOfInterest.coords
+
+        park_boundary_fc = ee.FeatureCollection(u'ft:' + boundary_ft, 'geometry')
+        self.boundaryFromFC(park_boundary_fc)
+        self.set_boundary_fc(self, park_boundary_fc, True)
+    '''
 
     def hasBoundary(self):
         """
@@ -615,40 +691,70 @@ class AreaOfInterest(ndb.Model):
         """
         @return the area's boundary hull or location as a FeatureCollection, or None on error.
         """
-
-        park_geom = self.area_location_geojson
-
+        park_geom = self.get_boundary_hull_geojson()
         if park_geom == None:
             return None
 
-        eeFeatureCollection, status, errormsg = self.get_eeFeatureCollection(park_geom)
+        eeFeatureCollection, status, errormsg = AreaOfInterest.get_eeFeatureCollection(park_geom)
         if eeFeatureCollection == None:
-            logging.error("boundaryFC(%s) error %s object status %s input: %s", self.name, errormsg, status, park_geom)
+            logging.error("get_boundary_hull_fc() area:%s, error:%s, status:%s input:%s", self.name, errormsg, status, park_geom)
         return eeFeatureCollection
 
-    def set_boundary_fc(self, eeFeatureCollection, set_view):
-        """
-        Given an arbitrary ee.FeatureCollection, set area's boundary to a convex hull of the collections geometry.
-        @param eeFeatureCollection an ee.FeatureCollection of arbitrary geometries.
-        @param set_view Optionally sets the mapview and area-Location if True 
-        @attention: updates area but does not store value in NDB.
-        Sets:         
-            self.boundary_hull (a geojson string)
-            self.bounds 
-            self.maxlatlon
-            self.minlatlon
-            self.total_area
 
-        Optionally sets:
-            self.map_center
-            self.area_location
-            
+
+
+
+    def set_boundary_fc(self, boundary_hull_dict, set_view):
+        '''
+            Given an dictionary object (typically returned by calc_boundary_fc()) via Earth Engine,
+            set area's boundary to a convex hull of the collection's geometry.
+            @param eeFeatureCollection: an ee.FeatureCollection of arbitrary geometries.
+            @param set_view: if true, sets the mapview and area-Location
+            @attention: updates area but does not store value in NDB. Call this funciton inside an ndb.transaction()
+
+            Sets:
+                self.boundary_hull (a geojson string)
+                self.bounds
+                self.maxlatlon
+                self.minlatlon
+                self.total_area
+
+            Optionally sets:
+                self.map_center
+                self.area_location
+
+            @return boundary_hull as a dictionary - not a string
+        '''
+        self.boundary_hull = json.dumps(boundary_hull_dict)
+
+        rectangle = boundary_hull_dict['properties']['rectangle']
+        if len(rectangle):
+            self.maxlatlon = ndb.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
+            self.minlatlon = ndb.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][0]))
+
+        self.total_area = boundary_hull_dict['properties']['total_area'] # area in sq km
+
+        if set_view == True:
+            centroid = boundary_hull_dict['properties']['centroid']
+            self.map_center = ndb.GeoPt(float(centroid[1]), float(centroid[0]))
+            self.area_location = self.map_center
+        return self.boundary_hull
+
+    @staticmethod
+    def calc_boundary_fc(eeFeatureCollection):
+        """
+        Given an arbitrary ee.FeatureCollection, return a dictionary of the convex hull of the collection's geometry.
+        @param eeFeatureCollection: an ee.FeatureCollection of arbitrary geometries.
+        The returned dictionary also containst centroid, bounds and total_area.
+
+
         @return boundary_hull as a dictionary - not a string
         """
-        hull = eeFeatureCollection.geometry().convexHull(10);
-
+        hull = eeFeatureCollection.geometry().convexHull(10)
         hull_coords = hull.coordinates().getInfo()
-        # print coord_list
+        bounds = hull.bounds(10)
+        rectangle = bounds.coordinates().getInfo()
+
         boundary_hull_dict = {
             "type": "Feature",
             "properties": {
@@ -657,70 +763,18 @@ class AreaOfInterest(ndb.Model):
                 "stroke-width": 2,
                 "stroke-opacity": 1,
                 "fill": "#555555",
-                "fill-opacity": 0.5
+                "fill-opacity": 0.5,
+                "rectangle": rectangle,
+                "centroid" : hull.centroid(10).coordinates().getInfo(),
+                "total_area": hull.area(10).getInfo() / 1e6  # area in sq km
             },
             "geometry": {
                 "type": "Polygon",
                 "coordinates": hull_coords
             }
         }
-        self.boundary_hull = json.dumps(boundary_hull_dict)
-        # self.boundary_fc = ee.FeatureCollection(hull).getInfo() # create a new FC based on the hull geometry.
-
-        bounds = hull.bounds(10)
-        rectangle = bounds.coordinates().getInfo()
-        if len(rectangle):
-            self.maxlatlon = ndb.GeoPt(float(rectangle[0][2][1]), float(rectangle[0][2][0]))
-            self.minlatlon = ndb.GeoPt(float(rectangle[0][0][1]), float(rectangle[0][0][0]))
-
-        self.total_area = hull.area(10).getInfo() / 1e6  # area in sq km
-
-        if set_view == True:
-            centroid = hull.centroid(10).coordinates().getInfo()
-
-            self.map_center = ndb.GeoPt(float(centroid[1]), float(centroid[0]))
-            self.area_location = self.map_center
-
         return boundary_hull_dict
 
-    def get_fusion_boundary(self, boundary_ft):
-        """
-        Given a fusion table id query its geometry and save to an eeFeatureCollection
-            @TODO move this function to eeservice as it does not use or set area.     
-        #boundary_ft = new_area['properties']['fusion_table']['boundary_ft']
-        #ftlink = 'https://www.google.com/fusiontables/DataSource?docid=' + boundary_ft
-        #@TODO ftlink does not beed to be stroed as it can be returned by a function.
-        #logging.debug('AreaHandler name: %s has fusion boundary:%s', boundary_ft)
-        ### User Provided a Fusion Table ###
-        #Test the fusion table
-        #authenticate to fusion table API
-        """
-        # coords = []
-        # total_area = 0
-        # zoom = 12 # zoom will be calculated when the map is displayed.
-
-        http = eeservice.EarthEngineService.credentials.authorize(httplib2.Http(memcache))
-        service = build('fusiontables', 'v2', http=http)
-
-        result = service.column().list(tableId=boundary_ft).execute(http)
-        message = "Fusion Table Columns: "
-        cols = result.get('items', [])
-
-        geo_col_name = ""
-        for c in cols:
-            message += c['name']
-            if c['type'] == 'LOCATION':
-                message += '[LOCATION]'
-                geo_col_name = c['name']
-            message += "; "
-        logging.debug("results=%s, column names=%s", result, message)
-
-        # Fusion table EE operations tested at https://ee-api.appspot.com/b8dec39252c0eced49bb085f2b6fcdd4
-        # make a convex hull and store the coordinates in ndb.model.AreoOfInterest.coords
-
-        park_boundary_fc = ee.FeatureCollection(u'ft:' + boundary_ft, 'geometry')
-        self.boundaryFromFC(park_boundary_fc)
-        self.set_boundary_fc(self, park_boundary_fc, True)
 
     @staticmethod
     def get_eeFeatureCollection(geojson_obj):

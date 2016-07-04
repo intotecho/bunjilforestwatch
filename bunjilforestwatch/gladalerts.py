@@ -5,43 +5,59 @@
 
 """
 
+
 import models
+import csv
+import numpy as np
+from googleapiclient.discovery import build
+from ee.batch import Export
+import settings
+import googleapiclient
+import httplib2
 import json
 from google.appengine.api import urlfetch #change timeout from 5 to 60 s. https://stackoverflow.com/questions/13051628/gae-appengine-deadlineexceedederror-deadline-exceeded-while-waiting-for-htt
-#import urllib
+import urllib
 import datetime
 from google.appengine.ext import ndb
 import cache
 import logging
-import csv
-import numpy as np
-from ee.batch import Export
-import httplib2
 import ee
 import eeservice
-from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
-import googleapiclient
 import io
-import settings
 import time
 import apiservices
 import ee.batch
+
 
 '''
 create_table() creates a fusion table with the provided schema using the service accounts permisisons
 The table belongs to the app's service account.
 create_table() makes the table visible to anoyone with the link.
 @service - see create_table_service()
-@param schema: the name, description and structure of the table. See: https://developers.google.com/fusiontables/docs/v2/reference/table/insert
+@param schema: the name, description and structure of the table. See: https://developers.google.com/tables/docs/v2/reference/table/insert
 @param data optionally describes the row data to import. - See https://developers.google.com/fusiontables/docs/v2/reference/table/importRows
 '''
 
-
-def create_table(ft_service, schema, data=None):
+def create_table(ft_service, parent_id, schema, data=None):
     drive_service = apiservices.create_drive_service()
     newtable = ft_service.table().insert(body=schema).execute()
     fileId = newtable["tableId"]
+
+
+    file = drive_service.files().get(fileId=fileId,
+                                     fields='parents').execute();
+
+    previous_parents = ",".join(file.get('parents'))
+    # Move the file to the new folder
+    file_metadata = {
+        'mimeType': 'application/vnd.google-apps.fusiontable'
+    }
+    file = drive_service.files().update(fileId=fileId,
+                                        body=file_metadata,
+                                        addParents=parent_id,
+                                        removeParents=previous_parents,
+                                        fields='id, parents').execute()
 
     permissions = drive_service.permissions()
     permissions.create(fileId=fileId,
@@ -69,7 +85,7 @@ def create_table(ft_service, schema, data=None):
 '''
 Creates a fusion table to store GLAD alerts from GFW.
 '''
-def createAlertsFusionTable(name, since_date_str, to_date_str, alerts):
+def createAlertsFusionTable(name, parent_id, since_date_str, to_date_str, alerts):
 
     #This schema maps to the unprocessed CSV from GFW.
     '''
@@ -121,84 +137,68 @@ def createAlertsFusionTable(name, since_date_str, to_date_str, alerts):
     }
 
     service = apiservices.create_table_service()
-    newtable = create_table(service, schema=targetschema, data=alerts)
+    newtable = create_table(service, parent_id, schema=targetschema, data=alerts)
     return newtable
 
 
-def testupdate(tableid):
-    '''
-    NOT CALLED
-    # sql(sql=None, hdrs=None, typed=None)
-    UPDATE <table_id>
-    SET <column_name> = <value> {, <column_name> = <value> }*
-    WHERE ROWID = <row_id>
+'''
+@returns a string which may be an error message.
+'''
+def handleCheckForGladAlertsInArea(handler, area):
 
-    select p.name, p.id, l.id from
-    '''
-    service = apiservices.create_table_service()
-    rows =  service.query().sql(sql="SELECT *  FROM %s" % (tableid)).execute()
-    newtable = service.query().sql(sql="UPDATE %s SET latlong = lat ' ' long WHERE ROWID=%s" % (tableid, rows)).execute()
-    logging.info("Updated Table %s ", tableid)
-    return
-
-def handleCheckForGladAlertsInArea(handler, area_name):
-    area = cache.get_area(None, area_name)
-    if not area:
-        area = cache.get_area(None, area_name)
-        logging.error('CheckForGladAlertsInAreaHandler: Area not found!')
-        return handler.error(400)
-    else:
-        logging.debug('CheckForGladAlertsInAreaHandler: check-new-area-images for area_name %s', area_name)
-
-    if area.name == u'peru6test':
-        print "TEST MATCH"
-        testupdate("1TwGcemZzzdJZmSuGDuOtsJEEUw8NWWKNtfCEGb9Y")
-        handler.response.set_status(500)
-        return handler.response.write("Tested Update Table ")
+    if area.glad_monitored == False:
+        #testupdate("1TwGcemZzzdJZmSuGDuOtsJEEUw8NWWKNtfCEGb9Y")
+        handler.response.set_status(400)
+        return "Area %s not monitored by GLAD Alerts" % area.name
 
     feat = area.get_boundary_hull_geojson()
     geom = json.dumps(feat['geometry'])
 
     today_dt = datetime.datetime.today()
-    today_str = today_dt.strftime('%Y-%m-%d')
+    today_str = today_dt.strftime('%Y-%m-%d')  #today_str = '2016-05-18'
 
     if area.last_alerts_date <> None:
         since_date = area.last_alerts_date.strftime('%Y-%m-%d')
     else:
-        since_date = '2016-05-08' # no alerts have been collected. No alerts are earlier than this so collect them all.
-    since_date = '2016-05-01' # no alerts have been collected. No alerts are earlier than this so collect them all.
-    today_str = '2016-05-18'
+        since_date_dt = today_dt - datetime.timedelta(days=30) # no alerts have been collected yet. So collect last 30 days.
+        since_date = since_date_dt.strftime('%Y-%m-%d')
+
     # call the API
     table_name = area.name + "-" + since_date + "-" + today_str
+    parent_id = area.folder()
     try:
-        alerts_result, ft, count  = getAlerts('glad-alerts', geom, table_name, since_date, today_str, 'csv')
+        alerts_result, ft, count = getAlerts('glad-alerts', geom, table_name, since_date, today_str, 'csv', parent_id)
     except TypeError, e:
         handler.response.set_status(500)
-        return handler.response.write("Type error in getAlerts - no data? %s" % e)
-
-    #logging.debug(json.loads(alerts_result))
+        logging.error("getAlerts() TypeError exception %s" % geom)
+        return "getAlerts()  TypeError exception - no data? %s" % e
 
     if alerts_result:
+        msg = "<b>handleCheckForGladAlertsInArea()</b> between %s and %s " %(since_date, today_str)
         if alerts_result.status_code == 200:
-            area.last_alerts_date = today_dt
-            area.last_alerts_raw_ft = ft['tableId']
-            area.put()
-            msg = "handleCheckForGladAlertsInArea() Created Fusion Table: " + \
-                  apiservices.fusiontable_url(ft['tableId'], ft['name']) + \
-                  ' with ' + str(count) + 'alerts.'
-            handler.response.write(msg)
-            #clusters = alerts2Clusters(area)
-            #handler.response.set_status(result.status_code)
-            #handler.response.write(clusters)
+            if ft and count > 0:
+                area.last_alerts_date = today_dt
+                area.last_alerts_raw_ft = ft['tableId']
+                area.put()
+                msg += "Created Fusion Table: " + \
+                      apiservices.fusiontable_url(ft['tableId'], ft['name']) + \
+                      ' with ' + str(count) + 'alerts.'
+                msg += alerts2Clusters(area)
+                return msg
+            else:
+                area.last_alerts_date = today_dt
+                area.put()
+                msg += "No Alerts returned."
+            return msg
         else:
-            msg = "handleCheckForGladAlertsInArea() error: " +\
-                str(result.content) + ' payload:' + json.dumps(geom)
-            #logging.error(msg)
-            handler.response.set_status(result.status_code)
-            handler.response.write(msg)
+            msg += "<b>Error:</b> " + area.name + \
+                str(alerts_result.content) + ' payload:' + json.dumps(geom)
+
+            handler.response.set_status(alerts_result.status_code)
+            return msg
     else:
         handler.response.set_status(500)
-        return handler.response.write("Exception in glad API")
+        return "Exception in glad API"
 
 '''
 getAlerts() calls Global Forest Watch API https://github.com/wri/gfw-api
@@ -245,7 +245,7 @@ Calls GFW with the boundary  of a given an AreaOfInterest
 
 '''
 
-def getAlerts(alert_type, polygon, table_name, since_date, to_date, format):
+def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, parent_id):
     headers = {}
     url= 'http://api.globalforestwatch.org/forest-change/' + alert_type + \
          '?period=' + since_date + ',' + to_date
@@ -267,10 +267,12 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format):
                 download_url = apiresult["download_urls"][format]
             except KeyError, k:
                 logging.error("Could not parse download_url in response")
-                return None
+                get_download_url_result.content += ': KeyError'
+                return get_download_url_result, None, 0
             except TypeError, e:
                 logging.error("Could not parse download_url in response %s ", e)
-                return None
+                get_download_url_result.content += ': TypeError'
+                return get_download_url_result, None, 0
 
             logging.debug('getAlerts: download url: %s', download_url)
             try:
@@ -282,7 +284,7 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format):
                 if alerts_result.status_code == 200:
                     #print 'alerts_result: ', alerts_result
                     if format == 'csv':
-                        ft, count = handleAlertDataCSV(table_name, since_date, to_date, alerts_result.content)
+                        ft, count = handleAlertDataCSV(table_name, parent_id, since_date, to_date, alerts_result.content)
                         return get_download_url_result, ft, count
                     #'''
                     #elif format == 'kml':
@@ -298,18 +300,23 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format):
 
             except urlfetch.InvalidURLError:
                 logging.error("Download URL is an empty string")
+                return {'content': 'exception in Download URL', 'status_code': '500'}, None, 0
+
             except urlfetch.DownloadError:
                 logging.error("Download Server cannot be contacted")
+                return {'content': 'exception in Download URL', 'status_code': '500'}, None, 0
+
         else:
-            logging.error("getAlerts() Fetch Download URL error %s", get_download_url_result.status_code)
+            return get_download_url_result, None, 0
 
         return get_download_url_result, None, 0
 
     except urlfetch.InvalidURLError:
         logging.error("GetAlerts URL is an empty string or invalid")
+        return {'content': 'exception in getAlerts URL', 'status_code':'500' }, None, 0
     except urlfetch.DownloadError:
         logging.error("GetAlerts Server cannot be contacted")
-    return None
+        return {'content': 'exception in getAlerts URL', 'status_code':'500' }, None, 0
 
 '''
 convertCSVForFusion()
@@ -342,54 +349,29 @@ def convertCSVForFusion(csvdata):
     logging.info("convertCSVForFusion()num alerts: %d , %s", alertcount, len(converted_data))
     return converted_data, alertcount
 
-def handleAlertDataCSV(table_name, since_date, to_date, csvdata):
+'''
+@returns: a id of a new  fusion table, and the number of alerts received, or None, 0
+'''
+def handleAlertDataCSV(table_name, parent_id, since_date, to_date, csvdata):
 
     if csvdata:
         converted_data, count = convertCSVForFusion(csvdata)
         if count:
-            ft = createAlertsFusionTable(table_name, since_date, to_date, converted_data)
+            ft = createAlertsFusionTable(table_name, parent_id, since_date, to_date, converted_data)
             return ft, count
         else:
-            logging.error('handleAlertDataCSV() No alerts')
-            return None
+            logging.warning('handleAlertDataCSV() No alerts')
+            return None, 0
     else:
         logging.error('handleAlertDataCSV() No input data')
-        return None
-
-''' NOT USED
-
-def handleAlertDataKML(kmldata):
-    logging.debug('handleAlertDataKML')
-    #print kmldata
-    #ft = createAlertsFusionTable('helloname', 'jan 2015', 'jan 2016', kmldata)
-    return ft
-
-def handleAlertDataGeoJson(geojson_data):
-    logging.debug('handleAlertDataGeoJson')
-
-    # area.put()
-    handler.response.write(alerts_result)
-    # uploadAlerts(alerts_result)
-
-    # ft = createFusionTable(area.lastRawGladAlerts)
-    #ft = createAlertsFusionTable('helloname', 'jan 2015', 'jan 2016', alerts_result)
-    # print ft
-
-    clusters = alerts2Clusters(area.lastRawGladAlerts, ft)
-    handler.response.set_status(result.status_code)
-    handler.response.write(clusters)
-
-    return geojson_data
-'''
-
+        return None, 0
 
 '''
 alerts2Clusters() calls Earth Engine to process the alerts to a FeatureCollection
-Cluster points     into     polygons.
+It Clusters alert points into polygons.
 Based on an answer from Noel Gorelich, GoogleGroups April 27 2016
 https://groups.google.com/d/msg/google-earth-engine-developers/3Oq1t9dBUqE/ft50BYTxDQAJ
 @param area: an Area of Interest - reads the last raw alerts fusion table ID.
-
 '''
 
 def alerts2Clusters(area):
@@ -402,42 +384,14 @@ def alerts2Clusters(area):
 
     alerts_fc = ee.FeatureCollection("ft:" + ft)
 
-    '''
-    #test_fc = ee.FeatureCollection(
-    #    ee.Feature(ee.Geometry.Point(-74, -7.902456)))
-    task = ee.batch.Export.table.toDrive(alerts_fc, description='ExportClusterTask',
-                folder=None, fileNamePrefix='clust', fileFormat='geoJSON')
+    date_count = alerts_fc.aggregate_count_distinct('date').getInfo()
 
-    state = task.status()['state']
-    while state in ['READY', 'RUNNING']:
-        print state + '...'
-        time.sleep(1)
-        state = task.status()['state']
-    print 'Done.', task.status()
-    print 'Completed task', task
-
-    task2 = ee.batch.Export.table.toCloudStorage({
-        'collection': alerts_fc,
-        'description': 'testname',
-        'bucket': 'bfw-ee-cluster-tables',
-        'fileNamePrefix': 'test_prefix',
-        'fileFormat': 'CSV'
-    })
-    task2.start()
-    state = task2.status()['state']
-    while state in ['READY', 'RUNNING']:
-        print state + '...'
-        time.sleep(1)
-        state = task2.status()['state']
-    '''
-
-    dates = alerts_fc.aggregate_count_distinct('date')
-    print ('Number of different dates in alert data', dates.getInfo())
+    print ('Number of different dates in alert data', date_count)
 
     img = ee.Image(0).byte().paint(alerts_fc, 1)
     #alert_img = img.mask(img)
     dist = img.distance(ee.Kernel.euclidean(20000, "meters"))
-    cluster_img = dist.lt(18000)
+    cluster_img = dist.lt(1000)
 
     clusters = img.addBands(cluster_img).updateMask(cluster_img).reduceToVectors(
         reducer=ee.Reducer.first(),
@@ -474,54 +428,70 @@ def alerts2Clusters(area):
         distance = 10,
         leftField = '.geo',
         rightField = '.geo',
-        maxError = 10
+        maxError = 10 
     )
     distSaveAll = ee.Join.saveAll(matchesKey = 'points', measureKey ='distance')
     clustersWithPoints = distSaveAll.apply(clusters, alerts_fc, distFilter)
 
     #Add a Count of points in each cluster
-    clustersWithPoints = clustersWithPoints.map(lambda f: f.set({'AlertsInCluster': ee.List(ee.Feature(f).get('points')).length(),'AlertsDate': ee.Feature(ee.List(ee.Feature(f).get('points')).get(0)).get('date')     }))
+    clustersWithPoints = clustersWithPoints.map(lambda f: f.set({
+        'AlertsInCluster': ee.List(ee.Feature(f).get('points')).length(),
+        'AlertsDate': ee.Feature(ee.List(ee.Feature(f).get('points')).get(0)).get('date'),
+        # Add a pink border and no fill styling for geojson.io
+        "stroke": "#ff6fb7",
+        "stroke-width": 1,
+        "fill-opacity": "0.0",
+    }))
 
     most_populous_cluster = clustersWithPoints.reduceColumns(
-        reducer = ee.Reducer.max(),
-        selectors= ['AlertsInCluster']
+        reducer=ee.Reducer.max(),
+        selectors=['AlertsInCluster']
     )
+
+    since_date = area.last_alerts_date.strftime('%Y-%m-%d')
+
+    today_dt = datetime.datetime.today()
+    today_str = today_dt.strftime('%Y-%m-%d')  #today_str = '2016-05-18'
 
     clustersWithPoints = clustersWithPoints.set(
         {
+        'name' : 'gladclusters',
+        'area_name': area.name,
+        'ft': 'https://www.google.com/fusiontables/DataSource?docid=' + ft ,
+        'since_date': since_date,
+        'clustered_date' : today_str,
         'NumberOfAlerts:': alerts_fc.size(),
         'NumberOfClusters': clusters.size(),
         'ClustersTotalArea': total_area.get('sum'),
-        'DistinctDates': dates,
+        'DistinctDates': date_count,
         'MostAlertsInCluster': most_populous_cluster.get('max')
         }
     )
-    '''
-    #Replace points as a list of Features with a Multipoint array - assumes all the same date.
-        reducePointProperties = function(f):
-            eef = ee.Feature(f)
-            glist = ee.List(eef.get('points')).map(lambda p : p.geometry())
-            mp = ee.Algorithms.GeometryConstructors.MultiPoint(glist)
-            return eef.set('points', mp)
-        }
-        clustersWithPoints = clustersWithPoints.map(reducePointProperties)
 
-    '''
     clustersWithPoints = clustersWithPoints.map(lambda f:f.set('points', ee.Algorithms.GeometryConstructors.MultiPoint(ee.List(ee.Feature(f).get('points')).map(lambda p : ee.Feature(p).geometry()))))
 
-    test_fc = ee.FeatureCollection([{"type": "Feature", "geometry": {"type": "Point", "coordinates": [-74.916831, -7.902456]},
-      "properties": {"date": "2016-04-13T00:00:00Z"}}])
+    #test_fc = ee.FeatureCollection([{"type": "Feature",
+    #                                 "geometry": {"type": "Point", "coordinates": [-74.916831, -7.902456]},
+    #                                 "properties": {"date": "2016-04-13T00:00:00Z"}}])
+    foldername = area.name
+    filename = area.name + "_GLADClusters_"
+    if since_date:
+        filename += "Since_" + since_date
 
     task = ee.batch.Export.table.toDrive(clustersWithPoints, description='ExportClusterTask',
-                                         folder='clusters', fileNamePrefix='clust', fileFormat='geoJSON')
+                                         folder=foldername, fileNamePrefix=filename, fileFormat='geoJSON')
     task.start()
     state = task.status()['state']
+    seconds = 0
     while state in ['READY', 'RUNNING']:
         print state + '...'
         time.sleep(1)
         state = task.status()['state']
-    print 'Done.', task.status()
-    print 'Completed task', task
+        seconds += 1
+        if seconds > 100:
+            logging.error("Exiting slow Export Job")
+            break
+    print 'COMPLETED TASK WITH STATUS: ', task.status()
 
     '''
     task = ee.batch.Export.table.toCloudStorage({
@@ -532,10 +502,14 @@ def alerts2Clusters(area):
         'fileFormat': 'KML'
     })
     '''
-
-    #info = clustersWithPoints.getInfo() # won't work for big clusters
-    #logging.info('Clusters With Points', info)
-    return
+    msg = 'Clustered <a href=\"https://www.google.com/fusiontables/DataSource?docid=%s\">fusion table</a> to <b>%s/%s</b>, \
+        containing %s alerts in %s clusters over %s distinct dates since %s' \
+           %(ft, foldername, filename, alerts_fc.size().getInfo(), clusters.size().getInfo(), date_count, since_date)
+    if state != u'COMPLETED':
+        msg += "error: " + task.status()['state']
+    if state == u'FAILED':
+        msg += "error: " + task.status()['error_message']
+    return msg
 
 '''
 handleAlerts2Clusters
@@ -546,10 +520,6 @@ not sure how to display the cluster yet.
 maybe a new FT.
 '''
 def handleAlerts2Clusters(handler, area_name):
-    #if not eeservice.initEarthEngineService():  # we need earth engine now.
-    #    logging.error('Sorry, Server Credentials Error')
-    # credentials = eeservice.EarthEngineService.credentials
-    # fc = ee.FeatureCollection(fc)
 
     area = cache.get_area(None, area_name)
     if not area:
@@ -558,29 +528,53 @@ def handleAlerts2Clusters(handler, area_name):
         handler.response.set_status(400)
         return handler.response.write('handleCheckForGladAlertsInAllAreas() area not found!')
     else:
-        logging.debug('handleAlerts2Clusters: check-new-area-images for area_name %s', area_name)
+        logging.debug('handleAlerts2Clusters: Clustering latest fusion table for area_name %s', area.name)
 
-    ret = checkGladFootprint(area_name)
-    print 'checkGladFootprint: ', ret
+    #print 'checkGladFootprint: ', ret
 
     if area.last_alerts_raw_ft:
-        clusters = alerts2Clusters(area)
-        return handler.response.write('handleAlerts2Clusters() clustered!')
+        cluster_msg = alerts2Clusters(area)
+        return handler.response.write('handleAlerts2Clusters() %s' %cluster_msg)
     else:
         handler.response.set_status(400)
         return handler.response.write('handleCheckForGladAlertsInAllAreas() No fusion table in area!')
-
 
 def handleCheckForGladAlertsInAllAreas(handler):
     handler.response.set_status(500)
     return handler.response.write('handleCheckForGladAlertsInAllAreas() Not implemented!')
 
 
-def checkGladFootprint(area_name):
+def testupdate(tableid):
+    '''
+    NOT CALLED
+    # sql(sql=None, hdrs=None, typed=None)
+    UPDATE <table_id>
+    SET <column_name> = <value> {, <column_name> = <value> }*
+    WHERE ROWID = <row_id>
 
-    area = cache.get_area(None, area_name)
-    if not area:
-        return False
+    select p.name, p.id, l.id from
+    '''
+    service = apiservices.create_table_service()
+    rows =  service.query().sql(sql="SELECT *  FROM %s" % (tableid)).execute()
+    newtable = service.query().sql(sql="UPDATE %s SET latlong = lat ' ' long WHERE ROWID=%s" % (tableid, rows)).execute()
+    logging.info("Updated Table %s ", tableid)
+    return
+
+'''
+ @returns: true if geom is in the glad footprint - 2016.
+ @param: geom an ee.Geometry
+'''
+def geometryIsInGladAlertsFootprint(geom):
+    return gladalerts_footprint_fc().geometry().intersects(geom, 100).getInfo()
+
+'''
+ GLAD Alerts footprint.
+ Geographic range of glad alerts in 2016
+ @returns: an ee.FeatureCollection of the GLAD ALERT footprint- 2016.
+ @FIXME - Currently the returned footprint includes all of Peru,
+          not just 'humid tropical Peru'
+'''
+def gladalerts_footprint_fc():
 
     if not eeservice.initEarthEngineService():
         logging.error('Sorry, Server Credentials Error')
@@ -592,24 +586,57 @@ def checkGladFootprint(area_name):
         "coordinates": [[
             [120.47607421874999, 4.23685605976896],
             [109.40185546874999, 4.784468966579375],
-            [108.2373046875,    -2.5479878714713835],
-            [116.49902343749999,-4.8282597468669755],
+            [108.2373046875, -2.5479878714713835],
+            [116.49902343749999, -4.8282597468669755],
             [120.47607421874999, 4.23685605976896]
         ]]
     }))
-
     countries = ee.FeatureCollection('ft:1tdSwUL7MVpOauSgRzqVTOwdfy17KDbw-1d9omPw')
     congo = countries.filterMetadata('Country', 'equals', 'Congo')
     peru = countries.filterMetadata('Country', 'equals', 'Peru')
     indonesia = countries.filterMetadata('Country', 'equals', 'Indonesia')
     kalimantan = indonesia.geometry().intersection(outline_fc)
     footprint = congo.merge(peru).merge(kalimantan)
-    feat = area.get_boundary_hull_fc()
-    geom = json.dumps(feat['geometry'])
+    return footprint
 
-    if footprint.intersects(area.boundary):
-        return True
-    return False
+
+
+'''
+@returns a dictionary of forst stats from UMD forest change
+'''
+def forestchange_stats(testfeature):
+    umdImage = ee.Image('UMD/hansen/global_forest_change_2015').clip(testfeature).multiply(ee.Image.pixelArea())
+    area = parseFloat(testfeature.area().getInfo())
+
+    # calculate loss since 2000
+    lossImage = umdImage.select(['loss'])
+    loss_stats = lossImage.reduceRegion({
+        reducer: ee.Reducer.sum(),
+        geometry: testfeature,
+        maxPixels: 5e9
+    })
+
+    loss_area = parseFloat(loss_stats.get('loss').getInfo())
+    percent_loss = loss_area * 100 / area
+
+    # calculate tree cover in  2000
+    treecover2000Image = umdImage.select(['treecover2000']);
+    treecover2000_stats = treecover2000Image.reduceRegion({
+        reducer: ee.Reducer.sum(),
+        geometry: testfeature,
+        maxPixels: 5e9
+    })
+    treecover2000_area = parseFloat(treecover2000_stats.get('treecover2000').getInfo())
+    percent_treecover2000 = treecover2000_area / area;  # @FIXME - why no *100 ?
+
+    results = {
+        'area': area,
+        'treecover2000': treecover2000_area,
+        'percent_treecover2000': percent_treecover2000,
+        'loss_area': loss_area,
+        'percent_loss': percent_loss,
+    }
+    return results
 
 
 def testupdate(tableid):

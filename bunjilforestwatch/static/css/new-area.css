@@ -122,6 +122,9 @@ hr {
     color: #BA3D32 !important;
 }
 
+.gladalert-color {
+    color: #ff6fb7 !important;
+}
 .unlocked {
 	display:none;
 }

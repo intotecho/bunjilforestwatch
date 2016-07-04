@@ -181,7 +181,7 @@
 								<div class="panel-group">
 										<div id='locate-area-legend'>
 												<div class='form-legend'>
-														Locate Area
+														Location <em><span class='area-name'></span></em>
 														<!-- <span class="glyphicon glyphicon-question-sign" ></span> -->
 												</div>
 										</div>
@@ -295,7 +295,7 @@
 																				<h3 class="popover-title">Saving Area</h3>
 
 																				<div class="popover-content">
-																						Saving your area now.<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
+																						Saving.<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
 																				</div>
 
 																				<div class="popover-footer">
@@ -332,7 +332,7 @@
 						#}
 
 						<div class="tab-pane fade {% if edit_boundary %} in active {%endif %}" id="boundary-tab-body">
-								<div class='form-legend'>Area Boundary</div>
+								<div class='form-legend'>Area Boundary <em><span class='area-name'></span></em></div>
 								<div class="panel-group">
 										{#
 										<!-- SET DEFAULT VIEW -->
@@ -357,20 +357,26 @@
 																<button class="btn btn-sm btn-primary popper" id="save-boundary" data-trigger="manual" data-toggle="popover" >
 																		Save Boundary <span class="glyphicon glyphicon glyphicon-save" style='color: #FA7063'></span>
 																</button>
-																<div class='popper-content hide' data-placement='right'>
-																		<div class="arrow"  id="save-boundary-popover"></div>
-																		<div class="popover-content">
-																				Saving Boundary<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
-																		</div>
-																		<div class="popover-footer">
-																				<button class="btn btn-sm btn-default" id='close-dialog-save-boundary'>Close</button>
-																		</div>
-																</div>
+
+                                <div class='popover popover-info popover-md hidden-panel' data-placement='right'
+                                      data-target='#save-boundary-wait-popover1' data-toggle="popover-x" id="save-boundary-wait-popover">
+                                      <div class="arrow" id='save-boundary-wait-popover1'></div>
+
+                                      <h3 class="popover-title">Updating Area</h3>
+
+                                      <div class="popover-content">
+                                          Saving Boundary.<br /> <img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" />
+                                      </div>
+
+                                      <div class="popover-footer">
+                                          <button class="btn btn-sm btn-default" id='close-dialog-save-boundary-wait'>Close</button>
+                                      </div>
+                                  </div>
 														</div>
 														<div class='col-md-4'>
 																<button class="btn  btn-sm btn-default popper" data-toggle="popover" data-trigger="hover" data-title="Undo Edits"
 																		id="undo-edits">
-																		Undo<span class="glyphicon glyphicon-remove-sign" style='color: #888888'></span>
+																		Undo <span class="glyphicon glyphicon-remove-sign" style='color: #888888'></span>
 																</button>
 																<div class="popper-content hide">Cancel all edits since the last save.</div>
 
@@ -524,7 +530,7 @@
 						<div class="tab-pane fade" id="descr-tab-body">
 								<!--  DESCRIPTION  TAB -->
 								<div class='row' id='description-form'>
-										<div class='form-legend'>Area description</div>
+										<div class='form-legend'>Area description <em><span class='area-name'></span></em></div>
 
 										<div class="panel-group">
 												<div class="panel panel-collapse collapse in" id="descriptionAccord">
