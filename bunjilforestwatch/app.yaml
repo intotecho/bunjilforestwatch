@@ -10,6 +10,7 @@ builtins:
 - deferred: on
 - remote_api: off
 
+
 skip_files:
 - ^(.*/)?#.*#$
 - ^(.*/)?.*~$
@@ -58,6 +59,10 @@ handlers:
 - url: /.well-known/.*
   script: main.app
 
+- url: /_ah/queue/deferred
+  script: google.appengine.ext.deferred.deferred.application
+  login: admin
+
 - url: /login/google
   script: main.app
   login: required
@@ -74,7 +79,6 @@ handlers:
 
 - url: /tasks/.*
   script: main.app
-
 
 - url: /.*
   script: main.app

@@ -28,7 +28,11 @@ import io
 import time
 import apiservices
 import ee.batch
-
+import ee.data
+from google.appengine.ext import deferred
+#from google.appengine.runtime import DeadlineExceededError
+#from google.appengine.api import taskqueue
+import utils
 
 '''
 create_table() creates a fusion table with the provided schema using the service accounts permisisons
@@ -43,7 +47,6 @@ def create_table(ft_service, parent_id, schema, data=None):
     drive_service = apiservices.create_drive_service()
     newtable = ft_service.table().insert(body=schema).execute()
     fileId = newtable["tableId"]
-
 
     file = drive_service.files().get(fileId=fileId,
                                      fields='parents').execute();
@@ -142,12 +145,15 @@ def createAlertsFusionTable(name, parent_id, since_date_str, to_date_str, alerts
 
 
 '''
+Checks GFW GLAD API for new alerts in area for new period.
+Updates area with fusion table and new date.
+Calls alerts2cluster
+@params create_task: if True waits for cluster to bve stored then generates an ObservationTask
 @returns a string which may be an error message.
 '''
-def handleCheckForGladAlertsInArea(handler, area):
+def handleCheckForGladAlertsInArea(handler, area, create_task=True):
 
     if area.glad_monitored == False:
-        #testupdate("1TwGcemZzzdJZmSuGDuOtsJEEUw8NWWKNtfCEGb9Y")
         handler.response.set_status(400)
         return "Area %s not monitored by GLAD Alerts" % area.name
 
@@ -183,7 +189,10 @@ def handleCheckForGladAlertsInArea(handler, area):
                 msg += "Created Fusion Table: " + \
                       apiservices.fusiontable_url(ft['tableId'], ft['name']) + \
                       ' with ' + str(count) + 'alerts.'
-                msg += alerts2Clusters(area)
+                '''
+                Cluster the Alerts
+                '''
+                msg += alerts2Clusters(area, create_task)
                 return msg
             else:
                 area.last_alerts_date = today_dt
@@ -366,61 +375,66 @@ def handleAlertDataCSV(table_name, parent_id, since_date, to_date, csvdata):
         logging.error('handleAlertDataCSV() No input data')
         return None, 0
 
-'''
+
+"""
 alerts2Clusters() calls Earth Engine to process the alerts to a FeatureCollection
 It Clusters alert points into polygons.
 Based on an answer from Noel Gorelich, GoogleGroups April 27 2016
 https://groups.google.com/d/msg/google-earth-engine-developers/3Oq1t9dBUqE/ft50BYTxDQAJ
+Updated EarthEngine Code at https://code.earthengine.google.com/046c8e9074f9a9f2f4442dd53ce7ef94
+
 @param area: an Area of Interest - reads the last raw alerts fusion table ID.
-'''
+eps = 600 (eps): the radius to look for neighbours.
+"""
 
-def alerts2Clusters(area):
+def alerts2Clusters(area, create_task=True):
 
-    ft = area.last_alerts_raw_ft
-    print 'ft:%s'%ft
+    eps = 600 #(eps): the radius to look for neighbours.
 
     if not eeservice.initEarthEngineService():
         logging.error('Sorry, Server Credentials Error')
+        return "Could not connect to Earth Engine"
+    ft = area.last_alerts_raw_ft
 
-    alerts_fc = ee.FeatureCollection("ft:" + ft)
+    raw_alerts_fc = ee.FeatureCollection("ft:" + ft)
 
-    date_count = alerts_fc.aggregate_count_distinct('date').getInfo()
+    num_alerts = raw_alerts_fc.size().getInfo()  # rows in ft = alerts for all dates.
+    date_count = raw_alerts_fc.aggregate_count_distinct('date').getInfo()
+    distinct_dates = raw_alerts_fc.distinct('date').sort('date', False) #false orders so first date is latest.
+    latest_date_iso = distinct_dates.first().get("date").getInfo()
+    latest_date = ee.Date(latest_date_iso).getInfo()
 
-    print ('Number of different dates in alert data', date_count)
+    #print 'latest_date_iso', latest_date_iso
+    #print 'latest_date', latest_date
+
+    alerts_fc = raw_alerts_fc.filterMetadata("date", "equals", latest_date_iso)
+
+    latest_alerts = alerts_fc.size().getInfo() #number of alerts with latest date
 
     img = ee.Image(0).byte().paint(alerts_fc, 1)
-    #alert_img = img.mask(img)
-    dist = img.distance(ee.Kernel.euclidean(20000, "meters"))
-    cluster_img = dist.lt(1000)
+    dist = img.distance(ee.Kernel.manhattan(eps * 6, "meters"), True)
+    cluster_img = dist.lt(eps * 1)
 
     clusters = img.addBands(cluster_img).updateMask(cluster_img).reduceToVectors(
         reducer=ee.Reducer.first(),
-        geometry =alerts_fc,
-        geometryType ='polygon', #or bb
-        scale = 1000,
+        geometry=alerts_fc,
+        geometryType='polygon', #or bb
+        scale=eps,
         crs = "EPSG:3857",
         bestEffort = True
     )
 
-    clusters = clusters.map(lambda f: f.convexHull(10).set({'AreaInHa': f.geometry().area(100).divide(100 * 100)}))
+    buffer = eps * 0.1
+    clusters = clusters.map(lambda f: f.buffer(buffer, buffer).set({'AreaInHa': f.geometry().area(100).divide(100 * 100)}))
 
     #select removes unnecessary properties.
     clusters = clusters.select(['points', 'AlertsInCluster', 'AreaInHa'])
 
-    # count totals var
-    #.filterMetadata('WRS_PATH', 'equals', path)
-    biggest_cluster = clusters.filter(ee.Filter.neq('AreaInHa', None)).reduceColumns(
-               reducer    = ee.Reducer.max(),
-                selectors  = ['AreaInHa']
-            )
+    #hulls = clusters.map(lambda f: f.convexHull(10)) # not using convex Hulls.
 
-    total_area = clusters.filter(ee.Filter.neq('AreaInHa', None)).reduceColumns(
-            reducer = ee.Reducer.sum(),
-            selectors = ['AreaInHa']
-        )
 
     '''
-    Cluster Feature Collection with List of Points
+    Join Cluster Feature Collection with List of Points
     '''
 
     #Define a spatial filter, with distance < 10.
@@ -453,87 +467,136 @@ def alerts2Clusters(area):
     today_dt = datetime.datetime.today()
     today_str = today_dt.strftime('%Y-%m-%d')  #today_str = '2016-05-18'
 
-    clustersWithPoints = clustersWithPoints.set(
-        {
-        'name' : 'gladclusters',
-        'area_name': area.name,
-        'ft': 'https://www.google.com/fusiontables/DataSource?docid=' + ft ,
-        'since_date': since_date,
-        'clustered_date' : today_str,
-        'NumberOfAlerts:': alerts_fc.size(),
-        'NumberOfClusters': clusters.size(),
-        'ClustersTotalArea': total_area.get('sum'),
-        'DistinctDates': date_count,
-        'MostAlertsInCluster': most_populous_cluster.get('max')
-        }
-    )
+    num_clusters = clusters.size().getInfo()
 
-    clustersWithPoints = clustersWithPoints.map(lambda f:f.set('points', ee.Algorithms.GeometryConstructors.MultiPoint(ee.List(ee.Feature(f).get('points')).map(lambda p : ee.Feature(p).geometry()))))
-
-    #test_fc = ee.FeatureCollection([{"type": "Feature",
-    #                                 "geometry": {"type": "Point", "coordinates": [-74.916831, -7.902456]},
-    #                                 "properties": {"date": "2016-04-13T00:00:00Z"}}])
     foldername = area.name
     filename = area.name + "_GLADClusters_"
     if since_date:
         filename += "Since_" + since_date
 
-    task = ee.batch.Export.table.toDrive(clustersWithPoints, description='ExportClusterTask',
-                                         folder=foldername, fileNamePrefix=filename, fileFormat='geoJSON')
-    task.start()
-    state = task.status()['state']
-    seconds = 0
-    while state in ['READY', 'RUNNING']:
-        print state + '...'
-        time.sleep(1)
-        state = task.status()['state']
-        seconds += 1
-        if seconds > 100:
-            logging.error("Exiting slow Export Job")
-            break
-    print 'COMPLETED TASK WITH STATUS: ', task.status()
+    clusterProperties = {
+        'name': 'gladclusters',
+        'filename': filename,
+        'epsilon': eps,
+        'area': area.name,
+        'ft': 'https://www.google.com/fusiontables/DataSource?docid=' + ft,
+        'since_date': since_date,
+        'clustered_date': today_str,
+        'alerts_date': latest_date_iso, #iso format
+        'num_alerts:': latest_alerts,  # Alerts with Latest Date only
+        'num_clusters': num_clusters,
+        'distinct_dates': date_count,
+        'num_alerts_alldates': num_alerts,
+        'most_alerts_in_cluster': most_populous_cluster.get('max').getInfo()
+    }
 
     '''
-    task = ee.batch.Export.table.toCloudStorage({
-        'collection': test_fc,
-        'description': 'clustersWithPoints',
-        'bucket': 'bfw-ee-cluster-tables',
-        'fileNamePrefix': 'cluster_with_alert_points ',
-        'fileFormat': 'KML'
-    })
+    clustersWithPoints = clustersWithPoints.set('name', 'gladclusters',
+        'epsilon', eps,
+        'area', area.name,
+        'ft', 'https://www.google.com/fusiontables/DataSource?docid=' + ft,
+        'since_date', since_date,
+        'clustered_date', today_str,
+        'alerts_date', latest_date_iso, #iso format
+        'num_alerts:', latest_alerts,  # Alerts with Latest Date only
+        'num_clusters', num_clusters,
+        'distinct_dates', date_count,
+        'num_alerts_alldates', num_alerts,
+        'most_alerts_in_cluster', most_populous_cluster.get('max').getInfo()
+    )
     '''
-    msg = 'Clustered <a href=\"https://www.google.com/fusiontables/DataSource?docid=%s\">fusion table</a> to <b>%s/%s</b>, \
-        containing %s alerts in %s clusters over %s distinct dates since %s' \
-           %(ft, foldername, filename, alerts_fc.size().getInfo(), clusters.size().getInfo(), date_count, since_date)
-    if state != u'COMPLETED':
-        msg += "error: " + task.status()['state']
-    if state == u'FAILED':
-        msg += "error: " + task.status()['error_message']
+    clustersWithPoints = clustersWithPoints.set(clusterProperties)
+
+    clustersWithPoints = clustersWithPoints.map(
+        lambda f:f.set('points', ee.Algorithms.GeometryConstructors.MultiPoint(
+            ee.List(ee.Feature(f).get('points')).map(lambda p : ee.Feature(p).geometry()))))
+
+    print clustersWithPoints.propertyNames().getInfo()
+
+
+    task = ee.batch.Export.table.toDrive(clustersWithPoints, description=area.name + ' Clusters',
+                                         folder=foldername, fileNamePrefix=filename, fileFormat='geoJSON')
+    '''@change drive to cloud?
+        task = ee.batch.Export.table.toCloudStorage({
+            'collection': test_fc,
+            'description': 'clustersWithPoints',
+            'bucket': 'bfw-ee-cluster-tables',
+            'fileNamePrefix': 'cluster_with_alert_points ',
+            'fileFormat': 'KML'
+        })
+    '''
+    task.start()
+
+    if create_task:
+        #wait for export to finish then create a task.
+        deferred.defer(check_export_status, task.id, clusterProperties, _countdown=10, _queue="export-check-queue")
+        logging.info("Started task to export GLAD Cluster")
+    return
+
+
+def check_export_status(task_id, clusterProperties):
+    logging.debug("check_export_status() for area %s task %s", clusterProperties['area'], task_id)
+    # Do your work here
+    try:
+        result = ee.data.getTaskStatus(task_id)[0]
+    except:
+        return "Exception task not found %s" %(task_id)
+
+    state = result['state']
+    msg = 'Export glad cluster for area %s is %s' %(clusterProperties['area'], state)
+    if state in ['READY', 'RUNNING']:
+        logging.debug(msg)
+        deferred.defer(check_export_status, task_id, clusterProperties,
+                       _countdown=10, _queue="export-check-queue")
+    elif state in ['COMPLETED']:
+        logging.info(msg)
+        #CREATE A TASK
+        try:
+            area= cache.get_area(clusterProperties['area'])
+            clusterProperties['file_id'] = area.get_gladcluster_file_id()
+            new_observations = []
+            obs = models.Observation.createGladAlertObservation(area, clusterProperties)
+            if obs is not None:
+                new_observations.append(obs.key)
+                area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
+                if area_followers:
+                    models.ObservationTask.createObsTask(area, new_observations, "GLADCLUSTER", area_followers.users)
+        except Exception as e:
+            msg = "Exception creating GLAD ObservationTask {0!s}".format(e)
+            logging.error(msg)
+            return msg
+    else:
+        logging.info(msg)
     return msg
 
+
+
 '''
-handleAlerts2Clusters
+handleAlerts2Clusters() takes the latest ft and clusters it.
+This can be called separately by /admin/alerts/glad2clusters/<area_name>
+or as part of the call to handleCheckForGladAlertsInArea() if new alerts are found.
+
 @param: area_name
 Assumes area has a new fusion table
 It process the data in the table to clusters.
 not sure how to display the cluster yet.
 maybe a new FT.
 '''
+
+
 def handleAlerts2Clusters(handler, area_name):
 
-    area = cache.get_area(None, area_name)
+    area = cache.get_area(area_name)
     if not area:
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
         logging.error('handleAlerts2Clusters: Area not found!')
         handler.response.set_status(400)
         return handler.response.write('handleCheckForGladAlertsInAllAreas() area not found!')
     else:
         logging.debug('handleAlerts2Clusters: Clustering latest fusion table for area_name %s', area.name)
 
-    #print 'checkGladFootprint: ', ret
-
     if area.last_alerts_raw_ft:
-        cluster_msg = alerts2Clusters(area)
+        cluster_msg = alerts2Clusters(area, True)
         return handler.response.write('handleAlerts2Clusters() %s' %cluster_msg)
     else:
         handler.response.set_status(400)

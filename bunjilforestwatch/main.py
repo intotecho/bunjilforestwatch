@@ -851,7 +851,7 @@ class ExistingAreaHandler(BaseHandler):
             self.response.set_status(403)
             return self.response.out.write('{"status": "error", "reason": "user not in session" }')
 
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
         if not area:
             self.response.set_status(404)
             return self.response.out.write('{"status": "error", "reason": "area not found" }')
@@ -1001,16 +1001,16 @@ class ExistingAreaHandler(BaseHandler):
             logging.error(message)
             return self.response.out.write('{"status": "error", "reason": ' + message + '}')
 
-        try:
-            cache.clear_area_cache(self.session['user']['key'], area.key) #@fixme DOES IT WORK?
+        #try:
+            #cache.clear_area_cache(self.session['user']['key'], area.key) #@fixme DOES IT WORK?
             #cache.flush()
             # cache.delete([cache.C_AREA %(username, area.name),
             #              cache.C_AREA %(None, area.name)])
-        except Exception, e:
-            self.response.set_status(500)
-            message = 'Exception clearing cache {0!s}'.format(e)
-            logging.error(message)
-            return self.response.out.write('{"status": "error", "reason": ' + message + '}')
+        #except Exception, e:
+        #    self.response.set_status(500)
+        #    message = 'Exception clearing cache {0!s}'.format(e)
+        #    logging.error(message)
+        #    return self.response.out.write('{"status": "error", "reason": ' + message + '}')
 
         results = {
             "status": "ok",
@@ -1051,7 +1051,7 @@ class ExistingAreaHandler(BaseHandler):
                 self.redirect(webapp2.uri_for('main'))
                 return
 
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
         if not area or (
                     area.share == area.PRIVATE_AOI and area.owner.string_id() != user.name and not users.is_current_user_admin()):
             self.add_message('danger', "Area not found!")
@@ -1222,7 +1222,7 @@ class NewAreaHandler(BaseHandler):
             self.response.set_status(400)
             return self.response.out.write('Create area requires a name.')
 
-        existing_area = cache.get_area(None, area_name)
+        existing_area = cache.get_area(area_name)
         if existing_area:
             logging.error('Cannot POST to Area - name already exists')
             return self.error(404)
@@ -1363,9 +1363,9 @@ class NewAreaHandler(BaseHandler):
             self.add_message('success',
                              'Created your new area of interest: %s covering about %d sq.km' % (area.name, total_area))
 
-            cache.clear_area_cache(user.key, area.key)
+            #cache.clear_area_cache(user.key, area.key)
             # clear_area_followers(area.key)
-            cache.set(cache.pack(user), cache.C_KEY, user.key)
+            #cache.set(cache.pack(user), cache.C_KEY, user.key)
 
             counters.increment(counters.COUNTER_AREAS)
         except Exception, e:
@@ -1427,7 +1427,7 @@ class DeleteAreaHandler(BaseHandler):
 
         cell_list = []
 
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
 
         if not area:
             #self.add_message('danger', 'Delete Area failed - Area not found.')
@@ -1437,13 +1437,14 @@ class DeleteAreaHandler(BaseHandler):
                 "updates":  "Area not found"
             }
             return self.error(404)
+        cell_list = area.cell_list()
+        observations = {}
+        if area.ft_docid is not None and len(area.ft_docid) != 0:
+            area.isfusion = True
         else:
-            cell_list = area.cell_list()
-            observations = {}
-            if area.ft_docid is not None and len(area.ft_docid) != 0:
-                area.isfusion = True
-            else:
-                area.isfusion = False
+            area.isfusion = False
+
+        file_id = area.folder_id # delete the folder for this glad area.
 
         area_followers = models.AreaFollowersIndex.get_by_id(area.name.encode('utf-8'), parent=area.key)
         # if user does not own area or user is not admin - disallow
@@ -1490,6 +1491,7 @@ class DeleteAreaHandler(BaseHandler):
             if area_followers_index is not None:
                 area_followers_index.key.delete()
             area.key.delete()
+
             return
 
         owner_key = area.owner
@@ -1499,14 +1501,20 @@ class DeleteAreaHandler(BaseHandler):
             # ndb.run_in_transaction_options(xg_on, txn, owner_key, area, area_followers_index)
             ndb.transaction(lambda: txn(owner_key, area, area_followers_index), xg=True)
 
-            cache.clear_area_cache(user.key, area.key)
-            cache.clear_area_followers(area.key)
-            cache.set(cache.pack(user), cache.C_KEY, user.key)
+            #cache.clear_area_cache(user.key, area.key)
+            #cache.clear_area_followers(area.key)
+            #cache.set(cache.pack(user), cache.C_KEY, user.key)
 
             models.Activity.create(user, models.ACTIVITY_DELETE_AREA, area.key)
             counters.increment(counters.COUNTER_AREAS, -1)
 
             msg = 'Deleted area of interest: {0!s}'.format(area_name)
+            if file_id:
+                delete_result = apiservices.delete_file(file_id)
+                if delete_result != None:
+                    msg += " But could not delete folder for %s" %area_name
+                    logging.error(msg)
+
             results = {
                 "status": "ok",
                 "updates": msg
@@ -1514,14 +1522,7 @@ class DeleteAreaHandler(BaseHandler):
             self.response.set_status(200)
             return self.response.out.write(json.dumps(results))
 
-            geojson_area = area.toGeoJSON()
-
-            self.populate_user_session()
-            self.redirect(webapp2.uri_for('main'))
-            # raise Exception('test', 'exception')
-
-            return
-        except Exception, e:
+        except Exception as e:
             msg= 'Sorry, Could not delete area: Exception {0!s}'.format(e)  # XSS safe
             results = {
             "status": "error",
@@ -1548,7 +1549,7 @@ class SelectCellHandler(BaseHandler):
         row = cell_feature['properties']['row']
         displayAjaxResponse = 'Cell {0:d} {1:d}'.format(path, row)
 
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
         username = self.session['user']['name']
 
         if not area or area.owner.string_id() != username:
@@ -1649,7 +1650,7 @@ class GetLandsatCellsHandler(BaseHandler):
     # This handler responds to Ajax request, hence it returns a response.write()
 
     def get(self, area_name):
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
         if not area or area is None:
             getCellsResult = {'result': 'error', 'reason': 'no area'}
             logging.info('GetLandsatCellsHandler - area %s not found', area_name)
@@ -1694,7 +1695,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
     # This handler responds to Ajax request, hence it returns a response.write()
 
     def get(self, area_name, action, satelite, algorithm, latest, **opt_params):
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
         returnval = {}
 
         if not area:
@@ -1883,7 +1884,7 @@ class UpdateOverlayAjaxHandler(BaseHandler):
             logging.error(returnval['reason'])
             return self.response.write(json.dumps(returnval))
 
-        obs = ovl.key.parent().get();
+        obs = ovl.key.parent().get()
 
         if not obs:
             returnval['result'] = "error"
@@ -2017,6 +2018,9 @@ class ObservationTaskAjaxHandler(BaseHandler):
         })
 
 
+
+
+
 '''
 checkForNewInArea() is a function to check if any new images for the specified area. 
 Called by CheckForNewInAllAreasHandler() and CheckForNewInAreaHandler()
@@ -2024,7 +2028,7 @@ returns a HTML formatted string
 
 This is not a handler and can be moved to another file
 '''
-def checkForNewInArea(area, hosturl):
+def checkForNewInArea(area):
     area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
     linestr = u'<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
     obstask_cachekeys = []
@@ -2054,36 +2058,7 @@ def checkForNewInArea(area, hosturl):
 
         # send each follower of this area an email with reference to a task.
         if new_observations:
-            new_task = models.ObservationTask(aoi=area.key, observations=new_observations, aoi_owner=area.owner,
-                                              share=area.share, status="open")  # always select the first follower.
-            priority = 0
-            for user_key in area_followers.users:
-                user = cache.get_user(user_key)
-
-                new_task.assigned_owner = user.key
-                new_task.name = "Latest images for " + area.name + "."
-                # new_task.descr = user.name + u"'s task with priority " + str(priority) + " for " + area.name
-                new_task.priority = priority
-                priority += 1
-                new_task.put()
-                try:
-                    mailer.new_image_email(new_task, hosturl)
-                except:
-                    logging.error("Error sending new_image_email()")
-
-                num_obs = len(new_observations)
-                linestr += "<p>Created task with " + str(num_obs) + " observations for " + user.name + ".</p>"
-                taskurl = new_task.taskurl()
-                linestr += u'<a href=' + taskurl + ' target="_blank">' + taskurl.encode('utf-8') + '</a>'
-
-            linestr += u'<ul>'
-            for ok in new_observations:
-                o = ok.get()
-                # clear_obstasks_cache(o)
-                linestr += u'<li>image_id: ' + o.image_id + u'</li>'
-            linestr += u'</ul>'
-
-            cache.flush()  # TODO To scale, will need a better strategy to just flush applicable items.
+            linestr += models.ObservationTask.createObsTask(area, new_observations, "LANDSATIMAGE", area_followers.users)
         else:
             linestr += u"<ul><li>No new observations found.</li></ul>"
     else:
@@ -2131,9 +2106,9 @@ This function is called by admin only.
 class CheckForNewInAreaHandler(BaseHandler):
     def get(self, area_name):
 
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
         if not area:
-            area = cache.get_area(None, area_name)
+            area = cache.get_area(area_name)
             logging.error('CheckForNewInAreaHandler: Area not found!')
             return self.error(404)
         else:
@@ -2149,9 +2124,8 @@ class CheckForNewInAreaHandler(BaseHandler):
             self.response.set_status(500)
             return self.response.write(initstr)
 
-        hostname = utils.get_custom_hostname()
 
-        returnstr = initstr + checkForNewInArea(area, hostname)  # self.request.headers.get('host', 'no host'))
+        returnstr = initstr + checkForNewInArea(area)  # self.request.headers.get('host', 'no host'))
         return self.response.write(returnstr.encode('utf-8'))
 
 
@@ -2168,7 +2142,7 @@ class CheckForGladAlertsInAllAreasHandler(BaseHandler):
         for area in all_areas:
             if area.glad_monitored & area.hasBoundary():
                 returnstr += '<h2>' + area.name + ' </h3><br/>' + gladalerts.handleCheckForGladAlertsInArea(self, area) + '<br/>'
-        cache.flush()
+        #cache.flush()
         self.response.write(returnstr.encode('utf-8'))
 
 '''
@@ -2177,9 +2151,9 @@ CheckForGladAlertsInAreaHandler() looks at a single area of interest and gets GL
 class CheckForGladAlertsInAreaHandler(BaseHandler):
 
     def get(self, area_name):
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
         if not area:
-            area = cache.get_area(None, area_name)
+            area = cache.get_area(area_name)
             logging.error('CheckForGladAlertsInAreaHandler: Area not found!')
             return self.error(400)
         else:
@@ -2206,6 +2180,24 @@ class DistributeGladClusters(BaseHandler):
         # for a in areas
         return gladalerts.distributeGladClusters(self, area_name)
 
+
+'''
+DistributeGladClusters() takes a GLAD-ALERT cluster and sends it to volunteers as tasks
+'''
+class RunAreaTest(BaseHandler):
+
+    def get(self, test_name, area_name):
+        # for a in areas
+        area = cache.get_area(area_name)
+        if not area:
+            area = cache.get_area(area_name)
+            logging.error('RunAreaTest: Area not found!')
+            return self.error(404)
+        else:
+            logging.debug('Run Test %s: area_name %s', test_name, area_name)
+        if test_name == 'test1':
+            logging.debug('Test1: area_name %s', area_name)
+            return
 
 '''
 MailTestHandler() - This handler sends a test email
@@ -2283,7 +2275,7 @@ class ViewObservationTasksHandler(BaseHandler):
             show_nav = True
 
         if area_name:
-            area = cache.get_area(None, area_name)
+            area = cache.get_area(area_name)
             if area:
                 # if user does not own area or user is not admin - disallow
                 if (area.shared_str == 'private') and (area.owner.string_id() != user.name) and (user.role != 'admin'):
@@ -2564,7 +2556,7 @@ class FollowAreaHandler(BaseHandler):
         Returns:
         '''
 
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
         if not area:
             return False
 
@@ -2663,7 +2655,7 @@ class FollowAreaHandler(BaseHandler):
         '''
         @fixme username from request path should be removed and get username from serssion.
         '''
-        area = cache.get_area(None, area_name)
+        area = cache.get_area(area_name)
         if not area:
             self.error(404)
             return
@@ -2685,8 +2677,8 @@ class FollowAreaHandler(BaseHandler):
                 self.add_message('success', u'You are now watching area <em>{0:s}</em>. Journal created'.format(
                     area_name.decode('utf-8')))
 
-        cache.flush()  # FIXME: Better fix by setting data into the cache as this will be expensive!!!
-        cache.clear_area_cache(self.session['user']['key'], area.key)
+        #cache.flush()  # FIXME: Better fix by setting data into the cache as this will be expensive!!!
+        #cache.clear_area_cache(self.session['user']['key'], area.key)
 
         self.populate_user_session()
         if 'unfollow' in self.request.GET:
@@ -3154,6 +3146,12 @@ class FlushMemcache(BaseHandler):  # Admin Only Function
             'show_navbar': True})
 
 
+class AdminDashboardHandler(BaseHandler):  # Admin Only Function
+    def get(self):
+        self.render('admin.html', {
+            'msg': ' Admin Dashboard',
+            'show_navbar': True})
+
 class MarkupHandler(BaseHandler):
     def get(self):
         self.render('markup.html')
@@ -3478,10 +3476,20 @@ class ListFolders(BaseHandler):
             self.response.set_status(500)
             return self.response.out.write(ret)
 
-class ListFolders(BaseHandler):
+class ListFoldersPlain(BaseHandler):
     def get(self):
         list = apiservices.list_folders()
         return self.response.write(list)
+
+class ListFolders(BaseHandler):
+
+    def get(self, page_token=None):
+        next_page_token, items = apiservices.get_folder_list(page_token)
+        self.render('folders.html', {
+            'list': items,
+            'next_page_token': next_page_token,
+            'prev_page_token': page_token,
+        })
 
 class ListFolder(BaseHandler):
     def get(self, folder_id):
@@ -3491,6 +3499,10 @@ class ListFolder(BaseHandler):
 class ListExportTasks(BaseHandler):
     def get(self):
         return self.response.write(apiservices.list_exports()) #json.dumps(list, indent=4, sort_keys=True)
+
+
+
+
 
 SECS_PER_WEEK = 60 * 60 * 24 * 7
 
@@ -3531,6 +3543,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/register', handler=RegisterUserHandler, name='register'),
     webapp2.Route(r'/new/user', handler=NewUserHandler, name='new-user'),
 
+    webapp2.Route(r'/admin', handler=AdminDashboardHandler, name='admin-dashboard'),
     webapp2.Route(r'/admin/flush', handler=FlushMemcache, name='flush-memcache'),
     webapp2.Route(r'/admin/update/users', handler=UpdateUsersHandler, name='update-users'),
     webapp2.Route(r'/admin/checknew', handler=CheckForNewInAllAreasHandler, name='check-new-all-images'),
@@ -3538,11 +3551,13 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/admin/assets', handler=ListAssetsHandler, name='list-assets'),
     webapp2.Route(r'/admin/assets/delete/<file_id>', handler=DeleteAssetHandler, name='delete-asset'),
     webapp2.Route(r'/admin/folders', handler=ListFolders, name='list-drive-folders'),
+    webapp2.Route(r'/admin/folders/<page_token>', handler=ListFolders, name='list-drive-folders'),
     webapp2.Route(r'/admin/folder/create/<parent_id>/<folder_name>', handler=CreateFolder, name='create-drive-folder'),
     webapp2.Route(r'/admin/folder/list/<folder_id>', handler=ListFolder, name='list-drive-folder'),
     webapp2.Route(r'/admin/exports', handler=ListExportTasks, name='list-exports-tasks'),
+    webapp2.Route(r'/admin/test/<test_name>/<area_name>', handler=RunAreaTest, name='area-test'),
 
-    webapp2.Route(r'/admin/alerts/glad', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
+    webapp2.Route(r'/admin/alerts/glad/checknew', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
     webapp2.Route(r'/admin/alerts/glad/<area_name>', handler=CheckForGladAlertsInAreaHandler, name='alerts-glad-area'),
     webapp2.Route(r'/admin/alerts/glad2clusters/<area_name>', handler=ProcessAlerts2ClustersHandler, name='alerts-glad2cluster-area'),
     webapp2.Route(r'/admin/alerts/glad/distribute_cluster/<area_name>', handler=DistributeGladClusters,
@@ -3607,70 +3622,71 @@ app = webapp2.WSGIApplication([
 ], debug=True, config=config)
 
 RESERVED_NAMES = set([
-  '',
-  '_ah',
-  'warmup',
-  '.well-known',
-  '<username>',
-  'about',
-  'assets',
-  'myareas',
-  'account',
-  'activity',
-  'area',
-  'areas',
-  'admin',
-  'blob',
-  'checknew',
-  'contact',
-  'delete',
-  'docs',
-  'donate',
-  'entry',
-  'engine',
-  'exports',
-  'facebook',
-  'features',
-  'feeds',
-  'file',
-  'folder'
-  'folders'
-  'follow',
-  'followers',
-  'following',
-  'google',
-  'googledocs',
-  'googleplus',
-  'help',
-  'image',
-  'journal',
-  'journals',
-  'login',
-  'logout',
-  'list',
-  'markup',
-  'mailtest',
-  'new',
-  'news',
-  'oauth',
-  'obs',
-  'obstasks'
-  'openid',
-  'prior',
-  'privacy',
-  'register',
-  'save',
-  # 'security',
-  'site',
-  'selectcell',
-  'stats',
-  'observatory',
-  'tasks',
-  'terms',
-  'twitter',
-  'upload',
-  'user',
-  'users'
+    '',
+    '_ah',
+    'warmup',
+    '.well-known',
+    '<username>',
+    'about',
+    'assets',
+    'myareas',
+    'account',
+    'activity',
+    'area',
+    'areas',
+    'admin',
+    'blob',
+    'checknew',
+    'contact',
+    'delete',
+    'docs',
+    'donate',
+    'entry',
+    'engine',
+    'exports',
+    'facebook',
+    'features',
+    'feeds',
+    'file',
+    'folder'
+    'folders'
+    'follow',
+    'followers',
+    'following',
+    'google',
+    'googledocs',
+    'googleplus',
+    'help',
+    'image',
+    'journal',
+    'journals',
+    'login',
+    'logout',
+    'list',
+    'markup',
+    'mailtest',
+    'new',
+    'news',
+    'oauth',
+    'obs',
+    'obstasks'
+    'openid',
+    'prior',
+    'privacy',
+    'register',
+    'save',
+    # 'security',
+    'site',
+    'selectcell',
+    'stats',
+    'observatory',
+    'tasks',
+    'terms',
+    'test',
+    'twitter',
+    'upload',
+    'user',
+    'users'
 ])
 
 # assert that all routes are listed in RESERVED_NAMES

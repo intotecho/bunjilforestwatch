@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+{% block content %}
+
+  <div class="container">
+    <ul class="breadcrumb">
+      <li><a href="/">home</a></li>
+      <li><a href="/admin">admin</a></li>
+      <li>folders</li>
+    </ul>
+
+    <div class="page-header">
+      <h1>List Files and Folders</h1>
+    </div>
+    <div class="row">
+        <div class="col-md-1">
+          <h3>Delete</h3>
+        </div>
+        <div class="col-md-5">
+          <h3>Name</h3>
+        </div>
+      <div class="col-md-1">
+        <h3>Size</h3>
+        </div>
+        <div class="col-md-3">
+        <h3>Modified</h3>
+        </div>
+    </div>
+
+    {% for item in list %}
+    <div class="row">
+              <div class="col-md-1">
+                {%  if item.mimeType != "application/vnd.google-apps.folder" %}
+                <a href="/admin/assets/delete/{{ item.id }}" target="_blank"
+                  class="btn btn-small"  data-toggle="tooltip"
+                  title="Delete this file">
+                  <span class="glyphicon glyphicon-remove" style='color: #FF0000'></span></a>
+                {%  else %}
+                <a href="#"
+                  class="btn btn-small"  data-toggle="tooltip"
+                  title="Folders are deleted automatically when the area is deleted">
+                  <span class="glyphicon glyphicon-remove" style='color: #AAAABB'></span></a>
+                {%  endif %}
+              </div>
+            	<div class="col-md-5">
+                <img src="{{item.iconLink}}" alt="icon" style="width:15px;height:15px;">
+                  {%  if item.mimeType == "application/vnd.google-apps.folder" %}
+                    <!-- Just Download the GeoJSON file -->
+                    <a href="{{ item.webViewLink }}"> {{ item.name }} </a>
+                  {%  elif item.mimeType == "application/vnd.google-apps.fusiontable" %}
+                    <a href="{{ item.webViewLink }}"> {{ item.name }} </a>
+                  {% else %}
+                    <a href="{{ item.webContentLink }}"> {{ item.name }} {{ item.mimeType }}</a>
+                  {% endif %}
+              </div>
+            	<div class="col-md-1">
+                {{ item.size}}
+              </div>
+              <div class="col-md-3">
+                {{item.modifiedTime}}
+              </div>
+    </div>
+    {% endfor %}
+
+     <ul class="pagination">
+          {% if prev_page_token %}
+              <li class="active"><a href="/admin/folders">&larr; first </a></li>
+          {% endif %}
+          <li class="active"><a href="/admin/folders/{{ next_page_token }}"> next </a></li>
+     </ul>
+
+  <div class="row">
+      <div class="col-md-6">
+        <a href= "https://www.google.com/fusiontables/showtables"  class="btn btn-small btn-lt-blue"  target="#_blank">Your Fusion Tables</a>
+      </div>
+      <div class="col-md-4">
+        <a href= "/admin/exports"  class="btn btn-small btn-lt-blue"  target="#_blank">Export Tasks</a>
+      </div>
+  </div>
+  <h3>Utilities</h3>
+  <ul>
+    <li>List Assets <a href="/admin/assets" target="#_blank">/admin/assets</a></li>
+    <li>Delete Asset <a href="/admin/assets/delete/&lt;file_id&gt;">/admin/assets/delete/&lt;file_id&gt;</a></li>
+    <li>Create Folder <a href="/admin/folder/create/&lt;parent_id&gt;/&lt;folder_name&gt;">/admin/folder/create/&lt;parent_id&gt;/&lt;folder_name&gt;</a></li>
+    </ul>
+{% endblock %}

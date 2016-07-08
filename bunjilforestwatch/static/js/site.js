@@ -70,6 +70,59 @@ $(document).ready(function() {
 	{
 		addToasterMessage('alert-warning', "This app has not been tested with Internet Explorer, only Firefox and Chrome");
 	}
+	$('.delete_area_btn').click(function(e) {
+            	/* global bootbox */
+            	e.preventDefault();
+                bootbox.dialog({
+                      message: "<b>Warning!</b> Deleting this area cannot be undone.<br/>Data contained with the area will also be deleted.<br/>Volunteers who follow this area will be notified.",
+                      title: "Delete Area <b>" + e.currentTarget.id + "</b> - Are You Sure?",
+                      buttons: {
+                        success: {
+                          label: "Cancel",
+                          className: "btn-info",
+                          callback: function() {
+                          }
+                        },
+                        danger: {
+                          label: "Delete",
+                          className: "btn-danger",
+                          callback: function() {
+                              console.log("Deleting area");
+							  $('.ajax-loader').removeClass('hidden');
+                              request = jQuery.ajax({
+									type: "GET",
+									beforeSend: function (request)
+									{
+										request.setRequestHeader("X-HTTP-Method-Override", "PATCH");
+									},
+									url: "/area/" + e.currentTarget.id  +"/delete" , //area_json.properties.area_url,
+									data: {"redirect": "none"},
+									dataType:"json"
+								});
+								request.done(function (data) {
+							  		$('.ajax-loader').addClass('hidden');
+									if(typeof data !== 'undefined') {
+										addToasterMessage('alert-info', "Deleted Area " + e.currentTarget.id );
+        								console.log('deleted '  + e.currentTarget.id);
+										$(e.currentTarget).parent().parent().parent().parent().parent().parent().parent().parent().fadeOut();
+        							}
+        						});
+        						request.fail(function (xhr, textStatus, error) {
+									$('.ajax-loader').addClass('hidden');
+									var msg = 'Failed to delete area ' + xhr.status + ' ' +
+										xhr.statusText + ' ' +
+										xhr.responseText;
+										console.log ('patch_area() - failed:', xhr.status,  ', ', xhr.statusText, ' error: ', error);
+									addToasterMessage('alert-warning', msg);
+									console.log (msg);
+        						});		                          
+                          }
+                        }
+                      }
+                    });
+            }
+        );//delete-are-you-sure handler
+
 }
 
 /**
@@ -148,53 +201,6 @@ function admin_test_4()
 }
 
 
-$('.delete_area_btn').click(function(e) {
-            	/* global bootbox */
-                bootbox.dialog({
-                      message: "<b>Warning!</b> Deleting this area cannot be undone.<br/>Data contained with the area will also be deleted.<br/>Volunteers who follow this area will be notified.",
-                      title: "Delete Area <b>" + e.currentTarget.id + "</b> - Are You Sure?",
-                      buttons: {
-                        success: {
-                          label: "Cancel",
-                          className: "btn-info",
-                          callback: function() {
-                          }
-                        },
-                        danger: {
-                          label: "Delete",
-                          className: "btn-danger",
-                          callback: function() {
-                              console.log("Deleting area");
-                              request = jQuery.ajax({
-									type: "GET",
-									beforeSend: function (request)
-									{
-										request.setRequestHeader("X-HTTP-Method-Override", "PATCH");
-									},
-									url: "/area/" + e.currentTarget.id  +"/delete" , //area_json.properties.area_url,
-									data: {"redirect": "none"},
-									dataType:"json"
-								});
-								request.done(function (data) {
-					        		if(typeof data !== 'undefined') {
-									addToasterMessage('alert-info', 
-										"Deleted Area " + e.currentTarget.id );
-        							console.log ('deleted '  + e.currentTarget.id);
-        							$(e.currentTarget.id).parent().hide();
-        							}
-        						});
-        						request.fail(function (xhr, textStatus, error) {
-									addToasterMessage('alert-warning', 
-										"Failed to delete area");
-										console.log ('Delete request failed:', xhr.status, ' error: ', error);
-        						});		
-                              //window.location.href =  "/area/" + e.currentTarget.id  +"/delete" ;
-                          }
-                        }
-                      }
-                    });
-            }
-        );//delete-are-you-sure handler
 
 
 //fadeout and slide up bootstrap .alert messages after 10 seconds.

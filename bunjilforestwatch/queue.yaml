@@ -3,3 +3,10 @@ queue:
   rate: 5/s
   retry_parameters:
     task_retry_limit: 5
+
+# Change the refresh rate of the default queue from 5/s to 1/s.
+- name: export-check-queue
+  rate: 1/s
+  retry_parameters:
+    task_retry_limit: 5
+

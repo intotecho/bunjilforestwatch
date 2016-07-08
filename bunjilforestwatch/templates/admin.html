@@ -1,22 +1,74 @@
 {% extends "base.html" %}
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> 
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 {% block content %}
 
-<div class="container">
+  <div class="container">
     <ul class="breadcrumb">
-        <li><a href="/">home</a></li>
-        <li>admin</li>
+      <li><a href="/">home</a></li>
+      <li>admin</li>
     </ul>
 
     <div class="page-header">
-        <h1>  admin page</h1>
+      <h1>Admin Dashboard</h1>
     </div>
 
-	<div class="row">
-		<div class="col-md-12">
-			<h3>  {{ msg }}</h3>
-		</div>
-	</div>
-</div>
+    <div class="row">
+      <div class="col-md-12">
+        <h3>{{ msg }}</h3>
+      </div>
+    </div>
+
+    <div class="row">
+      <label class="control-label" for="area-name">Area Name </label>
+      <div class="controls">
+						<input class="form-control" id="area-name" default='Title of this report' name="subject" type="text"
+							value="{{ content.subject|default('', True) }}" /> <span class="help-block">Title of this report. Summarise the
+							contents</span>
+      </div>
+    </div>
+
+    <div class=row">
+
+      <h2>Links</h2>
+      <a href="http://bunjilforestwatch.net">bunjilforestwatch.net</a> <a href="http://bunjilfw.com">bunjilfw.appspot.com</a>
+      Developers Console: <a href="https://cloud.google.com/console">https://cloud.google.com/console</a>
+      <h2>Application Controls</h2>
+
+      <h5>Flush Cache</h5> <a href="/admin/flush" target="#_blank">localhost:8001/admin/flush</a> <br/>
+      <h5>Check New Landsat Images</h5>
+        <a href="/admin/checknew" target="#_blank">/admin/checknew</a>,
+        <a href="/admin/checknew/&lt;area_name&gt;">/admin/checknew/&lt;area_name&gt;</a><br/>
+      <h5>List Assets </h5> <a href="/admin/assets" target="#_blank">/admin/assets</a>
+      <h5>Delete Assets</h5> <a href="/admin/assets/delete/&lt;file_id&gt;">/admin/assets/delete/&lt;file_id&gt;</a><br/>
+      <h5>List All Folders</h5> <a href="admin/folders" target="#_blank">/admin/folders</a>,
+      <a href="/admin/folder/list/&lt;folder_id&gt;">/admin/folder/list/&lt;folder_id&gt;</a><br/>
+      <h5> Create Folder</h5> <a href="/admin/folder/create/&lt;parent_id&gt;/&lt;folder_name&gt;">/admin/folder/create/&lt;parent_id&gt;/&lt;folder_name&gt;</a>
+      <h5>List Export Tasks</h5> <a href="/admin/exports" target="#_blank">/admin/exports</a>
+      <h5>Check for new GLAD Alerts</h5> <a href="/admin/alerts/glad/checknew" target="#_blank">/admin/alerts/glad/checknew</a>,
+      <a href="/admin/alerts/glad/&lt;area_name&gt;" target="#_blank">/admin/alerts/glad/&lt;area_name&gt;</a>
+      <h5>Convert Fusion Table to Clusters</h5> <a href="/admin/alerts/glad2clusters/&lt;area_name&gt;">/admin/alerts/glad2clusters/&lt;area_name&gt;</a>
+
+      <h5> List Tasks</h5>
+      /admin/alerts/glad/distribute_cluster/&lt;area_name&gt;
+      /admin/obs/list
+
+      <h2>Blogs  </h2>
+      Admin:<a href="//intotecho.wordpress.com/wp-admin"> https://intotecho.wordpress.com/wp-admin</a>
+      <h2>Jira Issues and Stories</h2>
+      <a href="https://bunjilforestwatch.atlassian.net/">https://bunjilforestwatch.atlassian.net/</a>
+      <h2>Mockups</h2>
+      <a href="https://bunjilforestwatch.mybalsamiq.com/projects/bpa">https://bunjilforestwatch.mybalsamiq.com/projects/bpa</a>
+      <h2>Git Hub</h2>
+      <a href="https://github.com/intotecho/bunjilforestwatch">https://github.com/intotecho/bunjilforestwatch</a>
+    </div>
+
+    <div class=row">
+      {% for ar in session.areas_list %}
+        <li {% if active== "view-area" and ar.1== area.name %} class="active"{% endif %}><a href="{{ ar.0 }}"> <span
+            class="glyphicon glyphicon-map-marker"></span> {{ ar.1 }}
+        </a></li>
+      {% endfor %}
+     </div>
+  </div>
 {% endblock %}

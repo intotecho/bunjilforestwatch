@@ -279,7 +279,7 @@ def get_obstasks_keys(username=None, areaname=None):
         if len(data) == 0 :
             logging.info("get_obstasks_keys() user %s has no tasks", username)
     elif areaname is not None:
-        area = get_area(username, areaname)
+        area = get_area(areaname)
         area_key = ndb.Key('AreaOfInterest', areaname)
         owner = area.owner.get()
         if (area.share == area.PRIVATE_AOI ) and (owner.name != username):
@@ -376,8 +376,8 @@ def get_obstask_render(task_key, reload=False):
 def clear_obstasks_cache(username=None, areaname=None):
     logging.error('clear_obstasks_cache DISABLED')
 
-def clear_area_cache(user_key, area_key):
-    logging.error('clear_area_cache DISABLED')
+#def clear_area_cache(user_key, area_key):
+#    logging.error('clear_area_cache DISABLED')
 
 def clear_area_followers(area_key):
     logging.error('clear_area_followers DISABLED')
@@ -494,10 +494,10 @@ def get_following_areanames_list(user_key): #as above but returns list of names 
     return data
 
 
-def get_area(username, area_name):
+def get_area(area_name):
     data = models.AreaOfInterest.get_by_id(area_name)
     if data is None:
-        logging.error("get_area() no area found for %s %s", username, area_name)
+        logging.error("get_area() no area found for %s", area_name)
         return None
     return data
 

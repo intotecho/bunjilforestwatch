@@ -3,7 +3,7 @@ cron:
   url: /admin/checknew
   schedule: every day 00:00
 #  timezone: Australia/NSW
-- description: test for new images
-  url: /admin/checknew
+- description: test for glad alerts in glad monitored areas
+  url: /admin/glad/checknew
   schedule: every day 11:50
 #  timezone: Australia/NSW

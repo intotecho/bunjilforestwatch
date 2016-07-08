@@ -143,10 +143,8 @@ def checkForNewObservationInCell(area, cell, collection_name):
             return obs
         else:
             logging.debug('checkForNewObservationInCell no newer observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
-            return None
     else:
         logging.error('checkForNewObservationInCell no matching image in collection %s %s %s %s', area.name, collection_name, cell.path, cell.row)
-        return None
     return None
 
 '''

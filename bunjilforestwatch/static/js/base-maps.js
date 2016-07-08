@@ -300,7 +300,7 @@ function initialize() {
 			"Alerts" + area_json.properties.glad_alerts,
 			layerslider_callback);
     }
- 	if (typeof(area_json.glad_alerts) !== 'undefined' ) {
+ 	if (typeof(area_json.glad_clusters) !== 'undefined' ) {
  	
 		newData = displayFeatureCollection(map_under_lhs, jQuery.parseJSON(area_json.glad_clusters));
 		if (newData !== null) {

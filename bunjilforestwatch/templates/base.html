@@ -11,7 +11,8 @@
 <!-- base.html head_scripts -->
     {% include "includes/head_scripts.html" %} 
 {% endblock head_scripts %}
-{% block head %}
+
+  {% block head %}
 <title>Bunjil Forest Watch </title>
 {% endblock %}
 {% block map_head %} {% endblock %}
@@ -188,7 +189,7 @@
 	{%block jobs_template %}{% endblock jobs_template %} 
 	
 	{% block footer_js%} 
-	{% include "includes/project_scripts.html" %} 
+	{% include "includes/project_scripts.html" %}
 	{% endblock footer_js %}
 
 	<!-- TEMPLATE TO ADD TO toaster  -->

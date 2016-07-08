@@ -13,11 +13,14 @@
                title="Create a new area. Volunteers will review images and send you alerts.">New area <span
             class="glyphicon glyphicon-plus"></span></a></h3>
       </div>
+      <div class="col-xs-4">
+        <img src="/static/img/ajax-loader.gif" class="ajax-loader hidden"/>
+      </div>
     </div>
     <div class="row">
       {% if areas or user.role == 'local' %}
         <div class="col-xs-4">
-          <h3>Your Local Area</h3>
+          <h3>Your Area{{  areas|length|pluralize }}</h3>
           {% if not areas %}
             You have not created your area yet. Please add an area so <em>Bunjil Forest Watch</em> can help you monitor
             it.
@@ -53,4 +56,3 @@
   </div>
 {% endblock %}
 
-{% include "includes/project_scripts.html" %}

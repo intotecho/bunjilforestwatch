@@ -96,6 +96,17 @@ def get_latest_file(folder_id):
 
 import ee
 
+'''
+Returns a html formatted string:
+      ee.batch.Task.list() returns a dictionary describing the current status of the task as it appears on
+      the EE server. Includes the following fields:
+      - state: One of the values in Task.State.
+      - creation_timestamp_ms: The Unix timestamp of when the task was created.
+      - update_timestamp_ms: The Unix timestamp of when the task last changed.
+      - output_url: URL of the output. Appears only if state is COMPLETED.
+      - error_message: Failure reason. Appears only if state is FAILED.
+      May also include other fields.
+'''
 def list_exports():
     if not eeservice.initEarthEngineService():
         return logging.error('Earth Engine Credentials Error')
@@ -103,9 +114,42 @@ def list_exports():
     tasks = ee.batch.Task.list()
     for t in tasks:
         result = t.status()
-        listing += result['state'] + ' : ' + ' : '+ result['description'] + '<br>'
+        listing += result['id'] + ' : ' +  result['state'] + ' : '   + result['description']
+        if result['state'] == 'COMPLETED':
+            try:
+                for url in result['output_url']:
+                    listing += ' <a href="' + url + '" target="#_blank">' + result['id'] + '</a>'
+            except KeyError:
+                pass
+        if result['state'] == 'FAILED':
+            try:
+                for error in result['error_message']:
+                    listing += error
+            except KeyError:
+                pass
+        listing += '<br>'
+
     return listing
 
+'''
+@returns a list of file items that can be rendered.
+'''
+def get_folder_list(page_token=None):
+    service = create_drive_service()
+    param = {
+        'pageSize' : 20,
+        'fields'   : "nextPageToken, files(id, name,  mimeType, modifiedTime, size, iconLink, webContentLink, webViewLink)"
+    }
+    if page_token:
+        param['pageToken'] = page_token
+    results = service.files().list(**param).execute()
+    page_token = results.get('nextPageToken')
+    items = results.get('files', [])
+    return page_token, items
+
+'''
+returns a rendered html string of folders
+'''
 def list_folders():
     service = create_drive_service()
     results = service.files().list(
@@ -130,11 +174,10 @@ def list_folders():
     return listing
     #       'mimeType': "application/vnd.google-apps.folder"
 
-
 def list_files_infolder(folder_id = None):
     service = create_drive_service()
     results = service.files().list(
-        pageSize=10, fields="nextPageToken, files(id, name)").execute()
+        pageSize=10, fields="nextPageToken, files(id, name, mimeType, selfLink, createdTime, size)").execute()
     items = results.get('files', [])
 
     if not items:

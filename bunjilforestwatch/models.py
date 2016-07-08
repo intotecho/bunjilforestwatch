@@ -541,11 +541,17 @@ class AreaOfInterest(ndb.Model):
         }
         return location_geojsonobj
 
-    def get_gladcluster(self):
+
+    def get_gladcluster_file_id(self):
         if self.glad_monitored == True:
             file_id = apiservices.get_latest_file(self.folder())
-            if file_id:
-                return apiservices.read_file(file_id) #Example: "0B-lTullYuWZ_MUUtR1JOV09pbVU")
+            return file_id
+        return None
+
+    def get_gladcluster(self):
+        file_id = self.get_gladcluster_file_id()
+        if file_id:
+            return apiservices.read_file(file_id) #Example: "0B-lTullYuWZ_MUUtR1JOV09pbVU")
         return None
 
     def toGeoJSON(self):
@@ -1031,6 +1037,7 @@ Some Observations have no image_id as they are composites of many images.
 class Observation(ndb.Model):
     image_collection = ndb.StringProperty(required=False)  # identifies the ImageCollection name, not an EE object.
     image_id = ndb.StringProperty(required=False)  # LANDSAT Image ID of Image - key to query EE.
+    properties = ndb.JsonProperty(required=False)  # store cluster properties.
     captured = ndb.DateTimeProperty(
         required=False)  # sysdate or date Image was captured - could be derived by EE from collection+image_id.
     obs_role = ndb.StringProperty(
@@ -1059,6 +1066,7 @@ class Observation(ndb.Model):
             "captured": self.captured.strftime("%Y-%m-%d @ %H:%M"),
             "obs_role": self.obs_role,  # ex 'latest'
             "encoded_key": self.key.urlsafe(),
+            "properties" : self.properties,
             "overlays": []
         }
         # obsdict['encoded_key'] = self.key.urlsafe()
@@ -1067,6 +1075,37 @@ class Observation(ndb.Model):
             if overlay is not None:
                 obsdict['overlays'].append(overlay.Overlay2Dictionary())
         return obsdict
+
+
+    '''
+    createGladObservation()
+    @param    clusterProperties: A dictionary{
+            'name': 'gladclusters',
+            'epsilon': eps,
+            'area': area.name,
+            'ft': 'https://www.google.com/fusiontables/DataSource?docid=' + ft,
+            'since_date': since_date,
+            'clustered_date': today_str,
+            'alerts_date': latest_date_iso, #Iso format
+            'num_alerts:': latest_alerts,  # Alerts with Latest Date only
+            'num_clusters': num_clusters,
+            'distinct_dates': date_count,
+            'num_alerts_alldates': num_alerts,
+            'most_alerts_in_cluster': most_populous_cluster.get('max').getInfo()
+            'file_id': area.get_gladcluster_file_id()
+        }
+    '''
+    @staticmethod
+    def createGladAlertObservation(area, clusterProperties):
+
+        #cluster_file_id = area.get_gladcluster_file_id()
+        date = datetime.datetime.fromtimestamp(clusterProperties['alerts_date']/1000) #mm to secs
+        obs = Observation(parent=area.key,  properties=clusterProperties,
+                                            image_collection="GLADALERTS",
+                                            captured=date, image_id=clusterProperties['file_id'],
+                                            obs_role="LATEST")
+        obs.put()
+        return obs
 
 
 '''
@@ -1080,6 +1119,8 @@ class ObservationTask(ndb.Model):
     # Observation
     name = ndb.StringProperty()
     aoi = ndb.KeyProperty(kind=AreaOfInterest)  # key to area that includes this cell
+
+    tasktype = ndb.StringProperty(default='LANDSATIMAGE') # could be GLADCLUSTER or LANDSATIMAGE
 
     # privacy and sharing
     share = ndb.IntegerProperty(required=True,
@@ -1137,6 +1178,47 @@ class ObservationTask(ndb.Model):
         else:
             return 'unspecified'
 
+    @staticmethod
+    def createObsTask(area, new_observations, type, area_followers=None):
+        linestr = ""
+        if area_followers == None:
+            area_followers = AreaFollowersIndex.get_by_id(area.name, parent=area.key)
+
+        # send each follower of this area an email with reference to a task.
+        new_task = ObservationTask(aoi=area.key, tasktype=type, observations=new_observations, aoi_owner=area.owner,
+                                          share=area.share, status="open")  # always select the first follower.
+        priority = 0
+        for user_key in area_followers: # area_followers.users:
+            user = cache.get_user(user_key)
+            new_task.assigned_owner = user.key
+            if type == "LANDSATIMAGE":
+                new_task.name = "Latest images for " + area.name + "."
+            elif type == "GLADCLUSTER":
+                new_task.name = "Latest GLAD Alerts for " + area.name + "."
+            # new_task.descr = user.name + u"'s task with priority " + str(priority) + " for " + area.name
+            new_task.priority = priority
+            priority += 1
+            new_task.put()
+            hosturl = utils.get_custom_hostname()
+            try:
+                mailer.new_image_email(new_task, hosturl)
+            except:
+                logging.error("Error sending new_image_email()")
+
+            num_obs = len(new_observations)
+            linestr += "<p>Created task with " + str(num_obs) + " observations for " + user.name + ".</p>"
+            taskurl = new_task.taskurl()
+            linestr += u'<a href=' + taskurl + ' target="_blank">' + taskurl.encode('utf-8') + '</a>'
+
+        linestr += u'<ul>'
+        for ok in new_observations:
+            o = ok.get()
+            # clear_obstasks_cache(o)
+            linestr += u'<li>image_id: ' + o.image_id + u'</li>'
+
+        linestr += u'</ul>'
+        logging.debug(linestr)
+        return linestr
 
 '''
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
