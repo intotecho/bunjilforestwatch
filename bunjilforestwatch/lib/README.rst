@@ -7,8 +7,9 @@ The files are all unmodified from published/released version. Generally the late
 
 There is a workaround described here: https://code.google.com/p/googleappengine/issues/detail?id=12783
 
-To resolve this issue, replace the file C:\Program Files (x86)\Google\google_appengine\google\appengine\dist27\socket.py
-With the modified file sockets.py from the root folder of the bunjilforestwatch repo 
+To resolve this issue, delete the file C:\Program Files (x86)\Google\google_appengine\google\appengine\dist27\socket.py
+and copy the modified file sockets_win8fix.py from the root folder of the bunjilforestwatch repo to the to that file path
+(don’t forget to change the name of the win8fix.py file to sockets.py).
 
 Files in lib are uploaded to appengine during deplyoment of the app, unless they are excluded in app.yaml.
 
