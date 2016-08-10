@@ -11,15 +11,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
- */
-/**
- * @preserve http://google-maps-utility-library-v3.googlecode.com
- */
+
 /**
  * @name ArcGIS Server Link for Google Maps JavaScript API V3
  * @version 1.0
  * @author: Nianwei Liu (nianwei at gmail dot com)
+ * @preserve http://google-maps-utility-library-v3.googlecode.com
+ * @preserve https://github.com/googlemaps/v3-utility-library
  * @fileoverview 
  *  <p><a href="examples.html">Examples</a>
  *   </p> 
@@ -126,10 +124,10 @@ var WGS84, NAD83, WEB_MERCATOR, WEB_MERCATOR_AUX;
  * @property {Boolean} [alwaysUseProxy] whether to always use proxy page when send request to server.
  */
 var Config = {
-  proxyUrl:null,
-  alwaysUseProxy: false
+  proxyUrl:"http://bunjilforestwatch.net/esri/proxy.php",
+  alwaysUseProxy: (window.location.host.indexOf('localhost') === -1)? true:false
 };
-
+console.log('host ' + window.location.host +  ' : ' + Config.alwaysUseProxy);
 /**
  * an internal collection of Spatial Refeneces supported in the application.
  * The key of the collection is the wkid/wkt, and value is an instance of

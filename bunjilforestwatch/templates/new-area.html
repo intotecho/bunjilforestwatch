@@ -269,7 +269,7 @@
 														<div class='row'>
 																<div class="col-md-1"></div>
 																<div class="col-md-2 ">
-																		<button class="btn btn-primary drag-only" data-placement="top" data-target='#zoom-more-popover'
+																		<button class="btn btn-primary hidden drag-only" data-placement="top" data-target='#zoom-more-popover'
 																				data-toggle="popover-x" id="drop-pin-mode" name="drop-pin">
 																				Drop marker<span class="glyphicon glyphicon glyphicon-map-marker" style='color: #FA7063'></span>
 																		</button>
@@ -646,12 +646,8 @@
 				<!-- addon connects lint to editor -->
 
 				<script src="/static/js/new-area.js" type="text/javascript" defer>
-					
 				</script>
-				<script type="text/javascript" src="/static/js/area-description.js" defer></script>
-                <script src="/static/js/vendor/arcgislink.js" type="text/javascript" defer></script>
-                 <script src="/static/js/vendor/arcgisonline.js" type="text/javascript" defer></script>
-                
+
 				{% endblock %} {% block footer_js%} {% endblock footer_js %}
 				<div></div>
 		</div>

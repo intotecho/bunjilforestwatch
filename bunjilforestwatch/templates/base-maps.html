@@ -354,6 +354,13 @@
 																								<button id='get_overlay_btn' type="button" style="padding: 4px" class="btn btn-xs btn-lt-blue"
 																										data-toggle="tooltip" title="Fetch the image matching the above settings.">Create Overlay</button>
 																						</div>
+                                            <div class="btn-group">
+                                              <button  id="protected-areaview"  class="btn btn-xs btn-lt-blue popper" data-trigger="hover" data-title='Show Protected Areas'>
+                                                  <span id='pa-title'>Parks</span><span class='pa-loading-icon hide'><img src='/static/img/ajax-loader.gif' class='ajax-loader' alt="" /></span>
+                                              </button>
+                                              <div class='popper-content hide'>Show protected areas from the World Database of Protected Areas at <b>protectedplanet.net</b><br\>This external map can take up to five minutes to load...</div>
+                                            </div>
+
 																				</div>
 																		</div>
 																</div>
@@ -483,5 +490,4 @@
           {% include "includes/project_scripts.html" %}
           {% include "includes/map_scripts.html" %}
   			  <script type="text/javascript" src="/static/js/base-maps.js" defer></script>
-				  <script type="text/javascript" src="/static/js/area-description.js" defer></script>
 				{% endblock footer_js %}

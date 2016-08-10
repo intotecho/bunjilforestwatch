@@ -465,3 +465,80 @@ var loss_types =
 [
 	'mechanical', 'harvesting', 'fire', 'disease', 'storm'
 ];
+
+
+
+function add_protected_areas(map)
+{
+	var url = "http://ec2-54-204-216-109.compute-1.amazonaws.com:6080/arcgis/rest/services/wdpa/wdpa/MapServer"
+	//var url = "http://bunjilforestwatch.net/esri/proxy.php?http://ec2-54-204-216-109.compute-1.amazonaws.com:6080/arcgis/rest/services/wdpa/wdpa/MapServer/0"
+	//var url = '//maps.natureserve.org/biodashgis1/rest/services/Reference/WDPA/MapServer';
+	// var url = 'http://sampleserver[4].arcgisonline.com/ArcGIS/rest/services/Portland/ESRI_LandBase_WebMercator/MapServer';
+	//var url = 'http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/Petroleum/KGS_OilGasFields_Kansas/MapServer';
+	//var url = 'http://ec2-54-204-216-109.compute-1.amazonaws.com:6080/arcgis/rest/services/marine/WCMC_008_CoralReefs2010/MapServer';
+	map.dynamap = add_arcgislayer(map, 'ProtectedAreas', 0.2, url);
+	return map.dynamap;
+}
+
+/**
+ * @laods an ESRI MapService as a layer give the URL.
+ * Adds it to map and displays with opacity 0.2
+ * @returns  a reference to the layer as a gmaps.ags.MapOverlay
+ */
+function add_arcgislayer(map, layer_name, opacity, url) {
+
+	var dynamap = new gmaps.ags.MapOverlay(url, {
+	      name: layer_name,
+	      opacity: opacity,
+		  minZoom: 1,
+		  maxZoom: 23,
+		  
+	    });
+	dynamap.setMap(map);
+
+	google.maps.event.addListener(dynamap, 'drawstart', function(){
+	    // DONT SHOW ICON TILL FIXED - $('.pa-loading-icon').removeClass('hide').show();
+	});
+
+	google.maps.event.addListener(dynamap, 'drawend', function(){
+	    $('.pa-loading-icon').hide();
+		$('#pa-title').text('Hide Parks');
+	});
+	map.dynamap = dynamap;
+	return dynamap; // caller store ref
+}
+
+
+/* assumes an ArcGis  dynamap is alread loaded. THis function toggles the visitbility*/
+
+function toggle_protected_areas(dynamap) {
+
+	if(typeof(dynamap) == 'undefined') {
+		console.log('toggle_protected_areas()- No arcgis dynamap');
+		return false;
+		//map.dynamap = add_protected_areas(map)
+	}
+    var service = dynamap.getMapService();
+
+    if (typeof(service) === 'undefined'){
+		console.log('toggle_protected_areas() - Dynamap has no services');
+		return false;
+	}
+	else {
+		if ((typeof(service.loaded_) === 'undefined')|| (service.loaded_ === false)) {
+			console.log('toggle_protected_areas() - Dynamap service not loaded ');
+			return false;
+		}
+		if (typeof(service.layers) === 'undefined') {
+			console.log('toggle_protected_areas() - Dynamap service has no layers');
+			return false;
+		}
+		else {
+			for (var i = 0; i < service.layers.length; i++) {
+				service.layers[i].visible = !service.layers[i].visible;
+			}
+			dynamap.refresh();
+			return service.layers[0].visible;
+		}
+	}
+}

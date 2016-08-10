@@ -5,6 +5,7 @@ import eeservice
 from googleapiclient import errors
 from googleapiclient.http import MediaIoBaseDownload
 import io
+import logging
 
 
 def create_table_service():
@@ -64,11 +65,37 @@ def create_folder(folderName, parentID=None, drive_service=None ):
     }
     if parentID:
         body['parents'] = [parentID]
-        print 'fodler has parent'
     root_folder = drive_service.files().create(body=body, fields='id').execute()
-    print 'created folder %s' %root_folder['id']
+    logging.info('created folder %s' %root_folder['id'])
     make_file_public(drive_service, root_folder['id'] )
     return root_folder['id']
+
+
+def create_file(fileName, parentID=None, drive_service=None, raw_data=None):
+    '''
+    Create a file on Drive, returns the newely created folders ID
+    '''
+    if not drive_service:
+        drive_service = create_drive_service()
+    body = {
+        'name': fileName,
+        'mimeType': "text/plain",
+    }
+    if parentID:
+        body['parents'] = [parentID]
+
+    if raw_data:
+        fh = BytesIO(raw_data)
+        media = MediaIoBaseUpload(fh, mimetype='text/plain',
+                                  chunksize=1024 * 1024, resumable=True)
+    else:
+        media_body=None
+
+    file = drive_service.files().create(body=body, fields='id',  media_body=media).execute()
+
+    logging.info('created folder %s' %file['id'])
+    make_file_public(drive_service, file['id'] )
+    return file['id']
 
 
 '''

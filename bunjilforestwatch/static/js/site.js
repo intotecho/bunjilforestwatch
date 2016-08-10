@@ -256,3 +256,9 @@ function check_msie() {
     }
 	return false;
 }
+
+// js file common to the entire app
+globalError = []
+window.onerror = function (msg, url, line, col, error) {
+    globalError.push({msg:msg, url:url, line:line})
+};

@@ -2,11 +2,11 @@
 #Wrappers for Global Forest Watch Glad-ALert APU Commenced 25/04/2016
 @author: cgoodman. Can be shared.
 # Copyright (c) 2013-16 Chris Goodman <chris@bunjilforestwatch.net>
-
 """
 
 
 import models
+'''
 import csv
 import numpy as np
 from googleapiclient.discovery import build
@@ -14,36 +14,36 @@ from ee.batch import Export
 import settings
 import googleapiclient
 import httplib2
+import utils
+import time
+from google.appengine.ext import ndb
+'''
 import json
 from google.appengine.api import urlfetch #change timeout from 5 to 60 s. https://stackoverflow.com/questions/13051628/gae-appengine-deadlineexceedederror-deadline-exceeded-while-waiting-for-htt
 import urllib
 import datetime
-from google.appengine.ext import ndb
 import cache
 import logging
 import ee
 import eeservice
 from googleapiclient.http import MediaIoBaseUpload
 import io
-import time
+
 import apiservices
 import ee.batch
 import ee.data
 from google.appengine.ext import deferred
-#from google.appengine.runtime import DeadlineExceededError
-#from google.appengine.api import taskqueue
-import utils
 
-'''
-create_table() creates a fusion table with the provided schema using the service accounts permisisons
-The table belongs to the app's service account.
-create_table() makes the table visible to anoyone with the link.
-@service - see create_table_service()
-@param schema: the name, description and structure of the table. See: https://developers.google.com/tables/docs/v2/reference/table/insert
-@param data optionally describes the row data to import. - See https://developers.google.com/fusiontables/docs/v2/reference/table/importRows
-'''
 
 def create_table(ft_service, parent_id, schema, data=None):
+    """
+    create_table() creates a fusion table with the provided schema using the service accounts permisisons
+    The table belongs to the app's service account.
+    create_table() makes the table visible to anyone with the link.
+    @service - see create_table_service()
+    @param schema: the name, description and structure of the table. See: https://developers.google.com/tables/docs/v2/reference/table/insert
+    @param data optionally describes the row data to import. - See https://developers.google.com/fusiontables/docs/v2/reference/table/importRows
+    """
     drive_service = apiservices.create_drive_service()
     newtable = ft_service.table().insert(body=schema).execute()
     fileId = newtable["tableId"]
@@ -85,13 +85,11 @@ def create_table(ft_service, parent_id, schema, data=None):
             return None
     return newtable
 
-'''
-Creates a fusion table to store GLAD alerts from GFW.
-'''
 def createAlertsFusionTable(name, parent_id, since_date_str, to_date_str, alerts):
 
+    """
+    Creates a fusion table to store GLAD alerts from GFW.
     #This schema maps to the unprocessed CSV from GFW.
-    '''
     schema = {
         "name": name,
         "description": 'GLAD ALERTS from ' + since_date_str + ' to ' + to_date_str,
@@ -117,7 +115,7 @@ def createAlertsFusionTable(name, parent_id, since_date_str, to_date_str, alerts
             }
         ]
     }
-    '''
+    """
 
     # This schema maps to the processed CSV from GFW - ideal for FT.
     #LOCATION to contain string of two numbers separated by space "lat long"
@@ -143,15 +141,24 @@ def createAlertsFusionTable(name, parent_id, since_date_str, to_date_str, alerts
     newtable = create_table(service, parent_id, schema=targetschema, data=alerts)
     return newtable
 
+def saveRawAlerts(name, parent_id, since_date_str, to_date_str, alerts):
+    """
+    Creates a copy of the raw CASV data from from GFW - for debugging and comparing DBSCAN can remove from production
+    """
+    filename = 'RAWGLAD_ALERTS_from_' + since_date_str + '_to_' + to_date_str
+    file_id = apiservices.create_file(filename, parentID=parent_id, drive_service=None, raw_data=alerts)
 
-'''
-Checks GFW GLAD API for new alerts in area for new period.
-Updates area with fusion table and new date.
-Calls alerts2cluster
-@params create_task: if True waits for cluster to bve stored then generates an ObservationTask
-@returns a string which may be an error message.
-'''
 def handleCheckForGladAlertsInArea(handler, area, create_task=True):
+
+
+    """
+    Checks GFW GLAD API for new alerts in area for new period.
+    Updates area with fusion table and new date.
+    Calls alerts2cluster
+    @params create_task: if True waits for cluster to bve stored then generates an ObservationTask
+    @returns a string which may be an error message.
+    """
+
 
     if area.glad_monitored == False:
         handler.response.set_status(400)
@@ -189,9 +196,9 @@ def handleCheckForGladAlertsInArea(handler, area, create_task=True):
                 msg += "Created Fusion Table: " + \
                       apiservices.fusiontable_url(ft['tableId'], ft['name']) + \
                       ' with ' + str(count) + 'alerts.'
-                '''
+                """
                 Cluster the Alerts
-                '''
+                """
                 msg += alerts2Clusters(area, create_task)
                 return msg
             else:
@@ -209,53 +216,52 @@ def handleCheckForGladAlertsInArea(handler, area, create_task=True):
         handler.response.set_status(500)
         return "Exception in glad API"
 
-'''
-getAlerts() calls Global Forest Watch API https://github.com/wri/gfw-api
-@param: alert_type, example 'glad-alerts', 'forma-alerts'
-@param: polygon is a GeoJSON encoded Polygon or MultiPolygon
-@param: since_date, alerts from this date inclusive. 'YYYY-MM-DD'
-@param: to_date, alerts to this date inclusive. 'YYYY-MM-DD'
-@param: format, one of 'geojson', 'csv', 'kml', 'shp', or 'svg'. Only kml is really supported.
-
-Get GLAD ALERTS for an area since the give date.
-Calls GFW with the boundary  of a given an AreaOfInterest
-
-  returns a list of GLAD alerts as a JSON dictionary
-    {
-        "rows": [
-        {
-            "date": "2015-11-13T00:00:00Z",
-            "the_geom": "0101000020E61000008532E9B54DCA52C0DAE4A7A56AA51EC0",
-            "lat": -7.66153963887447,
-            "long": -75.160993077976
-        }...
-        ]
-    }
-
-  parameters: area
-  parameters: since_date, in YYYY-MM-DD format.
-
-  API: http://github.com/wri/gfw-api
-
-  See also: http://beta.gfw-apis.appspot.com/forest-change/glad-alerts/admin/COD/5?thresh=10
-
-  GET http://api.globalforestwatch.org/forest-change/glad-alerts?period=2015-10-01,2016-04-06
-
-  HTTP parameter period:
-  Period of interest, as comma separated begin and end dates, inclusive.
-  Dates are in YYYY-MM-DD format. Examples: period=2006-10-08,2008-10-01
-  for an alert count between 2006-10-08 and 2008-10-01 inclusive,
-
-  PAYLOAD = HTTP parameter period:
-  geojson
-  GeoJSON encoded Polygon or MultiPolygon for calculating alerts within their area.
-
-  {"geojson":'{"type":"Polygon","coordinates":[[[12.8,8.9],[13.3,-7.3],[32.5,-6.6],[32.5,7.7],[12.8,8.9]]]}'}
-
-'''
 
 def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, parent_id):
-    headers = {}
+    """
+    getAlerts() calls Global Forest Watch API https://github.com/wri/gfw-api
+    @param: alert_type, example 'glad-alerts', 'forma-alerts'
+    @param: polygon is a GeoJSON encoded Polygon or MultiPolygon
+    @param: since_date, alerts from this date inclusive. 'YYYY-MM-DD'
+    @param: to_date, alerts to this date inclusive. 'YYYY-MM-DD'
+    @param: format, one of 'geojson', 'csv', 'kml', 'shp', or 'svg'. Only kml is really supported.
+
+    Get GLAD ALERTS for an area since the give date.
+    Calls GFW with the boundary  of a given an AreaOfInterest
+
+      returns a list of GLAD alerts as a JSON dictionary
+        {
+            "rows": [
+            {
+                "date": "2015-11-13T00:00:00Z",
+                "the_geom": "0101000020E61000008532E9B54DCA52C0DAE4A7A56AA51EC0",
+                "lat": -7.66153963887447,
+                "long": -75.160993077976
+            }...
+            ]
+        }
+
+      parameters: area
+      parameters: since_date, in YYYY-MM-DD format.
+
+      API: http://github.com/wri/gfw-api
+
+      See also: http://beta.gfw-apis.appspot.com/forest-change/glad-alerts/admin/COD/5?thresh=10
+
+      GET http://api.globalforestwatch.org/forest-change/glad-alerts?period=2015-10-01,2016-04-06
+
+      HTTP parameter period:
+      Period of interest, as comma separated begin and end dates, inclusive.
+      Dates are in YYYY-MM-DD format. Examples: period=2006-10-08,2008-10-01
+      for an alert count between 2006-10-08 and 2008-10-01 inclusive,
+
+      PAYLOAD = HTTP parameter period:
+      geojson
+      GeoJSON encoded Polygon or MultiPolygon for calculating alerts within their area.
+
+      {"geojson":'{"type":"Polygon","coordinates":[[[12.8,8.9],[13.3,-7.3],[32.5,-6.6],[32.5,7.7],[12.8,8.9]]]}'}
+
+    """
     url= 'http://api.globalforestwatch.org/forest-change/' + alert_type + \
          '?period=' + since_date + ',' + to_date
 
@@ -295,12 +301,12 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, pare
                     if format == 'csv':
                         ft, count = handleAlertDataCSV(table_name, parent_id, since_date, to_date, alerts_result.content)
                         return get_download_url_result, ft, count
-                    #'''
+                    #"""
                     #elif format == 'kml':
                     #    X = handleAlertDataKML(alerts_result.content)
                     ##elif format == 'json':
                     #    X = handleAlertDataGeoJson(alerts_result.content)
-                    #'''
+                    #"""
                     else:
                         logging.error('getAlerts() format not recognised. Use csv %s', format)
                         return get_download_url_result, None, 0
@@ -327,18 +333,18 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, pare
         logging.error("GetAlerts Server cannot be contacted")
         return {'content': 'exception in getAlerts URL', 'status_code':'500' }, None, 0
 
-'''
-convertCSVForFusion()
-
-@param csvdata: Expects data, database, lat, long\n
-
-1. Removes the headings in first row
-2. Creates new headings to match FT.
-2. Strips out the cartodb DB reference column
-3. Joins lat and long into a single column
-4. returns new data and number of alerts converted.
-'''
 def convertCSVForFusion(csvdata):
+    """
+    convertCSVForFusion()
+
+    @param csvdata: Expects data, database, lat, long\n
+
+    1. Removes the headings in first row
+    2. Creates new headings to match FT.
+    2. Strips out the cartodb DB reference column
+    3. Joins lat and long into a single column
+    4. returns new data and number of alerts converted.
+    """
     converted_data = "date,latlong\n" #new headings
     alertcount = 0
     rows = csvdata.split('\n')
@@ -358,15 +364,16 @@ def convertCSVForFusion(csvdata):
     logging.info("convertCSVForFusion()num alerts: %d , %s", alertcount, len(converted_data))
     return converted_data, alertcount
 
-'''
-@returns: a id of a new  fusion table, and the number of alerts received, or None, 0
-'''
 def handleAlertDataCSV(table_name, parent_id, since_date, to_date, csvdata):
+    """
+    @returns: a id of a new  fusion table, and the number of alerts received, or None, 0
+    """
 
     if csvdata:
         converted_data, count = convertCSVForFusion(csvdata)
         if count:
             ft = createAlertsFusionTable(table_name, parent_id, since_date, to_date, converted_data)
+            saveRawAlerts(table_name, parent_id, since_date, to_date, converted_data)
             return ft, count
         else:
             logging.warning('handleAlertDataCSV() No alerts')
@@ -376,18 +383,18 @@ def handleAlertDataCSV(table_name, parent_id, since_date, to_date, csvdata):
         return None, 0
 
 
-"""
-alerts2Clusters() calls Earth Engine to process the alerts to a FeatureCollection
-It Clusters alert points into polygons.
-Based on an answer from Noel Gorelich, GoogleGroups April 27 2016
-https://groups.google.com/d/msg/google-earth-engine-developers/3Oq1t9dBUqE/ft50BYTxDQAJ
-Updated EarthEngine Code at https://code.earthengine.google.com/046c8e9074f9a9f2f4442dd53ce7ef94
-
-@param area: an Area of Interest - reads the last raw alerts fusion table ID.
-eps = 600 (eps): the radius to look for neighbours.
-"""
 
 def alerts2Clusters(area, create_task=True):
+    """
+    alerts2Clusters() calls Earth Engine to process the alerts to a FeatureCollection
+    It Clusters alert points into polygons.
+    Based on an answer from Noel Gorelich, GoogleGroups April 27 2016
+    https://groups.google.com/d/msg/google-earth-engine-developers/3Oq1t9dBUqE/ft50BYTxDQAJ
+    Updated EarthEngine Code at https://code.earthengine.google.com/046c8e9074f9a9f2f4442dd53ce7ef94
+
+    @param area: an Area of Interest - reads the last raw alerts fusion table ID.
+    eps = 600 (eps): the radius to look for neighbours.
+    """
 
     eps = 600 #(eps): the radius to look for neighbours.
 
@@ -433,9 +440,9 @@ def alerts2Clusters(area, create_task=True):
     #hulls = clusters.map(lambda f: f.convexHull(10)) # not using convex Hulls.
 
 
-    '''
+    """
     Join Cluster Feature Collection with List of Points
-    '''
+    """
 
     #Define a spatial filter, with distance < 10.
     distFilter = ee.Filter.withinDistance(
@@ -490,7 +497,7 @@ def alerts2Clusters(area, create_task=True):
         'most_alerts_in_cluster': most_populous_cluster.get('max').getInfo()
     }
 
-    '''
+    """
     clustersWithPoints = clustersWithPoints.set('name', 'gladclusters',
         'epsilon', eps,
         'area', area.name,
@@ -504,7 +511,7 @@ def alerts2Clusters(area, create_task=True):
         'num_alerts_alldates', num_alerts,
         'most_alerts_in_cluster', most_populous_cluster.get('max').getInfo()
     )
-    '''
+    """
     clustersWithPoints = clustersWithPoints.set(clusterProperties)
 
     clustersWithPoints = clustersWithPoints.map(
@@ -516,7 +523,7 @@ def alerts2Clusters(area, create_task=True):
 
     task = ee.batch.Export.table.toDrive(clustersWithPoints, description=area.name + ' Clusters',
                                          folder=foldername, fileNamePrefix=filename, fileFormat='geoJSON')
-    '''@change drive to cloud?
+    """@change drive to cloud?
         task = ee.batch.Export.table.toCloudStorage({
             'collection': test_fc,
             'description': 'clustersWithPoints',
@@ -524,7 +531,7 @@ def alerts2Clusters(area, create_task=True):
             'fileNamePrefix': 'cluster_with_alert_points ',
             'fileFormat': 'KML'
         })
-    '''
+    """
     task.start()
 
     if create_task:
@@ -571,20 +578,20 @@ def check_export_status(task_id, clusterProperties):
 
 
 
-'''
-handleAlerts2Clusters() takes the latest ft and clusters it.
-This can be called separately by /admin/alerts/glad2clusters/<area_name>
-or as part of the call to handleCheckForGladAlertsInArea() if new alerts are found.
-
-@param: area_name
-Assumes area has a new fusion table
-It process the data in the table to clusters.
-not sure how to display the cluster yet.
-maybe a new FT.
-'''
 
 
 def handleAlerts2Clusters(handler, area_name):
+    """
+    handleAlerts2Clusters() takes the latest ft and clusters it.
+    This can be called separately by /admin/alerts/glad2clusters/<area_name>
+    or as part of the call to handleCheckForGladAlertsInArea() if new alerts are found.
+
+    @param: area_name
+    Assumes area has a new fusion table
+    It process the data in the table to clusters.
+    not sure how to display the cluster yet.
+    maybe a new FT.
+    """
 
     area = cache.get_area(area_name)
     if not area:
@@ -608,7 +615,7 @@ def handleCheckForGladAlertsInAllAreas(handler):
 
 
 def testupdate(tableid):
-    '''
+    """
     NOT CALLED
     # sql(sql=None, hdrs=None, typed=None)
     UPDATE <table_id>
@@ -616,28 +623,28 @@ def testupdate(tableid):
     WHERE ROWID = <row_id>
 
     select p.name, p.id, l.id from
-    '''
+    """
     service = apiservices.create_table_service()
     rows =  service.query().sql(sql="SELECT *  FROM %s" % (tableid)).execute()
     newtable = service.query().sql(sql="UPDATE %s SET latlong = lat ' ' long WHERE ROWID=%s" % (tableid, rows)).execute()
     logging.info("Updated Table %s ", tableid)
     return
 
-'''
- @returns: true if geom is in the glad footprint - 2016.
- @param: geom an ee.Geometry
-'''
 def geometryIsInGladAlertsFootprint(geom):
+    """
+     @returns: true if geom is in the glad footprint - 2016.
+     @param: geom an ee.Geometry
+    """
     return gladalerts_footprint_fc().geometry().intersects(geom, 100).getInfo()
 
-'''
- GLAD Alerts footprint.
- Geographic range of glad alerts in 2016
- @returns: an ee.FeatureCollection of the GLAD ALERT footprint- 2016.
- @FIXME - Currently the returned footprint includes all of Peru,
-          not just 'humid tropical Peru'
-'''
 def gladalerts_footprint_fc():
+    """
+     GLAD Alerts footprint.
+     Geographic range of glad alerts in 2016
+     @returns: an ee.FeatureCollection of the GLAD ALERT footprint- 2016.
+     @FIXME - Currently the returned footprint includes all of Peru,
+              not just 'humid tropical Peru'
+    """
 
     if not eeservice.initEarthEngineService():
         logging.error('Sorry, Server Credentials Error')
@@ -664,10 +671,10 @@ def gladalerts_footprint_fc():
 
 
 
-'''
-@returns a dictionary of forst stats from UMD forest change
-'''
 def forestchange_stats(testfeature):
+    """
+    @returns a dictionary of forst stats from UMD forest change
+    """
     umdImage = ee.Image('UMD/hansen/global_forest_change_2015').clip(testfeature).multiply(ee.Image.pixelArea())
     area = parseFloat(testfeature.area().getInfo())
 
@@ -703,7 +710,7 @@ def forestchange_stats(testfeature):
 
 
 def testupdate(tableid):
-    '''
+    """
     NOT CALLED
     # sql(sql=None, hdrs=None, typed=None)
     UPDATE <table_id>
@@ -711,7 +718,7 @@ def testupdate(tableid):
     WHERE ROWID = <row_id>
 
     select p.name, p.id, l.id from
-    '''
+    """
     service = apiservices.create_table_service()
     rows =  service.query().sql(sql="SELECT *  FROM %s" % (tableid)).execute()
     newtable = service.query().sql(sql="UPDATE %s SET latlong = lat ' ' long WHERE ROWID=%s" % (tableid, rows)).execute()

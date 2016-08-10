@@ -349,6 +349,22 @@ function initialize() {
         
     }); //get_overlay_btn.click
 
+    
+    $('#protected-areaview').click(function(event) {
+        if(typeof(map_under_lhs.dynamap) === 'undefined') {
+            add_protected_areas(map_under_lhs);
+        }
+        if(toggle_protected_areas(map_under_lhs.dynamap) === true) {
+            $('#pa-title').text('Loading');
+        }
+        else {
+            $('#pa-title').text('Show Parks');
+        }
+        return false;
+    });
+
+    add_protected_areas(map_under_lhs);
+    
      /* global createDrawingManager */
     $('#make-report').click(function(){
     	console.log("make report");

@@ -1,4 +1,4 @@
-/**
+/*
  * @name new-area
  * @version 1.0
  * @author Chris Goodman
@@ -786,16 +786,6 @@ function setup_handlers(map) {
 		return false;
 	});
 
-	$('#protected-areaview').click(function(event) {
-		if(toggle_protected_areas(initialize_map.dynamap) == true) {
-			$('#pa-title').text('Loading');
-		}
-		else {
-			$('#pa-title').text('Show Parks');
-		}		
-		return false;
-	});
-
 
 	$('#advanced').click(function(event) {
 		toggle_advanced();
@@ -819,45 +809,12 @@ function setup_handlers(map) {
 }
 
 /**
- * @adds a ESRI MapService as a layer 
+ * @adds a ESRI MapService as a layer
  * Adds it to map and displays with opacity 0.2
  * @returns  a reference to the layer as a gmaps.ags.MapOverlay
  */
-function add_protected_areas(map) {
-	
-	var opacity = 1.0;
-	//var url = '//maps.natureserve.org/biodashgis1/rest/services/Reference/WDPA/MapServer';
-
-	var url = 'http://ec2-54-204-216-109.compute-1.amazonaws.com:6080/arcgis/rest/services/wdpa/wdpa/MapServer/0';
-	 //var url = 'http://sampleserver[4].arcgisonline.com/ArcGIS/rest/services/Portland/ESRI_LandBase_WebMercator/MapServer';
-	 //var url = 'http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/Petroleum/KGS_OilGasFields_Kansas/MapServer';
-	var dynamap = new gmaps.ags.MapOverlay(url, {
-	      name: 'ProtectedAreas',
-	      opacity: 0.2
-	    });
-	dynamap.setMap(map);
-	
-	google.maps.event.addListener(dynamap, 'drawstart', function(){
-	    // DONT SHOW ICON TILL FIXED - $('.pa-loading-icon').removeClass('hide').show();
-	});
-	
-	google.maps.event.addListener(dynamap, 'drawend', function(){
-	    $('.pa-loading-icon').hide();
-		$('#pa-title').text('Hide Parks');
-	});
-	  
-	return dynamap; // caller store ref 
-} 
 
 
-function toggle_protected_areas(dynamap) {
-    var service = dynamap.getMapService();
-    for (var i = 0; i < service.layers.length; i++) {
-    	service.layers[i].visible = !service.layers[i].visible ;
-    }
-    dynamap.refresh();
-    return service.layers[0].visible;
-  }
 /**
  * Normalize longitude between +- 180 degrees. 
  * This is needed so the fusion tables query works
@@ -925,7 +882,20 @@ function initialize_map(place, center_prm) {
 	setup_handlers(initialize_map.map);
 	
 	initialize_map.dynamap = add_protected_areas(map);  
-  
+
+	$('#protected-areaview').click(function(event) {
+        if(toggle_protected_areas(initialize_map.dynamap) === true) {
+            $('#pa-title').text('Loading');
+			console.log('Loading parks');
+        }
+        else {
+            $('#pa-title').text('Show Parks');
+        }
+        return false;
+    });
+
+
+
 	google.maps.event.addListener(map, 'idle', function() {
  
 		normalize_lng(map);
@@ -935,17 +905,13 @@ function initialize_map(place, center_prm) {
 			map.setZoom(1);
 		}
 		if (z > 6) {
-
+			$('#drop-pin-mode').removeClass('hidden')
 			if ($('#landsat-grid').is(':checked') === true) {
 				createLandsatGridOverlay(map, 0.5, false, null);
 			}
-			
-			$('#drop-pin-mode').removeClass('btn-default').addClass(
-					'btn-primary');
 		} else {
+			$('#drop-pin-mode').addClass('hidden');
 			deleteLandsatGridOverlay(map, 0, true, null);
-			$('#drop-pin-mode').addClass('btn-default').removeClass(
-					'btn-primary');
 		}
 		return true;
 	});

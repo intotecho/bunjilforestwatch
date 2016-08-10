@@ -2470,8 +2470,8 @@ class FollowHandler(BaseHandler):
     def get(self, username, area):
         user = cache.get_user(username)
         if not user or 'user' not in self.session:
-            self.error(404)
-            return
+            self.add_message('error', 'Area not found.')
+            return self.error(404)
 
         thisuser = self.session['user']['name']
 
@@ -2479,6 +2479,8 @@ class FollowHandler(BaseHandler):
 
         # don't allow users to follow themselves
         if thisuser == username:
+            self.add_message('error', 'Area not found.')
+            return self.error(403)
             return
 
         if 'unfollow' in self.request.GET:
@@ -2558,6 +2560,9 @@ class FollowAreaHandler(BaseHandler):
 
         area = cache.get_area(area_name)
         if not area:
+            self.add_message('error', 'Area not found.')
+            self.response.set_status(404)
+            self.response.out.write('{"status": "error", "reason": "area not found" }')
             return False
 
         user = cache.get_user(username)
@@ -3387,13 +3392,17 @@ class AcmeChallenge(ndb.Model):
 class AcmeChallengeHandler(webapp2.RequestHandler):
     def get(self, challenge_id):
         challenge_key = ndb.Key(AcmeChallenge, challenge_id)
-        acme_challenge = challenge_key.get()
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write(acme_challenge.full_solution())
+        acme_challenge = challenge_key.get()
+
+        if acme_challenge is None:
+            self.response.write("ACME key not stored")
+        else:
+            self.response.write(acme_challenge.full_solution())
 
     def post(self, challenge_id, **kwargs):
         self.response.headers['Content-Type'] = 'text/plain'
-        return self.response.write('Disabled by admin') # uncomment below.
+        return self.response.write('POST Disabled by admin') # uncomment below.
         challenge, solution = challenge_id.split(".")
         challenge = AcmeChallenge(id=challenge, solution=solution)
         challenge.put()
