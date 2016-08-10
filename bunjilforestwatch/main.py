@@ -3529,7 +3529,7 @@ app = webapp2.WSGIApplication([
 
     webapp2.Route('/.well-known/acme-challenge/<challenge_id>', AcmeChallengeHandler, methods=['GET', 'POST']),
     # google site verification
-    webapp2.Route(r'/%s.html' % settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
+    # webapp2.Route(r'/%s.html' % settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
 
     # webapp2.Route(r'/login/google/<protected_url>', handler=GoogleLogin, name='login-google'),
     webapp2.Route(r'/login/google', handler=GoogleLogin, name='login-google'),
