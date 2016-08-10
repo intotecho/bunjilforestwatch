@@ -227,7 +227,7 @@ import jinja2
 try:
     from secrets import *
 except ImportError, exp:
-    logging.error('no secerets.py')
+    logging.error('no secrets.py')
     pass
 '''
 import jac
