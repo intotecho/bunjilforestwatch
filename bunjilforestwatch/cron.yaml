@@ -4,6 +4,6 @@ cron:
   schedule: every day 00:00
 #  timezone: Australia/NSW
 - description: test for glad alerts in glad monitored areas
-  url: /admin/glad/checknew
+  url: /admin/alerts/glad/checknew/noupdate
   schedule: every day 11:50
 #  timezone: Australia/NSW

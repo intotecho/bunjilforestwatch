@@ -4,9 +4,15 @@ import settings
 import eeservice
 from googleapiclient import errors
 from googleapiclient.http import MediaIoBaseDownload
-import io
+from googleapiclient.http import MediaIoBaseUpload
 import logging
 
+import io
+from io import StringIO
+try:
+    from io import BytesIO
+except ImportError:
+    BytesIO = StringIO
 
 def create_table_service():
     if not eeservice.initEarthEngineService():

@@ -145,20 +145,18 @@ def saveRawAlerts(name, parent_id, since_date_str, to_date_str, alerts):
     """
     Creates a copy of the raw CASV data from from GFW - for debugging and comparing DBSCAN can remove from production
     """
-    filename = 'RAWGLAD_ALERTS_from_' + since_date_str + '_to_' + to_date_str
+    filename = 'RAWGLAD_' + name + '_from_' + since_date_str + '_to_' + to_date_str
     file_id = apiservices.create_file(filename, parentID=parent_id, drive_service=None, raw_data=alerts)
 
-def handleCheckForGladAlertsInArea(handler, area, create_task=True):
 
-
+def handleCheckForGladAlertsInArea(handler, area, noupdate=None):
     """
     Checks GFW GLAD API for new alerts in area for new period.
     Updates area with fusion table and new date.
     Calls alerts2cluster
-    @params create_task: if True waits for cluster to bve stored then generates an ObservationTask
+    @params noupdate: If set, function does not update area.last_alerts_date to today
     @returns a string which may be an error message.
     """
-
 
     if area.glad_monitored == False:
         handler.response.set_status(400)
@@ -180,26 +178,30 @@ def handleCheckForGladAlertsInArea(handler, area, create_task=True):
     table_name = area.name + "-" + since_date + "-" + today_str
     parent_id = area.folder()
     try:
-        alerts_result, ft, count = getAlerts('glad-alerts', geom, table_name, since_date, today_str, 'csv', parent_id)
+        #alerts_result, ft, count
+        resp = getAlerts('glad-alerts', geom, table_name, since_date, today_str, 'csv', parent_id)
     except TypeError, e:
         handler.response.set_status(500)
-        logging.error("getAlerts() TypeError exception %s" % geom)
-        return "getAlerts()  TypeError exception - no data? %s" % e
-
-    if alerts_result:
+        logging.error("getAlerts() TypeError exception %s %s" %(e, geom))
+        return "handleCheckForGladAlertsInArea()  TypeError exception - no data? %s" % e
+    if resp['status'] == 200:
         msg = "<b>handleCheckForGladAlertsInArea()</b> between %s and %s " %(since_date, today_str)
-        if alerts_result.status_code == 200:
-            if ft and count > 0:
-                area.last_alerts_date = today_dt
-                area.last_alerts_raw_ft = ft['tableId']
+        if resp['download_response'].status_code == 200:
+            if resp['fusiontable'] and resp['count'] > 0:
+                if not noupdate:
+                    area.last_alerts_date = today_dt
+                else:
+                    logging.info('Noupdate requested - not updating last_alerts_date')
+
+                area.last_alerts_raw_ft = resp['fusiontable']['tableId']
                 area.put()
                 msg += "Created Fusion Table: " + \
-                      apiservices.fusiontable_url(ft['tableId'], ft['name']) + \
-                      ' with ' + str(count) + 'alerts.'
+                      apiservices.fusiontable_url(resp['fusiontable']['tableId'], resp['fusiontable']['name']) + \
+                      ' with ' + str(resp['count']) + 'alerts.'
                 """
                 Cluster the Alerts
                 """
-                msg += alerts2Clusters(area, create_task)
+                msg += alerts2Clusters(area, True)
                 return msg
             else:
                 area.last_alerts_date = today_dt
@@ -208,13 +210,12 @@ def handleCheckForGladAlertsInArea(handler, area, create_task=True):
             return msg
         else:
             msg += "<b>Error:</b> " + area.name + \
-                str(alerts_result.content) + ' payload:' + json.dumps(geom)
-
-            handler.response.set_status(alerts_result.status_code)
+                str(resp['download_response'].content) + ' payload:' + json.dumps(geom)
+            handler.response.set_status(resp['download_response'].status_code)
             return msg
     else:
-        handler.response.set_status(500)
-        return "Exception in glad API"
+        handler.response.set_status(resp['status'])
+        return "Exception in glad API %s" %resp['msg']
 
 
 def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, parent_id):
@@ -225,11 +226,19 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, pare
     @param: since_date, alerts from this date inclusive. 'YYYY-MM-DD'
     @param: to_date, alerts to this date inclusive. 'YYYY-MM-DD'
     @param: format, one of 'geojson', 'csv', 'kml', 'shp', or 'svg'. Only kml is really supported.
+    @parent_id: Google Drive Folder where documents are saved
 
     Get GLAD ALERTS for an area since the give date.
     Calls GFW with the boundary  of a given an AreaOfInterest
-
-      returns a list of GLAD alerts as a JSON dictionary
+    @returns: gladresponse = {
+        'geturl_response': None,
+        'download_response': None,
+        'fusiontable': None,
+        'alert count': 0,
+        'status_code': 0,
+        'errormsg': "OK"
+    }
+    If status_code is 200, then get_download_response contains a list of GLAD alerts as a JSON dictionary
         {
             "rows": [
             {
@@ -260,78 +269,144 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, pare
       GeoJSON encoded Polygon or MultiPolygon for calculating alerts within their area.
 
       {"geojson":'{"type":"Polygon","coordinates":[[[12.8,8.9],[13.3,-7.3],[32.5,-6.6],[32.5,7.7],[12.8,8.9]]]}'}
-
+      {"type":"Polygon","coordinates":[[[-76.5,-7],[-76.5,-6.5],[-76,-6.5],[-76,-7],[-76.5,-7]]]}
     """
+    resp = {
+        'geturl_response': None,
+        'download_response': None,
+        'fusiontable': None,
+        'count': 0,
+        'status': 0,
+        'msg': "OK"
+    }
+    if since_date == to_date:
+        resp['msg'] = 'getAlerts: SKIPPING - since_date and to_date are the same %s' %to_date
+        resp['status'] = 400
+        logging.warning(resp['msg'])
+        return resp
+        #return {'content': msg, 'status_code': '400'}, None, 0
+
     url= 'http://api.globalforestwatch.org/forest-change/' + alert_type + \
          '?period=' + since_date + ',' + to_date
 
-    payload = {}
-    payload['geojson'] = polygon
-    logging.debug('getAlerts: url=%s', url )
+    request_payload = urllib.urlencode({
+        'geojson': polygon
+    })
+
     try:
-        get_download_url_result = urlfetch.fetch(url,
+        resp['geturl_response'] = urlfetch.fetch(url,
                                 method='POST',
                                 deadline=15,
-                                payload= urllib.urlencode(payload)
+                                payload=request_payload
                                 )
 
-        if get_download_url_result.status_code == 200:
+        if resp['geturl_response'].status_code == 200:
             logging.debug('getAlerts: getdownload url OK')
             try:
-                apiresult = json.loads(get_download_url_result.content)
+                apiresult = json.loads(resp['geturl_response'].content)
                 download_url = apiresult["download_urls"][format]
             except KeyError, k:
-                logging.error("Could not parse download_url in response")
-                get_download_url_result.content += ': KeyError'
-                return get_download_url_result, None, 0
-            except TypeError, e:
-                logging.error("Could not parse download_url in response %s ", e)
-                get_download_url_result.content += ': TypeError'
-                return get_download_url_result, None, 0
+                #logging.error("Could not parse download_url in response")
+                #resp['geturl_response'].content += ': KeyError'
+                #return resp['geturl_response'], None, 0
+                resp['msg'] = 'Could not parse download_url in response'
+                resp['status'] = 400
+                logging.error(resp['msg'])
+                return resp
 
-            logging.debug('getAlerts: download url: %s', download_url)
+            except TypeError, e:
+                #logging.error("Could not parse download_url in response %s ", e)
+                #resp['geturl_response'].content += ': TypeError'
+                #return resp['geturl_response'], None, 0
+                resp['msg'] = "Could not parse download_url in response %s " %e
+                resp['status'] = 400
+                logging.error(resp['msg'])
+                return resp
+
+            #logging.debug('getAlerts: download url: %s', download_url)
             try:
-                alerts_result = urlfetch.fetch(download_url,
+                resp['download_response'] = urlfetch.fetch(download_url,
                                 method='GET',
                                 deadline=60
                                 )
-                #print 'alerts_content ', alerts_result.content
-                if alerts_result.status_code == 200:
-                    #print 'alerts_result: ', alerts_result
-                    if format == 'csv':
-                        ft, count = handleAlertDataCSV(table_name, parent_id, since_date, to_date, alerts_result.content)
-                        return get_download_url_result, ft, count
-                    #"""
-                    #elif format == 'kml':
-                    #    X = handleAlertDataKML(alerts_result.content)
-                    ##elif format == 'json':
-                    #    X = handleAlertDataGeoJson(alerts_result.content)
-                    #"""
+                try:
+                    logging.debug('resp.download_response: %s ', resp['download_response'].status_code)
+
+                    if resp['download_response'].status_code == 200:
+                        #print 'resp['download_response']: ', resp['download_response']
+                        if format == 'csv':
+                            resp['fusiontable'], resp['count'] = handleAlertDataCSV(table_name, parent_id, since_date, to_date, resp['download_response'].content)
+                            #return resp['download_response'], ft, count
+                            resp['status'] = 200
+                            return resp
+
+                        else:
+                            #logging.error('getAlerts() format not recognised. Use csv %s', format)
+                            #return resp['download_response'], None, 0
+                            resp['msg'] = 'getAlerts() format not recognised. Use csv %s', format
+                            resp['status'] = 400
+                            logging.error(resp['msg'])
+                            return resp
                     else:
-                        logging.error('getAlerts() format not recognised. Use csv %s', format)
-                        return get_download_url_result, None, 0
-                else:
-                    logging.error("getAlerts() Downloading URL error %s", alerts_result.status_code)
+                        #logging.error("getAlerts() Downloading URL error %s", download_alerts_response.status_code)
+                        resp['msg'] = "getAlerts() Downloading URL error %s" %resp['download_response'].status_code
+                        resp['status'] = resp['download_response'].status_code
+                        logging.error(resp['msg'])
+                        return resp
+                except Exception as e:
+                    #logging.error('Exception processing download result: %s' %e)
+                    resp['msg'] = "getAlerts()Exception processing download result: %s" %e
+                    resp['status'] = 500
+                    logging.error(resp['msg'])
+                    return resp
 
             except urlfetch.InvalidURLError:
-                logging.error("Download URL is an empty string")
-                return {'content': 'exception in Download URL', 'status_code': '500'}, None, 0
+                #logging.error("Download URL is an empty string")
+                #return {'content': 'Download URL is an empty string', 'status_code': '500'}, None, 0
+                resp['msg'] = "Download URL is an empty string"
+                resp['status'] = 500
+                logging.error(resp['msg'])
+                return resp
 
             except urlfetch.DownloadError:
-                logging.error("Download Server cannot be contacted")
-                return {'content': 'exception in Download URL', 'status_code': '500'}, None, 0
+                #logging.error("Download Server cannot be contacted")
+                #return {'content': 'Download Server cannot be contacted', 'status_code': '500'}, None, 0
+                resp['msg'] = "Download Server cannot be contacted %s" %download_url
+                resp['status'] = 503
+                logging.error(resp['msg'])
+                return resp
 
-        else:
-            return get_download_url_result, None, 0
+            except Exception as e:
+                #logging.error('Download Server exception %s', e)
+                #return {'content': 'Exception in Download URL', 'status_code': '500'}, None, 0
+                resp['msg'] = "Exception contacting Download Server: %s" %e
+                resp['status'] = 503
+                logging.error(resp['msg'])
+                return resp
 
-        return get_download_url_result, None, 0
+        #logging.error("Download URL returned error: %s" %(resp['download_response'].status_code))
+        #return {'content': 'Download URL returned error', 'status_code': resp['download_response'].status_code}, None, 0
+        resp['msg'] = 'Download URL returned error: %s' %(resp['download_response'].status_code)
+        resp['status'] = resp['download_response'].status_code
+        logging.error(resp['msg'])
+        return resp
 
     except urlfetch.InvalidURLError:
-        logging.error("GetAlerts URL is an empty string or invalid")
-        return {'content': 'exception in getAlerts URL', 'status_code':'500' }, None, 0
+        #logging.error("GetAlerts URL is an empty string or invalid")
+        #return {'content': 'GetAlerts URL is an empty string or invalidL', 'status_code':'500' }, None, 0
+        resp['msg'] = 'GetAlerts URL is an empty string or invalid'
+        resp['status'] = 400
+        logging.error(resp['msg'])
+        return resp
+
     except urlfetch.DownloadError:
-        logging.error("GetAlerts Server cannot be contacted")
-        return {'content': 'exception in getAlerts URL', 'status_code':'500' }, None, 0
+        #logging.error("GetAlerts Server cannot be contacted")
+        #return {'content': 'GetAlerts Server cannot be contacted', 'status_code':'500' }, None, 0
+        resp['msg'] = 'GetAlerts Server cannot be contacted %s' %url
+        resp['status'] = 400
+        logging.error(resp['msg'])
+        return resp
+
 
 def convertCSVForFusion(csvdata):
     """
@@ -359,7 +434,7 @@ def convertCSVForFusion(csvdata):
             lng = p[3]
             s = date + ', ' + lat + ' ' + lng + '\n'
             alertcount += 1
-            print s
+            #print s
             converted_data += s
     logging.info("convertCSVForFusion()num alerts: %d , %s", alertcount, len(converted_data))
     return converted_data, alertcount
@@ -372,8 +447,9 @@ def handleAlertDataCSV(table_name, parent_id, since_date, to_date, csvdata):
     if csvdata:
         converted_data, count = convertCSVForFusion(csvdata)
         if count:
+            logging.debug('handleAlertDataCSV() %d alerts', count)
             ft = createAlertsFusionTable(table_name, parent_id, since_date, to_date, converted_data)
-            saveRawAlerts(table_name, parent_id, since_date, to_date, converted_data)
+            saveRawAlerts(table_name, parent_id, since_date, to_date, csvdata)
             return ft, count
         else:
             logging.warning('handleAlertDataCSV() No alerts')
@@ -538,7 +614,7 @@ def alerts2Clusters(area, create_task=True):
         #wait for export to finish then create a task.
         deferred.defer(check_export_status, task.id, clusterProperties, _countdown=10, _queue="export-check-queue")
         logging.info("Started task to export GLAD Cluster")
-    return
+    return "Exporting alerts to GLAD Cluster"
 
 
 def check_export_status(task_id, clusterProperties):

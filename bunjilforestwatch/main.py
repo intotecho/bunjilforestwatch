@@ -48,6 +48,7 @@ import datetime
 import re
 import geojson
 import bleach
+import apiservices
 
 from google.appengine.api import files
 from google.appengine.api import taskqueue
@@ -2129,19 +2130,22 @@ class CheckForNewInAreaHandler(BaseHandler):
         return self.response.write(returnstr.encode('utf-8'))
 
 
-'''
-CheckForGladAlertsInAllAreasHandler() looks at a single area of interest and gets GLAD-ALERTS
-'''
 class CheckForGladAlertsInAllAreasHandler(BaseHandler):
+    """
+    CheckForGladAlertsInAllAreasHandler() looks at a single area of interest and gets GLAD-ALERTS
+    Takes no argmuments.
+    @param noupdate: if set, then the last_alert_date in the area is not updated to todays date
+    Expected to be called by a job in cron.yaml
+    """
 
-    def get(self):
+    def get(self, noupdate=None):
         returnstr = '<h1>CheckForGladAlertsInAllAreasHandler</h1>'
 
         all_areas = cache.get_all_glad_areas()  # includes unlisted and private areas in GLAD footprint.
 
         for area in all_areas:
             if area.glad_monitored & area.hasBoundary():
-                returnstr += '<h2>' + area.name + ' </h3><br/>' + gladalerts.handleCheckForGladAlertsInArea(self, area) + '<br/>'
+                returnstr += '<h2>' + area.name + ' </h3><br/>' + gladalerts.handleCheckForGladAlertsInArea(self, area, noupdate) + '<br/>'
         #cache.flush()
         self.response.write(returnstr.encode('utf-8'))
 
@@ -2150,7 +2154,7 @@ CheckForGladAlertsInAreaHandler() looks at a single area of interest and gets GL
 '''
 class CheckForGladAlertsInAreaHandler(BaseHandler):
 
-    def get(self, area_name):
+    def get(self, area_name, noupdate=None):
         area = cache.get_area(area_name)
         if not area:
             area = cache.get_area(area_name)
@@ -2159,8 +2163,7 @@ class CheckForGladAlertsInAreaHandler(BaseHandler):
         else:
             logging.debug('CheckForGladAlertsInAreaHandler: check-new-area-images for area_name %s', area_name)
 
-        return gladalerts.handleCheckForGladAlertsInArea(self, area)
-
+        return gladalerts.handleCheckForGladAlertsInArea(self, area, noupdate)
 
 '''
 ProcessAlerts2ClustersHandler() looks at a single area of interest and gets GLAD-ALERTS
@@ -3401,17 +3404,22 @@ class AcmeChallengeHandler(webapp2.RequestHandler):
             self.response.write(acme_challenge.full_solution())
 
     def post(self, challenge_id, **kwargs):
+        """
+        Avoid using this POST to set keys as it is allows anyone to claim the domain.
+        INstead just post the ACME key and value into the datastore.
+        Args:
+            challenge_id:
+            **kwargs:
+        Returns:
+        """
         self.response.headers['Content-Type'] = 'text/plain'
         return self.response.write('POST Disabled by admin') # uncomment below.
+        '''
         challenge, solution = challenge_id.split(".")
         challenge = AcmeChallenge(id=challenge, solution=solution)
         challenge.put()
         self.response.write(challenge_id)
-
-class GoogleSiteVerification(BaseHandler):
-    def get(self):
-        self.response.out.write('google-site-verification: %s.html' % settings.GOOGLE_SITE_VERIFICATION)
-
+        '''
 
 class GoogleCallback(BaseHandler):
     def get(self):
@@ -3441,7 +3449,6 @@ class GoogleCallback(BaseHandler):
 
             self.redirect(webapp2.uri_for('account'))
 
-import apiservices
 
 class ListAssetsHandler(BaseHandler):
     def get(self):
@@ -3529,7 +3536,6 @@ app = webapp2.WSGIApplication([
 
     webapp2.Route('/.well-known/acme-challenge/<challenge_id>', AcmeChallengeHandler, methods=['GET', 'POST']),
     # google site verification
-    webapp2.Route(r'/%s.html' % settings.GOOGLE_SITE_VERIFICATION, handler=GoogleSiteVerification),
 
     # webapp2.Route(r'/login/google/<protected_url>', handler=GoogleLogin, name='login-google'),
     webapp2.Route(r'/login/google', handler=GoogleLogin, name='login-google'),
@@ -3567,7 +3573,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/admin/test/<test_name>/<area_name>', handler=RunAreaTest, name='area-test'),
 
     webapp2.Route(r'/admin/alerts/glad/checknew', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
+    webapp2.Route(r'/admin/alerts/glad/checknew/<noupdate>', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
     webapp2.Route(r'/admin/alerts/glad/<area_name>', handler=CheckForGladAlertsInAreaHandler, name='alerts-glad-area'),
+    webapp2.Route(r'/admin/alerts/glad/<area_name>/<noupdate>', handler=CheckForGladAlertsInAreaHandler, name='alerts-glad-area'),
     webapp2.Route(r'/admin/alerts/glad2clusters/<area_name>', handler=ProcessAlerts2ClustersHandler, name='alerts-glad2cluster-area'),
     webapp2.Route(r'/admin/alerts/glad/distribute_cluster/<area_name>', handler=DistributeGladClusters,
                                                           name='alerts-glad2cluster-area'),
