@@ -169,8 +169,6 @@ class BaseHandler(webapp2.RequestHandler):
     """
 
     def render(self, _template, context={}):
-        """
-        """
         """returns (arg1 / arg2) + arg3
 
         renders a template in a user's context by calling utils.rv()
