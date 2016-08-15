@@ -13,16 +13,15 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import logging
-import models
 
-import counters
+import webapp2
+from google.appengine.api import memcache
+from google.appengine.datastore import entity_pb
+from google.appengine.ext import ndb
+
 import feeds
 import utils
-import webapp2
-
-from google.appengine.api import memcache
-from google.appengine.ext import ndb
-from google.appengine.datastore import entity_pb
+import models
 
 # use underscores since usernames are guaranteed to not have them
 # still a problem with journal names?
@@ -143,19 +142,19 @@ def get_by_keys(keys, kind=None):
 
 
 def get_areas(user_key):  #return all areas's owned by user.
-    data = models.AreaOfInterest.query(models.AreaOfInterest.owner == user_key). \
-    order(-models.AreaOfInterest.last_modified). \
-    fetch(models.AreaOfInterest.MAX_AREAS)
+    data = models.old_models.AreaOfInterest.query(models.old_models.AreaOfInterest.owner == user_key). \
+    order(-models.old_models.AreaOfInterest.last_modified). \
+    fetch(models.old_models.AreaOfInterest.MAX_AREAS)
     return data
 
 def get_area_count(user_key):  #return all areas's owned by user.
-    return models.AreaOfInterest.query(models.AreaOfInterest.owner == user_key).count()
+    return models.old_models.AreaOfInterest.query(models.old_models.AreaOfInterest.owner == user_key).count()
     
 def get_other_areas(user_key): # returns list of areas user neither created nor follows. User can select an area from this list to follow.
-    all_area_keys = models.AreaOfInterest.query(). \
-        filter(models.AreaOfInterest.owner != user_key). \
-        filter(models.AreaOfInterest.share == models.AreaOfInterest.PUBLIC_AOI ).  \
-        fetch(models.AreaOfInterest.MAX_OTHER_AREAS, keys_only=True)
+    all_area_keys = models.old_models.AreaOfInterest.query(). \
+        filter(models.old_models.AreaOfInterest.owner != user_key). \
+        filter(models.old_models.AreaOfInterest.share == models.old_models.AreaOfInterest.PUBLIC_AOI).  \
+        fetch(models.old_models.AreaOfInterest.MAX_OTHER_AREAS, keys_only=True)
         #order(-models.AreaOfInterest.last_modified). \ # first sort property is last_modified but the inequality filter is on owner
 
     af = get_following_area_keys(user_key) # a list of area keys.
@@ -177,18 +176,18 @@ def get_areas_list(user_key):
 
 #get_all_areas() returns a list of keys for all areas - inlcuding private and unlisted areas.
 def get_all_areas():
-    data = models.AreaOfInterest.query().fetch(300) #FIXME limit of 300 will be a problem in future. This is used by CheckNew cron job.
+    data = models.old_models.AreaOfInterest.query().fetch(300) #FIXME limit of 300 will be a problem in future. This is used by CheckNew cron job.
     return data
 
 
 #get_all_glad_areas() returns a list of keys for all areas - inlcuding private and unlisted areas.
 def get_all_glad_areas():
-    data = models.AreaOfInterest.query().filter(models.AreaOfInterest.glad_monitored == True).fetch(300)
+    data = models.old_models.AreaOfInterest.query().filter(models.old_models.AreaOfInterest.glad_monitored == True).fetch(300)
     #@FIXME limit of 300 will be a problem in future. This is used by CheckNewGlad cron job.
     return data
 
 def get_journals(user_key):
-    data = models.Journal.query(ancestor=user_key).fetch(models.Journal.MAX_JOURNALS)
+    data = models.old_models.Journal.query(ancestor=user_key).fetch(models.old_models.Journal.MAX_JOURNALS)
     return data
 
 # returns a list of journal names
@@ -200,15 +199,15 @@ def get_journal_list(user_key):
 # returns all entry keys sorted by descending date
 def get_entries_keys(journal_key):
         # todo: fix limit to 1000 most recent journal entries
-    data = models.Entry.query(ancestor = journal_key).order(-models.Entry.date).fetch(300, keys_only=True)
+    data = models.old_models.Entry.query(ancestor = journal_key).order(-models.old_models.Entry.date).fetch(300, keys_only=True)
     return data
 
 # returns entry keys of given page
 def get_entries_keys_page(journal_key, page):
     entries = get_entries_keys(journal_key)
-    data = entries[(page  - 1) * models.Journal.ENTRIES_PER_PAGE:page * models.Journal.ENTRIES_PER_PAGE]
+    data = entries[(page  - 1) * models.old_models.Journal.ENTRIES_PER_PAGE:page * models.old_models.Journal.ENTRIES_PER_PAGE]
     if not data:
-        logging.warning('Page %i requested from %s, but only %i entries, %i pages.', page, journal_key, len(entries), len(entries) / models.Journal.ENTRIES_PER_PAGE + 1)
+        logging.warning('Page %i requested from %s, but only %i entries, %i pages.', page, journal_key, len(entries), len(entries) / models.old_models.Journal.ENTRIES_PER_PAGE + 1)
     return data
 
 # returns entries of given page
@@ -237,7 +236,7 @@ def get_obstask(task_name):
     #Second attempt
     obstask_key = ndb.Key(urlsafe = task_name) 
     task_id = obstask_key.id()
-    task = models.ObservationTask.get_by_id(task_id)
+    task = models.old_models.ObservationTask.get_by_id(task_id)
     if not task:
         logging.error('get_obstask(): no task found for %s with id %d', task_name, task_id)
     return task
@@ -274,7 +273,7 @@ def get_obstasks_keys(username=None, areaname=None):
     if username is not None:
         user_key = ndb.Key('User', username)
         #data = models.ObservationTask.all(keys_only=True).filter('assigned_owner =', user_key).order('-created_date').fetch(200)
-        data = models.ObservationTask.query(models.ObservationTask.assigned_owner == user_key).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
+        data = models.old_models.ObservationTask.query(models.old_models.ObservationTask.assigned_owner == user_key).order(-models.old_models.ObservationTask.created_date).fetch(200, keys_only=True)
         logging.debug("get_obstasks_keys for user %s %s", username, user_key)
         if len(data) == 0 :
             logging.info("get_obstasks_keys() user %s has no tasks", username)
@@ -287,12 +286,12 @@ def get_obstasks_keys(username=None, areaname=None):
             data = None
         else:
             #data = models.ObservationTask.all(keys_only=True).filter('aoi =', area_key).order('-created_date').fetch(200)
-            data = models.ObservationTask.query(models.ObservationTask.aoi == area_key).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
+            data = models.old_models.ObservationTask.query(models.old_models.ObservationTask.aoi == area_key).order(-models.old_models.ObservationTask.created_date).fetch(200, keys_only=True)
             logging.debug("get_obstasks_keys for %s area %s %s", area.shared_str, areaname, area_key)
             if len(data) == 0:
                 logging.info("get_obstasks_keys() area %s has no tasks", areaname)
     else:
-        data = models.ObservationTask.query(models.ObservationTask.share == models.AreaOfInterest.PUBLIC_AOI).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
+        data = models.old_models.ObservationTask.query(models.old_models.ObservationTask.share == models.old_models.AreaOfInterest.PUBLIC_AOI).order(-models.old_models.ObservationTask.created_date).fetch(200, keys_only=True)
         logging.debug("get_obstasks_keys() loading cache for all tasks")
     return data
 
@@ -303,9 +302,9 @@ def get_obstasks_keys(username=None, areaname=None):
 def get_obstasks_keys_page(page, username=None, areaname=None):
     obstasks = get_obstasks_keys(username, areaname)
     if obstasks != None:
-        data = obstasks[(page  - 1) * models.ObservationTask.OBSTASKS_PER_PAGE:page * models.ObservationTask.OBSTASKS_PER_PAGE]
+        data = obstasks[(page  - 1) * models.old_models.ObservationTask.OBSTASKS_PER_PAGE:page * models.old_models.ObservationTask.OBSTASKS_PER_PAGE]
         if not data:
-            logging.warning('Page %i requested but only %i obstasks, %i pages.', page, len(obstasks), len(obstasks) / models.ObservationTask.OBSTASKS_PER_PAGE + 1)
+            logging.warning('Page %i requested but only %i obstasks, %i pages.', page, len(obstasks), len(obstasks) / models.old_models.ObservationTask.OBSTASKS_PER_PAGE + 1)
         return data
     return None
 
@@ -386,22 +385,23 @@ def clear_journal_cache(user_key):
     logging.error('clear_journal_cache DISABLED')
 
 def get_activities(username='', action='', object_key=''):
-    data = models.Activity.query()
+    data = models.old_models.Activity.query()
 
     if username:
-        data = data.filter(models.Activity.user == username)
+        data = data.filter(models.old_models.Activity.user == username)
         logging.debug('activity filter user=%s', username)
     if action:
-        data = data.filter(models.Activity.action, action)
+        data = data.filter(models.old_models.Activity.action, action)
     if object_key:
-        data = data.filter(models.Activity.object, object_key)
+        data = data.filter(models.old_models.Activity.object, object_key)
 
-    data = data.order(-models.Activity.date).fetch(models.Activity.RESULTS)
+    data = data.order(-models.old_models.Activity.date).fetch(models.old_models.Activity.RESULTS)
     return data
 
 def get_activities_follower_keys(username):
-    ActivityIdx = models.ActivityIndex
-    index_keys = ActivityIdx.query(ActivityIdx.receivers == username).order(-ActivityIdx.date).fetch(models.Activity.RESULTS, keys_only=True, )
+    ActivityIdx = models.old_models.ActivityIndex
+    index_keys = ActivityIdx.query(ActivityIdx.receivers == username).order(-ActivityIdx.date).fetch(
+        models.old_models.Activity.RESULTS, keys_only=True, )
     data = [str(i.parent()) for i in index_keys]
     return data
 
@@ -425,7 +425,7 @@ def get_user(username):
     return user_key.get()
 
 def get_followers(username):
-    followers = models.UserFollowersIndex.get_by_id(username, parent=ndb.Key('User', username))
+    followers = models.old_models.UserFollowersIndex.get_by_id(username, parent=ndb.Key('User', username))
     if not followers:
         data = []
     else:
@@ -433,7 +433,7 @@ def get_followers(username):
     return data
 
 def get_following(username):
-    following = models.UserFollowingIndex.get_by_id(username, parent=ndb.Key('User', username))
+    following = models.old_models.UserFollowingIndex.get_by_id(username, parent=ndb.Key('User', username))
     if not following:
         data = []
     else:
@@ -441,7 +441,7 @@ def get_following(username):
     return data
 
 def get_area_followers(area_name):
-    data= models.AreaFollowersIndex.get_by_id(area_name, parent=ndb.Key('AreaOfInterest', area_name))
+    data= models.old_models.AreaFollowersIndex.get_by_id(area_name, parent=ndb.Key('AreaOfInterest', area_name))
     return data
 
 '''
@@ -450,7 +450,7 @@ get_following_area_keys()
 @returns: a list of area keys that the user follows.
 '''
 def get_following_area_keys(user_key):
-    following = models.UserFollowingAreasIndex.get_by_username(user_key.id())
+    following = models.old_models.UserFollowingAreasIndex.get_by_username(user_key.id())
     data = []
     if not following:
         logging.debug("get_following_area_keys(): %s not following any areas", user_key.string_id())
@@ -465,13 +465,13 @@ get_following_areas()
 @returns: a UserFollowingAreasIndex entity that contains a list the names of areas that the user follows.
 '''
 def get_following_areas(user_key):
-    following = models.UserFollowingAreasIndex.get_by_username(user_key.id())
+    following = models.old_models.UserFollowingAreasIndex.get_by_username(user_key.id())
     data = []
     if not following:
         logging.debug("get_following_areas(): %s not following any areas", user_key.string_id())
     else:
         following_areas = following.areas
-        allareas = models.AreaOfInterest.query()  #TODO: This is inefficient. Give each user model a list.
+        allareas = models.old_models.AreaOfInterest.query()  #TODO: This is inefficient. Give each user model a list.
         data = [x for x in allareas if x.name in following_areas]
     return data
 
@@ -495,7 +495,7 @@ def get_following_areanames_list(user_key): #as above but returns list of names 
 
 
 def get_area(area_name):
-    data = models.AreaOfInterest.get_by_id(area_name)
+    data = models.old_models.AreaOfInterest.get_by_id(area_name)
     if data is None:
         logging.error("get_area() no area found for %s", area_name)
         return None
@@ -504,19 +504,19 @@ def get_area(area_name):
 
 def get_area_key(username, area_name):
     if username is None:
-        data = models.AreaOfInterest.query(models.AreaOfInterest.name == area_name).fetch(keys_only=True)
+        data = models.old_models.AreaOfInterest.query(models.old_models.AreaOfInterest.name == area_name).fetch(keys_only=True)
     else:
-        data = models.AreaOfInterest.query(models.AreaOfInterest.owner == username, models.AreaOfInterest.name == area_name.decode('utf-8')).fetch(keys_only=True)
+        data = models.old_models.AreaOfInterest.query(models.old_models.AreaOfInterest.owner == username, models.old_models.AreaOfInterest.name == area_name.decode('utf-8')).fetch(keys_only=True)
     return data
 
 def get_cell(path, row, area_name):    
-    data = models.LandsatCell.get_cell(path, row, area_name)
+    data = models.old_models.LandsatCell.get_cell(path, row, area_name)
     if data is None:
         logging.error("cache:get_cell() did not find cell object %d %d for area %s", path, row, area_key)
     return data
   
 def get_cells(area_key):
-    data = models.LandsatCell.all().filter('area =',  area_key)
+    data = models.old_models.LandsatCell.all().filter('area =', area_key)
     return data
 
 def get_journal_key(username, journal_name):
@@ -525,7 +525,7 @@ def get_journal_key(username, journal_name):
     return data
 
 def get_entry(username, journal_name, entry_id, entry_key=None):
-    return models.Entry.get_entry(username, journal_name, entry_id, entry_key)
+    return models.old_models.Entry.get_entry(username, journal_name, entry_id, entry_key)
     
 def get_entry_render(username, journal_name, entry_id):
     entry, content, blobs = get_entry(username, journal_name, entry_id)

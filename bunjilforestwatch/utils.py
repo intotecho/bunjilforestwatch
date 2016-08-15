@@ -5,21 +5,21 @@
 #
 # THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 
-import cStringIO
 import StringIO
+import cStringIO
 import logging
 import os
 import os.path
 import re
 import unicodedata
-from google.appengine.api import modules # for get_hostname
 
-from django.utils import html
-from google.appengine.ext import db
 import webapp2
+from django.utils import html
+from google.appengine.api import modules # for get_hostname
+from google.appengine.ext import db
 
-import models
 import settings
+from models import old_models
 
 # Fix sys.path
 import fix_path
@@ -74,15 +74,15 @@ def render_options(options, default=None):
 	return ret
 
 def markup(text, format):
-	if format == models.RENDER_TYPE_HTML:
+	if format == old_models.RENDER_TYPE_HTML:
 		return text
-	elif format == models.RENDER_TYPE_TEXT:
+	elif format == old_models.RENDER_TYPE_TEXT:
 		return html.linebreaks(html.escape(text))
-	elif format == models.RENDER_TYPE_MARKDOWN:
+	elif format == old_models.RENDER_TYPE_MARKDOWN:
 		return markdown.Markdown().convert(text)
 	#elif format == models.RENDER_TYPE_TEXTILE:
     #		return textile.textile(text)
-	elif format == models.RENDER_TYPE_RST:
+	elif format == old_models.RENDER_TYPE_RST:
 		warning_stream = cStringIO.StringIO()
 		parts = publish_parts(text, writer_name='html4css1',
 			settings_overrides={
@@ -177,8 +177,6 @@ def google_upload(token, path, content, entryid=None):
 		entry = client.Update(entry, media_source=ms)
 
 def syspath():
-	import sys
-	import logging
 	#from pprint import pprint as pp
 	#logging.error(pp(sys.path))
 	return

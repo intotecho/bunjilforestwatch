@@ -17,11 +17,12 @@
 """
 
 import logging
-import gladalerts
 
 from google.appengine.ext import db # is it required?
 
 import cache
+import gladalerts
+
 #from models import Observation # only required for Observations model.
 import models
 
@@ -37,7 +38,6 @@ import datetime
 import json
 import settings #You have to import your own private keys. 
 import ee
-import oauth2client.client
 from google.appengine.api import urlfetch #change timeout from 5 to 60 s. https://stackoverflow.com/questions/13051628/gae-appengine-deadlineexceedederror-deadline-exceeded-while-waiting-for-htt
 from ee.oauthinfo import OAuthInfo
 
@@ -133,7 +133,7 @@ def checkForNewObservationInCell(area, cell, collection_name):
         storedlastObs = cell.latestObservation(collection_name)
         if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
             
-            obs = models.Observation(parent=cell.key, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="latest")
+            obs = models.old_models.Observation(parent=cell.key, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="latest")
             obs.put()
             if storedlastObs is None:
                 logging.debug('checkForNewObservationInCell FIRST observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
@@ -784,7 +784,7 @@ def getLandsatCells(area):
                 continue
             overlap = overlap_area/park_area 
            
-            cell = models.LandsatCell(parent=area.key, id=cell_name, aoi=area.key, path=p, row=r, monitored=False , overlap=overlap, image_id=image_id)
+            cell = models.old_models.LandsatCell(parent=area.key, id=cell_name, aoi=area.key, path=p, row=r, monitored=False, overlap=overlap, image_id=image_id)
             cellList.append(cell)
             
         else:

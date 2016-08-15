@@ -5,7 +5,6 @@
 """
 
 
-import models
 '''
 import csv
 import numpy as np
@@ -18,6 +17,7 @@ import utils
 import time
 from google.appengine.ext import ndb
 '''
+import models
 import json
 from google.appengine.api import urlfetch #change timeout from 5 to 60 s. https://stackoverflow.com/questions/13051628/gae-appengine-deadlineexceedederror-deadline-exceeded-while-waiting-for-htt
 import urllib
@@ -638,12 +638,12 @@ def check_export_status(task_id, clusterProperties):
             area= cache.get_area(clusterProperties['area'])
             clusterProperties['file_id'] = area.get_gladcluster_file_id()
             new_observations = []
-            obs = models.Observation.createGladAlertObservation(area, clusterProperties)
+            obs = models.old_models.Observation.createGladAlertObservation(area, clusterProperties)
             if obs is not None:
                 new_observations.append(obs.key)
-                area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
+                area_followers = models.old_models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
                 if area_followers:
-                    models.ObservationTask.createObsTask(area, new_observations, "GLADCLUSTER", area_followers.users)
+                    models.old_models.ObservationTask.createObsTask(area, new_observations, "GLADCLUSTER", area_followers.users)
         except Exception as e:
             msg = "Exception creating GLAD ObservationTask {0!s}".format(e)
             logging.error(msg)
