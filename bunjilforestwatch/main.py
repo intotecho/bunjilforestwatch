@@ -12,7 +12,6 @@ This document is planned to give a tutorial-like overview of all web handlers in
 
 
 from __future__ import with_statement
-
 import os
 
 from google.appengine.ext import ndb
@@ -53,11 +52,13 @@ import apiservices
 
 from google.appengine.api import files
 from google.appengine.api import taskqueue
+from google.appengine.api.app_identity import get_default_version_hostname
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 
 from google.appengine.ext.webapp import blobstore_handlers
 from webapp2_extras import sessions
+from google.appengine.api import memcache
 
 # from apiclient.discovery import build
 # from oauth2client.appengine import OAuth2Decorator
@@ -317,9 +318,9 @@ class BaseHandler(webapp2.RequestHandler):
 
     def process_credentials(self, name, email, source, uid):
 
-        User = models.old_models.User
+        User = models.User
 
-        if source == models.old_models.USER_SOURCE_GOOGLE:
+        if source == models.USER_SOURCE_GOOGLE:
             user = User.query(
                 User.google_id == uid).get()
             # .filter('%s_id' %source, uid).get()
@@ -479,7 +480,7 @@ class GoogleLogin(BaseHandler):
     def get(self):
         current_user = users.get_current_user()
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(),
-                                                    models.old_models.USER_SOURCE_GOOGLE, current_user.user_id())
+                                                    models.USER_SOURCE_GOOGLE, current_user.user_id())
         if not registered:
             if 'role' in self.request.GET:
                 role = self.request.get('role')
@@ -498,7 +499,7 @@ class FacebookLogin(BaseHandler):
 
             if user_data is not False and 'username' in user_data and 'email' in user_data:
                 user, registered = self.process_credentials(user_data['username'], user_data['email'],
-                                                            models.old_models.USER_SOURCE_FACEBOOK, user_data['id'])
+                                                            models.USER_SOURCE_FACEBOOK, user_data['id'])
 
                 if not registered:
                     self.redirect(webapp2.uri_for('register'))
@@ -544,7 +545,7 @@ class RegisterUserHandler(BaseHandler):
                 lusername = username.lower()
                 # email = self.request.get('email')
                 # lusers = models.User.all(keys_only=True).filter('lname', lusername).get()
-                existing_user = models.old_models.User.get_by_id(lusername)  # .fetch(keys_only=True)
+                existing_user = models.User.get_by_id(lusername)  # .fetch(keys_only=True)
                 if not RegisterUserHandler.USERNAME_RE.match(lusername):
                     if username and username[0] == '_':
                         errors['username'] = 'Username cannot begin with a dash.'
@@ -561,15 +562,15 @@ class RegisterUserHandler(BaseHandler):
                         email = None
                     '''
 
-                    user = models.old_models.User.get_or_insert(username,
-                                                            role=role,
-                                                            name=username,
-                                                            lname=lusername,
-                                                            email=email,
-                                                            facebook_id=uid if source == models.old_models.USER_SOURCE_FACEBOOK else None,
-                                                            google_id=uid if source == models.old_models.USER_SOURCE_GOOGLE else None,
-                                                            token=base64.urlsafe_b64encode(os.urandom(30))[:32],
-                                                            )
+                    user = models.User.get_or_insert(username,
+                                                     role=role,
+                                                     name=username,
+                                                     lname=lusername,
+                                                     email=email,
+                                                     facebook_id=uid if source == models.USER_SOURCE_FACEBOOK else None,
+                                                     google_id=uid if source == models.USER_SOURCE_GOOGLE else None,
+                                                     token=base64.urlsafe_b64encode(os.urandom(30))[:32],
+                                                     )
 
                     if getattr(user, '%s_id' % source) != uid:
                         errors['username'] = 'Username is already taken.'
@@ -618,7 +619,7 @@ class NewUserHandler(BaseHandler):  # NOT CALLED !!! see RegisterUserHandler
                 username = self.request.get('username')
                 lusername = username.lower()
                 email = self.request.get('email')
-                lusers = models.old_models.User.all(keys_only=True).filter('lname', lusername).get()
+                lusers = models.User.all(keys_only=True).filter('lname', lusername).get()
 
                 if not RegisterUserHandler.USERNAME_RE.match(lusername):
                     errors[
@@ -633,15 +634,15 @@ class NewUserHandler(BaseHandler):  # NOT CALLED !!! see RegisterUserHandler
                         errors['email'] = 'You must have an email to use this service.'
                         email = None
 
-                    user = models.old_models.User.get_or_insert(username,
-                                                            role=rolechoice,
-                                                            name=username,
-                                                            lname=lusername,
-                                                            email=email,
-                                                            facebook_id=uid if source == models.old_models.USER_SOURCE_FACEBOOK else None,
-                                                            google_id=uid if source == models.old_models.USER_SOURCE_GOOGLE else None,
-                                                            token=base64.urlsafe_b64encode(os.urandom(30))[:32],
-                                                            )
+                    user = models.User.get_or_insert(username,
+                                                     role=rolechoice,
+                                                     name=username,
+                                                     lname=lusername,
+                                                     email=email,
+                                                     facebook_id=uid if source == models.USER_SOURCE_FACEBOOK else None,
+                                                     google_id=uid if source == models.USER_SOURCE_GOOGLE else None,
+                                                     token=base64.urlsafe_b64encode(os.urandom(30))[:32],
+                                                     )
 
                     if getattr(user, '%s_id' % source) != uid:
                         errors['username'] = 'Username is already taken.'
@@ -702,29 +703,29 @@ class AccountHandler(BaseHandler):  # superseded for now by user.html. no menu p
                     self.add_message('success', 'Facebook integration enabled.')
         elif 'disable' in self.request.GET:
             disable = self.request.get('disable')
-            if disable in models.old_models.USER_SOCIAL_NETWORKS or disable in models.old_models.USER_BACKUP_NETWORKS:
+            if disable in models.USER_SOCIAL_NETWORKS or disable in models.USER_BACKUP_NETWORKS:
                 setattr(u, '%s_enable' % disable, False)
                 self.add_message('success', '%s posting disabled.' % disable.title())
                 changed = True
         elif 'enable' in self.request.GET:
             enable = self.request.get('enable')
-            if enable in models.old_models.USER_SOCIAL_NETWORKS or enable in models.old_models.USER_BACKUP_NETWORKS:
+            if enable in models.USER_SOCIAL_NETWORKS or enable in models.USER_BACKUP_NETWORKS:
                 setattr(u, '%s_enable' % enable, True)
                 self.add_message('success', '%s posting enabled.' % enable.title())
                 changed = True
         elif 'deauthorize' in self.request.GET:
             deauthorize = self.request.get('deauthorize')
             changed = True
-            if deauthorize == models.old_models.USER_SOURCE_FACEBOOK:
+            if deauthorize == models.USER_SOURCE_FACEBOOK:
                 u.facebook_token = None
                 u.facebook_enable = False
                 self.add_message('success', 'Facebook posting deauthorized.')
-            elif deauthorize == models.old_models.USER_SOURCE_TWITTER:
+            elif deauthorize == models.USER_SOURCE_TWITTER:
                 u.twitter_key = None
                 u.twitter_secret = None
                 u.twitter_enable = None
                 self.add_message('success', 'Twitter posting deauthorized.')
-            elif deauthorize == models.old_models.USER_BACKUP_GOOGLE_DOCS:
+            elif deauthorize == models.USER_BACKUP_GOOGLE_DOCS:
                 utils.google_revoke(u.google_docs_token)
                 u.google_docs_token = None
                 u.google_docs_enable = None
@@ -833,7 +834,7 @@ class ExistingAreaHandler(BaseHandler):
             return self.response.out.write('{"status": "error", "reason": "not logged in" }')
 
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(),
-                                                    models.old_models.USER_SOURCE_GOOGLE, current_user.user_id())
+                                                    models.USER_SOURCE_GOOGLE, current_user.user_id())
 
         if not registered:
             self.response.set_status(401)
@@ -904,7 +905,7 @@ class ExistingAreaHandler(BaseHandler):
 
                 # print 'update boundary with: ', operation['value']
 
-                eeFeatureCollection, status, errormsg = models.old_models.AreaOfInterest.get_eeFeatureCollection(
+                eeFeatureCollection, status, errormsg = models.AreaOfInterest.get_eeFeatureCollection(
                     operation['value'])
                 # print  eeFeatureCollection, status, errormsg
                 if eeFeatureCollection == None:
@@ -921,7 +922,7 @@ class ExistingAreaHandler(BaseHandler):
                         area.put()
                         return
 
-                    boundary_hull_dict = models.old_models.AreaOfInterest.calc_boundary_fc(eeFeatureCollection)
+                    boundary_hull_dict = models.AreaOfInterest.calc_boundary_fc(eeFeatureCollection)
                     ndb.transaction(lambda: update_txn(area, boundary_hull_dict), xg=True)
 
                     #area.set_boundary_fc(eeFeatureCollection, True)
@@ -1035,7 +1036,7 @@ class ExistingAreaHandler(BaseHandler):
             self.add_message('danger', 'You must log in to view areas.')
             return self.redirect(users.create_login_url(original_url))
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(),
-                                                    models.old_models.USER_SOURCE_GOOGLE, current_user.user_id())
+                                                    models.USER_SOURCE_GOOGLE, current_user.user_id())
 
         if not registered:
             return self.redirect(webapp2.uri_for('register'))
@@ -1128,7 +1129,7 @@ class NewAreaHandler(BaseHandler):
             self.add_message('danger', 'You must log in to create a new area .')
             return self.redirect(users.create_login_url(original_url))
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(),
-                                                    models.old_models.USER_SOURCE_GOOGLE, current_user.user_id())
+                                                    models.USER_SOURCE_GOOGLE, current_user.user_id())
 
         if not registered:
             return self.redirect(webapp2.uri_for('register'))
@@ -1227,16 +1228,16 @@ class NewAreaHandler(BaseHandler):
         ### check if too many areas created.
         areas_count = user.get_area_count()
         logging.debug('User has created %d area.', areas_count)
-        if areas_count >= models.old_models.AreaOfInterest.MAX_AREAS:
+        if areas_count >= models.AreaOfInterest.MAX_AREAS:
             if (user.role != 'admin'):
                 message = 'Sorry, you have created too many areas. Max Areas = {0!s}'.format(
-                    models.old_models.AreaOfInterest.MAX_AREAS)
+                    models.AreaOfInterest.MAX_AREAS)
                 logging.error(message)
                 self.response.set_status(400)
                 return self.response.out.write(message)
             else:
                 self.add_message('warning', "Extra Areas permitted for admin ")
-        elif areas_count >= models.old_models.AreaOfInterest.MAX_AREAS - 1:
+        elif areas_count >= models.AreaOfInterest.MAX_AREAS - 1:
             self.add_message('warning',
                              "You won't be able to create any more areas unless you first delete one of your existing areas")
 
@@ -1320,7 +1321,7 @@ class NewAreaHandler(BaseHandler):
 
 
         try:
-            area = models.old_models.AreaOfInterest(
+            area = models.AreaOfInterest(
                 id=area_name, name=area_name,
                 owner=self.session['user']['key'],
                 description=new_area['properties']['area_description']['description'].decode('utf-8'),
@@ -1357,7 +1358,7 @@ class NewAreaHandler(BaseHandler):
         ### update the area and the referencing user
         try:
             user, area = ndb.transaction(lambda: txn(self.session['user']['key'], area), xg=True)
-            models.old_models.Activity.create(user, models.old_models.ACTIVITY_NEW_AREA, area.key)
+            models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key)
             self.add_message('success',
                              'Created your new area of interest: %s covering about %d sq.km' % (area.name, total_area))
 
@@ -1409,7 +1410,7 @@ class DeleteAreaHandler(BaseHandler):
             self.add_message('danger', 'You must log in to delete an area .')
             return self.redirect(users.create_login_url(original_url))
         user, registered = self.process_credentials(current_user.nickname(), current_user.email(),
-                                                    models.old_models.USER_SOURCE_GOOGLE, current_user.user_id())
+                                                    models.USER_SOURCE_GOOGLE, current_user.user_id())
 
         if not registered:
             return self.redirect(webapp2.uri_for('register'))
@@ -1444,7 +1445,7 @@ class DeleteAreaHandler(BaseHandler):
 
         file_id = area.folder_id # delete the folder for this glad area.
 
-        area_followers = models.old_models.AreaFollowersIndex.get_by_id(area.name.encode('utf-8'), parent=area.key)
+        area_followers = models.AreaFollowersIndex.get_by_id(area.name.encode('utf-8'), parent=area.key)
         # if user does not own area or user is not admin - disallow
 
         if (area.owner.string_id() != user.name) and (user.role != 'admin'):
@@ -1503,7 +1504,7 @@ class DeleteAreaHandler(BaseHandler):
             #cache.clear_area_followers(area.key)
             #cache.set(cache.pack(user), cache.C_KEY, user.key)
 
-            models.old_models.Activity.create(user, models.old_models.ACTIVITY_DELETE_AREA, area.key)
+            models.Activity.create(user, models.ACTIVITY_DELETE_AREA, area.key)
             counters.increment(counters.COUNTER_AREAS, -1)
 
             msg = 'Deleted area of interest: {0!s}'.format(area_name)
@@ -1602,12 +1603,12 @@ class NewJournal(BaseHandler):
     def post(self):
         name = self.request.get('name')
 
-        if len(self.session['journals']) >= models.old_models.Journal.MAX_JOURNALS:
-            self.add_message('danger', 'Only %i journals allowed.' % models.old_models.Journal.MAX_JOURNALS)
+        if len(self.session['journals']) >= models.Journal.MAX_JOURNALS:
+            self.add_message('danger', 'Only %i journals allowed.' % models.Journal.MAX_JOURNALS)
         elif not name:
             self.add_message('danger', 'Your journal needs a name.')
         else:
-            journal = models.old_models.Journal(id=name, parent=self.session['user']['key'])  # FIXME not XS safe.
+            journal = models.Journal(id=name, parent=self.session['user']['key'])  # FIXME not XS safe.
             for journal_url, journal_name, journal_type in self.session['journals']:
                 if journal.key.string_id() == journal_name:
                     self.add_message('danger', 'You already have a journal called %s.' % name)
@@ -1629,7 +1630,7 @@ class NewJournal(BaseHandler):
                 cache.set(cache.pack(user), cache.C_KEY, user.key)
                 self.populate_user_session()
                 counters.increment(counters.COUNTER_AREAS)
-                models.old_models.Activity.create(user, models.old_models.ACTIVITY_NEW_JOURNAL, journal.key)
+                models.Activity.create(user, models.ACTIVITY_NEW_JOURNAL, journal.key)
                 self.add_message('success', 'Created your journal %s.' % name)
                 self.redirect(webapp2.uri_for('new-entry', username=self.session['user']['name'], journal=journal,
                                               journal_name=journal.key.string_id()))
@@ -1751,10 +1752,10 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
             cell = cache.get_cell(path, row, area_name)
             if cell is not None:
                 # captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-                obs = models.old_models.Observation(parent=area.key,
-                                                image_collection=map_id['collection'],
-                                                captured=map_id['capture_datetime'],
-                                                image_id=map_id['id'])
+                obs = models.Observation(parent=area.key,
+                                         image_collection=map_id['collection'],
+                                         captured=map_id['capture_datetime'],
+                                         image_id=map_id['id'])
             else:
                 returnval['result'] = "error"
                 returnval['reason'] = 'LandsatOverlayRequestHandler - cache.get_cell error'
@@ -1765,15 +1766,15 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
 
         else:
             # TODO: Do we really want some Observation with the parent being aoi instead of cell?
-            obs = models.old_models.Observation(parent=area.key, image_collection=map_id['collection'],
-                                            captured=map_id['capture_datetime'], image_id=map_id['id'], obs_role='ad-hoc')
+            obs = models.Observation(parent=area.key, image_collection=map_id['collection'],
+                                     captured=map_id['capture_datetime'], image_id=map_id['id'], obs_role='ad-hoc')
 
         obs.put()
-        ovl = models.old_models.Overlay(parent=obs.key,
-                                    map_id=map_id['mapid'],
-                                    token=map_id['token'],
-                                    overlay_role='special',
-                                    algorithm=algorithm)
+        ovl = models.Overlay(parent=obs.key,
+                             map_id=map_id['mapid'],
+                             token=map_id['token'],
+                             overlay_role='special',
+                             algorithm=algorithm)
 
         ovl.put()  # Do first to create a key.
         obs.overlays.append(ovl.key)
@@ -1803,7 +1804,7 @@ class CreateOverlayHandler(BaseHandler):
     # This handler responds to Ajax request, hence it returns a response.write()
 
     def get(self, obskey_encoded, role, algorithm):
-        obs = models.old_models.Observation.get_from_encoded_key(obskey_encoded)
+        obs = models.Observation.get_from_encoded_key(obskey_encoded)
 
         returnval = {}
 
@@ -1845,10 +1846,10 @@ class CreateOverlayHandler(BaseHandler):
             return
 
         # captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-        ovl = models.old_models.Overlay(parent=obs.key,
-                                    map_id=map_id['mapid'],
-                                    token=map_id['token'],
-                                    overlay_role=role,  # is it safe to assume?
+        ovl = models.Overlay(parent=obs.key,
+                             map_id=map_id['mapid'],
+                             token=map_id['token'],
+                             overlay_role=role,  # is it safe to assume?
                              algorithm=algorithm)
 
         # obs.captured = map_id['capture_datetime'] #we already  had this?
@@ -1873,7 +1874,7 @@ class UpdateOverlayAjaxHandler(BaseHandler):
 
     def get(self, ovlkey, algorithm):
 
-        ovl = models.old_models.Overlay.get_from_encoded_key(ovlkey)
+        ovl = models.Overlay.get_from_encoded_key(ovlkey)
         returnval = {}
 
         if not ovl:
@@ -1946,7 +1947,7 @@ ObservationTaskHandler() when a user clicks on a link in an obstask email they c
 class ObservationTaskAjaxHandler(BaseHandler):
     def get(self, task_id):
 
-        obstask = models.old_models.ObservationTask.get_by_id(long(task_id))
+        obstask = models.ObservationTask.get_by_id(long(task_id))
         if obstask is None:
             self.add_message('danger', "Task not found. ObservationTaskHandler")
             resultstr = "Task not found. ObservationTaskHandler: key {0!s}".format(task_id)
@@ -1965,7 +1966,7 @@ class ObservationTaskAjaxHandler(BaseHandler):
             user = None
         else:
             user, registered = self.process_credentials(current_user.nickname(), current_user.email(),
-                                                        models.old_models.USER_SOURCE_GOOGLE, current_user.user_id())
+                                                        models.USER_SOURCE_GOOGLE, current_user.user_id())
             username = self.session['user']['name']
             show_nav = True
             if current_user.nickname != obstask.assigned_owner:
@@ -2027,7 +2028,7 @@ returns a HTML formatted string
 This is not a handler and can be moved to another file
 '''
 def checkForNewInArea(area):
-    area_followers = models.old_models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
+    area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
     linestr = u'<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
     obstask_cachekeys = []
 
@@ -2056,7 +2057,7 @@ def checkForNewInArea(area):
 
         # send each follower of this area an email with reference to a task.
         if new_observations:
-            linestr += models.old_models.ObservationTask.createObsTask(area, new_observations, "LANDSATIMAGE", area_followers.users)
+            linestr += models.ObservationTask.createObsTask(area, new_observations, "LANDSATIMAGE", area_followers.users)
         else:
             linestr += u"<ul><li>No new observations found.</li></ul>"
     else:
@@ -2214,7 +2215,7 @@ class MailTestHandler(BaseHandler):
         #         username = "myotheremail@gmail.com"
 
         user = cache.get_user(self.session['user']['name'])
-        tasks = models.old_models.ObservationTask.query().order(-models.old_models.ObservationTask.created_date).fetch(2)
+        tasks = models.ObservationTask.query().order(-models.ObservationTask.created_date).fetch(2)
         # mailer.new_image_email(user)
         if not tasks:
             return self.handle_error("No tasks to test mailer")
@@ -2227,7 +2228,7 @@ class ViewJournal(BaseHandler):
     # FIXME: Pagination for view-journals does not work.
     def get(self, username, journal_name):
         page = int(self.request.get('page', 1))
-        journal = models.old_models.Journal.get_journal(username, journal_name.decode('utf-8'))
+        journal = models.Journal.get_journal(username, journal_name.decode('utf-8'))
         if 'user' not in self.session or username != self.session['user']['name']:
             self.error(403)
             return
@@ -2299,7 +2300,7 @@ class ViewObservationTasksHandler(BaseHandler):
         else:
             logging.debug('ViewObservationTasks: user:%s, area:%s, page:%d', user2view, area_name,
                           page)  # Move here to XSS sanitise user2view
-            pages = len(tasks) / models.old_models.ObservationTask.OBSTASKS_PER_PAGE
+            pages = len(tasks) / models.ObservationTask.OBSTASKS_PER_PAGE
             if pages < 1:
                 pages = 1
 
@@ -2496,9 +2497,9 @@ class FollowHandler(BaseHandler):
             tu, oa = ndb.get_multi([thisuser, area])
 
             if not tu:
-                tu = models.old_models.AreasFollowingIndex(key=thisuser)
+                tu = models.AreasFollowingIndex(key=thisuser)
             if not ou:
-                oa = models.old_models.AreasFollowersIndex(key=area)
+                oa = models.AreasFollowersIndex(key=area)
 
             changed = []
             if op == 'add':
@@ -2527,7 +2528,7 @@ class FollowHandler(BaseHandler):
 
         if op == 'add':
             self.add_message('success', 'You are now watching %s.' % username)
-            models.old_models.Activity.create(cache.get_by_key(self.session['user']['key']), models.old_models.ACTIVITY_FOLLOWING, user)
+            models.Activity.create(cache.get_by_key(self.session['user']['key']), models.ACTIVITY_FOLLOWING, user)
         elif op == 'del':
             self.add_message('success', 'You are no longer watching %s.' % username)
 
@@ -2579,10 +2580,10 @@ class FollowAreaHandler(BaseHandler):
             areasUserFollows, areasFollowers = ndb.get_multi([userfollowingareas_key, areafollowers_key])
             if not areasUserFollows:
                 logging.info(u"FollowArea() User %s is following their first area", user.name)
-                areasUserFollows = models.old_models.UserFollowingAreasIndex(key=userfollowingareas_key)
+                areasUserFollows = models.UserFollowingAreasIndex(key=userfollowingareas_key)
             if not areasFollowers:
                 logging.info(u"FollowArea() adding first follower to area {0:s}".format(area.name))
-                areasFollowers = models.old_models.AreaFollowersIndex(key=areafollowers_key)
+                areasFollowers = models.AreaFollowersIndex(key=areafollowers_key)
 
             changed = []
             if op == 'add':
@@ -2599,7 +2600,7 @@ class FollowAreaHandler(BaseHandler):
                     areasUserFollows.area_keys.append(area.key)
                     changed.append(areasUserFollows)
                     changed.append(area)
-                models.old_models.Activity.create(user, models.old_models.ACTIVITY_FOLLOWING, area.key)
+                models.Activity.create(user, models.ACTIVITY_FOLLOWING, area.key)
 
             elif op == 'del':
                 if user.name in areasFollowers.users:
@@ -2621,12 +2622,12 @@ class FollowAreaHandler(BaseHandler):
                 else:
                     logging.error(u"FollowArea() Cannot remove area. Area not in user's list of areas")
 
-                models.old_models.Activity.create(user, models.old_models.ACTIVITY_UNFOLLOWING, area.key)
+                models.Activity.create(user, models.ACTIVITY_UNFOLLOWING, area.key)
             ndb.put_multi(changed)
             return areasUserFollows, areasFollowers
 
-        UserFollowingAreas_key = models.old_models.UserFollowingAreasIndex.get_key(username)
-        AreaFollowersIndex_key = models.old_models.AreaFollowersIndex.get_key(area_name)
+        UserFollowingAreas_key = models.UserFollowingAreasIndex.get_key(username)
+        AreaFollowersIndex_key = models.AreaFollowersIndex.get_key(area_name)
         # print 'AreaFollowersIndex_key.encoded', AreaFollowersIndex_key
         areas_following, followers = ndb.transaction(
             lambda: txn(UserFollowingAreas_key, AreaFollowersIndex_key, area, user, op), xg=True)
@@ -2634,12 +2635,12 @@ class FollowAreaHandler(BaseHandler):
         if op == 'add':
             ########### create a journal for each followed area - should be in above txn and a function call as duplicated ##############
             journal_name = 'Observations for ' + area_name  # .decode('utf-8') # name is used by view-obstask.html to make reports.
-            existing_journal = models.old_models.Journal.get_journal(username, journal_name)
+            existing_journal = models.Journal.get_journal(username, journal_name)
             if existing_journal:
                 logging.warning('User already has a journal called {0:s}!'.format(journal_name))
                 journal = existing_journal
             else:
-                journal = models.old_models.Journal(parent=user.key, id=journal_name)
+                journal = models.Journal(parent=user.key, id=journal_name)
                 # logging.error('FIXME no journal created due to self reference')
                 journal.journal_type = "observations"
 
@@ -2651,7 +2652,7 @@ class FollowAreaHandler(BaseHandler):
 
                 user, journal = ndb.transaction(lambda: txn2(user.key, journal))
                 cache.clear_journal_cache(user.key)
-                models.old_models.Activity.create(user, models.old_models.ACTIVITY_NEW_JOURNAL, journal.key)
+                models.Activity.create(user, models.ACTIVITY_NEW_JOURNAL, journal.key)
                 cache.set(cache.pack(user), cache.C_KEY, user.key)
 
         return True
@@ -2715,15 +2716,15 @@ class NewEntryHandler(BaseHandler):
             logging.error("NewEntryHandler(): Owner not found")
             return self.error(404)
 
-        journal = models.old_models.Journal.get_journal(author, journal_name)
+        journal = models.Journal.get_journal(author, journal_name)
         if journal == None:
             logging.error("NewEntryHandler(): Journal not found: %s", journal_name)
             return self.error(404)
 
-        entry_key = models.old_models.Entry.get_entry_key(journal)
-        content_key = models.old_models.EntryContent.get_entrycontent_key(journal)
-        content = models.old_models.EntryContent(key=content_key)
-        entry = models.old_models.Entry(key=entry_key, content=content_key.integer_id())
+        entry_key = models.Entry.get_entry_key(journal)
+        content_key = models.EntryContent.get_entrycontent_key(journal)
+        content = models.EntryContent(key=content_key)
+        entry = models.Entry(key=entry_key, content=content_key.integer_id())
 
         if images:
             # content.images= [i.strip() for i in self.request.get('images').split(',')]
@@ -2739,7 +2740,7 @@ class NewEntryHandler(BaseHandler):
 
         user, journal = ndb.transaction(lambda: txn(user, journal, entry, content), xg=True)
         # move this to new entry saving for first time
-        models.old_models.Activity.create(user, models.old_models.ACTIVITY_NEW_ENTRY, entry.key)
+        models.Activity.create(user, models.ACTIVITY_NEW_ENTRY, entry.key)
 
         counters.increment(counters.COUNTER_ENTRIES)
         cache.clear_entries_cache(journal.key)
@@ -2748,11 +2749,11 @@ class NewEntryHandler(BaseHandler):
 
         if user.facebook_token and user.facebook_enable:
             taskqueue.add(queue_name='retry-limit', url=webapp2.uri_for('social-post'),
-                          params={'entry_key': entry_key, 'network': models.old_models.USER_SOURCE_FACEBOOK,
+                          params={'entry_key': entry_key, 'network': models.USER_SOURCE_FACEBOOK,
                                   'username': user.name})
         if user.twitter_key and user.twitter_enable:
             taskqueue.add(queue_name='retry-limit', url=webapp2.uri_for('social-post'),
-                          params={'entry_key': entry_key, 'network': models.old_models.USER_SOURCE_TWITTER, 'username': user.name})
+                          params={'entry_key': entry_key, 'network': models.USER_SOURCE_TWITTER, 'username': user.name})
 
         self.redirect(
             webapp2.uri_for('view-entry', username=owner, journal_name=journal_name, entry_id=entry_key.integer_id()))
@@ -2769,13 +2770,13 @@ class ViewEntryHandler(BaseHandler):
 
         journal_name = journal_name.decode('utf-8')
 
-        journal = models.old_models.Journal.get_journal(username, journal_name)
+        journal = models.Journal.get_journal(username, journal_name)
         if journal == None:
             logging.error("ViewEntryHandler(): Journal not found %s", journal_name)
             return self.error(404)
 
         # logging.info('ViewEntryHandler journal_name %s %s', journal_name, journal)
-        entry, content, blobs = models.old_models.Entry.get_entry(username, journal_name, entry_id)
+        entry, content, blobs = models.Entry.get_entry(username, journal_name, entry_id)
         if not entry:
             logging.error("ViewEntryHandler(): Entry %s not found for user %s in journal %s ", entry_id, username,
                           journal_name)
@@ -2802,7 +2803,7 @@ class ViewEntryHandler(BaseHandler):
             'upload_url': webapp2.uri_for('upload-url', username=username, journal_name=journal_name,
                                           entry_id=entry_id),
             'can_upload': user.can_upload(),
-            'markup_options': utils.render_options(models.old_models.CONTENT_TYPE_CHOICES, content.markup),
+            'markup_options': utils.render_options(models.CONTENT_TYPE_CHOICES, content.markup),
         })
 
 
@@ -2818,7 +2819,7 @@ class GetUploadURL(BaseHandler):
                                 journal_name=journal_name,
                                 entry_id=entry_id
                                 ),
-                max_bytes_per_blob=models.old_models.Blob.MAXSIZE
+                max_bytes_per_blob=models.Blob.MAXSIZE
             ))
         else:
             self.response.out.write('')
@@ -2837,7 +2838,7 @@ class SaveEntryHandler(BaseHandler):
 
         self.redirect(webapp2.uri_for('view-entry', username=username, journal_name=journal_name, entry_id=entry_id))
 
-        entry, content, blobs = models.old_models.Entry.get_entry(username, journal_name, entry_id)
+        entry, content, blobs = models.Entry.get_entry(username, journal_name, entry_id)
 
         if delete == 'delete':
             journal_key = entry.key.parent()
@@ -2875,7 +2876,7 @@ class SaveEntryHandler(BaseHandler):
                 # only 1 left (but there are 2 in the datastore still)
                 else:
                     # find last entry
-                    entries = models.old_models.Entry.all().ancestor(journal).order('-date').fetch(2)
+                    entries = models.Entry.all().ancestor(journal).order('-date').fetch(2)
                     logging.info('%s last entries returned', len(entries))
                     for e in entries:
                         if e.key != entry.key:
@@ -2885,7 +2886,7 @@ class SaveEntryHandler(BaseHandler):
                         logging.error('Did not find n last entry not %s', entry.key)
 
                     # find first entry
-                    entries = models.old_models.Entry.all().ancestor(journal).order('date').fetch(2)
+                    entries = models.Entry.all().ancestor(journal).order('date').fetch(2)
                     logging.info('%s first entries returned', len(entries))
                     for e in entries:
                         if e.key != entry.key:
@@ -2972,7 +2973,7 @@ class SaveEntryHandler(BaseHandler):
                 user.set_dates()
                 user.count()
 
-                content = models.old_models.EntryContent(key=content_key)
+                content = models.EntryContent(key=content_key)
                 content.subject = subject
                 content.tags = tags
                 content.images = images
@@ -2992,7 +2993,7 @@ class SaveEntryHandler(BaseHandler):
                     journal.first_entry = date
                 else:
                     # find last entry
-                    entries = models.old_models.Entry.get_entries(journal, True)
+                    entries = models.Entry.get_entries(journal, True)
                     logging.info('%s last entries returned', len(entries))
                     for e in entries:
                         if e.key != entry.key:
@@ -3006,7 +3007,7 @@ class SaveEntryHandler(BaseHandler):
 
                     # find first entry
                     # entries = models.Entry.query(ancestor = journal).order('date').fetch(2)
-                    entries = models.old_models.Entry.get_entries(journal, False)
+                    entries = models.Entry.get_entries(journal, False)
                     logging.info('%s first entries returned', len(entries))
                     for e in entries:
                         if e.key != entry.key:
@@ -3048,7 +3049,7 @@ class SaveEntryHandler(BaseHandler):
             user, journal, entry, content, dchars, dwords, dsentences = ndb.transaction(
                 lambda: txn_save(entry.key, content.key, rm_blobs, subject, tags, images, text, markup, rendered, chars,
                                  words, sentences, newdate))
-            models.old_models.Activity.create(cache.get_user(username), models.old_models.ACTIVITY_SAVE_ENTRY, entry.key)
+            models.Activity.create(cache.get_user(username), models.ACTIVITY_SAVE_ENTRY, entry.key)
 
             counters.increment(counters.COUNTER_CHARS, dchars)
             counters.increment(counters.COUNTER_SENTENCES, dsentences)
@@ -3088,13 +3089,13 @@ class UploadHandler(BaseUploadHandler):
         user = cache.get_user(username)
 
         uploads = self.get_uploads()
-        entry, content, blobs = models.old_models.Entry.get_entry(username, urllib.unquote(journal_name), entry_id)
+        entry, content, blobs = models.Entry.get_entry(username, urllib.unquote(journal_name), entry_id)
 
         blob_type = -1
         if len(uploads) == 1:
             blob = uploads[0]
             if blob.content_type.startswith('image/'):
-                blob_type = models.old_models.BLOB_TYPE_IMAGE
+                blob_type = models.BLOB_TYPE_IMAGE
 
         # blob_type = models.BLOB_TYPE_IMAGE #testing only delete this line.
 
@@ -3110,11 +3111,11 @@ class UploadHandler(BaseUploadHandler):
             ndb.put_multi([user, entry, blob])
             return user, entry
 
-        blob_key = models.old_models.Blob.get_blob_key(entry)
+        blob_key = models.Blob.get_blob_key(entry)
         # print 'blob_key', blob_key
 
 
-        new_blob = models.old_models.Blob(key=blob_key, blob=blob.key(), type=blob_type, name=blob.filename, size=blob.size)
+        new_blob = models.Blob(key=blob_key, blob=blob.key(), type=blob_type, name=blob.filename, size=blob.size)
         new_blob.get_url()
 
         user, entry = ndb.transaction(lambda: txn(user, entry, new_blob))
@@ -3168,7 +3169,7 @@ class MarkupHandler(BaseHandler):
 
 class UpdateUsersHandler(BaseHandler):  # Admin Only Function for user maintenance.
     def get(self):
-        q = models.old_models.User.all(keys_only=True)
+        q = models.User.all(keys_only=True)
         cursor = self.request.get('cursor')
 
         if cursor:
@@ -3276,13 +3277,13 @@ class SocialPost(BaseHandler):
 
         user = cache.get_by_key(entry_key.parent().parent())
 
-        if network == models.old_models.USER_SOURCE_FACEBOOK and all([user.facebook_token, user.facebook_enable]):
+        if network == models.USER_SOURCE_FACEBOOK and all([user.facebook_token, user.facebook_enable]):
             data = facebook.graph_request(user.facebook_token, method='POST', path='/feed', payload_dict={
                 'message': MESSAGE,
                 'link': link,
                 'name': NAME,
             })
-        if network == models.old_models.USER_SOURCE_TWITTER and all([user.twitter_id, user.twitter_key, user.twitter_secret]):
+        if network == models.USER_SOURCE_TWITTER and all([user.twitter_id, user.twitter_key, user.twitter_secret]):
             oauth_token = twitter.oauth_token(user.twitter_key, user.twitter_secret)
             client = twitter.oauth_client(None, oauth_token)
             status = client.post('/statuses/update', status='%s %s' % (MESSAGE, link))
@@ -3303,7 +3304,7 @@ class DownloadJournalHandler(BaseHandler):
             self.error(403)
             return
 
-        journal = models.old_models.Journal.get_journal(username, journal_name.decode('utf-8'))
+        journal = models.Journal.get_journal(username, journal_name.decode('utf-8'))
 
         if not journal:
             self.error(404)
@@ -3340,17 +3341,17 @@ class DownloadJournalHandler(BaseHandler):
                 title = '%s: %s to %s' % (journal.name, from_date.strftime(DATE_FORMAT), to_date.strftime(DATE_FORMAT))
 
                 entries = []
-                for entry_key in models.old_models.Entry.all(keys_only=True).ancestor(journal).filter('date >=', from_date).filter(
+                for entry_key in models.Entry.all(keys_only=True).ancestor(journal).filter('date >=', from_date).filter(
                         'date <', to_date + datetime.timedelta(1)).order('date'):
                     entries.append(cache.get_entry(username, journal_name, entry_key.id(), entry_key))
 
                 with files.open(file_name, 'a') as f:
                     error = utils.convert_html(f, title, entries)
                 files.finalize(file_name)
-                pdf_blob = models.old_models.Blob(
+                pdf_blob = models.Blob(
                     key=key,
                     blob=files.blobstore.get_blob_key(file_name),
-                    type=models.old_models.BLOB_TYPE_PDF,
+                    type=models.BLOB_TYPE_PDF,
                     name='%s - %s - %s to %s' % (
                     username, utils.deunicode(journal_name.decode('utf-8')), from_date.strftime(DATE_FORMAT),
                     to_date.strftime(DATE_FORMAT)),
