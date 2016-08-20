@@ -680,7 +680,7 @@ def createGladClusterEntries(area):
     """
     gladcluster_geogjson_collection = get_gladcluster_list(area.get_gladcluster())
     for cluster in gladcluster_geogjson_collection:
-        cluster_key = models.GladCluster(area=area.Key, geo_json=cluster)
+        cluster_key = models.GladCluster(area=area.Key, geo_json=json.dumps(cluster))
         cluster_key.put()
         #TODO: create cases for each cluster
 
