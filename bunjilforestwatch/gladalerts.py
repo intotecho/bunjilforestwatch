@@ -655,20 +655,21 @@ def check_export_status(task_id, clusterProperties):
     return msg
 
 
-def get_gladcluster_list(gladcluster_geojson):
+def get_gladcluster_list(gladcluster_geojson_str):
     """
     returns a list of geojson objects each only containing one glad cluster.
     """
     gladcluster_geogjson_collection = []
+    gladcluster_geojson_obj = json.loads(gladcluster_geojson_str)
 
-    for cluster in gladcluster_geojson["features"]:
-        gladcluster_geojson = {
+    for cluster in gladcluster_geojson_obj["features"]:
+        gladcluster_geojson_str = {
             "type": "FeatureCollection",
             "features": [
                 cluster
             ]
         }
-        gladcluster_geogjson_collection.append(gladcluster_geojson)
+        gladcluster_geogjson_collection.append(gladcluster_geojson_str)
 
     return gladcluster_geogjson_collection
 
