@@ -6,7 +6,6 @@
 
 
 import models
-from models.glad_cluster import GladCluster
 
 '''
 import csv
@@ -639,7 +638,7 @@ def check_export_status(task_id, clusterProperties):
         try:
             area = cache.get_area(clusterProperties['area'])
             clusterProperties['file_id'] = area.get_gladcluster_file_id()
-            createGladClusterEnteries(area)
+            createGladClusterEntries(area)
             new_observations = []
             obs = models.Observation.createGladAlertObservation(area, clusterProperties)
             if obs is not None:
@@ -674,13 +673,13 @@ def get_gladcluster_list(gladcluster_geojson):
     return gladcluster_geogjson_collection
 
 #TODO: rename this method so that it conveys that a case will also be created.
-def createGladClusterEnteries(area):
+def createGladClusterEntries(area):
     """
     Creates an entry in the data store for each glad cluster in a given area
     """
     gladcluster_geogjson_collection = get_gladcluster_list(area.get_gladcluster())
     for cluster in gladcluster_geogjson_collection:
-        cluster_key = GladCluster(area=area.Key, geo_json=cluster)
+        cluster_key = models.GladCluster(area=area.Key, geo_json=cluster)
         cluster_key.put()
         #TODO: create cases for each cluster
 
