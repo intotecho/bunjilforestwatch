@@ -661,7 +661,7 @@ def get_gladcluster_list(gladcluster_geojson):
     """
     gladcluster_geogjson_collection = []
 
-    for cluster in gladcluster_geojson.features:
+    for cluster in gladcluster_geojson["features"]:
         gladcluster_geojson = {
             "type": "FeatureCollection",
             "features": [
