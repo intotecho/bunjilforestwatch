@@ -1603,13 +1603,14 @@ class Case(ndb.Model):
     """
 
     glad_cluster = ndb.KeyProperty(kind=GladCluster)  # key to the GladCluster that created the case.
-    status = ndb.StringProperty(required=True, indexed=True)
+    status = ndb.StringProperty(required=True, indexed=True, default="OPEN")
     creation_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
 
     # Voting Data
-    fire_votes = ndb.IntegerProperty(indexed=False)
-    deforestation_votes = ndb.IntegerProperty(indexed=False)
-    agriculture_votes = ndb.IntegerProperty(indexed=False)
-    road_votes = ndb.IntegerProperty(indexed=False)
-    unsure_votes = ndb.IntegerProperty(indexed=False)
-    confidence = ndb.IntegerProperty(indexed=False)
+    fire_votes = ndb.IntegerProperty(indexed=False, default=0)
+    deforestation_votes = ndb.IntegerProperty(indexed=False, default=0)
+    agriculture_votes = ndb.IntegerProperty(indexed=False, default=0)
+    road_votes = ndb.IntegerProperty(indexed=False, default=0)
+    unsure_votes = ndb.IntegerProperty(indexed=False, default=0)
+    confidence = ndb.IntegerProperty(indexed=False, default=0)
+
