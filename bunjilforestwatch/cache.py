@@ -502,6 +502,14 @@ def get_area(area_name):
     return data
 
 
+def get_case_for_glad_cluster(glad_cluster):
+    return models.Case.query(models.Case.glad_cluster == glad_cluster.key).fetch()
+
+
+def get_glad_clusters_for_area(area):
+    return models.GladCluster.query(models.GladCluster.area == area.key).fetch()
+
+
 def get_area_key(username, area_name):
     if username is None:
         data = models.AreaOfInterest.query(models.AreaOfInterest.name == area_name).fetch(keys_only=True)

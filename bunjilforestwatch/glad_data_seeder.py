@@ -10,8 +10,13 @@ from gladalerts import createGladClusterAndCaseEntries
 
 
 def removeOldSeededArea(old_seeded_area):
-    # todo: remove old glad clusters
-    # todo: remove old cases
+    clusters = cache.get_glad_clusters_for_area(old_seeded_area)
+    for cluster in clusters:
+        cases = cache.get_case_for_glad_cluster(cluster)
+        for case in cases:
+            case.key.delete()
+
+        cluster.key.delete()
 
     old_seeded_area.key.delete()
 
@@ -179,5 +184,4 @@ def seedData():
     createGladClusterAndCaseEntries(peru_area)
 
     return True, "GladCluster and case data has been seeded successfully. " \
-                 "\n NOTE: this should only be run once as on subsequent executions the old seeded case and cluster " \
-                 "data will not be deleted."
+                 "NOTE: any previously seeded data has been removed"
