@@ -638,7 +638,11 @@ def check_export_status(task_id, clusterProperties):
         try:
             area = cache.get_area(clusterProperties['area'])
             clusterProperties['file_id'] = area.get_gladcluster_file_id()
-            createGladClusterAndCaseEntries(area)
+            try:
+                createGladClusterAndCaseEntries(area)
+            except Exception as e:
+                logging.error("Failed to create clustered geojson and case entries in the data store")
+                    
             new_observations = []
             obs = models.Observation.createGladAlertObservation(area, clusterProperties)
             if obs is not None:
