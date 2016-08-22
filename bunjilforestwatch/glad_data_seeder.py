@@ -168,9 +168,8 @@ def createArea(new_area_geojson_str):
 
 def seedData():
     '''
-        Seeds the data store with a new areas (within the glad monitored zones), glad clusters and
-        cases.
-    :return: True if successful, Message: to show when the request has been handled
+    Seeds the data store with a new areas (within the glad monitored zones), glad clusters and cases.
+    @returns: True if successful, Message: to show when the request has been handled
     '''
     # TODO: use a sub directory and automatically scan and use whole directory for seeding
     with open('seed-data/peru_area.geojson', 'r') as seed_data_file:

@@ -493,16 +493,12 @@ def get_following_areanames_list(user_key): #as above but returns list of names 
         data = []
     return data
 
-
 def get_area(area_name):
     data = models.AreaOfInterest.get_by_id(area_name)
     if data is None:
         logging.error("get_area() no area found for %s", area_name)
         return None
     return data
-
-
-
 
 def get_area_key(username, area_name):
     if username is None:
