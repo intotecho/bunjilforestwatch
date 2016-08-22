@@ -1597,6 +1597,9 @@ class GladCluster(ndb.Model):
     first_alert_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
     geo_json = ndb.PickleProperty(required=True, indexed=False)
 
+    def get_glad_clusters_for_area(area):
+        return GladCluster.query(GladCluster.area == area.key).fetch()
+
 
 class Case(ndb.Model):
     """
@@ -1614,3 +1617,5 @@ class Case(ndb.Model):
     unsure_votes = ndb.IntegerProperty(indexed=False, default=0)
     confidence = ndb.IntegerProperty(indexed=False, default=0)
 
+    def get_cases_for_glad_cluster(glad_cluster):
+        return Case.query(Case.glad_cluster == glad_cluster.key).fetch()

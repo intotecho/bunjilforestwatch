@@ -10,9 +10,9 @@ from gladalerts import createGladClusterAndCaseEntries
 
 
 def removeOldSeededArea(old_seeded_area):
-    clusters = cache.get_glad_clusters_for_area(old_seeded_area)
+    clusters = models.GladCluster.get_glad_clusters_for_area(old_seeded_area)
     for cluster in clusters:
-        cases = cache.get_case_for_glad_cluster(cluster)
+        cases = models.Case.get_cases_for_glad_cluster(cluster)
         for case in cases:
             case.key.delete()
 
