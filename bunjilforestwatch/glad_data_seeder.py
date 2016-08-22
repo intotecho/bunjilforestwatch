@@ -6,7 +6,7 @@ import cache
 import eeservice
 import geojson
 import models
-from gladalerts import createGladClusterAndCaseEntries
+from gladalerts import create_glad_cluster_and_case_entities
 
 
 def removeOldSeededArea(old_seeded_area):
@@ -181,7 +181,7 @@ def seedData():
     if not area_a_success:
         return False, "Error: could not seed data for some reason"
 
-    createGladClusterAndCaseEntries(peru_area)
+    create_glad_cluster_and_case_entities(peru_area)
 
     return True, "GladCluster and case data has been seeded successfully. " \
                  "NOTE: any previously seeded data has been removed"

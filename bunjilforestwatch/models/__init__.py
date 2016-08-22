@@ -1595,7 +1595,7 @@ class GladCluster(ndb.Model):
     """
     area = ndb.KeyProperty(kind=AreaOfInterest)  # key to the GladCluster that created the case.
     first_alert_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
-    geo_json = ndb.PickleProperty(required=True, indexed=False)
+    geojson = ndb.PickleProperty(required=True, indexed=False)
 
     @staticmethod
     def get_glad_clusters_for_area(area):

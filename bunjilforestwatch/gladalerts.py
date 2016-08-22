@@ -639,7 +639,7 @@ def check_export_status(task_id, clusterProperties):
             area = cache.get_area(clusterProperties['area'])
             clusterProperties['file_id'] = area.get_gladcluster_file_id()
             try:
-                createGladClusterAndCaseEntries(area)
+                create_glad_cluster_and_case_entities(area)
             except Exception as e:
                 logging.error("Failed to create clustered geojson and case entries in the data store")
                     
@@ -659,35 +659,35 @@ def check_export_status(task_id, clusterProperties):
     return msg
 
 
-def get_gladcluster_list(gladcluster_geojson_str):
+def get_glad_cluster_list(glad_cluster_geojson_str):
     """
     returns a list of geojson objects each only containing one glad cluster.
     """
-    gladcluster_geogjson_collection = []
-    gladcluster_geojson_obj = json.loads(gladcluster_geojson_str)
+    glad_cluster_geogjson_collection = []
+    glad_cluster_geojson_obj = json.loads(glad_cluster_geojson_str)
 
-    for cluster in gladcluster_geojson_obj["features"]:
-        gladcluster_geojson_str = {
+    for cluster in glad_cluster_geojson_obj["features"]:
+        glad_cluster_geojson_str = {
             "type": "FeatureCollection",
             "features": [
                 cluster
             ]
         }
-        gladcluster_geogjson_collection.append(gladcluster_geojson_str)
+        glad_cluster_geogjson_collection.append(glad_cluster_geojson_str)
 
-    return gladcluster_geogjson_collection
+    return glad_cluster_geogjson_collection
 
 
-def createGladClusterAndCaseEntries(area):
+def create_glad_cluster_and_case_entities(area):
     """
     Creates an entry in the data store for each glad cluster in a given area
     """
-    gladcluster_geojson_collection = get_gladcluster_list(area.get_gladcluster())
+    gladcluster_geojson_collection = get_glad_cluster_list(area.get_gladcluster())
     for cluster in gladcluster_geojson_collection:
-        cluster_key = models.GladCluster(area=area.key, geo_json=json.dumps(cluster))
-        cluster_key.put()
-        case_key = models.Case(glad_cluster=cluster_key.key)
-        case_key.put()
+        cluster_entity = models.GladCluster(area=area.key, geojson=json.dumps(cluster))
+        cluster_entity.put()
+        case_entity = models.Case(glad_cluster=cluster_entity.key)
+        case_entity.put()
 
 
 def handleAlerts2Clusters(handler, area_name):
