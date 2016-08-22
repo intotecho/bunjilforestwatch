@@ -677,16 +677,18 @@ def get_gladcluster_list(gladcluster_geojson_str):
 
     return gladcluster_geogjson_collection
 
+
 def createGladClusterAndCaseEntries(area):
     """
     Creates an entry in the data store for each glad cluster in a given area
     """
-    gladcluster_geogjson_collection = get_gladcluster_list(area.get_gladcluster())
-    for cluster in gladcluster_geogjson_collection:
+    gladcluster_geojson_collection = get_gladcluster_list(area.get_gladcluster())
+    for cluster in gladcluster_geojson_collection:
         cluster_key = models.GladCluster(area=area.key, geo_json=json.dumps(cluster))
         cluster_key.put()
         case_key = models.Case(glad_cluster=cluster_key.key)
         case_key.put()
+
 
 def handleAlerts2Clusters(handler, area_name):
     """
