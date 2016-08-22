@@ -6,6 +6,7 @@
 
 
 import models
+
 '''
 import csv
 import numpy as np
@@ -635,8 +636,13 @@ def check_export_status(task_id, clusterProperties):
         logging.info(msg)
         #CREATE A TASK
         try:
-            area= cache.get_area(clusterProperties['area'])
+            area = cache.get_area(clusterProperties['area'])
             clusterProperties['file_id'] = area.get_gladcluster_file_id()
+            try:
+                create_glad_cluster_and_case_entities(area)
+            except Exception as e:
+                logging.error("Failed to create clustered geojson and case entries in the data store")
+                    
             new_observations = []
             obs = models.Observation.createGladAlertObservation(area, clusterProperties)
             if obs is not None:
@@ -653,7 +659,35 @@ def check_export_status(task_id, clusterProperties):
     return msg
 
 
+def get_glad_cluster_list(glad_cluster_geojson_str):
+    """
+    @returns: a list of geojson objects each only containing one glad cluster.
+    """
+    glad_cluster_geogjson_collection = []
+    glad_cluster_geojson_obj = json.loads(glad_cluster_geojson_str)
 
+    for cluster in glad_cluster_geojson_obj["features"]:
+        glad_cluster_geojson_str = {
+            "type": "FeatureCollection",
+            "features": [
+                cluster
+            ]
+        }
+        glad_cluster_geogjson_collection.append(glad_cluster_geojson_str)
+
+    return glad_cluster_geogjson_collection
+
+
+def create_glad_cluster_and_case_entities(area):
+    """
+    Creates an entry in the data store for each glad cluster in a given area
+    """
+    gladcluster_geojson_collection = get_glad_cluster_list(area.get_gladcluster())
+    for cluster in gladcluster_geojson_collection:
+        cluster_entity = models.GladCluster(area=area.key, geojson=json.dumps(cluster))
+        cluster_entity.put()
+        case_entity = models.Case(glad_cluster=cluster_entity.key)
+        case_entity.put()
 
 
 def handleAlerts2Clusters(handler, area_name):

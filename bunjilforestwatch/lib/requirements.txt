@@ -10,3 +10,4 @@ matplotlib==1.4.0
 oauth2client==1.5.2
 six==1.10.0
 uritemplate==0.6
+pycrypto>=2.6.1

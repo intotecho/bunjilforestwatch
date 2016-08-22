@@ -1588,3 +1588,42 @@ class BlogEntry(ndb.Model):
 
 class Config(ndb.Expando):
     pass
+
+
+class GladCluster(ndb.Model):
+    """
+    """
+    area = ndb.KeyProperty(kind=AreaOfInterest)  # key to the GladCluster that created the case.
+    first_alert_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
+    geojson = ndb.PickleProperty(required=True, indexed=False)
+
+    @staticmethod
+    def get_glad_clusters_for_area(area):
+        return GladCluster.query(GladCluster.area == area.key).fetch()
+
+
+class CaseVotes(ndb.Model):
+    """
+    Stores the number of votes made for each vote category within a given case
+    """
+    fire = ndb.IntegerProperty(indexed=False, default=0)
+    deforestation = ndb.IntegerProperty(indexed=False, default=0)
+    agriculture = ndb.IntegerProperty(indexed=False, default=0)
+    road = ndb.IntegerProperty(indexed=False, default=0)
+    unsure = ndb.IntegerProperty(indexed=False, default=0)
+
+
+class Case(ndb.Model):
+    """
+    """
+
+    glad_cluster = ndb.KeyProperty(kind=GladCluster)  # key to the GladCluster that created the case.
+    status = ndb.StringProperty(required=True, indexed=True, default="OPEN")
+    creation_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
+
+    votes = ndb.StructuredProperty(CaseVotes, default=CaseVotes())
+    confidence = ndb.IntegerProperty(indexed=False, default=0)
+
+    @staticmethod
+    def get_cases_for_glad_cluster(glad_cluster):
+        return Case.query(Case.glad_cluster == glad_cluster.key).fetch()

@@ -16,6 +16,8 @@ import os
 
 from google.appengine.ext import ndb
 
+import glad_data_seeder
+
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
 
@@ -2182,6 +2184,18 @@ class DistributeGladClusters(BaseHandler):
         return gladalerts.distributeGladClusters(self, area_name)
 
 
+class SeedGladClusterData(BaseHandler):
+
+    def get(self):
+        success, message = glad_data_seeder.seedData()
+        if success:
+            self.response.set_status(200)
+        else:
+            self.response.set_status(400)
+
+        return self.response.write(message)
+
+
 '''
 DistributeGladClusters() takes a GLAD-ALERT cluster and sends it to volunteers as tasks
 '''
@@ -3570,6 +3584,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/admin/exports', handler=ListExportTasks, name='list-exports-tasks'),
     webapp2.Route(r'/admin/test/<test_name>/<area_name>', handler=RunAreaTest, name='area-test'),
 
+    webapp2.Route(r'/admin/alerts/glad/seed', handler=SeedGladClusterData),
     webapp2.Route(r'/admin/alerts/glad/checknew', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
     webapp2.Route(r'/admin/alerts/glad/checknew/<noupdate>', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
     webapp2.Route(r'/admin/alerts/glad/<area_name>', handler=CheckForGladAlertsInAreaHandler, name='alerts-glad-area'),
