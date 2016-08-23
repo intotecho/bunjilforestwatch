@@ -51,6 +51,13 @@ def createArea(new_area_geojson_str):
         logging.error('Create area requires a name.')
         return False, None
 
+    ft_docid = ''
+
+    try:
+        ft_docid = new_area['properties']['fusion_table']['ft_docid'].encode('utf-8')  # allow non-english area names.
+    except KeyError, e:
+        logging.warning('Seeded area does not have a fusion table id.')
+
     existing_area = cache.get_area(area_name)
     if existing_area:
         removeOldSeededArea(existing_area)
@@ -119,8 +126,7 @@ def createArea(new_area_geojson_str):
             description_how=new_area['properties']['area_description']['description_how'].decode('utf-8'),
             threats=new_area['properties']['area_description']['threats'].decode('utf-8'),
             wiki=new_area['properties']['area_description']['wiki'].decode('utf-8'),
-            # ft_docid=ft_docid,
-            ft_docid=None,
+            ft_docid=ft_docid,
             area_location=area_location,
             boundary_hull=boundary_hull,
             boundary_geojsonstr=boundary_geojsonstr,
