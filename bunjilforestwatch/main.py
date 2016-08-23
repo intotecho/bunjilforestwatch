@@ -1942,17 +1942,15 @@ class UpdateOverlayAjaxHandler(BaseHandler):
 
 
 '''
-ObservationTaskHandler() when a user clicks on a link in an obstask email they come here to see the new image.
+    Legacy: Old_ObservationTaskHandler() when a user clicks on a link in an obstask email they come here to see the new image.
 '''
-
-
-class ObservationTaskAjaxHandler(BaseHandler):
+class Old_ObservationTaskAjaxHandler(BaseHandler):
     def get(self, task_id):
 
-        obstask = models.ObservationTask.get_by_id(long(task_id))
+        obstask = models.Old_ObservationTask.get_by_id(long(task_id))
         if obstask is None:
-            self.add_message('danger', "Task not found. ObservationTaskHandler")
-            resultstr = "Task not found. ObservationTaskHandler: key {0!s}".format(task_id)
+            self.add_message('danger', "Task not found. Old_ObservationTaskAjaxHandler")
+            resultstr = "Task not found. ObservationTaskAjaxHandler: key {0!s}".format(task_id)
             logging.error(resultstr)
             return self.response.write(resultstr)
 
@@ -2059,7 +2057,7 @@ def checkForNewInArea(area):
 
         # send each follower of this area an email with reference to a task.
         if new_observations:
-            linestr += models.ObservationTask.createObsTask(area, new_observations, "LANDSATIMAGE", area_followers.users)
+            linestr += models.Old_ObservationTask.createObsTask(area, new_observations, "LANDSATIMAGE", area_followers.users)
         else:
             linestr += u"<ul><li>No new observations found.</li></ul>"
     else:
@@ -2240,7 +2238,7 @@ class MailTestHandler(BaseHandler):
         #         username = "myotheremail@gmail.com"
 
         user = cache.get_user(self.session['user']['name'])
-        tasks = models.ObservationTask.query().order(-models.ObservationTask.created_date).fetch(2)
+        tasks = models.Old_ObservationTask.query().order(-models.Old_ObservationTask.created_date).fetch(2)
         # mailer.new_image_email(user)
         if not tasks:
             return self.handle_error("No tasks to test mailer")
@@ -2325,7 +2323,7 @@ class ViewObservationTasksHandler(BaseHandler):
         else:
             logging.debug('ViewObservationTasks: user:%s, area:%s, page:%d', user2view, area_name,
                           page)  # Move here to XSS sanitise user2view
-            pages = len(tasks) / models.ObservationTask.OBSTASKS_PER_PAGE
+            pages = len(tasks) / models.Old_ObservationTask.OBSTASKS_PER_PAGE
             if pages < 1:
                 pages = 1
 
@@ -3643,7 +3641,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/obs/overlay/create/<obskey_encoded>/<role>/<algorithm>', handler=CreateOverlayHandler,
                   name='create-overlay'),
     webapp2.Route(r'/obs/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
-    webapp2.Route(r'/obs/<task_id>', handler=ObservationTaskAjaxHandler, name='view-obstask'),
+    webapp2.Route(r'/obs/<task_id>', handler=Old_ObservationTaskAjaxHandler, name='view-obstask'),
+
+    # webapp2.Rout('r/observation-task/next/<router_name>', handler=ObservationTaskHandler)
 
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
     # this section must be last, since the regexes below will match one and two -level URLs

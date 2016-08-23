@@ -1113,7 +1113,7 @@ Each task has a unique ID.
 '''
 
 
-class ObservationTask(ndb.Model):
+class Old_ObservationTask(ndb.Model):
     OBSTASKS_PER_PAGE = 5
     # Observation
     name = ndb.StringProperty()
@@ -1184,8 +1184,8 @@ class ObservationTask(ndb.Model):
             area_followers = AreaFollowersIndex.get_by_id(area.name, parent=area.key)
 
         # send each follower of this area an email with reference to a task.
-        new_task = ObservationTask(aoi=area.key, tasktype=type, observations=new_observations, aoi_owner=area.owner,
-                                          share=area.share, status="open")  # always select the first follower.
+        new_task = Old_ObservationTask(aoi=area.key, tasktype=type, observations=new_observations, aoi_owner=area.owner,
+                                       share=area.share, status="open")  # always select the first follower.
         priority = 0
         for user_key in area_followers: # area_followers.users:
             user = cache.get_user(user_key)

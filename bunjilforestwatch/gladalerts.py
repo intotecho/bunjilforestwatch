@@ -649,7 +649,7 @@ def check_export_status(task_id, clusterProperties):
                 new_observations.append(obs.key)
                 area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
                 if area_followers:
-                    models.ObservationTask.createObsTask(area, new_observations, "GLADCLUSTER", area_followers.users)
+                    models.Old_ObservationTask.createObsTask(area, new_observations, "GLADCLUSTER", area_followers.users)
         except Exception as e:
             msg = "Exception creating GLAD ObservationTask {0!s}".format(e)
             logging.error(msg)
