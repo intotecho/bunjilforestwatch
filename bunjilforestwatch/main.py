@@ -2187,7 +2187,18 @@ class DistributeGladClusters(BaseHandler):
 class SeedGladClusterData(BaseHandler):
 
     def get(self):
-        success, message = glad_data_seeder.seedData()
+
+        try:
+            username = self.session['user']['name']
+            user = cache.get_user(username)
+            if not user:
+                raise KeyError
+
+        except KeyError:
+            # TODO: use proper page redirects and redirect to login page.
+            return self.response.write('You must be logged in as an administrator to seed glad cluster / case data')
+
+        success, message = glad_data_seeder.seed_data(user)
         if success:
             self.response.set_status(200)
         else:

@@ -9,7 +9,7 @@ import models
 from gladalerts import create_glad_cluster_and_case_entities
 
 
-def removeOldSeededArea(old_seeded_area):
+def remove_old_seeded_area(old_seeded_area):
     clusters = models.GladCluster.get_glad_clusters_for_area(old_seeded_area)
     for cluster in clusters:
         cases = models.Case.get_cases_for_glad_cluster(cluster)
@@ -21,16 +21,15 @@ def removeOldSeededArea(old_seeded_area):
     old_seeded_area.key.delete()
 
 
-def createArea(new_area_geojson_str):
-    '''
+def create_area(new_area_geojson_str, logged_in_user):
+    """
     Create a new Area
     @param new_area_geojson_str - defines the new area as a geojson string.
            This may optionally contain a boundary_feature named 'boundary' - depending on the new area form design
-    '''
+           :param logged_in_user:
+    """
 
-    # TODO: does an area need a user?
-
-    ### read geojson dict of area properties
+    # read geojson dict of area properties
     try:
         logging.debug("AreaHandler() new_area_geojson_str: %s ", new_area_geojson_str)
         new_area = geojson.loads(new_area_geojson_str)
@@ -43,7 +42,7 @@ def createArea(new_area_geojson_str):
             logging.error('Error parsing new_area data E1184')
         return False, None
 
-    ### area_name
+    # area_name
     logging.info("AreaHandler() request to create new area %s", new_area)
     try:
         area_name = new_area['properties']['area_name'].encode('utf-8')  # allow non-english area names.
@@ -60,15 +59,15 @@ def createArea(new_area_geojson_str):
 
     existing_area = cache.get_area(area_name)
     if existing_area:
-        removeOldSeededArea(existing_area)
+        remove_old_seeded_area(existing_area)
         logging.info('Deleted old seed data')
 
-    ### check EE service
+    # check EE service
     if not eeservice.initEarthEngineService():  # we need earth engine now.
         logging.error('Failed to seed data because Google Earth Engine not available right now. Please try again later')
         return False, None
 
-    ###pre-init variables to create area in case they don't appear in the geojson object
+    # pre-init variables to create area in case they don't appear in the geojson object
     maxlatlon = ndb.GeoPt(0, 0)
     minlatlon = ndb.GeoPt(0, 0)
     area_location = ndb.GeoPt(0, 0)
@@ -91,24 +90,24 @@ def createArea(new_area_geojson_str):
             logging.error(errmsg % feature)
             return False, None
 
-        ### get map view
+        # get map view
         if name == "mapview":  # get the view settings to display the area.
             zoom = feature['properties']['zoom']
             center = ndb.GeoPt(float(coordinates[1]), float(coordinates[0]))
 
-        ### get center point
+        # get center point
         if name == "area_location":  # get the view settings to display the area.
             area_location = ndb.GeoPt(
                 float(coordinates[1]),
                 float(coordinates[0]))
 
-        ### get drawn or geojson imported boundary
+        # get drawn or geojson imported boundary
         if name == "boundary_hull":
             # boundary_hull = feature
             boundary_feature = feature
             pass
 
-    ### check area is not too small or too big.
+    # TODO: check area is not too small or too big.
 
     def txn(area):
         # user = user_key.get()
@@ -118,8 +117,7 @@ def createArea(new_area_geojson_str):
     try:
         area = models.AreaOfInterest(
             id=area_name, name=area_name,
-            # owner=self.session['user']['key'],
-            owner=None,
+            owner=logged_in_user.key,
             description=new_area['properties']['area_description']['description'].decode('utf-8'),
             description_why=new_area['properties']['area_description']['description_why'].decode('utf-8'),
             description_who=new_area['properties']['area_description']['description_who'].decode('utf-8'),
@@ -141,14 +139,14 @@ def createArea(new_area_geojson_str):
 
     area.set_shared('public')
 
-    ### set boundary if one was provided.
+    # set boundary if one was provided.
     if boundary_feature != None:
         eeFeatureCollection, status, errormsg = models.AreaOfInterest.get_eeFeatureCollection(
             new_area)
         boundary_hull_dict = models.AreaOfInterest.calc_boundary_fc(eeFeatureCollection)
         area.set_boundary_fc(boundary_hull_dict, False)
 
-    ### update the area and the referencing user
+    # update the area and the referencing user
     try:
         area = ndb.transaction(lambda: txn(area), xg=True)
         # models.Activity.create(user, models.ACTIVITY_NEW_AREA, area.key)
@@ -160,7 +158,7 @@ def createArea(new_area_geojson_str):
         logging.error("Exception creating area... {0!s}".format(e))
         return False, None
 
-    ### if auto-follow, add user as follower or area
+    # if auto-follow, add user as follower or area
     # if new_area['properties']['self_monitor'] == True:
     #     logging.debug('Requesting self-monitoring for %s' % (area.name))
     #     # FollowAreaHandler.followArea(username, area.name, True)
@@ -172,18 +170,19 @@ def createArea(new_area_geojson_str):
     return True, area
 
 
-def seedData():
-    '''
+def seed_data(logged_in_user):
+    """
     Seeds the data store with a new areas (within the glad monitored zones), glad clusters and cases.
     @returns: True if successful, Message: to show when the request has been handled
-    '''
+    """
+
     # TODO: use a sub directory and automatically scan and use whole directory for seeding
     with open('seed-data/peru_area.geojson', 'r') as seed_data_file:
         peru_area_goejson_str = seed_data_file.read()
 
-    area_a_success, peru_area = createArea(peru_area_goejson_str)
+    peru_area_success, peru_area = create_area(peru_area_goejson_str, logged_in_user)
 
-    if not area_a_success:
+    if not peru_area_success:
         return False, "Error: could not seed data for some reason"
 
     create_glad_cluster_and_case_entities(peru_area)
