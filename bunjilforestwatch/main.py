@@ -2044,18 +2044,7 @@ class ObservationTaskHandler(BaseHandler):
             router = SimpleRouter()
 
         result = router.get_next_observation_task(user)
-        self.response.write(json.dumps(
-            {
-                "case": {
-                            "case_id": result.case.key.id(),
-                            "case_data": result.case.to_dict(exclude=['glad_cluster', 'creation_time'])
-                },
-                "glad_cluster": {
-                    "cluster_id": result.glad_cluster.key.id(),
-                    "cluster_data": result.glad_cluster.geojson
-                }
-            }))
-
+        self.response.write(result.to_JSON())
 
 
 
