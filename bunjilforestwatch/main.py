@@ -2021,7 +2021,7 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
 
 
 class ObservationTaskHandler(BaseHandler):
-    def get(self, router_name):
+    def get(self, router_name='DUMMY'):
 
         try:
             username = self.session['user']['name']
@@ -3674,6 +3674,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>',
                     handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
 
+    webapp2.Route(r'/observation-task/<router_name>/next', handler=ObservationTaskHandler, name="next-task"),
+    webapp2.Route(r'/observation-task/next', handler=ObservationTaskHandler, name="next-task"),
+
     # observation tasks see also admin/obs/list
     webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
                   name='view-obstasks'),
@@ -3681,9 +3684,6 @@ app = webapp2.WSGIApplication([
                   name='create-overlay'),
     webapp2.Route(r'/obs/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
     webapp2.Route(r'/obs/<task_id>', handler=Old_ObservationTaskAjaxHandler, name='view-obstask'),
-
-    webapp2.Route('r/observation-task/<router_name>/next', handler=ObservationTaskHandler,
-                  name='next-observation-task'),
 
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
     # this section must be last, since the regexes below will match one and two -level URLs
