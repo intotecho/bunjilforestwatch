@@ -684,7 +684,7 @@ def create_glad_cluster_and_case_entities(area):
     """
     gladcluster_geojson_collection = get_glad_cluster_list(area.get_gladcluster())
     for cluster in gladcluster_geojson_collection:
-        cluster_entity = models.GladCluster(area=area.key, geojson=json.dumps(cluster))
+        cluster_entity = models.GladCluster(area=area.key, geojson=cluster)
         cluster_entity.put()
         case_entity = models.Case(glad_cluster=cluster_entity.key)
         case_entity.put()

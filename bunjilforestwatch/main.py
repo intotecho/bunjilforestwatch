@@ -17,6 +17,8 @@ import os
 from google.appengine.ext import ndb
 
 import glad_data_seeder
+from observation_task_routers.dummy_router import DummyRouter
+from observation_task_routers.simple_router import SimpleRouter
 
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
@@ -51,6 +53,7 @@ import re
 import geojson
 import bleach
 import apiservices
+from observation_task_routers import *
 
 from google.appengine.api import files
 from google.appengine.api import taskqueue
@@ -1950,7 +1953,7 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
         obstask = models.Old_ObservationTask.get_by_id(long(task_id))
         if obstask is None:
             self.add_message('danger', "Task not found. Old_ObservationTaskAjaxHandler")
-            resultstr = "Task not found. ObservationTaskAjaxHandler: key {0!s}".format(task_id)
+            resultstr = "Task not found. Old_ObservationTaskAjaxHandler: key {0!s}".format(task_id)
             logging.error(resultstr)
             return self.response.write(resultstr)
 
@@ -1977,8 +1980,8 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
 
         area = obstask.aoi.get()
         if area is None:
-            self.add_message('danger', "ObservationTaskHandler: Task for deleted area. ")
-            resultstr = "Task's area not found. ObservationTaskHandler: key {0!s}".format(task_id)
+            self.add_message('danger', "Old_ObservationTaskAjaxHandler: Task for deleted area. ")
+            resultstr = "Task's area not found. Old_ObservationTaskAjaxHandler: key {0!s}".format(task_id)
             logging.error(resultstr)
             return self.response.write(resultstr)
 
@@ -2016,6 +2019,42 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
             'celllist': json.dumps(cell_list)
         })
 
+
+class ObservationTaskHandler(BaseHandler):
+    def get(self, router_name):
+
+        try:
+            username = self.session['user']['name']
+            user = cache.get_user(username)
+            if not user:
+                raise KeyError
+                # TODO: use proper page redirects and redirect to login page.
+
+        except KeyError:
+            return self.response.write('You must be logged in!')
+
+        router = None
+        if router_name is None:
+            result_str = "Specified router not found"
+            logging.error(result_str)
+            return self.response.write(result_str)
+        elif router_name == 'DUMMY':
+            router = DummyRouter()
+        elif router_name == 'SIMPLE':
+            router = SimpleRouter()
+
+        result = router.get_next_observation_task(user)
+        self.response.write(json.dumps(
+            {
+                "case": {
+                            "case_id": result.case.key.id(),
+                            "case_data": result.case.to_dict(exclude=['glad_cluster', 'creation_time'])
+                },
+                "glad_cluster": {
+                    "cluster_id": result.glad_cluster.key.id(),
+                    "cluster_data": result.glad_cluster.geojson
+                }
+            }))
 
 
 
@@ -3643,7 +3682,8 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/obs/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
     webapp2.Route(r'/obs/<task_id>', handler=Old_ObservationTaskAjaxHandler, name='view-obstask'),
 
-    # webapp2.Rout('r/observation-task/next/<router_name>', handler=ObservationTaskHandler)
+    webapp2.Route('r/observation-task/<router_name>/next', handler=ObservationTaskHandler,
+                  name='next-observation-task'),
 
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
     # this section must be last, since the regexes below will match one and two -level URLs
@@ -3671,6 +3711,8 @@ RESERVED_NAMES = set([
     'about',
     'assets',
     'myareas',
+    'observation-task',
+    'next',
     'account',
     'activity',
     'area',
