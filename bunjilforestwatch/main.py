@@ -2034,14 +2034,16 @@ class ObservationTaskHandler(BaseHandler):
             return self.response.write('You must be logged in!')
 
         router = None
-        if router_name is None:
-            result_str = "Specified router not found"
-            logging.error(result_str)
-            return self.response.write(result_str)
-        elif router_name == 'DUMMY':
+        if router_name == 'DUMMY':
             router = DummyRouter()
         elif router_name == 'SIMPLE':
             router = SimpleRouter()
+        else:
+            result_str = "Specified router not found"
+            logging.error(result_str)
+            result_str = "Specified router not found"
+            logging.error(result_str)
+            return self.response.write(result_str)
 
         result = router.get_next_observation_task(user)
         self.response.write(result.to_JSON())
