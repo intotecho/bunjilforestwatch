@@ -2,11 +2,12 @@ import { render } from 'react-dom';
 import React from 'react';
 
 import App from './app';
+import { hello } from '../css/index'
 
 var AppComponent = React.createClass({
   render() {
     return (
-      <div class='testMeNao'>
+      <div className={hello}>
       	hello
       	<App />
       </div>

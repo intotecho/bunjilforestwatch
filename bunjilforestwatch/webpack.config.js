@@ -1,6 +1,7 @@
 var path = require("path")
 var webpack = require('webpack')
 var BundleTracker = require('webpack-bundle-tracker')
+var autoprefixer = require('autoprefixer');
 
 module.exports = {
   context: __dirname,
@@ -28,19 +29,21 @@ module.exports = {
         }
       },
       { 
-        test: /\.css$/, 
-        exclude: /\.useable\.css$/, 
-        loader: 'style!css' 
-      },
-    ],
+        // Can't get autoprefixer to work, need to research on loaders and its linking
+        test: /\.css$/,
+        loaders: [
+          'style?sourceMap',
+          'css?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]'
+        ]
+      }
+    ]
   },
-
+  postcss: [ autoprefixer({ browsers: ['last 2 versions'] }) ],
   resolve: {
     root: [
-      path.resolve(__dirname + '/assets/js'),
-      path.resolve(__dirname + '/assets/css')
+      path.resolve(__dirname + '/assets/js')
     ],
     modulesDirectories: ['node_modules', 'bower_components'],
-    extensions: ['', '.js', '.jsx']
+    extensions: ['', '.js', '.jsx', '.css']
   },
 }
