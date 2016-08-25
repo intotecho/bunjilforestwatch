@@ -10,7 +10,6 @@ builtins:
 - deferred: on
 - remote_api: off
 
-
 skip_files:
 - ^(.*/)?#.*#$
 - ^(.*/)?.*~$
@@ -22,6 +21,7 @@ skip_files:
 - ^(.*/)?.*/source/.*$
 - ^(.*/)?.*\.db$
 - ^(.*/)?.*\.dist-info$
+- ^(.*/)?.*/node_modules/.*$
 
 libraries:
 - name: jinja2
@@ -45,6 +45,9 @@ inbound_services:
 - warmup
 
 handlers:
+- url: /assets
+  static_dir: assets
+
 - url: /favicon.ico
   static_files: static/images/favicon.ico
   upload: static/images/favicon.ico
