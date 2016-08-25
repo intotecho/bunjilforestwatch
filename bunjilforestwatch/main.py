@@ -2021,7 +2021,7 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
 
 
 class ObservationTaskHandler(BaseHandler):
-    def get(self, router_name):
+    def get(self, router_name='DUMMY'):
 
         try:
             username = self.session['user']['name']
@@ -2034,28 +2034,19 @@ class ObservationTaskHandler(BaseHandler):
             return self.response.write('You must be logged in!')
 
         router = None
-        if router_name is None:
-            result_str = "Specified router not found"
-            logging.error(result_str)
-            return self.response.write(result_str)
-        elif router_name == 'DUMMY':
+        if router_name == 'DUMMY':
             router = DummyRouter()
         elif router_name == 'SIMPLE':
             router = SimpleRouter()
+        else:
+            result_str = "Specified router not found"
+            logging.error(result_str)
+            result_str = "Specified router not found"
+            logging.error(result_str)
+            return self.response.write(result_str)
 
         result = router.get_next_observation_task(user)
-        self.response.write(json.dumps(
-            {
-                "case": {
-                            "case_id": result.case.key.id(),
-                            "case_data": result.case.to_dict(exclude=['glad_cluster', 'creation_time'])
-                },
-                "glad_cluster": {
-                    "cluster_id": result.glad_cluster.key.id(),
-                    "cluster_data": result.glad_cluster.geojson
-                }
-            }))
-
+        self.response.write(result.to_JSON())
 
 
 
@@ -3674,6 +3665,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>',
                     handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
 
+    webapp2.Route(r'/observation-task/<router_name>/next', handler=ObservationTaskHandler, name="next-task"),
+    webapp2.Route(r'/observation-task/next', handler=ObservationTaskHandler, name="next-task"),
+
     # observation tasks see also admin/obs/list
     webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
                   name='view-obstasks'),
@@ -3681,9 +3675,6 @@ app = webapp2.WSGIApplication([
                   name='create-overlay'),
     webapp2.Route(r'/obs/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
     webapp2.Route(r'/obs/<task_id>', handler=Old_ObservationTaskAjaxHandler, name='view-obstask'),
-
-    webapp2.Route('r/observation-task/<router_name>/next', handler=ObservationTaskHandler,
-                  name='next-observation-task'),
 
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
     # this section must be last, since the regexes below will match one and two -level URLs
