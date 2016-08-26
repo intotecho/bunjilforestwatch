@@ -32,8 +32,8 @@ module.exports = {
         // Can't get autoprefixer to work, need to research on loaders and its linking
         test: /\.css$/,
         loaders: [
-          'style?sourceMap',
-          'css?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]'
+          'style-loader',
+          'css-loader?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss-loader'
         ]
       }
     ]
