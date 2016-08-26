@@ -20,7 +20,6 @@ module.exports = {
   module: {
     loaders: [
       { 
-        // to transform JSX into JS
         test: /\.js?$/, 
         exclude: /node_modules/, 
         loader: 'babel-loader',
@@ -29,11 +28,11 @@ module.exports = {
         }
       },
       { 
-        // Can't get autoprefixer to work, need to research on loaders and its linking
-        test: /\.css$/,
+        test: /\.scss$/,
         loaders: [
-          'style-loader',
-          'css-loader?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss-loader'
+          'style',
+          'css?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]',
+          'sass'
         ]
       }
     ]
@@ -44,6 +43,6 @@ module.exports = {
       path.resolve(__dirname + '/assets/js')
     ],
     modulesDirectories: ['node_modules', 'bower_components'],
-    extensions: ['', '.js', '.jsx', '.css']
+    extensions: ['', '.js', '.jsx', '.scss']
   },
 }
