@@ -2048,6 +2048,46 @@ class ObservationTaskHandler(BaseHandler):
         result = router.get_next_observation_task(user)
         self.response.write(result.to_JSON())
 
+    def post(self):
+        """
+            Accepts an observation task response
+            
+            Example request body
+            {
+                "vote_category": "FIRE",
+                "case_id": 4573418615734272
+            }
+        :return:
+        """
+        try:
+            username = self.session['user']['name']
+            user = cache.get_user(username)
+            if not user:
+                raise KeyError
+
+        except KeyError:
+            self.response.set_status(401)
+            return
+
+        observation_task_response = json.loads(self.request.body)
+        # TODO: use a json encoder and us a Decoding Error for the validation
+        if observation_task_response['vote_category'] is not None:
+            if observation_task_response['case_id'] is not None:
+                # TODO: consider moving this check down into a JSON decoding function or BLL module
+                if observation_task_response['vote_category'] in models.VOTE_CATEGORIES:
+                    case = models.Case.get_by_id(id=observation_task_response['case_id'])
+                    if case is None:
+                        # TODO: consider moving this check down into a BLL module
+                        self.response.set_status(404)
+                        return
+
+                    # TODO: do stuff with response
+                    # TODO: send 400 if something bad happens during creation of observation task response
+                    self.response.set_status(201)
+                    return
+
+        self.reponse.set_status(400)
+        return
 
 
 '''
@@ -3665,8 +3705,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>',
                     handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
 
-    webapp2.Route(r'/observation-task/<router_name>/next', handler=ObservationTaskHandler, name="next-task"),
-    webapp2.Route(r'/observation-task/next', handler=ObservationTaskHandler, name="next-task"),
+    webapp2.Route(r'/observation-task/<router_name>/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
+    webapp2.Route(r'/observation-task/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
+    webapp2.Route(r'/observation-task/response', handler=ObservationTaskHandler, name="next-task", methods=['POST']),
 
     # observation tasks see also admin/obs/list
     webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',

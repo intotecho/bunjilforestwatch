@@ -1601,6 +1601,20 @@ class GladCluster(ndb.Model):
     def get_glad_clusters_for_area(area):
         return GladCluster.query(GladCluster.area == area.key).fetch()
 
+FIRE = 'FIRE'
+DEFORESTATION = 'DEFORESTATION'
+AGRICULTURE = 'AGRICULTURE'
+ROAD = 'ROAD'
+UNSURE = 'UNSURE'
+
+VOTE_CATEGORIES = [
+    FIRE,
+    DEFORESTATION,
+    AGRICULTURE,
+    ROAD,
+    UNSURE
+]
+
 
 class CaseVotes(ndb.Model):
     """
@@ -1627,6 +1641,7 @@ class Case(ndb.Model):
     @staticmethod
     def get_cases_for_glad_cluster(glad_cluster):
         return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
+
 
 class ObservationTasks(ndb.Model):
     """
