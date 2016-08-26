@@ -1,18 +1,5 @@
 from google.appengine.ext import ndb
-
-class UserCompletedCases(ndb.model):
-    datecompleted = ndb.DateTimeProperty(auto_now_add=True)
-    username = ndb.StringProperty(required=True)
-    caseid = ndb.StringProperty(required=True)
-    caseresponse = ndb.StringProperty(required=True)
-
-
-
-
-class UsersCaseLists(ndb.model):
-    username = ndb.StringProperty(required=True)
-    caselist = UserCompletedCases
-
+import models
 
 
 class UserTasksGoGetter(object):
@@ -36,7 +23,6 @@ class UserTasksGoGetter(object):
             return
 
     def get_tasks(self, name):
-        alluserlists = UsersCaseLists.get(name)
         caselist = UserCompletedCases
 
 
