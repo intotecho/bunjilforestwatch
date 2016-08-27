@@ -1,0 +1,17 @@
+.uSizeFit {
+  flex-basis: auto !important;
+}
+
+.uSizeFill {
+  flex: 1 1 0% !important;
+  flex-basis: 0% !important;
+}
+
+.uSizeFillAlt {
+  flex: 1 1 auto !important;
+  flex-basis: auto !important;
+}
+
+.uSizeFull {
+  width: 100% !important;
+}
