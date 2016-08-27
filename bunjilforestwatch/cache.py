@@ -237,7 +237,7 @@ def get_obstask(task_name):
     #Second attempt
     obstask_key = ndb.Key(urlsafe = task_name) 
     task_id = obstask_key.id()
-    task = models.ObservationTask.get_by_id(task_id)
+    task = models.Old_ObservationTask.get_by_id(task_id)
     if not task:
         logging.error('get_obstask(): no task found for %s with id %d', task_name, task_id)
     return task
@@ -274,7 +274,7 @@ def get_obstasks_keys(username=None, areaname=None):
     if username is not None:
         user_key = ndb.Key('User', username)
         #data = models.ObservationTask.all(keys_only=True).filter('assigned_owner =', user_key).order('-created_date').fetch(200)
-        data = models.ObservationTask.query(models.ObservationTask.assigned_owner == user_key).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
+        data = models.Old_ObservationTask.query(models.Old_ObservationTask.assigned_owner == user_key).order(-models.Old_ObservationTask.created_date).fetch(200, keys_only=True)
         logging.debug("get_obstasks_keys for user %s %s", username, user_key)
         if len(data) == 0 :
             logging.info("get_obstasks_keys() user %s has no tasks", username)
@@ -287,12 +287,12 @@ def get_obstasks_keys(username=None, areaname=None):
             data = None
         else:
             #data = models.ObservationTask.all(keys_only=True).filter('aoi =', area_key).order('-created_date').fetch(200)
-            data = models.ObservationTask.query(models.ObservationTask.aoi == area_key).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
+            data = models.Old_ObservationTask.query(models.Old_ObservationTask.aoi == area_key).order(-models.Old_ObservationTask.created_date).fetch(200, keys_only=True)
             logging.debug("get_obstasks_keys for %s area %s %s", area.shared_str, areaname, area_key)
             if len(data) == 0:
                 logging.info("get_obstasks_keys() area %s has no tasks", areaname)
     else:
-        data = models.ObservationTask.query(models.ObservationTask.share == models.AreaOfInterest.PUBLIC_AOI).order(-models.ObservationTask.created_date).fetch(200, keys_only=True)
+        data = models.Old_ObservationTask.query(models.Old_ObservationTask.share == models.AreaOfInterest.PUBLIC_AOI).order(-models.Old_ObservationTask.created_date).fetch(200, keys_only=True)
         logging.debug("get_obstasks_keys() loading cache for all tasks")
     return data
 
@@ -303,9 +303,9 @@ def get_obstasks_keys(username=None, areaname=None):
 def get_obstasks_keys_page(page, username=None, areaname=None):
     obstasks = get_obstasks_keys(username, areaname)
     if obstasks != None:
-        data = obstasks[(page  - 1) * models.ObservationTask.OBSTASKS_PER_PAGE:page * models.ObservationTask.OBSTASKS_PER_PAGE]
+        data = obstasks[(page  - 1) * models.Old_ObservationTask.OBSTASKS_PER_PAGE:page * models.Old_ObservationTask.OBSTASKS_PER_PAGE]
         if not data:
-            logging.warning('Page %i requested but only %i obstasks, %i pages.', page, len(obstasks), len(obstasks) / models.ObservationTask.OBSTASKS_PER_PAGE + 1)
+            logging.warning('Page %i requested but only %i obstasks, %i pages.', page, len(obstasks), len(obstasks) / models.Old_ObservationTask.OBSTASKS_PER_PAGE + 1)
         return data
     return None
 

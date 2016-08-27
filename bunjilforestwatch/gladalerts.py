@@ -649,7 +649,7 @@ def check_export_status(task_id, clusterProperties):
                 new_observations.append(obs.key)
                 area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
                 if area_followers:
-                    models.ObservationTask.createObsTask(area, new_observations, "GLADCLUSTER", area_followers.users)
+                    models.Old_ObservationTask.createObsTask(area, new_observations, "GLADCLUSTER", area_followers.users)
         except Exception as e:
             msg = "Exception creating GLAD ObservationTask {0!s}".format(e)
             logging.error(msg)
@@ -684,7 +684,7 @@ def create_glad_cluster_and_case_entities(area):
     """
     gladcluster_geojson_collection = get_glad_cluster_list(area.get_gladcluster())
     for cluster in gladcluster_geojson_collection:
-        cluster_entity = models.GladCluster(area=area.key, geojson=json.dumps(cluster))
+        cluster_entity = models.GladCluster(area=area.key, geojson=cluster)
         cluster_entity.put()
         case_entity = models.Case(glad_cluster=cluster_entity.key)
         case_entity.put()
