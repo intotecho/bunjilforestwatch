@@ -8,6 +8,12 @@ class SimpleRouter(BaseRouter):
     def __init__(self):
         pass
 
+    def _case_NOT_IN_completed_case(self, open_case, completed_case_query):
+        for completed_task in completed_case_query:
+            if open_case.glad_cluster == completed_task.glad_cluster:
+                return True;
+        return False;
+
     def _select_case_to_use_for_next_observation_task(self, user):
         # TODO: actually implement simple router selection
 
@@ -22,12 +28,11 @@ class SimpleRouter(BaseRouter):
             observation_task_entity = models.ObservationTasks(username=user.name, glad_cluster=Case.glad_cluster, caseresponse='Fire')
             observation_task_entity.put()
 
-
-
-
+        for case_task in query1:
+            if self._case_NOT_IN_completed_case(case_task, query2):
+                return case_task
 
         return NextObservationTaskAjaxModel('TODO', 'TODO', 'TODO')
-
 
 """
 import models
