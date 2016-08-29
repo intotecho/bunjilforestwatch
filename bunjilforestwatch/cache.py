@@ -500,6 +500,17 @@ def get_area(area_name):
         return None
     return data
 
+def get_area_name_by_cluster_id(cluster_id):
+    query1 = models.AreaOfInterest.query(models.AreaOfInterest.glad_monitored == True)
+    data = None
+    for area in query1:
+        if area.get_gladcluster() == cluster_id:
+            data = area.name
+    if data is None:
+        logging.error("get_area() no area found for %s", cluster_id)
+        return None
+    return data
+
 def get_area_key(username, area_name):
     if username is None:
         data = models.AreaOfInterest.query(models.AreaOfInterest.name == area_name).fetch(keys_only=True)

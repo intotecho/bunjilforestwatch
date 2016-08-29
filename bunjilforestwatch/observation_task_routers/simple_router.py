@@ -45,12 +45,12 @@ class SimpleRouter(BaseRouter):
                 "this is an expensive operation"
                 cluster = models.GladCluster.get_by_id(case_task.glad_cluster.id())
                 case = models.Case.get_by_id(case_task.key.id())
-                area = cache.get_area(cluster.area.id())
+                area = cache.get_area_name_by_cluster_id(cluster.area.id())
 
                 return NextObservationTaskAjaxModel(case, cluster, area)
 
         "still to be fixed"
-        return NextObservationTaskAjaxModel('TODO', 'TODO', 'TODO')
+        return None
 
 
 class SimpleRouter2(BaseRouter):
