@@ -2083,6 +2083,9 @@ class ObservationTaskHandler(BaseHandler):
 
                     # TODO: do stuff with response
                     # TODO: send 400 if something bad happens during creation of observation task response
+                    observation_task_entity = models.ObservationTasks(username=user.name, glad_cluster=case.glad_cluster, caseresponse=observation_task_response)
+                    observation_task_entity.put()
+
                     self.response.set_status(201)
                     return
 
