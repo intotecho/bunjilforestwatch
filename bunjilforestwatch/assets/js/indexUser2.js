@@ -2,6 +2,7 @@ import { render } from 'react-dom';
 import React from 'react';
 
 import LinkButton from './linkButton';
+import VotingTaskBar from './votingTaskBar';
 import GeoMapDisplay from './geoMapDisplay';
 import Request from 'superagent';
 
@@ -18,18 +19,25 @@ var IndexUser2 = React.createClass({
     };
   },
 
-  render() {
-    let geoMapDisplay;
+  setNextTask() {
+    this.setState({
+      isTaskReady: false
+    });
+  },
 
-    if (this.state.isTaskReady === true) {
+  render() {
+    let { state, setNextTask } = this;
+    let votingTaskBar, geoMapDisplay;
+
+    if (state.isTaskReady === true) {
       // Ugly ultra hacky data retrieval
-      let coords = this.state.gladCluster.geojson.features[0].properties.points.coordinates[0];
+      let coords = state.gladCluster.geojson.features[0].properties.points.coordinates[0];
       let long = coords[0];
       let lat = coords[1];
 
+      votingTaskBar = <VotingTaskBar setNextTask={setNextTask} caseId={state.case.case_id} />;
       geoMapDisplay = <GeoMapDisplay long={long} lat={lat} />;
     } else {
-      // Small hack, not sure how to function bind on Superagent
       let self = this;
 
       // Fire off get request before component starts rendering
@@ -37,7 +45,7 @@ var IndexUser2 = React.createClass({
       .get('/observation-task/next')
       .end(
         function(err, res) {
-          if (err === null && res.statusCode === 200) {
+          if (err === null && res.ok) {
             // Response is coming back as JSON string
             let response = JSON.parse(res.text);
             console.log(response);
@@ -56,6 +64,7 @@ var IndexUser2 = React.createClass({
     return (
       <div>
         <LinkButton name='Back' link='/old' classNames={uSizeFull} />
+        {votingTaskBar}
         {geoMapDisplay}
       </div>
     );
