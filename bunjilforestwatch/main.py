@@ -2093,8 +2093,21 @@ class ObservationTaskHandler(BaseHandler):
                         self.response.set_status(404)
                         return
 
-                    # TODO: do stuff with response
-                    # TODO: send 400 if something bad happens during creation of observation task response
+                    # Check if user has already completed task
+                    if models.ObservationTaskResponse \
+                        .query(models.ObservationTaskResponse.username == user.name,
+                               models.ObservationTaskResponse.glad_cluster == case.glad_cluster).fetch():
+                        self.response.set_status(400)
+                        return
+
+                    observation_task_entity = models.ObservationTaskResponse(username=user.name,
+                                                                             glad_cluster=case.glad_cluster,
+                                                                             vote_category=
+                                                                             observation_task_response['vote_category'],
+                                                                             case_response=
+                                                                             observation_task_response)
+                    observation_task_entity.put()
+
                     self.response.set_status(201)
                     return
 

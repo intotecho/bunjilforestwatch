@@ -853,6 +853,19 @@ class AreaOfInterest(ndb.Model):
         except ee.EEException:
             return None, 500, "EEException creating FeatureCollection"
 
+    @staticmethod
+    def get_area_name_by_cluster_id(cluster_id):
+        query1 = AreaOfInterest.query(AreaOfInterest.glad_monitored == True)
+        data = None
+        for area in query1:
+            if area.get_gladcluster() == cluster_id:
+                data = area.name
+        if data is None:
+            logging.error("get_area() no area found for %s", cluster_id)
+            return None
+        return data
+
+
     '''
     def getBoundary(self, geojsonBoundary):
         """
@@ -1643,11 +1656,12 @@ class Case(ndb.Model):
         return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
 
 
-class ObservationTasks(ndb.Model):
+class ObservationTaskResponse(ndb.Model):
     """
     """
-    datecompleted = ndb.DateTimeProperty(auto_now_add=True)
-    username = ndb.StringProperty(required=True)
-    glad_cluster = ndb.KeyProperty(kind=GladCluster)
-    caseresponse = ndb.StringProperty(required=True)
+    date_completed = ndb.DateTimeProperty(auto_now_add=True)
+    username = ndb.StringProperty(required=True)  # TODO: consider making this a key property to userid
+    glad_cluster = ndb.KeyProperty(kind=GladCluster)  # TODO: consider using key reference to case instead
+    case_response = ndb.PickleProperty(required=True)
+    vote_category = ndb.StringProperty(required=True)
 
