@@ -1615,6 +1615,7 @@ VOTE_CATEGORIES = [
     UNSURE
 ]
 
+
 class CaseVotes(ndb.Model):
     """
     Stores the number of votes made for each vote category within a given case
@@ -1640,4 +1641,13 @@ class Case(ndb.Model):
     @staticmethod
     def get_cases_for_glad_cluster(glad_cluster):
         return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
+
+
+class ObservationTasks(ndb.Model):
+    """
+    """
+    datecompleted = ndb.DateTimeProperty(auto_now_add=True)
+    username = ndb.StringProperty(required=True)
+    glad_cluster = ndb.KeyProperty(kind=GladCluster)
+    caseresponse = ndb.StringProperty(required=True)
 

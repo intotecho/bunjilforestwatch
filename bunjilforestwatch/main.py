@@ -387,7 +387,6 @@ class EarthEngineWarmUpHandler(BaseHandler):
         self.response.write("EarthEngineWarmUpHandler")
         return
 
-
 class MainPage(BaseHandler):
     """ Main handler for default page.
     Default page is index.html if not authenticated, or index-user if authenticated.
@@ -444,6 +443,19 @@ class MainPage(BaseHandler):
                 'tasks': tasks,
                 'show_navbar': False
             })
+
+class MainPageObsTask(BaseHandler):
+    """ Main handler for default page.
+    Default page is index.html if not authenticated, or index-user if authenticated.
+
+    ^^^^
+    Take note of the above comment from MainPage handler, currently this is a test 
+    render with the integration of React. The file name will have to be changed in 
+    the future and this handler may be removed.
+    """
+
+    def get(self):
+        self.render('index-user2.html')
 
 
 class ViewAllAreas(BaseHandler):
@@ -3623,7 +3635,8 @@ config = {
 
 app = webapp2.WSGIApplication([
     webapp2.Route(r'_ah/warmup', handler=EarthEngineWarmUpHandler, name='earth-engine'),
-    webapp2.Route(r'/', handler=MainPage, name='main'),
+    webapp2.Route(r'/', handler=MainPageObsTask, name='main2'),
+    webapp2.Route(r'/old', handler=MainPage, name='main'),
 
     webapp2.Route('/.well-known/acme-challenge/<challenge_id>', AcmeChallengeHandler, methods=['GET', 'POST']),
     # google site verification
@@ -3801,7 +3814,8 @@ RESERVED_NAMES = set([
     'twitter',
     'upload',
     'user',
-    'users'
+    'users',
+    'old' # Test render, remove when done 
 ])
 
 # assert that all routes are listed in RESERVED_NAMES
