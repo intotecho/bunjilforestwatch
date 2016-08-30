@@ -6,7 +6,6 @@ import VotingTaskBar from './votingTaskBar';
 import GeoMapDisplay from './geoMapDisplay';
 import Request from 'superagent';
 
-import { hello } from '../stylesheets/indexUser2';
 import { uSizeFull } from '../stylesheets/utils';
 
 var IndexUser2 = React.createClass({
@@ -48,7 +47,6 @@ var IndexUser2 = React.createClass({
           if (err === null && res.ok) {
             // Response is coming back as JSON string
             let response = JSON.parse(res.text);
-            console.log(response);
 
             self.setState({
               isTaskReady: true,
