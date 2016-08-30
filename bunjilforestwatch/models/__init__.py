@@ -1656,13 +1656,12 @@ class Case(ndb.Model):
         return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
 
 
-class ObservationTasks(ndb.Model):
+class ObservationTaskResponse(ndb.Model):
     """
     """
-    datecompleted = ndb.DateTimeProperty(auto_now_add=True)
-    username = ndb.StringProperty(required=True)
-    glad_cluster = ndb.KeyProperty(kind=GladCluster)
-    caseresponse = ndb.StringProperty(required=True)
-
-
+    date_completed = ndb.DateTimeProperty(auto_now_add=True)
+    username = ndb.StringProperty(required=True)  # TODO: consider making this a key property to userid
+    glad_cluster = ndb.KeyProperty(kind=GladCluster)  # TODO: consider using key reference to case instead
+    case_response = ndb.PickleProperty(required=True)
+    vote_category = ndb.StringProperty(required=True)
 

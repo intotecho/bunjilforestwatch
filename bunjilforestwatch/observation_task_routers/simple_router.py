@@ -8,17 +8,19 @@ class SimpleRouter(BaseRouter):
     def __init__(self):
         pass
 
-    def _case_NOT_IN_completed_case(self, open_case, completed_case_query):
+    # TODO: consider renaming to case task is not already completed by user
+    def _case_NOT_IN_completed_case(self, open_case, completed_tasks_query):
         """
         Args:
             open_case: A row from the Case table which has the status 'Open'
-            completed_case_query: A query that returns all user completed cases
+            completed_tasks_query: A query that returns all user completed cases
 
         Returns:
             Boolean return whether the case has been completed by the user
 
         """
-        for completed_task in completed_case_query:
+        for completed_task in completed_tasks_query:
+            # TODO: consider if open_case.key == completed_task.case:
             if open_case.glad_cluster == completed_task.glad_cluster:
                 return False
         return True
@@ -35,17 +37,17 @@ class SimpleRouter(BaseRouter):
 
         """
 
-        query1 = models.Case.query(models.Case.status == 'OPEN')
-        query2 = models.ObservationTasks.query(models.ObservationTasks.username == user.name)
+        open_cases_query = models.Case.query(models.Case.status == 'OPEN')
+        completed_tasks_query = models.ObservationTaskResponse\
+            .query(models.ObservationTaskResponse.username == user.name)
 
-        for case_task in query1:
-            if self._case_NOT_IN_completed_case(case_task, query2):
-
-                cluster = models.GladCluster.get_by_id(case_task.glad_cluster.id())
-                case = models.Case.get_by_id(case_task.key.id())
+        for open_case in open_cases_query:
+            if self._case_NOT_IN_completed_case(open_case, completed_tasks_query):
+                cluster = models.GladCluster.get_by_id(open_case.glad_cluster.id())
+                # case = models.Case.get_by_id(open_case.key.id())
                 area = models.AreaOfInterest.get_by_id(cluster.area.id())
 
-                return NextObservationTaskAjaxModel(case, cluster, area)
+                return NextObservationTaskAjaxModel(open_case, cluster, area)
 
         return None
 
@@ -69,9 +71,9 @@ class SimpleRouter2(BaseRouter):
         query1 = models.Case.query(models.Case.status == 'OPEN')
 
         for case_task in query1:
-            query2 = models.ObservationTasks.query(models.ObservationTasks.username == user.name, models.ObservationTasks.glad_cluster == case_task.glad_cluster)
+            query2 = models.ObservationTaskResponse.query(models.ObservationTaskResponse.username == user.name,
+                                                          models.ObservationTaskResponse.glad_cluster == case_task.glad_cluster)
             if query2.count == 0:
-
                 cluster = models.GladCluster.get_by_id(case_task.glad_cluster.id())
                 case = models.Case.get_by_id(case_task.key.id())
                 area = cache.get_area(cluster.area.id())
