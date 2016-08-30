@@ -1,5 +1,4 @@
 secrets.py
-package.json
 Makefile
 */.jshintrc
 */.pylintrc
