@@ -1,12 +1,12 @@
 import { render } from 'react-dom';
 import React from 'react';
 
-import LinkButton from './linkButton';
+import LinkButton from '../linkButton';
 import VotingTaskBar from './votingTaskBar';
 import GeoMapDisplay from './geoMapDisplay';
 import Request from 'superagent';
 
-import { uSizeFull } from '../stylesheets/utils';
+import { uSizeFull } from '../../stylesheets/utils';
 
 var IndexUser2 = React.createClass({
   getInitialState() {

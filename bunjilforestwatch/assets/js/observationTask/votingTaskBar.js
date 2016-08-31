@@ -2,8 +2,8 @@ import React from 'react';
 
 import Request from 'superagent';
 
-import { container, categoryLink, title } from '../stylesheets/votingTaskBar';
-import { uTextAlignCenter } from '../stylesheets/utils';
+import { container, categoryLink, title } from '../../stylesheets/observationTask/votingTaskBar';
+import { uTextAlignCenter } from '../../stylesheets/utils';
 
 // FIXME: Make this an open constant somewhere
 const categoryList = ['Fire', 'Deforestation', 'Agriculture', 'Road', 'Unsure'];
