@@ -8,8 +8,7 @@ class SimpleRouter(BaseRouter):
     def __init__(self):
         pass
 
-    # TODO: consider renaming to case task is not already completed by user
-    def _case_NOT_IN_completed_case(self, open_case, completed_tasks_query):
+    def _case_is_not_already_completed_by_user(self, open_case, completed_tasks_query):
         """
         Args:
             open_case: A row from the Case table which has the status 'Open'
@@ -20,8 +19,7 @@ class SimpleRouter(BaseRouter):
 
         """
         for completed_task in completed_tasks_query:
-            # TODO: consider if open_case.key == completed_task.case:
-            if open_case.glad_cluster == completed_task.glad_cluster:
+            if open_case.key == completed_task.case:
                 return False
         return True
 
@@ -39,10 +37,10 @@ class SimpleRouter(BaseRouter):
 
         open_cases_query = models.Case.query(models.Case.status == 'OPEN')
         completed_tasks_query = models.ObservationTaskResponse\
-            .query(models.ObservationTaskResponse.username == user.name)
+            .query(models.ObservationTaskResponse.userid == user.uid)
 
         for open_case in open_cases_query:
-            if self._case_NOT_IN_completed_case(open_case, completed_tasks_query):
+            if self._case_is_not_already_completed_by_user(open_case, completed_tasks_query):
                 cluster = models.GladCluster.get_by_id(open_case.glad_cluster.id())
                 # case = models.Case.get_by_id(open_case.key.id())
                 area = models.AreaOfInterest.get_by_id(cluster.area.id())
@@ -50,34 +48,3 @@ class SimpleRouter(BaseRouter):
                 return NextObservationTaskAjaxModel(open_case, cluster, area)
 
         return None
-
-
-class SimpleRouter2(BaseRouter):
-    def __init__(self):
-        pass
-
-    def _select_case_to_use_for_next_observation_task(self, user):
-        """
-        Heavier network traffic version. Will need to speak to datastore for every row check
-
-        Args:
-            user: The user currently in session
-
-        Returns:
-            The row of the next case task if one is available
-
-        """
-
-        query1 = models.Case.query(models.Case.status == 'OPEN')
-
-        for case_task in query1:
-            query2 = models.ObservationTaskResponse.query(models.ObservationTaskResponse.username == user.name,
-                                                          models.ObservationTaskResponse.glad_cluster == case_task.glad_cluster)
-            if query2.count == 0:
-                cluster = models.GladCluster.get_by_id(case_task.glad_cluster.id())
-                case = models.Case.get_by_id(case_task.key.id())
-                area = cache.get_area(cluster.area.id())
-
-                return NextObservationTaskAjaxModel(case, cluster, area)
-
-        return NextObservationTaskAjaxModel('TODO', 'TODO', 'TODO')

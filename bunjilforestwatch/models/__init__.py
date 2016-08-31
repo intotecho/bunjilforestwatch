@@ -1660,8 +1660,8 @@ class ObservationTaskResponse(ndb.Model):
     """
     """
     date_completed = ndb.DateTimeProperty(auto_now_add=True)
-    username = ndb.StringProperty(required=True)  # TODO: consider making this a key property to userid
-    glad_cluster = ndb.KeyProperty(kind=GladCluster)  # TODO: consider using key reference to case instead
+    userid = ndb.KeyProperty(kind=User)  # TODO: consider making this a key property to userid
+    case = ndb.KeyProperty(kind=Case)  # TODO: consider using key reference to case instead
     case_response = ndb.PickleProperty(required=True)
     vote_category = ndb.StringProperty(required=True)
 
