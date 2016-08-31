@@ -37,7 +37,7 @@ class SimpleRouter(BaseRouter):
 
         open_cases_query = models.Case.query(models.Case.status == 'OPEN')
         completed_tasks_query = models.ObservationTaskResponse\
-            .query(models.ObservationTaskResponse.userid == user.uid)
+            .query(models.ObservationTaskResponse.user == user.key)
 
         for open_case in open_cases_query:
             if self._case_is_not_already_completed_by_user(open_case, completed_tasks_query):
