@@ -2095,13 +2095,13 @@ class ObservationTaskHandler(BaseHandler):
 
                     # Check if user has already completed task
                     if models.ObservationTaskResponse \
-                        .query(models.ObservationTaskResponse.username == user.name,
-                               models.ObservationTaskResponse.glad_cluster == case.glad_cluster).fetch():
+                        .query(models.ObservationTaskResponse.user == user.key,
+                               models.ObservationTaskResponse.case == case.key).fetch():
                         self.response.set_status(400)
                         return
 
-                    observation_task_entity = models.ObservationTaskResponse(username=user.name,
-                                                                             glad_cluster=case.glad_cluster,
+                    observation_task_entity = models.ObservationTaskResponse(user=user.key,
+                                                                             case=case.key,
                                                                              vote_category=
                                                                              observation_task_response['vote_category'],
                                                                              case_response=
