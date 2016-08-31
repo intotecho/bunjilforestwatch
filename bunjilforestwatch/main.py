@@ -2033,7 +2033,7 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
 
 
 class ObservationTaskHandler(BaseHandler):
-    def get(self, router_name='DUMMY'):
+    def get(self, router_name='SIMPLE'):
 
         try:
             username = self.session['user']['name']
