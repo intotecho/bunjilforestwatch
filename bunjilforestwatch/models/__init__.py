@@ -99,6 +99,8 @@ class User(ndb.Model):
     twitter_key = ndb.StringProperty(indexed=False)
     twitter_secret = ndb.StringProperty(indexed=False)
 
+    trust = ndb.IntegerProperty(default=1)
+
     # not really required
     def count(self):
         if self.entry_count and self.last_entry and self.first_entry:
@@ -1633,11 +1635,23 @@ class CaseVotes(ndb.Model):
     """
     Stores the number of votes made for each vote category within a given case
     """
-    fire = ndb.IntegerProperty(indexed=False, default=0)
-    deforestation = ndb.IntegerProperty(indexed=False, default=0)
-    agriculture = ndb.IntegerProperty(indexed=False, default=0)
-    road = ndb.IntegerProperty(indexed=False, default=0)
-    unsure = ndb.IntegerProperty(indexed=False, default=0)
+    fire = ndb.FloatProperty(indexed=False, default=0.0)
+    deforestation = ndb.FloatProperty(indexed=False, default=0.0)
+    agriculture = ndb.FloatProperty(indexed=False, default=0.0)
+    road = ndb.FloatProperty(indexed=False, default=0.0)
+    unsure = ndb.FloatProperty(indexed=False, default=0.0)
+
+    def add_vote(self, vote_category, weighted_vote):
+        if vote_category == FIRE:
+            self.fire += weighted_vote
+        elif vote_category == DEFORESTATION:
+            self.deforestation += weighted_vote
+        elif vote_category == AGRICULTURE:
+            self.agriculture += weighted_vote
+        elif vote_category == ROAD:
+            self.road += weighted_vote
+        elif vote_category == UNSURE:
+            self.unsure += weighted_vote
 
 
 class Case(ndb.Model):

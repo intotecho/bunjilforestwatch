@@ -19,6 +19,7 @@ from google.appengine.ext import ndb
 import glad_data_seeder
 from observation_task_routers.dummy_router import DummyRouter
 from observation_task_routers.simple_router import SimpleRouter
+from vote_weighting_calculator.simple_vote_calculator import SimpleVoteCalculator
 
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
@@ -2107,6 +2108,11 @@ class ObservationTaskHandler(BaseHandler):
                                                                              case_response=
                                                                              observation_task_response)
                     observation_task_entity.put()
+
+                    vote_calculator = SimpleVoteCalculator()
+                    case.votes.add_vote(observation_task_response['vote_category'],
+                                        vote_calculator.get_weighted_vote(user, case))
+                    case.put()
 
                     self.response.set_status(201)
                     return
