@@ -1,4 +1,3 @@
-from google.appengine.ext import ndb
 
 
 class CaseChecker(object):
