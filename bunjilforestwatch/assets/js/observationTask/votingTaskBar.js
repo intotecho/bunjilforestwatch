@@ -12,11 +12,11 @@ import { container, categoryListItem, title,
 // FIXME: Make this an open constant somewhere
 const CATEGORIES = ['Fire', 'Deforestation', 'Agriculture', 'Road', 'Unsure'];
 const categoryImages = {
-  'Fire': require('../../images/fire.png'),
+  'Fire':          require('../../images/fire.png'),
   'Deforestation': require('../../images/deforestation.png'),
-  'Agriculture': require('../../images/agriculture.png'),
-  'Road': require('../../images/road.png'),
-  'Unsure': require('../../images/unsure.png'),
+  'Agriculture':   require('../../images/agriculture.png'),
+  'Road':          require('../../images/road.png'),
+  'Unsure':        require('../../images/unsure.png'),
 }
 
 export default React.createClass({
