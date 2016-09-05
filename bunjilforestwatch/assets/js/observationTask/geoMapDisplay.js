@@ -2,7 +2,6 @@ import React from 'react';
 
 import { GoogleMapLoader, GoogleMap, Marker,
          Polyline, Polygon, InfoWindow } from "react-google-maps";
-// import styles from '../stylesheets/geoMapDisplay'; //FIXME: component styling issues
 
 export default React.createClass({
   geometryToComponentWithLatLng(geometry) {
