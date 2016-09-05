@@ -9,47 +9,47 @@ import { uTextAlignCenter } from '../../stylesheets/utils';
 const categoryList = ['Fire', 'Deforestation', 'Agriculture', 'Road', 'Unsure'];
 
 export default React.createClass({
-	votingHandler({ target: { innerText } }) {
-		// Should output or provide visual cue that an error has occurred
-		if (!categoryList.includes(innerText) || !this.props.caseId) { return; }
+  votingHandler({ target: { innerText } }) {
+    // Should output or provide visual cue that an error has occurred
+    if (!categoryList.includes(innerText) || !this.props.caseId) { return; }
 
-		const self = this;
-		const payload = {
-			case_id: this.props.caseId,
-			vote_category: innerText.toUpperCase()
-		};
+    const self = this;
+    const payload = {
+      case_id: this.props.caseId,
+      vote_category: innerText.toUpperCase()
+    };
 
-		Request
-		.post('/observation-task/response')
-		.send(payload)
-		.set('Accept', 'application/json')
-	  .end(
-	  	function(err, res) {
-	  		// Should output or provide visual cue that an error has occurred
-	  		if (err == null && res.ok) {
-					self.props.setNextTask();
-	  		}
-	  	}
-	  );
-	},
+    Request
+    .post('/observation-task/response')
+    .send(payload)
+    .set('Accept', 'application/json')
+    .end(
+      function(err, res) {
+        // Should output or provide visual cue that an error has occurred
+        if (err == null && res.ok) {
+          self.props.setNextTask();
+        }
+      }
+    );
+  },
 
-	renderCategoryLinkList() {
-		const categoryLinkList = categoryList.map((category, index) => {
-			return 	<li key={index} className={categoryLink}>
-								<button onClick={this.votingHandler}>{category}</button>
-							</li>;
-		});
+  renderCategoryLinkList() {
+    const categoryLinkList = categoryList.map((category, index) => {
+      return  <li key={index} className={categoryLink}>
+                <button onClick={this.votingHandler}>{category}</button>
+              </li>;
+    });
 
-		return <ul>{categoryLinkList}</ul>;
-	},
+    return <ul>{categoryLinkList}</ul>;
+  },
 
   render() {
-  	const titleClasses = `${title} ${uTextAlignCenter}`;
+    const titleClasses = `${title} ${uTextAlignCenter}`;
 
     return (
       <div className={container}>
-      	<p className={titleClasses}>Category</p>
-      	{this.renderCategoryLinkList()}
+        <p className={titleClasses}>Category</p>
+        {this.renderCategoryLinkList()}
       </div>
     );
   }

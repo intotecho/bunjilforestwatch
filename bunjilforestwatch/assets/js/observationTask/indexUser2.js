@@ -71,6 +71,6 @@ var IndexUser2 = React.createClass({
 });
 
 render(
-	<IndexUser2 />,
-	document.getElementById('index-user2')
+  <IndexUser2 />,
+  document.getElementById('index-user2')
 );
