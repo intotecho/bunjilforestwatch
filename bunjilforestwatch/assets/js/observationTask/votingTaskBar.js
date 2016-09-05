@@ -12,9 +12,9 @@ export default React.createClass({
 	votingHandler({ target: { innerText } }) {
 		// Should output or provide visual cue that an error has occurred
 		if (!categoryList.includes(innerText) || !this.props.caseId) { return; }
-		
-		let self = this;
-		let payload = {
+
+		const self = this;
+		const payload = {
 			case_id: this.props.caseId,
 			vote_category: innerText.toUpperCase()
 		};
@@ -34,8 +34,8 @@ export default React.createClass({
 	},
 
 	renderCategoryLinkList() {
-		let categoryLinkList = categoryList.map((category) => {
-			return 	<li className={categoryLink}>
+		const categoryLinkList = categoryList.map((category, index) => {
+			return 	<li key={index} className={categoryLink}>
 								<button onClick={this.votingHandler}>{category}</button>
 							</li>;
 		});
@@ -44,7 +44,7 @@ export default React.createClass({
 	},
 
   render() {
-  	let titleClasses = `${title} ${uTextAlignCenter}`;
+  	const titleClasses = `${title} ${uTextAlignCenter}`;
 
     return (
       <div className={container}>
