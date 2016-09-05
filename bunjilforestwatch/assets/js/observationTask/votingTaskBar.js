@@ -10,7 +10,7 @@ import { container, categoryListItem, title,
          categoryIcon } from '../../stylesheets/observationTask/votingTaskBar';
 
 // FIXME: Make this an open constant somewhere
-const categories = ['Fire', 'Deforestation', 'Agriculture', 'Road', 'Unsure'];
+const CATEGORIES = ['Fire', 'Deforestation', 'Agriculture', 'Road', 'Unsure'];
 const categoryImages = {
   'Fire': require('../../images/fire.png'),
   'Deforestation': require('../../images/deforestation.png'),
@@ -22,7 +22,7 @@ const categoryImages = {
 export default React.createClass({
 	votingHandler({ target: { innerText } }) {
 		// Should output or provide visual cue that an error has occurred
-		if (!categories.includes(innerText) || !this.props.caseId) { return; }
+		if (!CATEGORIES.includes(innerText) || !this.props.caseId) { return; }
 
 		let self = this;
 		let payload = {
@@ -45,10 +45,11 @@ export default React.createClass({
 	},
 
 	renderCategoryList() {
-		let categoryList = categories.map((category, index) => {
+		let categoryList = CATEGORIES.map((category, index) => {
 			return 	<li key={index} className={categoryListItem}>
 								<Button classNames={categoryButton} onClick={this.votingHandler}>
-                  <Icon classNames={categoryIcon} src={categoryImages[category]} />{category}
+                  <Icon classNames={categoryIcon} src={categoryImages[category]} />
+                  {category}
                 </Button>
 							</li>;
 		});
