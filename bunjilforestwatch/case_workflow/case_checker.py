@@ -7,9 +7,13 @@ class CaseChecker(object):
     @staticmethod
     def is_a_majority(self, case):
         maximum_value = 0
+        total_votes = 0
         for category in case.votes:
+            total_votes += category
             if category > maximum_value:
                 maximum_value = category
+        if maximum_value > 0:
+            maximum_value = (maximum_value / total_votes) * 100
         if maximum_value > self.MIN_CONSENSUS:
             return True
         return False
