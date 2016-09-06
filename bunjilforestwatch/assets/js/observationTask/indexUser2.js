@@ -1,7 +1,7 @@
 import { render } from 'react-dom';
 import React from 'react';
 
-import Button from '../button';
+import NavBar from '../navBar/navBar';
 import VotingTaskBar from './votingTaskBar';
 import GeoMapDisplay from './geoMapDisplay';
 import Request from 'superagent';
@@ -61,7 +61,7 @@ var IndexUser2 = React.createClass({
 
     return (
       <div>
-        <Button link='/old' classNames={uSizeFull}>Back</Button>
+        <NavBar />
         {votingTaskBar}
         {geoMapDisplay}
       </div>
