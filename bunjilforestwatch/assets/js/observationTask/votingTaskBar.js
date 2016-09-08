@@ -1,55 +1,69 @@
 import React from 'react';
 
 import Request from 'superagent';
+import Button from '../button';
+import Icon from '../icon';
 
-import { container, categoryLink, title } from '../../stylesheets/observationTask/votingTaskBar';
 import { uTextAlignCenter } from '../../stylesheets/utils';
+import { container, categoryListItem, title,
+         categoryButton, categoryOptionList,
+         categoryIcon } from '../../stylesheets/observationTask/votingTaskBar';
 
 // FIXME: Make this an open constant somewhere
-const categoryList = ['Fire', 'Deforestation', 'Agriculture', 'Road', 'Unsure'];
+const CATEGORIES = ['Fire', 'Deforestation', 'Agriculture', 'Road', 'Unsure'];
+const categoryImages = {
+  'Fire':          require('../../images/fire.png'),
+  'Deforestation': require('../../images/deforestation.png'),
+  'Agriculture':   require('../../images/agriculture.png'),
+  'Road':          require('../../images/road.png'),
+  'Unsure':        require('../../images/unsure.png'),
+}
 
 export default React.createClass({
-  votingHandler({ target: { innerText } }) {
-    // Should output or provide visual cue that an error has occurred
-    if (!categoryList.includes(innerText) || !this.props.caseId) { return; }
+	votingHandler({ target: { innerText } }) {
+		// Should output or provide visual cue that an error has occurred
+		if (!CATEGORIES.includes(innerText) || !this.props.caseId) { return; }
 
-    const self = this;
-    const payload = {
-      case_id: this.props.caseId,
-      vote_category: innerText.toUpperCase()
-    };
+		let self = this;
+		let payload = {
+			case_id: this.props.caseId,
+			vote_category: innerText.toUpperCase()
+		};
 
-    Request
-    .post('/observation-task/response')
-    .send(payload)
-    .set('Accept', 'application/json')
-    .end(
-      function(err, res) {
-        // Should output or provide visual cue that an error has occurred
-        if (err == null && res.ok) {
-          self.props.setNextTask();
-        }
-      }
-    );
-  },
+		Request
+		.post('/observation-task/response')
+		.send(payload)
+		.set('Accept', 'application/json')
+	  .end(
+	  	function(err, res) {
+	  		// Should output or provide visual cue that an error has occurred
+	  		if (err == null && res.ok) {
+					self.props.setNextTask();
+	  		}
+	  	}
+	  );
+	},
 
-  renderCategoryLinkList() {
-    const categoryLinkList = categoryList.map((category, index) => {
-      return  <li key={index} className={categoryLink}>
-                <button onClick={this.votingHandler}>{category}</button>
-              </li>;
-    });
+	renderCategoryList() {
+		let categoryList = CATEGORIES.map((category, index) => {
+			return 	<li key={index} className={categoryListItem} onClick={this.votingHandler}>
+								<Button classNames={categoryButton}>
+                  <Icon classNames={categoryIcon} src={categoryImages[category]} />
+                  {category}
+                </Button>
+							</li>;
+		});
 
-    return <ul>{categoryLinkList}</ul>;
-  },
+		return <ul className={categoryOptionList}>{categoryList}</ul>;
+	},
 
   render() {
     const titleClasses = `${title} ${uTextAlignCenter}`;
 
     return (
       <div className={container}>
-        <p className={titleClasses}>Category</p>
-        {this.renderCategoryLinkList()}
+      	<p className={titleClasses}>Category</p>
+      	{this.renderCategoryList()}
       </div>
     );
   }

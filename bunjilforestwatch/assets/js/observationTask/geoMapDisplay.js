@@ -81,7 +81,6 @@ export default React.createClass({
           containerElement={ <div style={{ height: "100%", width: "100%" }} /> }
           googleMapElement={
             <GoogleMap
-              ref={(map) => console.log(map)}
               mapTypeId='satellite'
               defaultZoom={16}
               defaultCenter={coords}>
