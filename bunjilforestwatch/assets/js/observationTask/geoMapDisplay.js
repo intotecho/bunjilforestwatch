@@ -20,7 +20,6 @@ export default React.createClass({
 	        }
 	        googleMapElement={
 	          <GoogleMap
-	            ref={(map) => console.log(map)}
 	            mapTypeId='satellite'
 	            defaultZoom={12}
 	            defaultCenter={coords}>

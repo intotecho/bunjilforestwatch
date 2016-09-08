@@ -46,8 +46,8 @@ export default React.createClass({
 
 	renderCategoryList() {
 		let categoryList = CATEGORIES.map((category, index) => {
-			return 	<li key={index} className={categoryListItem}>
-								<Button classNames={categoryButton} onClick={this.votingHandler}>
+			return 	<li key={index} className={categoryListItem} onClick={this.votingHandler}>
+								<Button classNames={categoryButton}>
                   <Icon classNames={categoryIcon} src={categoryImages[category]} />
                   {category}
                 </Button>
