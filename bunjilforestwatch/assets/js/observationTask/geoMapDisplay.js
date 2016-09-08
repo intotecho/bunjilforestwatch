@@ -76,7 +76,7 @@ export default React.createClass({
     };
 
     return (
-      <section style={{ height: "100%" }}>
+      <section style={{ height: "95%" }}>
         <GoogleMapLoader
           containerElement={ <div style={{ height: "100%", width: "100%" }} /> }
           googleMapElement={
