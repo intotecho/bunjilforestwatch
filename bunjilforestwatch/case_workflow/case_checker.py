@@ -32,7 +32,7 @@ class CaseChecker(object):
         """
         case_votes = case.votes
         total_votes = (case_votes.fire + case_votes.agriculture + case_votes.deforestation + case_votes.road)
-        if total_votes == self.MAX_VOTES:
+        if total_votes == self.MIN_VOTES_FOR_VIABLE_CONSENSUS:
             return True
         return False
 
