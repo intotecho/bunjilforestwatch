@@ -1,6 +1,7 @@
 import React from 'react';
 
 import Request from 'superagent';
+import _ from 'lodash';
 import classNames from 'classnames';
 
 import { navBar, navList } from '../../stylesheets/navBar/navBar';
@@ -21,7 +22,7 @@ export default React.createClass({
       navigationsList.push(
         <li className={navList}>
           <a href={NAVIGATIONS[key]}>
-            {key}
+            {_.capitalize(key)}
           </a>
         </li>
       );
