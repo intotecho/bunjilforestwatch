@@ -62,7 +62,7 @@ export default React.createClass({
 	},
 
   render() {
-  	let titleClasses = `${title} ${uTextAlignCenter}`;
+    const titleClasses = `${title} ${uTextAlignCenter}`;
 
     return (
       <div className={container}>
