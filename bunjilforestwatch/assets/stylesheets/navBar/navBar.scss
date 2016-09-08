@@ -1,0 +1,28 @@
+.navBar {
+  background-color: #222;
+  height: 40px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.navList {
+  display: inline-block;
+  height: 40px;
+  list-style: none;
+
+  a {
+    color: white;
+    display: inline-block;
+    height: 30px;
+    padding: 10px 15px 0 15px;
+    text-decoration: none;
+  }
+
+  &:hover {
+    background-color: white;
+
+    a {
+      color: black;
+    }
+  }
+}
