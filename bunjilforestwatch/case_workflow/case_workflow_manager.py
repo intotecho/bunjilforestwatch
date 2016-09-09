@@ -5,6 +5,7 @@ import models
 
 checker = case_checker.CaseChecker
 Case = models.Case
+ClosedCase = models.ClosedCase
 
 
 class CaseWorkflowManager(object):
@@ -15,6 +16,11 @@ class CaseWorkflowManager(object):
     def update_case(self, case):
         """Do some stuff"""
         pass
+
+    @staticmethod
+    def close_case(self, case, majority_held):
+        """Do some stuff"""
+        ClosedCase.add(case, majority_held)
 
     def check_cases(self):
         open_cases_query = Case.query(Case.status == 'OPEN')
