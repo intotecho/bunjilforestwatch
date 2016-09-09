@@ -1,23 +1,60 @@
 .container {
-	width: 220px;
+	background-color: #222;
 	border-radius: 10px;
-	border: 1px solid black;
+	border: 1px solid #222;
 	color: white;
-	background-color: #696969;
+	left: 17px;
+	position: absolute;
+	top: 95px;
+	width: 160px;
+	z-index: 1;
+}
+
+.categoryLink {
+  list-style-type: none;
+  margin-bottom: 10px;
+
+  &:hover {
+    color: red;
+    background-color: black;
+  }
 }
 
 .title {
 	border-bottom: 1px solid white;
-	padding: 15px 0;
 	margin: 0 25px;
+	padding: 10px 0;
 }
 
-.categoryLink {
+.categoryListItem {
 	list-style-type: none;
 	margin-bottom: 10px;
+	padding-bottom: 3px;
 
 	&:hover {
-		color: red;
-		background-color: black;
+		background-color: white;
+
+		.categoryButton {
+			color: #222;
+		}
 	}
+}
+
+.categoryButton {
+	padding-left: 25px;
+	background: none;
+	border: none;
+	color: white;
+	outline: none;
+}
+
+.categoryOptionList {
+	padding-left: 0;
+}
+
+.categoryIcon {
+	background-color: white;
+	margin-bottom: -5px;
+	margin-right: 10px;
+	pointer-events: none;
 }
