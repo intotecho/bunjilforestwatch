@@ -2054,12 +2054,16 @@ class ObservationTaskHandler(BaseHandler):
         else:
             result_str = "Specified router not found"
             logging.error(result_str)
-            result_str = "Specified router not found"
-            logging.error(result_str)
+            self.response.set_status(404)
             return self.response.write(result_str)
 
         result = router.get_next_observation_task(user)
-        self.response.write(result.to_JSON())
+        if result is None:
+            self.response.set_status(404)
+            return self.response.write("No uncompleted tasks available")
+
+        return self.response.write(result.to_JSON())
+        self.response.set_status(200)
 
     def post(self):
         """
