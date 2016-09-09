@@ -25,9 +25,9 @@ skip_files:
 - ^(.*/)?node_modules/.*$
 - ^(.*/)?assets/js/.*$
 - ^(.*/)?assets/stylesheets/.*$
-- ^(.*/)?webpack.config.js
-- ^(.*/)?webpack-stats.json
-- ^(.*/)?package.json
+- ^(.*/)?webpack.config\.js
+- ^(.*/)?webpack-stats\.json
+- ^(.*/)?package\.json
 
 libraries:
 - name: jinja2

@@ -44,6 +44,8 @@ from ee.oauthinfo import OAuthInfo
 #from oauth2client.service_account import ServiceAccountCredentials
 
 # from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
+from oauth2client.appengine import AppAssertionCredentials
+
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
     

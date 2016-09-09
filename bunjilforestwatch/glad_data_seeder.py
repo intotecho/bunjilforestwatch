@@ -140,7 +140,7 @@ def create_area(new_area_geojson_str, logged_in_user):
     area.set_shared('public')
 
     # set boundary if one was provided.
-    if boundary_feature != None:
+    if boundary_feature is not None:
         eeFeatureCollection, status, errormsg = models.AreaOfInterest.get_eeFeatureCollection(
             new_area)
         boundary_hull_dict = models.AreaOfInterest.calc_boundary_fc(eeFeatureCollection)
