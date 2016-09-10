@@ -1,0 +1,28 @@
+.container {
+  z-index: 3;
+  top: 300px;
+  left: 550px;
+  position: absolute;
+  background:rgba(255,255,255,0.75);
+  width: 180px;
+  text-align: center;
+  border-radius: 15px;
+}
+
+p.negative  {
+	opacity: 1 !important;
+	color: red;
+	font-size: 110%;
+}
+
+p.positive {
+	opacity: 1 !important;
+	color: green;
+	font-size: 110%;
+}
+
+p.neutral {
+	opacity: 1 !important;
+	color: gray;
+	font-size: 110%;
+}

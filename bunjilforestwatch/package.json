@@ -41,8 +41,10 @@
     "react-dom": "^15.3.1",
     "react-google-maps": "^4.11.0",
     "sass-loader": "^4.0.0",
+    "snabbt.js": "^0.6.4",
     "style-loader": "^0.13.1",
     "superagent": "^2.2.0",
+    "velocity-react": "^1.1.5",
     "webpack": "^1.13.2",
     "webpack-bundle-tracker": "0.0.93"
   }
