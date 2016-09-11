@@ -36,6 +36,10 @@ export default React.createClass({
 		.set('Accept', 'application/json')
 	  .end(
 	  	function(err, res) {
+        // Interminently fails here, placing a log to capture the issue
+        console.log(err);
+        console.log(res);
+
 	  		// Should output or provide visual cue that an error has occurred
 	  		if (err == null && res.ok) {
 					self.props.setNextTask();
@@ -46,8 +50,8 @@ export default React.createClass({
 
 	renderCategoryList() {
 		let categoryList = CATEGORIES.map((category, index) => {
-			return 	<li key={index} className={categoryListItem}>
-								<Button classNames={categoryButton} onClick={this.votingHandler}>
+			return 	<li key={index} className={categoryListItem} onClick={this.votingHandler}>
+								<Button classNames={categoryButton}>
                   <Icon classNames={categoryIcon} src={categoryImages[category]} />
                   {category}
                 </Button>
@@ -58,7 +62,7 @@ export default React.createClass({
 	},
 
   render() {
-  	let titleClasses = `${title} ${uTextAlignCenter}`;
+    const titleClasses = `${title} ${uTextAlignCenter}`;
 
     return (
       <div className={container}>

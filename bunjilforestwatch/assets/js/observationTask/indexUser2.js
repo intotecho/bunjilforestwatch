@@ -1,7 +1,7 @@
 import { render } from 'react-dom';
 import React from 'react';
 
-import Button from '../button';
+import NavBar from '../navBar/navBar';
 import VotingTaskBar from './votingTaskBar';
 import GeoMapDisplay from './geoMapDisplay';
 import Request from 'superagent';
@@ -25,19 +25,20 @@ var IndexUser2 = React.createClass({
   },
 
   render() {
-    let { state, setNextTask } = this;
+    const { state, setNextTask } = this;
     let votingTaskBar, geoMapDisplay;
 
     if (state.isTaskReady === true) {
       // Ugly ultra hacky data retrieval
-      let coords = state.gladCluster.geojson.features[0].properties.points.coordinates[0];
-      let long = coords[0];
-      let lat = coords[1];
+      const features = state.gladCluster.geojson.features;
+      const coords = features[0].properties.points.coordinates[0];
+      const long = coords[0];
+      const lat = coords[1];
 
       votingTaskBar = <VotingTaskBar setNextTask={setNextTask} caseId={state.case.case_id} />;
-      geoMapDisplay = <GeoMapDisplay long={long} lat={lat} />;
+      geoMapDisplay = <GeoMapDisplay features={features} long={long} lat={lat} />;
     } else {
-      let self = this;
+      const self = this;
 
       // Fire off get request before component starts rendering
       Request
@@ -46,7 +47,7 @@ var IndexUser2 = React.createClass({
         function(err, res) {
           if (err === null && res.ok) {
             // Response is coming back as JSON string
-            let response = JSON.parse(res.text);
+            const response = JSON.parse(res.text);
 
             self.setState({
               isTaskReady: true,
@@ -61,7 +62,7 @@ var IndexUser2 = React.createClass({
 
     return (
       <div>
-        <Button link='/old' classNames={uSizeFull}>Back</Button>
+        <NavBar />
         {votingTaskBar}
         {geoMapDisplay}
       </div>
@@ -70,6 +71,6 @@ var IndexUser2 = React.createClass({
 });
 
 render(
-	<IndexUser2 />,
-	document.getElementById('index-user2')
+  <IndexUser2 />,
+  document.getElementById('index-user2')
 );

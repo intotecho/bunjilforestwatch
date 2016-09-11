@@ -2,52 +2,61 @@ from models import VOTE_CATEGORIES
 
 
 class CaseChecker(object):
-    MAX_VOTES = 6
+    MIN_VOTES_FOR_VIABLE_CONSENSUS = 6
     MIN_CONSENSUS = 66
 
     @staticmethod
-    def is_a_majority(self, case):
-        highest_vote = 0
-        total_votes = 0
-        for category in case.votes:
-            total_votes += category
-            if category > highest_vote:
-                highest_vote = category
-        if highest_vote > 0:
-            highest_vote = (highest_vote / total_votes) * 100
-        if highest_vote > self.MIN_CONSENSUS:
-            return True
-        return False
-
-    @staticmethod
-    def is_max_votes(self, case):
-        v = case.votes
-        total_votes = (v.fire + v.agriculture + v.deforestation + v.road)
-        if total_votes == self.MAX_VOTES:
-            return True
-        return False
-
-    @staticmethod
-    def get_highest_category(self, case):
+    def has_a_majority(self, case):
         """
-        Returns the VOTE_CATAGORY that corresponds with the highest vote
+        :return: True: if the votes for a case form a clear majority for one vote category. Based on MIN_CONSENSUS
+        and MIN_VOTES_FOR_VIABLE_CONSENSUS requirements.
+        """
+        highest_category_votes = 0
+        total_votes = 0
+        for category_votes in case.votes:
+            total_votes += category_votes
+            if category_votes > highest_category_votes:
+                highest_category_votes = category_votes
+        if highest_category_votes > 0:
+            highest_category_votes = (highest_category_votes / total_votes) * 100
+        if highest_category_votes > self.MIN_CONSENSUS:
+            return True
+        return False
+
+    @staticmethod
+    def is_min_votes(self, case):
+        """
+        :return: True if the case has the minimum number of votes for the consensus (or lack of consensus) to be
+        considered viable for actioning (notifying local subscribers). False if more votes are required (e.g., a
+        consensus of one vote is not very trustworthy).
+        """
+        case_votes = case.votes
+        total_votes = (case_votes.fire + case_votes.agriculture + case_votes.deforestation + case_votes.road)
+        if total_votes == self.MIN_VOTES_FOR_VIABLE_CONSENSUS:
+            return True
+        return False
+
+    @staticmethod
+    def get_most_voted_category(case):
+        """
+        Returns the VOTE_CATEGORY that corresponds with the highest vote
         A possible bug is 50/50 splits
         """
-        v = case.votes
-        highest_vote = 0
-        for category in v:
-            if category > highest_vote:
-                    highest_vote = category
-        if highest_vote == 0:
-            return "ERROR: No Majority detected"
-        elif v.fire == highest_vote:
+        case_votes = case.votes
+        highest_category_votes = 0
+        for category in case_votes:
+            if category > highest_category_votes:
+                    highest_category_votes = category
+        if highest_category_votes == 0:
+            return None
+        elif case_votes.fire == highest_category_votes:
             return VOTE_CATEGORIES.FIRE
-        elif v.agriculture == highest_vote:
+        elif case_votes.agriculture == highest_category_votes:
             return VOTE_CATEGORIES.AGRICULTURE
-        elif v.deforestation == highest_vote:
+        elif case_votes.deforestation == highest_category_votes:
             return VOTE_CATEGORIES.DEFORESTATION
-        elif v.road == highest_vote:
+        elif case_votes.road == highest_category_votes:
             return VOTE_CATEGORIES.ROAD
-        elif v.unsure == highest_vote:
+        elif case_votes.unsure == highest_category_votes:
             return VOTE_CATEGORIES.UNSURE
 
