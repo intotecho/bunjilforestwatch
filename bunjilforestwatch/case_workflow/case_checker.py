@@ -60,3 +60,31 @@ class CaseChecker(object):
         elif case_votes.unsure == highest_category_votes:
             return VOTE_CATEGORIES.UNSURE
 
+
+def total_votes(self, case_votes):
+    """
+    You must only pass in a case_votes entity
+    """
+    result = 0
+    for category in case_votes:
+        result += category
+    return result
+
+
+def closed_case_percentage_of_(self, category, case):
+    """
+    You must only pass in ClosedCase entities
+    """
+    vote_category = 0
+    if category == VOTE_CATEGORIES.FIRE:
+        vote_category = case.key().parent().fire
+    if category == VOTE_CATEGORIES.DEFORESTATION:
+        vote_category = case.key().parent().deforestation
+    if category == VOTE_CATEGORIES.AGRICULTURE:
+        vote_category = case.key().parent().agriculture
+    if category == VOTE_CATEGORIES.ROAD:
+        vote_category = case.key().parent().road
+    if category == VOTE_CATEGORIES.UNSURE:
+        vote_category = case.key().parent().unsure
+    return (vote_category / self.total_votes(case.parent.votes)) * 100
+
