@@ -1,4 +1,5 @@
 import React from 'react';
+import _ from 'lodash';
 import {
   container, positive, negative, neutral
 }
@@ -27,36 +28,80 @@ export default React.createClass({
     }
   },
 
+  findHighest(listOfVotes) {
+    let currentHighestCategory = Object.keys(listOfVotes)[0];
+    let currentHighestNumberOfVotes = listOfVotes[currentHighestCategory];
+    for (var category in listOfVotes) {
+      var votesForCategory = listOfVotes[category];
+      if (currentHighestNumberOfVotes < votesForCategory) {
+        currentHighestCategory = category;
+        currentHighestNumberOfVotes = votesForCategory;
+      }
+    }
+    return currentHighestCategory;
+  },
+
+  getMostSelected() {
+    const {props} = this;
+    return this.findHighest(props.caseVotes);
+  },
+
+  getSecondMostSelected() {
+    const {props} = this;
+    return this.findHighest(_.omit(props.caseVotes, this.getMostSelected()));
+  },
+
+  convertToPercentage(votes, totalVotes) {
+    return _.floor((votes / totalVotes) * 100, 1);
+  },
+
   renderMessage() {
+    const {props} = this;
     console.log("MSG");
     let msg1, msg2;
-    let value1, value2;
-    let opposingChoice = 'Fire';
     let classColour;
 
-    value1 = Math.round(Math.random() * 100);
-    value2 = Math.round(Math.random() * (100 - value1));
-
-    if (value2 == 0) {
-      value2 += 1;
-    } // TODO: consider removing this
-
-    if (Math.abs(value1 - value2) <= 10) {
-      msg1 = value1 + '% agreed with you';
-      msg2 = value2 + '% chose ' + opposingChoice;
-
+    let totalVotes = _.sum(_.values(props.caseVotes));
+    if (totalVotes === 0) {
+      msg1 = "You are the first to vote on this issue";
+      msg2 = "";
       classColour = 'neutral';
-    } else if (value1 > value2) {
-      msg1 = value1 + '% agreed with you';
-      msg2 = value2 + '% chose ' + opposingChoice;
-      
-      classColour = 'positive';
     } else {
-      msg1 = value2 + '% chose ' + opposingChoice;
-      msg2 = value1 + '% agreed with you';
+      let percentThatAgreedWithYou = this.convertToPercentage(props.caseVotes[props.selectedCategory], totalVotes);
 
-      classColour = 'negative';
+      let mostSelectedCategory = this.getMostSelected();
+      let percentForMostSelected = this.convertToPercentage(props.caseVotes[mostSelectedCategory], totalVotes);
+
+      let secondMostSelectedCategory = this.getSecondMostSelected();
+      let percentForSecondMostSelected = this.convertToPercentage(props.caseVotes[secondMostSelectedCategory], totalVotes);
+
+      let opposingCategory, percentForOpposingCategory;
+      if (props.selectedCategory !== mostSelectedCategory) {
+        opposingCategory = mostSelectedCategory;
+        percentForOpposingCategory = percentForMostSelected;
+      } else {
+        opposingCategory = secondMostSelectedCategory;
+        percentForOpposingCategory = percentForSecondMostSelected;
+      }
+      console.log(opposingCategory + " : " + percentForOpposingCategory);
+      if (Math.abs(percentThatAgreedWithYou - percentForOpposingCategory) <= 10) {
+        msg1 = percentThatAgreedWithYou + '% agreed with you';
+        msg2 = percentForOpposingCategory + '% chose ' + opposingCategory;
+
+        classColour = 'neutral';
+      } else if (percentThatAgreedWithYou > percentForOpposingCategory) {
+        msg1 = percentThatAgreedWithYou + '% agreed with you';
+        msg2 = percentForOpposingCategory > 0.01 ? percentForOpposingCategory + '% chose ' + opposingCategory : '';
+
+        classColour = 'positive';
+      } else {
+        msg1 = percentForOpposingCategory + '% chose ' + opposingCategory;
+        msg2 = percentThatAgreedWithYou > 0.01 ? percentThatAgreedWithYou + '% agreed with you' : '';
+
+        classColour = 'negative';
+      }
     }
+
     
     setTimeout(() => this.props.startNextTask(), MESSAGE_DURATION_MS);
 

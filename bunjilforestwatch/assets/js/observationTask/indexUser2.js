@@ -79,7 +79,7 @@ var IndexUser2 = React.createClass({
     const {state} = this;
     if (state.selectedCategory !== null) {
       console.log("rendering message");
-      return <ConsensusMessage startNextTask={this.startNextTask} selectedCategory={state.selectedCategory}
+      return <ConsensusMessage startNextTask={this.startNextTask} selectedCategory={state.selectedCategory.toLowerCase()}
                                            caseVotes={state.case.votes}/>;
     }
     return null;
