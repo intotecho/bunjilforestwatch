@@ -24,14 +24,12 @@ const categoryImages = {
 export default React.createClass({
 
   getInitialState() {
-    console.log("VTB init state");
     return {
       selectionMade: false
     };
   },
 
   componentWillReceiveProps(nextProps) {
-    console.log("VTB props change: " + nextProps.caseId);
     this.setState({
       selectionMade: false
     });
@@ -39,7 +37,6 @@ export default React.createClass({
 
   votingHandler({target: {innerText}}) {
     let self = this;
-    console.log(this.state.selectionMade + " for case " + this.props.caseId);
     if (self.state.selectionMade !== undefined && self.state.selectionMade === false) {
       if (!CATEGORIES.includes(innerText) || !this.props.caseId) {
         return;
@@ -57,15 +54,13 @@ export default React.createClass({
         .set('Accept', 'application/json')
         .end(
           function (err, res) {
-            // Interminently fails here, placing a log to capture the issue
+            // Intermittently fails here, placing a log to capture the issue
             console.log(err);
             console.log(res);
 
             // Should output or provide visual cue that an error has occurred
             if (err == null && res.ok) {
-              console.log("vtb " + payload.vote_category);
               self.props.setSelectedCategory(payload.vote_category);
-              // self.props.setSelectedCategory();
             }
           }
         );

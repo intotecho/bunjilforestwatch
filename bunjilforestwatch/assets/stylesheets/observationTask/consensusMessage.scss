@@ -9,20 +9,17 @@
   border-radius: 15px;
 }
 
-p.negative  {
+.negative  {
 	opacity: 1 !important;
 	color: red;
-	font-size: 110%;
 }
 
-p.positive {
+.positive {
 	opacity: 1 !important;
 	color: green;
-	font-size: 110%;
 }
 
-p.neutral {
+.neutral {
 	opacity: 1 !important;
 	color: gray;
-	font-size: 110%;
 }

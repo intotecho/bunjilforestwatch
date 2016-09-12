@@ -11,7 +11,7 @@ import {uSizeFull} from '../../stylesheets/utils';
 
 var IndexUser2 = React.createClass({
   getInitialState() {
-    this.startNextTask(); // Renders twice still super crappy
+    this.startNextTask(); // Fixme: causes two renders
 
     return {
       selectedCategory: null,
@@ -39,7 +39,6 @@ var IndexUser2 = React.createClass({
             // Response is coming back as JSON string
             const response = JSON.parse(res.text);
             const gc = response.glad_cluster;
-            console.log("response received");
             self.setState({
               areaId: response.area_id,
               selectedCategory: null,
@@ -54,7 +53,6 @@ var IndexUser2 = React.createClass({
   renderVotingTaskBar() {
     const {state, setSelectedCategory} = this;
     if (_.isEmpty(state.case) === false) {
-      console.log("rendeing task bar");
       return <VotingTaskBar setSelectedCategory={setSelectedCategory} caseId={state.case.case_id}/>;
     }
     return null;
@@ -63,12 +61,10 @@ var IndexUser2 = React.createClass({
   renderGeoMapDisplay() {
     const {state} = this;
     if (_.isEmpty(state.gladCluster) === false) {
-      console.log(state.gladCluster.geojson);
       const features = state.gladCluster.geojson.features;
       const coords = features[0].properties.points.coordinates[0];
       const long = coords[0];
       const lat = coords[1];
-      console.log("rendeing map");
       return <GeoMapDisplay features={features} long={long} lat={lat}/>;
     }
 
@@ -78,7 +74,6 @@ var IndexUser2 = React.createClass({
   renderConsensusMessage() {
     const {state} = this;
     if (state.selectedCategory !== null) {
-      console.log("rendering message");
       return <ConsensusMessage startNextTask={this.startNextTask} selectedCategory={state.selectedCategory.toLowerCase()}
                                            caseVotes={state.case.votes}/>;
     }

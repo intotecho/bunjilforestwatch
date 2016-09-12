@@ -2,24 +2,21 @@ import React from 'react';
 import _ from 'lodash';
 import {
   container, positive, negative, neutral
-}
-  from '../../stylesheets/observationTask/consensusMessage.scss';
+} from '../../stylesheets/observationTask/consensusMessage';
 
 require('velocity-animate');
 require('velocity-animate/velocity.ui');
 var snabbt = require('snabbt.js');
 
-const CATEGORIES = ['Fire', 'Deforestation', 'Agriculture', 'Road', 'Unsure'];
-
 const MESSAGE_DURATION_MS = 5000;
 
 export default React.createClass({
 
-  componentDidUpdate: function () {
-    if (this.refs.popMsg != undefined) {
+  componentDidMount(prevProps, prevState) {
+    if (this.refs.popMsg !== undefined) {
       Velocity(this.refs.popMsg,
         {opacity: 0}, {easing: "ease-out", duration: 1000, delay: 3500});
-      Snabbt(this.refs.popMsg, {
+      snabbt(this.refs.popMsg, {
         position: [0, -75, 0],
         // easing: 'easeIn',
         opacity: [0],
@@ -57,15 +54,14 @@ export default React.createClass({
 
   renderMessage() {
     const {props} = this;
-    console.log("MSG");
     let msg1, msg2;
-    let classColour;
+    let colourClass;
 
     let totalVotes = _.sum(_.values(props.caseVotes));
     if (totalVotes === 0) {
       msg1 = "You are the first to vote on this issue";
       msg2 = "";
-      classColour = 'neutral';
+      colourClass = neutral;
     } else {
       let percentThatAgreedWithYou = this.convertToPercentage(props.caseVotes[props.selectedCategory], totalVotes);
 
@@ -77,38 +73,34 @@ export default React.createClass({
 
       let opposingCategory, percentForOpposingCategory;
       if (props.selectedCategory !== mostSelectedCategory) {
-        opposingCategory = mostSelectedCategory;
+        opposingCategory = _.upperFirst(mostSelectedCategory);
         percentForOpposingCategory = percentForMostSelected;
       } else {
-        opposingCategory = secondMostSelectedCategory;
+        opposingCategory = _.upperFirst(secondMostSelectedCategory);
         percentForOpposingCategory = percentForSecondMostSelected;
       }
-      console.log(opposingCategory + " : " + percentForOpposingCategory);
       if (Math.abs(percentThatAgreedWithYou - percentForOpposingCategory) <= 10) {
         msg1 = percentThatAgreedWithYou + '% agreed with you';
         msg2 = percentForOpposingCategory + '% chose ' + opposingCategory;
 
-        classColour = 'neutral';
+        colourClass = neutral;
       } else if (percentThatAgreedWithYou > percentForOpposingCategory) {
         msg1 = percentThatAgreedWithYou + '% agreed with you';
         msg2 = percentForOpposingCategory > 0.01 ? percentForOpposingCategory + '% chose ' + opposingCategory : '';
 
-        classColour = 'positive';
+        colourClass = positive;
       } else {
         msg1 = percentForOpposingCategory + '% chose ' + opposingCategory;
         msg2 = percentThatAgreedWithYou > 0.01 ? percentThatAgreedWithYou + '% agreed with you' : '';
 
-        classColour = 'negative';
+        colourClass = negative;
       }
     }
-
-    
     setTimeout(() => this.props.startNextTask(), MESSAGE_DURATION_MS);
-
     return (
       <div ref='popMsg' className={container}>
-        <p className={classColour}>{msg1}</p>
-        <p className={classColour}>{msg2}</p>
+        <p className={colourClass}>{msg1}</p>
+        <p className={colourClass}>{msg2}</p>
       </div>
     );
   },
