@@ -11,14 +11,16 @@ import {uSizeFull} from '../../stylesheets/utils';
 
 var IndexUser2 = React.createClass({
   getInitialState() {
-    this.startNextTask(); // Fixme: causes two renders
-
     return {
       selectedCategory: null,
       areaId: -1,
       case: {},
       gladCluster: {}
     };
+  },
+
+  componentWillMount() {
+    this.startNextTask();
   },
   
   setSelectedCategory(selectedCategory) {
@@ -55,7 +57,7 @@ var IndexUser2 = React.createClass({
     if (_.isEmpty(state.case) === false) {
       return <VotingTaskBar setSelectedCategory={setSelectedCategory} caseId={state.case.case_id}/>;
     }
-    return null;
+    return;
   },
 
   renderGeoMapDisplay() {
@@ -68,7 +70,7 @@ var IndexUser2 = React.createClass({
       return <GeoMapDisplay features={features} long={long} lat={lat}/>;
     }
 
-    return null; // TODO: have the map object have a default no features available view
+    return; // TODO: have the map object have a default no features available view
   },
 
   renderConsensusMessage() {
@@ -77,7 +79,7 @@ var IndexUser2 = React.createClass({
       return <ConsensusMessage startNextTask={this.startNextTask} selectedCategory={state.selectedCategory.toLowerCase()}
                                            caseVotes={state.case.votes}/>;
     }
-    return null;
+    return;
   },
   
   render() {

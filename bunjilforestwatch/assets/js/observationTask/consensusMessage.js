@@ -79,6 +79,7 @@ export default React.createClass({
         opposingCategory = _.upperFirst(secondMostSelectedCategory);
         percentForOpposingCategory = percentForSecondMostSelected;
       }
+
       if (Math.abs(percentThatAgreedWithYou - percentForOpposingCategory) <= 10) {
         msg1 = percentThatAgreedWithYou + '% agreed with you';
         msg2 = percentForOpposingCategory + '% chose ' + opposingCategory;
@@ -96,7 +97,9 @@ export default React.createClass({
         colourClass = negative;
       }
     }
+
     setTimeout(() => this.props.startNextTask(), MESSAGE_DURATION_MS);
+
     return (
       <div ref='popMsg' className={container}>
         <p className={colourClass}>{msg1}</p>
