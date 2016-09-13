@@ -20,7 +20,7 @@ export default React.createClass({
 
     for (let key in NAVIGATIONS) {
       navigationsList.push(
-        <li className={navList}>
+        <li key={key} className={navList}>
           <a href={NAVIGATIONS[key]}>
             {_.capitalize(key)}
           </a>
