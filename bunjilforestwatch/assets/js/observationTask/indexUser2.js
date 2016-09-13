@@ -1,7 +1,6 @@
 import { render } from 'react-dom';
 import React from 'react';
 
-import NavBar from '../navBar/navBar';
 import VotingTaskBar from './votingTaskBar';
 import GeoMapDisplay from './geoMapDisplay';
 import Request from 'superagent';
@@ -62,7 +61,6 @@ export default React.createClass({
 
     return (
       <div>
-        <NavBar />
         {votingTaskBar}
         {geoMapDisplay}
       </div>

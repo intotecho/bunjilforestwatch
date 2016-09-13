@@ -465,12 +465,22 @@ class MainPageObsTask(BaseHandler):
                 preference = models.ObservationTaskPreference.get_preference(self.session['user']['key'])
                 self.preference = preference
 
-            # Preference can be empty after creation (async issue?)
-            # Regardless, we don't care, just render preference entry
             if preference and preference.hasPreference:
                 self.render('bfw-baseEntry-react.html')
 
-            # redirect to different route
+            # Preference can be empty after creation (async issue?)
+            # Regardless, we don't care, just render preference entry
+            self.redirect(webapp2.uri_for('obsTaskPreference'))
+        else:
+            self.render('index.html', {
+                'show_navbar': False
+            })  # not logged in.
+
+class ObsTaskPreferenceHandler(BaseHandler):
+    """
+    """
+    def get(self):
+        if 'user' in self.session:
             self.render('bfw-baseEntry-react.html')
         else:
             self.render('index.html', {
@@ -3680,6 +3690,8 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/', handler=MainPageObsTask, name='main2'),
     webapp2.Route(r'/old', handler=MainPage, name='main'),
 
+    webapp2.Route(r'/obsTaskPreference', handler=ObsTaskPreferenceHandler, name='obsTaskPreference'),
+
     webapp2.Route('/.well-known/acme-challenge/<challenge_id>', AcmeChallengeHandler, methods=['GET', 'POST']),
     # google site verification
 
@@ -3857,7 +3869,8 @@ RESERVED_NAMES = set([
     'upload',
     'user',
     'users',
-    'old' # Test render, remove when done 
+    'old', # Test render, remove when done
+    'obsTaskPreference'
 ])
 
 # assert that all routes are listed in RESERVED_NAMES
