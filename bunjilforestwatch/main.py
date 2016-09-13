@@ -54,6 +54,7 @@ import re
 import geojson
 import bleach
 import apiservices
+import case_workflow.case_workflow_manager
 from observation_task_routers import *
 
 from google.appengine.api import files
@@ -2118,7 +2119,11 @@ class ObservationTaskHandler(BaseHandler):
                                         vote_calculator.get_weighted_vote(user, case))
                     case.put()
 
+                    case_manager = case_workflow.case_workflow_manager.CaseWorkflowManager()
+                    case_manager.check_single_case(case)
+
                     self.response.set_status(201)
+
                     return
 
         self.reponse.set_status(400)

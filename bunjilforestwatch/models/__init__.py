@@ -1669,6 +1669,16 @@ class Case(ndb.Model):
     def get_cases_for_glad_cluster(glad_cluster):
         return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
 
+    "Static method for returning whether or not a case is closed. To be made more explicit once "
+    "all potential case statuses are in use"
+
+    @staticmethod
+    def is_closed(self):
+        if self.status == 'OPEN':
+            return False
+        else:
+            return True
+
 
 class ObservationTaskResponse(ndb.Model):
     """
@@ -1678,29 +1688,3 @@ class ObservationTaskResponse(ndb.Model):
     case = ndb.KeyProperty(kind=Case)
     case_response = ndb.PickleProperty(required=True)
     vote_category = ndb.StringProperty(required=True)
-
-
-class ClosedCase(ndb.model):
-    """
-    Child of Case
-    Specifically for storing closed case
-    outcomes separate from open and active
-    cases.
-    """
-    case = ndb.KeyProperty(kind=Case)
-    status = ndb.StringProperty(default="UNCONFIRMED")
-    closed_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
-
-    @staticmethod
-    def add(self, closing_case, confirmed):
-        """
-        Used to add entities to this model, only accepts closed cases
-        """
-        if closing_case.status == "OPEN":
-            print("ERROR: You must close a case before it can be added to this table")
-        else:
-            new_closed_case = ClosedCase(closing_case)
-            if confirmed:
-                new_closed_case.status = "CONFIRMED"
-            new_closed_case.put()
-
