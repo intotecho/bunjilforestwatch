@@ -6,7 +6,9 @@ var autoprefixer = require('autoprefixer');
 module.exports = {
   context: __dirname,
 
-  entry: './assets/js/observationTask/indexUser2', // entry point of our app. assets/js/index.js should require other js modules and dependencies it needs
+  // entry point of our app.
+  // assets/js/base should require other js modules and dependencies it needs.
+  entry: './assets/js/base',
 
   output: {
       path: path.resolve('./assets/bundles/'),

@@ -468,10 +468,10 @@ class MainPageObsTask(BaseHandler):
             # Preference can be empty after creation (async issue?)
             # Regardless, we don't care, just render preference entry
             if preference and preference.hasPreference:
-                self.render('index-user2.html')
+                self.render('bfw-baseEntry-react.html')
 
             # redirect to different route
-            self.render('index-user2.html')
+            self.render('bfw-baseEntry-react.html')
         else:
             self.render('index.html', {
                 'show_navbar': False

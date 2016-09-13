@@ -8,7 +8,7 @@ import Request from 'superagent';
 
 import { uSizeFull } from '../../stylesheets/utils';
 
-var IndexUser2 = React.createClass({
+export default React.createClass({
   getInitialState() {
     return {
       isTaskReady: false,
@@ -69,8 +69,3 @@ var IndexUser2 = React.createClass({
     );
   }
 });
-
-render(
-  <IndexUser2 />,
-  document.getElementById('index-user2')
-);
