@@ -1679,3 +1679,29 @@ class ObservationTaskResponse(ndb.Model):
     case_response = ndb.PickleProperty(required=True)
     vote_category = ndb.StringProperty(required=True)
 
+class ObservationTaskPreference(ndb.Model):
+    """
+    Stores all user's observation task preferences, the preference relates to area of interest, animals,
+    and other future attributes. It records whether the user has performed a preference entry and creates
+    one if it hasn't been previously done.
+    """
+
+    user = ndb.KeyProperty(kind=User, required=True)
+    hasPreference = ndb.BooleanProperty(required=False, default=False)
+
+    @staticmethod
+    def create(user_key):
+        preference = ObservationTaskPreference.query(
+            ObservationTaskPreference.user == user_key
+        ).get()
+
+        # Only create when there isn't an existing preference record for user
+        if preference == None:
+            preference = ObservationTaskPreference(user=user_key, hasPreference=False)
+            preference.put()
+
+    @staticmethod
+    def get_preference(user_key):
+        return ObservationTaskPreference.query(
+            ObservationTaskPreference.user == user_key
+        ).get()

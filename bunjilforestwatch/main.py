@@ -450,13 +450,32 @@ class MainPageObsTask(BaseHandler):
     Default page is index.html if not authenticated, or index-user if authenticated.
 
     ^^^^
-    Take note of the above comment from MainPage handler, currently this is a test 
-    render with the integration of React. The file name will have to be changed in 
+    Take note of the above comment from MainPage handler, currently this is a test
+    render with the integration of React. The file name will have to be changed in
     the future and this handler may be removed.
     """
 
     def get(self):
-        self.render('index-user2.html')
+        if 'user' in self.session:
+            try:
+                preference = self.preference;
+            except AttributeError:
+                # Create and get preference from datastore
+                models.ObservationTaskPreference.create(self.session['user']['key'])
+                preference = models.ObservationTaskPreference.get_preference(self.session['user']['key'])
+                self.preference = preference
+
+            # Preference can be empty after creation (async issue?)
+            # Regardless, we don't care, just render preference entry
+            if preference and preference.hasPreference:
+                self.render('index-user2.html')
+
+            # redirect to different route
+            self.render('index-user2.html')
+        else:
+            self.render('index.html', {
+                'show_navbar': False
+            })  # not logged in.
 
 
 class ViewAllAreas(BaseHandler):
