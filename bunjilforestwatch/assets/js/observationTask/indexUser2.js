@@ -40,12 +40,11 @@ var IndexUser2 = React.createClass({
           if (err === null && res.ok) {
             // Response is coming back as JSON string
             const response = JSON.parse(res.text);
-            const gc = response.glad_cluster;
             self.setState({
               areaId: response.area_id,
               selectedCategory: null,
               case: response.case,
-              gladCluster: gc
+              gladCluster: response.glad_cluster
             });
           }
         }
@@ -54,14 +53,17 @@ var IndexUser2 = React.createClass({
 
   renderVotingTaskBar() {
     const {state, setSelectedCategory} = this;
+
     if (_.isEmpty(state.case) === false) {
       return <VotingTaskBar setSelectedCategory={setSelectedCategory} caseId={state.case.case_id}/>;
     }
+
     return;
   },
 
   renderGeoMapDisplay() {
     const {state} = this;
+
     if (_.isEmpty(state.gladCluster) === false) {
       const features = state.gladCluster.geojson.features;
       const coords = features[0].properties.points.coordinates[0];
@@ -75,18 +77,22 @@ var IndexUser2 = React.createClass({
 
   renderConsensusMessage() {
     const {state} = this;
+
     if (state.selectedCategory !== null) {
-      return <ConsensusMessage startNextTask={this.startNextTask} selectedCategory={state.selectedCategory.toLowerCase()}
-                                           caseVotes={state.case.votes}/>;
+      return <ConsensusMessage
+                startNextTask={this.startNextTask}
+                selectedCategory={state.selectedCategory.toLowerCase()}
+                caseVotes={state.case.votes}
+            />;
     }
+
     return;
   },
   
   render() {
-    let votingTaskBar, geoMapDisplay, consensusMessage;
-    votingTaskBar = this.renderVotingTaskBar();
-    geoMapDisplay = this.renderGeoMapDisplay();
-    consensusMessage = this.renderConsensusMessage();
+    const votingTaskBar = this.renderVotingTaskBar();
+    const geoMapDisplay = this.renderGeoMapDisplay();
+    const consensusMessage = this.renderConsensusMessage();
 
     return (
       <div>

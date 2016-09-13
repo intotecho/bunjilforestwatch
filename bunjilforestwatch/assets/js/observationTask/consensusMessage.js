@@ -6,7 +6,7 @@ import {
 
 require('velocity-animate');
 require('velocity-animate/velocity.ui');
-var snabbt = require('snabbt.js');
+import snabbt from 'snabbt.js';
 
 const MESSAGE_DURATION_MS = 5000;
 
@@ -15,10 +15,10 @@ export default React.createClass({
   componentDidMount(prevProps, prevState) {
     if (this.refs.popMsg !== undefined) {
       Velocity(this.refs.popMsg,
-        {opacity: 0}, {easing: "ease-out", duration: 1000, delay: 3500});
+        {opacity: 0},
+        {easing: "ease-out", duration: 1000, delay: 3500});
       snabbt(this.refs.popMsg, {
         position: [0, -75, 0],
-        // easing: 'easeIn',
         opacity: [0],
         duration: 4400
       });
@@ -28,8 +28,8 @@ export default React.createClass({
   findHighest(listOfVotes) {
     let currentHighestCategory = Object.keys(listOfVotes)[0];
     let currentHighestNumberOfVotes = listOfVotes[currentHighestCategory];
-    for (var category in listOfVotes) {
-      var votesForCategory = listOfVotes[category];
+    for (let category in listOfVotes) {
+      const votesForCategory = listOfVotes[category];
       if (currentHighestNumberOfVotes < votesForCategory) {
         currentHighestCategory = category;
         currentHighestNumberOfVotes = votesForCategory;
@@ -62,6 +62,7 @@ export default React.createClass({
       msg1 = "You are the first to vote on this issue";
       msg2 = "";
       colourClass = neutral;
+
     } else {
       let percentThatAgreedWithYou = this.convertToPercentage(props.caseVotes[props.selectedCategory], totalVotes);
 

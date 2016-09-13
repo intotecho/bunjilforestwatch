@@ -5,8 +5,7 @@ import Button from '../button';
 import Icon from '../icon';
 
 import {uTextAlignCenter} from '../../stylesheets/utils';
-import {
-  container, categoryListItem, title,
+import {container, categoryListItem, title,
   categoryButton, categoryOptionList,
   categoryIcon
 } from '../../stylesheets/observationTask/votingTaskBar';
@@ -24,9 +23,7 @@ const categoryImages = {
 export default React.createClass({
 
   getInitialState() {
-    return {
-      selectionMade: false
-    };
+    return {selectionMade: false};
   },
 
   componentWillReceiveProps(nextProps) {
@@ -65,21 +62,20 @@ export default React.createClass({
           }
         );
 
-      self.setState({
-          selectionMade: true
-        }
-      );
+      self.setState({selectionMade: true});
     }
   },
 
   renderCategoryList() {
     let categoryList = CATEGORIES.map((category, index) => {
-      return <li key={index} className={categoryListItem} onClick={this.votingHandler}>
-        <Button classNames={categoryButton}>
-          <Icon classNames={categoryIcon} src={categoryImages[category]}/>
-          {category}
-        </Button>
-      </li>;
+      return (
+        <li key={index} className={categoryListItem} onClick={this.votingHandler}>
+          <Button classNames={categoryButton}>
+            <Icon classNames={categoryIcon} src={categoryImages[category]}/>
+            {category}
+          </Button>
+        </li>
+      );
     });
 
     return <ul className={categoryOptionList}>{categoryList}</ul>;
