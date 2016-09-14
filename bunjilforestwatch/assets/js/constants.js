@@ -1,11 +1,11 @@
 const categories = ['Fire', 'Deforestation', 'Agriculture', 'Road', 'Unsure'];
 
 const categoryImages = {
-  'Fire':          require('../images/fire.png'),
+  'Fire': require('../images/fire.png'),
   'Deforestation': require('../images/deforestation.png'),
-  'Agriculture':   require('../images/agriculture.png'),
-  'Road':          require('../images/road.png'),
-  'Unsure':        require('../images/unsure.png'),
+  'Agriculture': require('../images/agriculture.png'),
+  'Road': require('../images/road.png'),
+  'Unsure': require('../images/unsure.png'),
 }
 
 const regionPreference = {
@@ -13,6 +13,7 @@ const regionPreference = {
   'peru': require('../images/peru.jpeg')
 };
 
+// Remove when tested
 const regionPreferenceTest = {
   'borneo': require('../images/borneo.jpeg'),
   'borneo1': require('../images/borneo.jpeg'),

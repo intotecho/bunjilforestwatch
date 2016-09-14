@@ -1,9 +1,11 @@
 .container {
   border-radius: 5px;
   border: 1px solid #222;
+  margin-left: auto;
+  margin-right: auto;
   margin-top: 20px;
   position: relative;
-  width: 600px;
+  width: 780px;
 }
 
 .title {
@@ -13,8 +15,8 @@
 .regionContainer {
   border: 1px solid #222;
   height: 500px;
-  overflow-y: scroll;
   margin: 0 20px 50px 20px;
+  overflow-y: scroll;
 
   // FIXME: Usability issue with scrolls not appearing when overflowed
   &::-webkit-scrollbar {
