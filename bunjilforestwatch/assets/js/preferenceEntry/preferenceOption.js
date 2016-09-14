@@ -1,4 +1,3 @@
-import { render } from 'react-dom';
 import React from 'react';
 import classNames from 'classnames';
 import _ from 'lodash';
@@ -15,6 +14,12 @@ export default React.createClass({
   },
 
   setSelected() {
+    const { onSelect, children: region } = this.props;
+
+    if (onSelect !== undefined) {
+      onSelect(region, !this.state.selected);
+    }
+
     this.setState({
       selected: !this.state.selected
     });

@@ -467,10 +467,10 @@ class MainPageObsTask(BaseHandler):
 
             if preference and preference.hasPreference:
                 self.render('bfw-baseEntry-react.html')
-
-            # Preference can be empty after creation (async issue?)
-            # Regardless, we don't care, just render preference entry
-            self.redirect(webapp2.uri_for('obsTaskPreference'))
+            else:
+                # Preference can be empty after creation (async issue?)
+                # Regardless, we don't care, just render preference entry
+                self.redirect(webapp2.uri_for('obsTaskPreference'))
         else:
             self.render('index.html', {
                 'show_navbar': False
@@ -479,6 +479,7 @@ class MainPageObsTask(BaseHandler):
 class ObsTaskPreferenceHandler(BaseHandler):
     """
     """
+    # The GET request is not really REST-y, instead returns a page instead of returning data
     def get(self):
         if 'user' in self.session:
             self.render('bfw-baseEntry-react.html')
@@ -486,6 +487,26 @@ class ObsTaskPreferenceHandler(BaseHandler):
             self.render('index.html', {
                 'show_navbar': False
             })  # not logged in.
+
+    def post(self):
+        if 'user' in self.session:
+            user_key = self.session['user']['key']
+            response = json.loads(self.request.body)
+
+            if response['region_preference'] is not None:
+                result = models.ObservationTaskPreference.update(user_key, response['region_preference'])
+
+                if result:
+                    return self.response.set_status(200)
+                else:
+                    logging.error('ObsTaskPreference - could not update preference data')
+                    return self.error(500)
+            else:
+                logging.error('Cannot POST to ObsTaskPreference - region preferences not found')
+                return self.error(404)
+        else:
+            logging.error('Cannot POST to ObsTaskPreference - user not found in session')
+            return self.error(401)
 
 
 class ViewAllAreas(BaseHandler):
