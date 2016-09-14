@@ -13,6 +13,27 @@ import {
 } from '../../stylesheets/preferenceEntry/preferenceEntry';
 
 export default React.createClass({
+  componentDidMount() {
+    const self = this;
+
+    Request
+    .get('/observation-task/preference/resource')
+    .set('Accept', 'application/json')
+    .end(
+      function (err, res) {
+        if (err == null && res.ok) {
+          const preference = JSON.parse(res.text);
+
+          if (preference.hasPreference) {
+            self.setState({
+              selectedOptions: preference.region_preference
+            });
+          }
+        }
+      }
+    );
+  },
+
   getInitialState() {
     return {
       selectedOptions: []
@@ -38,6 +59,8 @@ export default React.createClass({
   },
 
   submitHandler() {
+    // FIXME: Stop hitting remote endpoint when theres no difference in selection
+
     const payload = {
       region_preference: this.state.selectedOptions
     };
@@ -61,6 +84,7 @@ export default React.createClass({
       return (
         <PreferenceOption
           key={key}
+          selected={_.includes(this.state.selectedOptions, key)}
           onSelect={this.updateSelectedOptions}
           image={value}>
           {key}

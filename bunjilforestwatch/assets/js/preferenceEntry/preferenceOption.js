@@ -28,7 +28,7 @@ export default React.createClass({
   render() {
     const containerClasses = classNames({
       [`${container}`]: true,
-      [`${selected}`]: this.state.selected
+      [`${selected}`]: this.props.selected || this.state.selected
     });
 
     return (
