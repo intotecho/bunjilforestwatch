@@ -465,7 +465,7 @@ class MainPageObsTask(BaseHandler):
                 preference = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
                 self.preference = preference
 
-            if preference and preference.hasPreference:
+            if preference and preference.has_preference:
                 self.render('bfw-baseEntry-react.html')
             else:
                 # Preference can be empty after creation (async issue?)
@@ -494,7 +494,7 @@ class ObsTaskPreferenceResource(BaseHandler):
 
             if result:
                 response = {
-                    "hasPreference": result.hasPreference,
+                    "has_preference": result.has_preference,
                     "region_preference": result.region_preference
                 }
 

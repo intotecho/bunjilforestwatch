@@ -24,7 +24,7 @@ export default React.createClass({
         if (err == null && res.ok) {
           const preference = JSON.parse(res.text);
 
-          if (preference.hasPreference) {
+          if (preference.has_preference) {
             self.setState({
               selectedOptions: preference.region_preference
             });
