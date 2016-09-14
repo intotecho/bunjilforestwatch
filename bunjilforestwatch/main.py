@@ -2120,7 +2120,7 @@ class ObservationTaskHandler(BaseHandler):
                     case.put()
 
                     case_manager = case_workflow.case_workflow_manager.CaseWorkflowManager()
-                    case_manager.check_single_case(case)
+                    case_manager.update_case_status(case)
 
                     self.response.set_status(201)
 

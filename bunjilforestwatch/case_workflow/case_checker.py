@@ -11,7 +11,6 @@ class CaseChecker(object):
         and MIN_VOTES_FOR_VIABLE_CONSENSUS requirements.
         """
         highest_category_votes = 0
-        total_votes = (case.votes.fire + case.votes.agriculture + case.votes.deforestation + case.votes.road)
         if case.votes.fire > highest_category_votes:
             highest_category_votes = case.votes.fire
         if case.votes.agriculture > highest_category_votes:
@@ -20,12 +19,10 @@ class CaseChecker(object):
             highest_category_votes = case.votes.deforestation
         if case.votes.road > highest_category_votes:
             highest_category_votes = case.votes.road
-        if case.votes.unsure == highest_category_votes:
-            highest_category_votes = case.votes.unsure
-
+        total_votes = self.total_votes(case)
         if highest_category_votes > 0:
-            highest_category_votes = (highest_category_votes / total_votes) * 100
-        if highest_category_votes > self.MIN_CONSENSUS:
+            highest_votes = (highest_category_votes / total_votes) * 100
+        if highest_votes > self.MIN_CONSENSUS:
             return True
         return False
 
@@ -35,7 +32,7 @@ class CaseChecker(object):
         considered viable for actioning (notifying local subscribers). False if more votes are required (e.g., a
         consensus of one vote is not very trustworthy).
         """
-        total_votes = (case.votes.fire + case.votes.agriculture + case.votes.deforestation + case.votes.road)
+        total_votes = self.total_votes(case)
         if total_votes >= self.MIN_VOTES_FOR_VIABLE_CONSENSUS:
             return True
         return False
@@ -69,16 +66,23 @@ class CaseChecker(object):
             return CaseVotes.road
 
     @staticmethod
-    def total_votes(self, case):
+    def total_votes(case):
         """
-        Can only take a case as an argument. This method factors unsure votes into total votes
+        Returns:
+            result: a float value of all votes tallied together
+        Args:
+            case: a case data store entry
         """
         result = (case.votes.fire + case.votes.agriculture + case.votes.deforestation + case.votes.road + case.votes.unsure)
         return result
 
     def closed_case_percentage_of_(self, category, case):
         """
-        You must only pass in ClosedCase entities
+        Returns:
+            The percentage that a vote category for a closed case received
+        Args:
+            category: the category of votes to be returned
+            case: a closed case
         """
         vote_category = 0
         if category == VOTE_CATEGORIES.FIRE:
@@ -92,4 +96,6 @@ class CaseChecker(object):
         if category == VOTE_CATEGORIES.UNSURE:
             vote_category = case.key().parent().unsure
         return (vote_category / self.total_votes(case)) * 100
+
+
 
