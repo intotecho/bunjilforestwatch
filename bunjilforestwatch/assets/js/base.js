@@ -3,7 +3,7 @@ import { render } from 'react-dom'
 import { Router, IndexRoute, Route, Link, browserHistory } from 'react-router'
 
 import NavBar from './navBar/navBar';
-import IndexUser2 from './observationTask/IndexUser2';
+import ObservationTask from './observationTask/observationTask';
 import PreferenceEntry from './preferenceEntry/preferenceEntry';
 
 const App = React.createClass({
@@ -20,7 +20,7 @@ const App = React.createClass({
 render((
   <Router history={browserHistory}>
     <Route path="/" component={App}>
-      <IndexRoute component={IndexUser2} />
+      <IndexRoute component={ObservationTask} />
       <Route path="observation-task/preference" component={PreferenceEntry} />
     </Route>
   </Router>
