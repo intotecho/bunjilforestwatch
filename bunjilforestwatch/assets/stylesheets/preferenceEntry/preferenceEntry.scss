@@ -1,0 +1,47 @@
+.container {
+  border-radius: 5px;
+  border: 1px solid #222;
+  margin-top: 20px;
+  position: relative;
+  width: 600px;
+}
+
+.title {
+  text-align: center;
+}
+
+.regionContainer {
+  border: 1px solid #222;
+  height: 500px;
+  overflow-y: scroll;
+  margin: 0 20px 50px 20px;
+
+  // FIXME: Usability issue with scrolls not appearing when overflowed
+  &::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 7px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+      border-radius: 4px;
+      background-color: rgba(0,0,0,.5);
+      -webkit-box-shadow: 0 0 1px rgba(255,255,255,.5);
+  }
+}
+
+// Should put this into button as default styling
+.btnContinue {
+  background-color: #6495ED;
+  border-radius: 5px;
+  border: 1px solid #6495ED;
+  bottom: 13px;
+  color: white;
+  outline: none;
+  padding: 6px 10px;
+  position: absolute;
+  right: 20px;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
