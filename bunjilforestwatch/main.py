@@ -479,7 +479,6 @@ class MainPageObsTask(BaseHandler):
 class ObsTaskPreferenceHandler(BaseHandler):
     """
     """
-    # The GET request is not really REST-y, instead returns a page instead of returning data
     def get(self):
         if 'user' in self.session:
             self.render('bfw-baseEntry-react.html')
@@ -488,6 +487,7 @@ class ObsTaskPreferenceHandler(BaseHandler):
                 'show_navbar': False
             })  # not logged in.
 
+class ObsTaskPreferenceResource(BaseHandler):
     def post(self):
         if 'user' in self.session:
             user_key = self.session['user']['key']
@@ -3711,8 +3711,6 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/', handler=MainPageObsTask, name='main2'),
     webapp2.Route(r'/old', handler=MainPage, name='main'),
 
-    webapp2.Route(r'/obsTaskPreference', handler=ObsTaskPreferenceHandler, name='obsTaskPreference'),
-
     webapp2.Route('/.well-known/acme-challenge/<challenge_id>', AcmeChallengeHandler, methods=['GET', 'POST']),
     # google site verification
 
@@ -3796,6 +3794,9 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/observation-task/<router_name>/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
     webapp2.Route(r'/observation-task/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
     webapp2.Route(r'/observation-task/response', handler=ObservationTaskHandler, name="next-task", methods=['POST']),
+
+    webapp2.Route(r'/observation-task/preference', handler=ObsTaskPreferenceHandler, name='obsTaskPreference'),
+    webapp2.Route(r'/observation-task/preference/resource', handler=ObsTaskPreferenceResource, name='obsTaskPreferenceResource'),
 
     # observation tasks see also admin/obs/list
     webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
@@ -3891,7 +3892,6 @@ RESERVED_NAMES = set([
     'user',
     'users',
     'old', # Test render, remove when done
-    'obsTaskPreference'
 ])
 
 # assert that all routes are listed in RESERVED_NAMES

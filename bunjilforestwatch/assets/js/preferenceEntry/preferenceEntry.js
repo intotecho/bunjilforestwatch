@@ -43,7 +43,7 @@ export default React.createClass({
     };
 
     Request
-    .post('/obsTaskPreference')
+    .post('/observation-task/preference/resource')
     .send(payload)
     .set('Accept', 'application/json')
     .end(

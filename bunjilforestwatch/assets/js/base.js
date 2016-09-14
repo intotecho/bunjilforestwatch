@@ -21,7 +21,7 @@ render((
   <Router history={browserHistory}>
     <Route path="/" component={App}>
       <IndexRoute component={IndexUser2} />
-      <Route path="obsTaskPreference" component={PreferenceEntry} />
+      <Route path="observation-task/preference" component={PreferenceEntry} />
     </Route>
   </Router>
 ), document.getElementById('bfw-baseEntry-react'))

@@ -59,7 +59,7 @@ export default React.createClass({
 
   renderPreferenceSetting() {
     const cogwheelSrc = require('../../images/cogwheel.png');
-    const routeToPreference = () => browserHistory.push('/obsTaskPreference');
+    const routeToPreference = () => browserHistory.push('/observation-task/preference');
 
     return (
       <Button classNames={preferenceButton} onClick={routeToPreference}>
