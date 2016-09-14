@@ -28,7 +28,7 @@ export default React.createClass({
   votingHandler({target: {innerText}}) {
     let self = this;
     if (self.state.selectionMade !== undefined && self.state.selectionMade === false) {
-      if (!CATEGORIES.includes(innerText) || !this.props.caseId) {
+      if (!categories.includes(innerText) || !this.props.caseId) {
         return;
       }
       // Should output or provide visual cue that an error has occurred
@@ -60,7 +60,7 @@ export default React.createClass({
   },
 
   renderCategoryList() {
-    let categoryList = CATEGORIES.map((category, index) => {
+    let categoryList = categories.map((category, index) => {
       return (
         <li key={index} className={categoryListItem} onClick={this.votingHandler}>
           <Button classNames={categoryButton}>
