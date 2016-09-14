@@ -1,5 +1,6 @@
 import React from 'react';
 import Request from 'superagent';
+import { browserHistory } from 'react-router';
 
 import Button from '../button';
 import Icon from '../icon';
@@ -58,9 +59,10 @@ export default React.createClass({
 
   renderPreferenceSetting() {
     const cogwheelSrc = require('../../images/cogwheel.png');
+    const routeToPreference = () => browserHistory.push('/obsTaskPreference');
 
     return (
-      <Button classNames={preferenceButton}>
+      <Button classNames={preferenceButton} onClick={routeToPreference}>
         <Icon classNames={preferenceIcon} src={cogwheelSrc} />
         Preference
       </Button>
