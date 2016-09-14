@@ -29,14 +29,14 @@ export default React.createClass({
         coordinates = coordinates.map(this.geometryToComponentWithLatLng, { type: `Point` });
         return isArray ? coordinates : {
           ElementClass: Polyline,
-          path: coordinates,
+          path: coordinates
         };
       case `Point`:
         coordinates = new google.maps.LatLng(coordinates[1], coordinates[0]);
         return isArray ? coordinates : {
           ElementClass: Marker,
           ChildElementClass: InfoWindow,
-          position: coordinates,
+          position: coordinates
         };
       default:
         throw new TypeError(`Unknown geometry type: ${ type }`);
@@ -83,7 +83,7 @@ export default React.createClass({
             <GoogleMap
               mapTypeId='satellite'
               defaultZoom={16}
-              defaultCenter={coords}>
+              center={coords}>
               {mapElements}
             </GoogleMap>
           }

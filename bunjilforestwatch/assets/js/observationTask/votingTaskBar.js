@@ -2,10 +2,10 @@ import React from 'react';
 import Request from 'superagent';
 import { browserHistory } from 'react-router';
 
+import { categories, categoryImages } from '../constants';
 import Button from '../button';
 import Icon from '../icon';
-import { categories, categoryImages } from '../constants';
-import { uTextAlignCenter } from '../../stylesheets/utils';
+import {uTextAlignCenter} from '../../stylesheets/utils';
 import {
   container, categoryListItem, title,
   categoryButton, categoryOptionList,
@@ -14,40 +14,57 @@ import {
 } from '../../stylesheets/observationTask/votingTaskBar';
 
 export default React.createClass({
-  votingHandler({ target: { innerText } }) {
-    // Should output or provide visual cue that an error has occurred
-    if (!categories.includes(innerText) || !this.props.caseId) { return; }
 
+  getInitialState() {
+    return { selectionMade: false };
+  },
+
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      selectionMade: false
+    });
+  },
+
+  votingHandler({target: {innerText}}) {
     let self = this;
-    let payload = {
-      case_id: this.props.caseId,
-      vote_category: innerText.toUpperCase()
-    };
-
-    Request
-    .post('/observation-task/response')
-    .send(payload)
-    .set('Accept', 'application/json')
-    .end(
-      function(err, res) {
-        // Interminently fails here, placing a log to capture the issue
-        console.log(err);
-        console.log(res);
-
-        // Should output or provide visual cue that an error has occurred
-        if (err == null && res.ok) {
-          self.props.setNextTask();
-        }
+    if (self.state.selectionMade !== undefined && self.state.selectionMade === false) {
+      if (!CATEGORIES.includes(innerText) || !this.props.caseId) {
+        return;
       }
-    );
+      // Should output or provide visual cue that an error has occurred
+
+      let payload = {
+        case_id: this.props.caseId,
+        vote_category: innerText.toUpperCase()
+      };
+
+      Request
+        .post('/observation-task/response')
+        .send(payload)
+        .set('Accept', 'application/json')
+        .end(
+          function (err, res) {
+            // Intermittently fails here, placing a log to capture the issue
+            console.log(err);
+            console.log(res);
+
+            // Should output or provide visual cue that an error has occurred
+            if (err == null && res.ok) {
+              self.props.setSelectedCategory(payload.vote_category);
+            }
+          }
+        );
+
+      self.setState({selectionMade: true});
+    }
   },
 
   renderCategoryList() {
-    let categoryList = categories.map((category, index) => {
-      return  (
+    let categoryList = CATEGORIES.map((category, index) => {
+      return (
         <li key={index} className={categoryListItem} onClick={this.votingHandler}>
           <Button classNames={categoryButton}>
-            <Icon classNames={categoryIcon} src={categoryImages[category]} />
+            <Icon classNames={categoryIcon} src={categoryImages[category]}/>
             {category}
           </Button>
         </li>
