@@ -68,31 +68,28 @@ class CaseChecker(object):
         elif case.votes.road == highest_category_votes:
             return CaseVotes.road
 
+    @staticmethod
+    def total_votes(self, case):
+        """
+        Can only take a case as an argument. This method factors unsure votes into total votes
+        """
+        result = (case.votes.fire + case.votes.agriculture + case.votes.deforestation + case.votes.road + case.votes.unsure)
+        return result
 
-def total_votes(self, case_votes):
-    """
-    You must only pass in a case_votes entity
-    """
-    result = 0
-    for category in case_votes:
-        result += category
-    return result
-
-
-def closed_case_percentage_of_(self, category, case):
-    """
-    You must only pass in ClosedCase entities
-    """
-    vote_category = 0
-    if category == VOTE_CATEGORIES.FIRE:
-        vote_category = case.key().parent().fire
-    if category == VOTE_CATEGORIES.DEFORESTATION:
-        vote_category = case.key().parent().deforestation
-    if category == VOTE_CATEGORIES.AGRICULTURE:
-        vote_category = case.key().parent().agriculture
-    if category == VOTE_CATEGORIES.ROAD:
-        vote_category = case.key().parent().road
-    if category == VOTE_CATEGORIES.UNSURE:
-        vote_category = case.key().parent().unsure
-    return (vote_category / self.total_votes(case.parent.votes)) * 100
+    def closed_case_percentage_of_(self, category, case):
+        """
+        You must only pass in ClosedCase entities
+        """
+        vote_category = 0
+        if category == VOTE_CATEGORIES.FIRE:
+            vote_category = case.key().parent().fire
+        if category == VOTE_CATEGORIES.DEFORESTATION:
+            vote_category = case.key().parent().deforestation
+        if category == VOTE_CATEGORIES.AGRICULTURE:
+            vote_category = case.key().parent().agriculture
+        if category == VOTE_CATEGORIES.ROAD:
+            vote_category = case.key().parent().road
+        if category == VOTE_CATEGORIES.UNSURE:
+            vote_category = case.key().parent().unsure
+        return (vote_category / self.total_votes(case)) * 100
 

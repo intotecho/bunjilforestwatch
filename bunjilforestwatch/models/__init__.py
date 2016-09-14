@@ -1669,16 +1669,6 @@ class Case(ndb.Model):
     def get_cases_for_glad_cluster(glad_cluster):
         return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
 
-    "Static method for returning whether or not a case is closed. To be made more explicit once "
-    "all potential case statuses are in use"
-
-    @staticmethod
-    def is_closed(self):
-        if self.status == 'OPEN':
-            return False
-        else:
-            return True
-
 
 class ObservationTaskResponse(ndb.Model):
     """
