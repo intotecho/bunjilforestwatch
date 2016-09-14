@@ -1719,7 +1719,7 @@ class ObservationTaskPreference(ndb.Model):
             return False;
 
     @staticmethod
-    def get_preference(user_key):
+    def get_by_user_key(user_key):
         return ObservationTaskPreference.query(
             ObservationTaskPreference.user == user_key
         ).get()

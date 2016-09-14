@@ -462,7 +462,7 @@ class MainPageObsTask(BaseHandler):
             except AttributeError:
                 # Create and get preference from datastore
                 models.ObservationTaskPreference.create(self.session['user']['key'])
-                preference = models.ObservationTaskPreference.get_preference(self.session['user']['key'])
+                preference = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
                 self.preference = preference
 
             if preference and preference.hasPreference:
@@ -488,6 +488,26 @@ class ObsTaskPreferenceHandler(BaseHandler):
             })  # not logged in.
 
 class ObsTaskPreferenceResource(BaseHandler):
+    def get(self):
+        if 'user' in self.session:
+            result = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
+
+            if result:
+                response = {
+                    "hasPreference": result.hasPreference,
+                    "region_preference": result.region_preference
+                }
+
+                self.response.set_status(200)
+
+                return self.response.write(json.dumps(response))
+            else:
+                logging.error('ObsTaskPreferenceResource - could not get preference data')
+                return self.error(500)
+        else:
+            logging.error('Cannot GET from ObsTaskPreferenceResource - user not found in session')
+            return self.error(401)
+
     def post(self):
         if 'user' in self.session:
             user_key = self.session['user']['key']
@@ -499,13 +519,13 @@ class ObsTaskPreferenceResource(BaseHandler):
                 if result:
                     return self.response.set_status(200)
                 else:
-                    logging.error('ObsTaskPreference - could not update preference data')
+                    logging.error('ObsTaskPreferenceResource - could not update preference data')
                     return self.error(500)
             else:
-                logging.error('Cannot POST to ObsTaskPreference - region preferences not found')
+                logging.error('Cannot POST to ObsTaskPreferenceResource - region preferences not found')
                 return self.error(404)
         else:
-            logging.error('Cannot POST to ObsTaskPreference - user not found in session')
+            logging.error('Cannot POST to ObsTaskPreferenceResource - user not found in session')
             return self.error(401)
 
 
