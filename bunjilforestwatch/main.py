@@ -74,6 +74,7 @@ from google.appengine.api import memcache
 import settings
 import secrets
 import gladalerts
+import region_manager
 
 '''
 decorator = OAuth2Decorator(
@@ -449,16 +450,89 @@ class MainPage(BaseHandler):
 class MainPageObsTask(BaseHandler):
     """ Main handler for default page.
     Default page is index.html if not authenticated, or index-user if authenticated.
-
-    ^^^^
-    Take note of the above comment from MainPage handler, currently this is a test 
-    render with the integration of React. The file name will have to be changed in 
-    the future and this handler may be removed.
     """
 
     def get(self):
-        self.render('index-user2.html')
+        # TODO: to move this logic to the client router instead
+        if 'user' in self.session:
+            try:
+                preference = self.preference;
+            except AttributeError:
+                # Get preference from datastore
+                preference = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
+                self.preference = preference
 
+            if preference:
+                self.render('bfw-baseEntry-react.html')
+            else:
+                # Preference can be empty after creation (async issue?)
+                # Regardless, we don't care, just render preference entry
+                self.redirect(webapp2.uri_for('obsTaskPreference'))
+        else:
+            self.render('index.html', {
+                'show_navbar': False
+            })  # not logged in.
+
+class ObsTaskPreferenceHandler(BaseHandler):
+    """
+    """
+    def get(self):
+        if 'user' in self.session:
+            self.render('bfw-baseEntry-react.html')
+        else:
+            self.render('index.html', {
+                'show_navbar': False
+            })  # not logged in.
+
+class ObsTaskPreferenceResource(BaseHandler):
+    """
+    This class defines the list of REST endpoints that are exposed for Preference data
+    """
+
+    """Return a JSON of certain attributes in ObservationTaskPreference model
+
+    Checks if User exists in session, then uses the User's key to obtain the preference data
+    from the datastore which will be inserted into a JSON format and sent back as a response.
+    """
+    def get(self):
+        if 'user' in self.session:
+            result = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
+
+            if result:
+                response = { "region_preference": result.region_preference }
+            else:
+                response = { "region_preference": [] }
+
+            self.response.set_status(200)
+            return self.response.write(json.dumps(response))
+        else:
+            logging.error('Cannot GET from ObsTaskPreferenceResource - user not found in session')
+            return self.error(401)
+
+    """Updates an ObservationTaskPreference data based on user_key and request payload
+
+    Checks if User exists in session, then extracts the request payload in order to update
+    the ObservationTaskPreference record that is bound by User's key.
+    """
+    def post(self):
+        if 'user' in self.session:
+            user_key = self.session['user']['key']
+            response = json.loads(self.request.body)
+
+            if response['region_preference'] is not None:
+                models.ObservationTaskPreference.upsert(user_key, response['region_preference'])
+
+                return self.response.set_status(200)
+            else:
+                logging.error('Cannot POST to ObsTaskPreferenceResource - region preferences not found')
+                return self.error(400)
+        else:
+            logging.error('Cannot POST to ObsTaskPreferenceResource - user not found in session')
+            return self.error(401)
+
+class RegionHandler(BaseHandler):
+    def get(self):
+        return self.response.write(json.dumps(region_manager.get_regions()));
 
 class ViewAllAreas(BaseHandler):
     def get(self, username):
@@ -3750,6 +3824,11 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/observation-task/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
     webapp2.Route(r'/observation-task/response', handler=ObservationTaskHandler, name="next-task", methods=['POST']),
 
+    webapp2.Route(r'/observation-task/preference', handler=ObsTaskPreferenceHandler, name='obsTaskPreference'),
+    webapp2.Route(r'/observation-task/preference/resource', handler=ObsTaskPreferenceResource, name='obsTaskPreferenceResource'),
+
+    webapp2.Route(r'/region', handler=RegionHandler, name='RegionHandler'),
+
     # observation tasks see also admin/obs/list
     webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
                   name='view-obstasks'),
@@ -3843,7 +3922,8 @@ RESERVED_NAMES = set([
     'upload',
     'user',
     'users',
-    'old' # Test render, remove when done 
+    'old',
+    'region'
 ])
 
 # assert that all routes are listed in RESERVED_NAMES

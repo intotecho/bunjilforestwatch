@@ -1,0 +1,25 @@
+.container {
+  text-align: center;
+  border: 1px solid #222;
+  border-radius: 5px;
+  margin: 10px 0 10px 10px;
+  display: inline-block;
+  width: 170px;
+
+  &:hover {
+    @extend .selected;
+  }
+}
+
+.imageContainer {
+  width: 150px;
+  height: 150px;
+  margin: 10px 10px 5px 10px;
+  border-radius: 5px;
+}
+
+.selected {
+  background-color: #6495ED;
+  border: 1px solid #6495ED;
+  color: white;
+}

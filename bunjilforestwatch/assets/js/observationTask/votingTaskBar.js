@@ -1,29 +1,22 @@
 import React from 'react';
-
 import Request from 'superagent';
+import { browserHistory } from 'react-router';
+
+import { categories, categoryImages } from '../constants';
 import Button from '../button';
 import Icon from '../icon';
-
 import {uTextAlignCenter} from '../../stylesheets/utils';
-import {container, categoryListItem, title,
+import {
+  container, categoryListItem, title,
   categoryButton, categoryOptionList,
-  categoryIcon
+  categoryIcon, lineSeparator, preferenceIcon,
+  preferenceButton
 } from '../../stylesheets/observationTask/votingTaskBar';
-
-// FIXME: Make this an open constant somewhere
-const CATEGORIES = ['Fire', 'Deforestation', 'Agriculture', 'Road', 'Unsure'];
-const categoryImages = {
-  'Fire': require('../../images/fire.png'),
-  'Deforestation': require('../../images/deforestation.png'),
-  'Agriculture': require('../../images/agriculture.png'),
-  'Road': require('../../images/road.png'),
-  'Unsure': require('../../images/unsure.png')
-};
 
 export default React.createClass({
 
   getInitialState() {
-    return {selectionMade: false};
+    return { selectionMade: false };
   },
 
   componentWillReceiveProps(nextProps) {
@@ -35,7 +28,7 @@ export default React.createClass({
   votingHandler({target: {innerText}}) {
     let self = this;
     if (self.state.selectionMade !== undefined && self.state.selectionMade === false) {
-      if (!CATEGORIES.includes(innerText) || !this.props.caseId) {
+      if (!categories.includes(innerText) || !this.props.caseId) {
         return;
       }
       // Should output or provide visual cue that an error has occurred
@@ -67,7 +60,7 @@ export default React.createClass({
   },
 
   renderCategoryList() {
-    let categoryList = CATEGORIES.map((category, index) => {
+    let categoryList = categories.map((category, index) => {
       return (
         <li key={index} className={categoryListItem} onClick={this.votingHandler}>
           <Button classNames={categoryButton}>
@@ -81,6 +74,18 @@ export default React.createClass({
     return <ul className={categoryOptionList}>{categoryList}</ul>;
   },
 
+  renderPreferenceSetting() {
+    const cogwheelSrc = require('../../images/cogwheel.png');
+    const routeToPreference = () => browserHistory.push('/observation-task/preference');
+
+    return (
+      <Button classNames={preferenceButton} onClick={routeToPreference}>
+        <Icon classNames={preferenceIcon} src={cogwheelSrc} />
+        Preference
+      </Button>
+    );
+  },
+
   render() {
     const titleClasses = `${title} ${uTextAlignCenter}`;
 
@@ -88,6 +93,8 @@ export default React.createClass({
       <div className={container}>
         <p className={titleClasses}>Category</p>
         {this.renderCategoryList()}
+        <span className={lineSeparator} />
+        {this.renderPreferenceSetting()}
       </div>
     );
   }

@@ -1,13 +1,13 @@
 .container {
-	background-color: #222;
-	border-radius: 10px;
-	border: 1px solid #222;
-	color: white;
-	left: 17px;
-	position: absolute;
-	top: 95px;
-	width: 160px;
-	z-index: 1;
+  background-color: #222;
+  border-radius: 10px;
+  border: 1px solid #222;
+  color: white;
+  left: 17px;
+  position: absolute;
+  top: 95px;
+  width: 160px;
+  z-index: 1;
 }
 
 .categoryLink {
@@ -21,40 +21,63 @@
 }
 
 .title {
-	border-bottom: 1px solid white;
-	margin: 0 25px;
-	padding: 10px 0;
+  border-bottom: 1px solid white;
+  margin: 0 25px;
+  padding: 10px 0;
 }
 
 .categoryListItem {
-	list-style-type: none;
-	margin-bottom: 10px;
-	padding-bottom: 3px;
+  list-style-type: none;
+  margin-bottom: 10px;
+  padding-bottom: 3px;
 
-	&:hover {
-		background-color: white;
+  &:hover {
+    background-color: white;
 
-		.categoryButton {
-			color: #222;
-		}
-	}
+    .categoryButton {
+      color: #222;
+    }
+  }
 }
 
 .categoryButton {
-	padding-left: 25px;
-	background: none;
-	border: none;
-	color: white;
-	outline: none;
+  padding-left: 25px;
+  background: none;
+  border: none;
+  color: white;
+  outline: none;
 }
 
 .categoryOptionList {
-	padding-left: 0;
+  padding-left: 0;
 }
 
 .categoryIcon {
-	background-color: white;
-	margin-bottom: -5px;
-	margin-right: 10px;
-	pointer-events: none;
+  background-color: white;
+  margin-bottom: -5px;
+  margin-right: 10px;
+  pointer-events: none;
+}
+
+.lineSeparator {
+  display: block;
+  border-top: 1px solid white;
+  margin: 10px 25px 0 25px;
+}
+
+.preferenceIcon {
+  @extend .categoryIcon;
+}
+
+.preferenceButton {
+  @extend .categoryButton;
+
+  margin: 10px 0;
+  padding: 5px 26px 7px 0;
+  width: 100%;
+
+  &:hover {
+    background-color: white;
+    color: #222;
+  }
 }

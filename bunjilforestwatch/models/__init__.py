@@ -51,7 +51,7 @@ USER_SOCIAL_NETWORKS = [
 
 class User(ndb.Model):
     """ ndb.User builds on google user
-    
+
     """
 
     name = ndb.StringProperty(required=True, indexed=False)
@@ -67,7 +67,7 @@ class User(ndb.Model):
     areas_subscribing = ndb.KeyProperty(repeated=True, default=None)  # list of areas I subscribe to  (only for local)
 
     role = ndb.StringProperty(required=True, choices=set(["volunteer", "local", "admin", "viewer"]))
-    """roles for bunjil app users are either volunteer, local, admin or viewer. 
+    """roles for bunjil app users are either volunteer, local, admin or viewer.
     """
 
     # not required
@@ -198,22 +198,22 @@ class UserFollowingAreasIndex(ndb.Model):
 
 class AreaOfInterest(ndb.Model):
     """
-    
+
     @cvar PUBLIC_AOI:
-    @cvar UNLISTED_AOI: 
-    @cvar PRIVATE_AOI: 
-    @cvar ENTRIES_PER_PAGE: 
-    @cvar MAX_AREAS:  
+    @cvar UNLISTED_AOI:
+    @cvar PRIVATE_AOI:
+    @cvar ENTRIES_PER_PAGE:
+    @cvar MAX_AREAS:
     @cvar MAX_OTHER_AREAS:  #Max Other Areas to show
     @todo Move ENTRIES_PER_PAGE and MAX_AREAS to settings.py
 
     @group Geometry:
-        max_latlon, min_latlon, total_area, ft_docid, area_location, boundary_geojsonstr, boundary_hull, bounds 
+        max_latlon, min_latlon, total_area, ft_docid, area_location, boundary_geojsonstr, boundary_hull, bounds
     @group Users:
         created_by,    owner, share,
 
     @group Monitoring:
-        cells, entry_count 
+        cells, entry_count
 
     @group Decription:
         name, description, description_why, description_who, description_how, threats, type, wiki
@@ -252,17 +252,17 @@ class AreaOfInterest(ndb.Model):
     wiki = ndb.StringProperty()  # beware max url 500 - like to a story about this area.
 
     """
-    WDPA Attributes 
+    WDPA Attributes
     """
     gov_type = ndb.StringProperty()  # 'Federal';'national ministry or agency', 'Sub-national ministry or agency', 'Government delegated management', 'Transboundary governance', 'Collaborative governance', 'Joint governance', 'Individual landowners', 'Non-profit organisations', 'For-profit organizations', 'Indigenous peoples', 'Community conserved areas' , 'Not Reported'.
     orig_name = ndb.StringProperty()  # name in original language
     desig_type = ndb.StringProperty()  # Allowed values: National, Regional, International.
     desig = ndb.StringProperty()  # Name of designation.
     IUCNcategory = ndb.StringProperty()  # Allowed values:Ia, Ib, II, III, IV, V, VI, Not Applicable, Not Applied, Not Reported. https://en.wikipedia.org/wiki/IUCN_protected_area_categories
-    """ 
-    Designation in English. 
-    Allowed values for "international-level designations: Ramsar Site, Wetland of International Importance; UNESCO-MAB Biosphere Reserve ; World Heritage Site. 
-    Allowed values for regional-level designations: Baltic Sea Protected Area (HELCOM) ; Cartagena Special Protected Area ; Marine Protected Area (CCAMLR) ; Marine Protected Area (OSPAR) ; Site of Community Importance (Habitats Directive) ; Special Protection Area (Habitats Directive) ; Specially Protected Area of Mediterranean Importance (Barcelona Convention). 
+    """
+    Designation in English.
+    Allowed values for "international-level designations: Ramsar Site, Wetland of International Importance; UNESCO-MAB Biosphere Reserve ; World Heritage Site.
+    Allowed values for regional-level designations: Baltic Sea Protected Area (HELCOM) ; Cartagena Special Protected Area ; Marine Protected Area (CCAMLR) ; Marine Protected Area (OSPAR) ; Site of Community Importance (Habitats Directive) ; Special Protection Area (Habitats Directive) ; Specially Protected Area of Mediterranean Importance (Barcelona Convention).
     No fixed values for protected areas designated at a national level
     """
     manag_auth = ndb.StringProperty()
@@ -290,7 +290,7 @@ class AreaOfInterest(ndb.Model):
 
     bounds = ndb.FloatProperty(repeated=True, default=None)  # bounds of rectangle used for mapview.
 
-    """ 
+    """
     VIEW - Parameters for viewing Area
     """
     map_center = ndb.GeoPtProperty(required=True, default=None)
@@ -806,10 +806,10 @@ class AreaOfInterest(ndb.Model):
 
     @staticmethod
     def get_eeFeatureCollection(geojson_obj):
-        """ Creates an Earth Engine FeatureCollection from a geojson object containing a Feature or FeatureCollection. 
+        """ Creates an Earth Engine FeatureCollection from a geojson object containing a Feature or FeatureCollection.
         First ensure the App is connected to the EarthEngine API or you get 404
         Does not modify the area object.
-        
+
         @param geojson - A geojson object containing features
         @returns eeFeatureCollection, status, errormsg
         """
@@ -931,14 +931,14 @@ class AreaOfInterest(ndb.Model):
 
 class LandsatCell(ndb.Model):
     """
-    Landsat Cell represents an 170sq km area where each image is captured. 
+    Landsat Cell represents an 170sq km area where each image is captured.
     Each path and row identifies a unique cell.
     An AOI makes overlaps a set of one or more cells - and creates a constant list of these.
     Each cell has a different schedule when new images arrive.
-    
+
     Note that multiple LandsatCell objects for the same Landsat Cell(p,r) can be created, one for each parent area to which it belongs.
-    
-    The normal name for a Cell is a Swath.                
+
+    The normal name for a Cell is a Swath.
     """
     # constants - not changed once created. Created when AOI is created.
     path = ndb.IntegerProperty(required=True, default=0)  # Landsat Path
@@ -955,7 +955,7 @@ class LandsatCell(ndb.Model):
                                     default=False)  # Set if cell is monitored for new data (i.e selected in view-area)
 
     '''
-    Cell2Dictionary() converts a cell object into a dictionary of the path,row, monitored 
+    Cell2Dictionary() converts a cell object into a dictionary of the path,row, monitored
     and date of latest image stored in
      datastore for L8 collection (other collections to follow)
     '''
@@ -995,7 +995,7 @@ class LandsatCell(ndb.Model):
 
 '''
 class Overlay describes a visualisation of an image asset.
-It includes the map_id and token, an algorithm and information about the type. 
+It includes the map_id and token, an algorithm and information about the type.
 Used for a (Landsat) satelite image that has been retrieved and converted to a usable (visible/NDVI) format.
 The image is based on an Observatioin Asset.
 Note that the Overlay is an asset in the earth engine that has a limited expiry date.
@@ -1042,7 +1042,7 @@ An Observation contains a list of zero or more Overlays, each Overlay is a visua
 
 The main use is the captured date. Once this observation has been actioned, it becomes the latest, against which future observations are base-lined for change detection.
 This allows the app to redraw the overlay computed by earth engine on a new browser session without recalculating it - providing the overlay token has not expired.
-In which case, app will need to regenerate the observation.    
+In which case, app will need to regenerate the observation.
 
 Some Observations have no image_id as they are composites of many images.
 '''
@@ -1236,7 +1236,7 @@ class Old_ObservationTask(ndb.Model):
 
 '''
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
-Based on journalr.org 
+Based on journalr.org
 '''
 
 
@@ -1685,3 +1685,37 @@ class ObservationTaskResponse(ndb.Model):
     case = ndb.KeyProperty(kind=Case)
     case_response = ndb.PickleProperty(required=True)
     vote_category = ndb.StringProperty(required=True)
+
+class ObservationTaskPreference(ndb.Model):
+    """
+    Stores all user's observation task preferences, the preference relates to area of interest, animals,
+    and other future attributes. It records whether the user has performed a preference entry and creates
+    one if it hasn't been previously done.
+    """
+
+    user = ndb.KeyProperty(kind=User, required=True)
+    region_preference = ndb.PickleProperty(required=False, default=[])
+
+    # May need to refactor this in the future
+    # to accept a dictionary instead of a single field
+    @staticmethod
+    def upsert(user_key, region_preference=[]):
+        preference = ObservationTaskPreference.get_by_user_key(user_key)
+
+        if preference == None:
+            # Only create when there isn't an existing preference record for user
+            preference = ObservationTaskPreference(
+                user=user_key,
+                region_preference=region_preference
+            )
+            preference.put()
+        else:
+            # Check if there exists a data to update
+            preference.region_preference = region_preference
+            preference.put()
+
+    @staticmethod
+    def get_by_user_key(user_key):
+        return ObservationTaskPreference.query(
+            ObservationTaskPreference.user == user_key
+        ).get()

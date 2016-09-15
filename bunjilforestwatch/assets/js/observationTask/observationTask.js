@@ -1,7 +1,6 @@
 import {render} from 'react-dom';
 import React from 'react';
 import _ from 'lodash';
-import NavBar from '../navBar/navBar';
 import VotingTaskBar from './votingTaskBar';
 import GeoMapDisplay from './geoMapDisplay';
 import ConsensusMessage from './consensusMessage'
@@ -9,7 +8,7 @@ import Request from 'superagent';
 
 import {uSizeFull} from '../../stylesheets/utils';
 
-var IndexUser2 = React.createClass({
+export default React.createClass({
   getInitialState() {
     return {
       selectedCategory: null,
@@ -22,13 +21,13 @@ var IndexUser2 = React.createClass({
   componentWillMount() {
     this.startNextTask();
   },
-  
+
   setSelectedCategory(selectedCategory) {
     this.setState({
       selectedCategory: selectedCategory
     });
   },
-  
+
   startNextTask() {
     const self = this;
 
@@ -88,7 +87,7 @@ var IndexUser2 = React.createClass({
 
     return;
   },
-  
+
   render() {
     const votingTaskBar = this.renderVotingTaskBar();
     const geoMapDisplay = this.renderGeoMapDisplay();
@@ -96,7 +95,6 @@ var IndexUser2 = React.createClass({
 
     return (
       <div>
-        <NavBar />
         {votingTaskBar}
         {geoMapDisplay}
         {consensusMessage}
@@ -104,8 +102,3 @@ var IndexUser2 = React.createClass({
     );
   }
 });
-
-render(
-  <IndexUser2 />,
-  document.getElementById('index-user2')
-);
