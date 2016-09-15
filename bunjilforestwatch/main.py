@@ -513,7 +513,7 @@ class ObsTaskPreferenceResource(BaseHandler):
                 return self.response.write(json.dumps(response))
             else:
                 logging.error('ObsTaskPreferenceResource - could not get preference data')
-                return self.error(500)
+                return self.error(404)
         else:
             logging.error('Cannot GET from ObsTaskPreferenceResource - user not found in session')
             return self.error(401)
@@ -534,11 +534,11 @@ class ObsTaskPreferenceResource(BaseHandler):
                 if result:
                     return self.response.set_status(200)
                 else:
-                    logging.error('ObsTaskPreferenceResource - could not update preference data')
-                    return self.error(500)
+                    logging.error('ObsTaskPreferenceResource - could not update/create preference data')
+                    return self.error(404)
             else:
                 logging.error('Cannot POST to ObsTaskPreferenceResource - region preferences not found')
-                return self.error(404)
+                return self.error(400)
         else:
             logging.error('Cannot POST to ObsTaskPreferenceResource - user not found in session')
             return self.error(401)
