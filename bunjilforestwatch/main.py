@@ -492,6 +492,12 @@ class ObsTaskPreferenceResource(BaseHandler):
     """
     This class defines the list of REST endpoints that are exposed for Preference data
     """
+
+    """Return a JSON of certain attributes in ObservationTaskPreference model
+
+    Checks if User exists in session, then uses the User's key to obtain the preference data
+    from the datastore which will be inserted into a JSON format and sent back as a response.
+    """
     def get(self):
         if 'user' in self.session:
             result = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
@@ -512,6 +518,11 @@ class ObsTaskPreferenceResource(BaseHandler):
             logging.error('Cannot GET from ObsTaskPreferenceResource - user not found in session')
             return self.error(401)
 
+    """Updates an ObservationTaskPreference data based on user_key and request payload
+
+    Checks if User exists in session, then extracts the request payload in order to update
+    the ObservationTaskPreference record that is bound by User's key.
+    """
     def post(self):
         if 'user' in self.session:
             user_key = self.session['user']['key']
