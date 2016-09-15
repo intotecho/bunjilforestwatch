@@ -456,8 +456,7 @@ class MainPageObsTask(BaseHandler):
             try:
                 preference = self.preference;
             except AttributeError:
-                # Create and get preference from datastore
-                models.ObservationTaskPreference.create(self.session['user']['key'])
+                # Get preference from datastore
                 preference = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
                 self.preference = preference
 
@@ -524,13 +523,9 @@ class ObsTaskPreferenceResource(BaseHandler):
             response = json.loads(self.request.body)
 
             if response['region_preference'] is not None:
-                result = models.ObservationTaskPreference.update(user_key, response['region_preference'])
+                models.ObservationTaskPreference.upsert(user_key, response['region_preference'])
 
-                if result:
-                    return self.response.set_status(200)
-                else:
-                    logging.error('ObsTaskPreferenceResource - could not update/create preference data')
-                    return self.error(404)
+                return self.response.set_status(200)
             else:
                 logging.error('Cannot POST to ObsTaskPreferenceResource - region preferences not found')
                 return self.error(400)
