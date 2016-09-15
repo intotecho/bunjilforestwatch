@@ -489,6 +489,9 @@ class ObsTaskPreferenceHandler(BaseHandler):
             })  # not logged in.
 
 class ObsTaskPreferenceResource(BaseHandler):
+    """
+    This class defines the list of REST endpoints that are exposed for Preference data
+    """
     def get(self):
         if 'user' in self.session:
             result = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
