@@ -15,7 +15,7 @@ export default React.createClass({
     // Reasoning (Super hack)
     //  I don't want to define a private method that calls superagent
     //  I'd rather encapsulate it an in anchor tag and redirect that way
-    if (this.props.link !== undefined) {
+    if (this.props.link) {
       button = <a href={this.props.link}>{button}</a>;
     }
 
