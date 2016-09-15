@@ -96,7 +96,7 @@ export default React.createClass({
   render() {
     return (
       <div className={container}>
-        <p className={title}>Select the regions you prefer to be served a task</p>
+        <p className={title}>Select the regions you want to watch</p>
         <div className={regionContainer}>{this.renderPreferenceChoice()}</div>
         <Button
           classNames={btnContinue}
