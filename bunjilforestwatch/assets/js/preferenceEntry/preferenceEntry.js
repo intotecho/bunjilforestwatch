@@ -6,8 +6,7 @@ import Request from 'superagent';
 
 import Button from '../button';
 import PreferenceOption from './preferenceOption';
-import { regionPreference, regionPreferenceTest } from '../constants';
-
+import { regionPreference } from '../constants';
 import {
   container, title, regionContainer, btnContinue
 } from '../../stylesheets/preferenceEntry/preferenceEntry';
@@ -15,6 +14,8 @@ import {
 export default React.createClass({
   componentDidMount() {
     const self = this;
+    let selectedOptions = [];
+    let regionData = [];
 
     Request
     .get('/observation-task/preference/resource')
@@ -25,18 +26,33 @@ export default React.createClass({
           const preference = JSON.parse(res.text);
 
           if (preference.has_preference) {
-            self.setState({
-              selectedOptions: preference.region_preference
-            });
+            selectedOptions = preference.region_preference;
           }
+
+          // Initiate another request inside callback to retain selectedOptions
+          Request
+          .get('/region')
+          .set('Accept', 'application/json')
+          .end(
+            function (err, res) {
+              if (err == null && res.ok) {
+                self.setState({
+                  selectedOptions: selectedOptions,
+                  regionData: JSON.parse(res.text).region_data
+                });
+              }
+            }
+          );
         }
       }
     );
+
   },
 
   getInitialState() {
     return {
-      selectedOptions: []
+      selectedOptions: [],
+      regionData: []
     };
   },
 
@@ -80,14 +96,18 @@ export default React.createClass({
   },
 
   renderPreferenceChoice() {
-    return _.map(regionPreferenceTest, (value, key) => {
+    const { regionData } = this.state;
+
+    return _.map(regionData, (region) => {
+      const { region_id, region_name } = region;
+
       return (
         <PreferenceOption
-          key={key}
-          selected={_.includes(this.state.selectedOptions, key)}
+          key={region_id}
+          selected={_.includes(this.state.selectedOptions, region_name)}
           onSelect={this.updateSelectedOptions}
-          image={value}>
-          {key}
+          image={regionPreference[region_name]}>
+          {region_name}
         </PreferenceOption>
       );
     });

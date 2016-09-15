@@ -74,6 +74,7 @@ from google.appengine.api import memcache
 import settings
 import secrets
 import gladalerts
+import region_manager
 
 '''
 decorator = OAuth2Decorator(
@@ -533,6 +534,9 @@ class ObsTaskPreferenceResource(BaseHandler):
             logging.error('Cannot POST to ObsTaskPreferenceResource - user not found in session')
             return self.error(401)
 
+class RegionHandler(BaseHandler):
+    def get(self):
+        return self.response.write(json.dumps(region_manager.get_regions()));
 
 class ViewAllAreas(BaseHandler):
     def get(self, username):
@@ -3827,6 +3831,8 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/observation-task/preference', handler=ObsTaskPreferenceHandler, name='obsTaskPreference'),
     webapp2.Route(r'/observation-task/preference/resource', handler=ObsTaskPreferenceResource, name='obsTaskPreferenceResource'),
 
+    webapp2.Route(r'/region', handler=RegionHandler, name='RegionHandler'),
+
     # observation tasks see also admin/obs/list
     webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
                   name='view-obstasks'),
@@ -3920,7 +3926,8 @@ RESERVED_NAMES = set([
     'upload',
     'user',
     'users',
-    'old', # Test render, remove when done
+    'old',
+    'region'
 ])
 
 # assert that all routes are listed in RESERVED_NAMES
