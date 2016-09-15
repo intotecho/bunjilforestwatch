@@ -3,6 +3,7 @@ from models import VOTE_CATEGORIES, Case, CaseVotes
 
 class CaseChecker(object):
     MIN_VOTES_FOR_VIABLE_CONSENSUS = 6
+    MAX_VOTES = 12
     MIN_CONSENSUS = 66
 
     def has_a_majority(self, case):
@@ -34,6 +35,17 @@ class CaseChecker(object):
         """
         total_votes = self.total_votes(case)
         if total_votes >= self.MIN_VOTES_FOR_VIABLE_CONSENSUS:
+            return True
+        return False
+
+    def is_max_votes(self, case):
+        """
+        Returns:
+            result: a boolean representing if a case has reached maximum votes
+        Args:
+            case: a case data store entry
+        """
+        if self.total_votes(case) >= self.MAX_VOTES:
             return True
         return False
 

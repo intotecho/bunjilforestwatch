@@ -12,13 +12,14 @@ class CaseWorkflowManager(object):
     def __init__(self):
         pass
 
-    def _close_case(self, case):
+    def _close_case(self, case, status):
         """
         Closes a specified open case
         Args:
             case: An Open case that has been identified as suitable for closing
+            status: The status the case is to be updated to
         """
-        case.status = "CLOSED"
+        case.status = status
         case.put()
 
     def check_cases(self):
@@ -34,9 +35,11 @@ class CaseWorkflowManager(object):
         Args:
             case: An Open case that has been identified as a candidate for closing
         """
-        update_case_state = False
+        update_case_state = 'OPEN'
         if checker.is_min_votes(case):
             if checker.has_a_majority(case):
-                update_case_state = True
-        if update_case_state:
-            self._close_case(case)
+                update_case_state = 'CONFIRMED'
+            elif checker.is_max_votes(case):
+                update_case_state = 'UNCONFIRMED'
+        if update_case_state != 'OPEN':
+            self._close_case(case, update_case_state)

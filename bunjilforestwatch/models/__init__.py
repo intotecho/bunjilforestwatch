@@ -1669,6 +1669,13 @@ class Case(ndb.Model):
     def get_cases_for_glad_cluster(glad_cluster):
         return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
 
+    @staticmethod
+    def is_closed(case):
+        if case.status == 'CONFIRMED' or case.status == 'UNCONFIRMED':
+            return True
+        else:
+            return False
+
 
 class ObservationTaskResponse(ndb.Model):
     """
