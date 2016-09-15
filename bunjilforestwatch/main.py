@@ -453,6 +453,7 @@ class MainPageObsTask(BaseHandler):
     """
 
     def get(self):
+        # TODO: to move this logic to the client router instead
         if 'user' in self.session:
             try:
                 preference = self.preference;
@@ -461,7 +462,7 @@ class MainPageObsTask(BaseHandler):
                 preference = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
                 self.preference = preference
 
-            if preference and preference.has_preference:
+            if preference:
                 self.render('bfw-baseEntry-react.html')
             else:
                 # Preference can be empty after creation (async issue?)
@@ -498,17 +499,12 @@ class ObsTaskPreferenceResource(BaseHandler):
             result = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
 
             if result:
-                response = {
-                    "has_preference": result.has_preference,
-                    "region_preference": result.region_preference
-                }
-
-                self.response.set_status(200)
-
-                return self.response.write(json.dumps(response))
+                response = { "region_preference": result.region_preference }
             else:
-                logging.error('ObsTaskPreferenceResource - could not get preference data')
-                return self.error(404)
+                response = { "region_preference": [] }
+
+            self.response.set_status(200)
+            return self.response.write(json.dumps(response))
         else:
             logging.error('Cannot GET from ObsTaskPreferenceResource - user not found in session')
             return self.error(401)

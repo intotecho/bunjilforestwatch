@@ -1694,8 +1694,7 @@ class ObservationTaskPreference(ndb.Model):
     """
 
     user = ndb.KeyProperty(kind=User, required=True)
-    has_preference = ndb.BooleanProperty(required=False, default=False)
-    region_preference = ndb.PickleProperty(required=False)
+    region_preference = ndb.PickleProperty(required=False, default=[])
 
     # May need to refactor this in the future
     # to accept a dictionary instead of a single field
@@ -1705,20 +1704,13 @@ class ObservationTaskPreference(ndb.Model):
 
         if preference == None:
             # Only create when there isn't an existing preference record for user
-            if region_preference == []:
-                has_preference = False
-            else:
-                has_preference = True
-
             preference = ObservationTaskPreference(
                 user=user_key,
-                has_preference=has_preference,
                 region_preference=region_preference
             )
             preference.put()
         else:
             # Check if there exists a data to update
-            preference.has_preference = True
             preference.region_preference = region_preference
             preference.put()
 

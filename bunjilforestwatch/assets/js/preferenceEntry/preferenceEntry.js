@@ -25,9 +25,7 @@ export default React.createClass({
         if (err == null && res.ok) {
           const preference = JSON.parse(res.text);
 
-          if (preference.has_preference) {
-            selectedOptions = preference.region_preference;
-          }
+          selectedOptions = preference.region_preference;
 
           // Initiate another request inside callback to retain selectedOptions
           Request
