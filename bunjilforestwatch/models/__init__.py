@@ -99,7 +99,7 @@ class User(ndb.Model):
     twitter_key = ndb.StringProperty(indexed=False)
     twitter_secret = ndb.StringProperty(indexed=False)
 
-    trust = ndb.IntegerProperty(default=1)
+    trust = ndb.FloatProperty(default=1.0)
 
     # not really required
     def count(self):
@@ -1642,6 +1642,7 @@ class CaseVotes(ndb.Model):
     unsure = ndb.FloatProperty(indexed=False, default=0.0)
 
     def add_vote(self, vote_category, weighted_vote):
+        # TODO: fire case vote received event
         if vote_category == FIRE:
             self.fire += weighted_vote
         elif vote_category == DEFORESTATION:
