@@ -83,7 +83,11 @@ export default React.createClass({
             <GoogleMap
               mapTypeId='satellite'
               defaultZoom={16}
-              center={coords}>
+              center={coords}
+              options={{
+                streetViewControl: false,
+                mapTypeControl: false
+              }}>
               {mapElements}
             </GoogleMap>
           }
