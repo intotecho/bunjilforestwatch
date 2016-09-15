@@ -449,11 +449,6 @@ class MainPage(BaseHandler):
 class MainPageObsTask(BaseHandler):
     """ Main handler for default page.
     Default page is index.html if not authenticated, or index-user if authenticated.
-
-    ^^^^
-    Take note of the above comment from MainPage handler, currently this is a test
-    render with the integration of React. The file name will have to be changed in
-    the future and this handler may be removed.
     """
 
     def get(self):
