@@ -5,8 +5,8 @@ const categoryImages = {
   'Deforestation': require('../images/deforestation.png'),
   'Agriculture': require('../images/agriculture.png'),
   'Road': require('../images/road.png'),
-  'Unsure': require('../images/unsure.png'),
-}
+  'Unsure': require('../images/unsure.png')
+};
 
 const regionPreference = {
   'borneo': require('../images/borneo.jpeg'),
