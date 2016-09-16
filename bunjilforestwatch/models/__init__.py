@@ -1678,6 +1678,11 @@ class Case(ndb.Model):
         else:
             return False
 
+    @property
+    def area(self):
+        glad_cluster = self.glad_cluster.get()
+        return glad_cluster.area.get() if glad_cluster is not None else None
+
 
 class ObservationTaskResponse(ndb.Model):
     """

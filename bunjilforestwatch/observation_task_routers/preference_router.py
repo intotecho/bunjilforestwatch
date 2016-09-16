@@ -36,7 +36,6 @@ class PreferenceRouter(BaseRouter):
         """
 
         open_cases_query = models.Case.query(models.Case.status == 'OPEN')
-
         user_preferences = models.ObservationTaskPreference.get_by_user_key(user.key)
 
         for open_case in open_cases_query:
