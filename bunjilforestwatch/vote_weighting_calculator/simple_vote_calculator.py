@@ -31,6 +31,6 @@ class SimpleVoteCalculator(object):
 
   def get_user_trust_threshold(self):
     """
-    Return trust threshold as 20% of maximum available trust
+    :return: The amount of trust that is gained or lost when the user responses correctly or incorrectly.
     """
     return user_trust_manager.get_max_trust() * 0.2
