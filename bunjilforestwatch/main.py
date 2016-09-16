@@ -2185,12 +2185,15 @@ class ObservationTaskHandler(BaseHandler):
                                                                              vote_category=
                                                                              observation_task_response['vote_category'],
                                                                              case_response=
-                                                                             observation_task_response)
+                                                                             observation_task_response,
+                                                                             task_duration_seconds=
+                                                                             observation_task_response['task_duration_seconds'])
                     observation_task_entity.put()
 
                     vote_calculator = SimpleVoteCalculator()
                     case.votes.add_vote(observation_task_response['vote_category'],
-                                        vote_calculator.get_weighted_vote(user, case))
+                                        vote_calculator.get_weighted_vote(
+                                            user, case, observation_task_response['task_duration_seconds']))
                     case.put()
 
                     case_manager = case_workflow.case_workflow_manager.CaseWorkflowManager()
@@ -2205,7 +2208,7 @@ class ObservationTaskHandler(BaseHandler):
 
 
 '''
-checkForNewInArea() is a function to check if any new images for the specified area. 
+checkForNewInArea() is a function to check if any new images for the specified area.
 Called by CheckForNewInAllAreasHandler() and CheckForNewInAreaHandler()
 returns a HTML formatted string
 

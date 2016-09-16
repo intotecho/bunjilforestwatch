@@ -16,13 +16,24 @@ import {
 export default React.createClass({
 
   getInitialState() {
-    return { selectionMade: false };
+    return {
+      selectionMade: false
+    };
   },
 
   componentWillReceiveProps(nextProps) {
     this.setState({
       selectionMade: false
     });
+  },
+
+  getTaskDuration() {
+    const { taskStartTime } = this.props;
+
+    if (!taskStartTime) { return 0; }
+
+    // Original time - current time, convert from milliseconds to seconds
+    return Math.abs((taskStartTime - Date.now())) / 1000;
   },
 
   votingHandler({target: {innerText}}) {
@@ -35,7 +46,8 @@ export default React.createClass({
 
       let payload = {
         case_id: this.props.caseId,
-        vote_category: innerText.toUpperCase()
+        vote_category: innerText.toUpperCase(),
+        task_duration_seconds: this.getTaskDuration()
       };
 
       Request
