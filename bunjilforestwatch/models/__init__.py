@@ -1685,7 +1685,7 @@ class ObservationTaskResponse(ndb.Model):
     case = ndb.KeyProperty(kind=Case)
     case_response = ndb.PickleProperty(required=True)
     vote_category = ndb.StringProperty(required=True)
-    time_spent = ndb.FloatProperty(default=0.01)
+    time_spent = ndb.FloatProperty(default=0.0)
 
 class ObservationTaskPreference(ndb.Model):
     """
