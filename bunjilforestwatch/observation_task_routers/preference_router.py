@@ -37,13 +37,12 @@ class PreferenceRouter(BaseRouter):
 
         open_cases_query = models.Case.query(models.Case.status == 'OPEN')
 
-        user_preferences = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
-        user_region_preference = {"region_preference": user_preferences.region_preference}
+        user_preferences = models.ObservationTaskPreference.get_by_user_key(user.key)
 
         for open_case in open_cases_query:
             cluster = models.GladCluster.get_by_id(open_case.glad_cluster.id())
-            area = models.AreaOfInterest.get_by_id(cluster.area.id())
-            if self._case_is_not_already_completed_by_user(open_case, user) and area in user_region_preference:
+            preference = models.AreaOfInterest.get_by_id(cluster.area.id())
+            if self._case_is_not_already_completed_by_user(open_case, user) and (preference.region in user_preferences.region_preference):
                 return self._return_case_for_user(open_case)
 
         for open_case in open_cases_query:

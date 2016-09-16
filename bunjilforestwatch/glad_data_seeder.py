@@ -117,6 +117,7 @@ def create_area(new_area_geojson_str, logged_in_user):
     try:
         area = models.AreaOfInterest(
             id=area_name, name=area_name,
+            region=new_area['properties']['region_name'].decode('utf-8'),
             owner=logged_in_user.key,
             description=new_area['properties']['area_description']['description'].decode('utf-8'),
             description_why=new_area['properties']['area_description']['description_why'].decode('utf-8'),

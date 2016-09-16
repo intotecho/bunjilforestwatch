@@ -250,6 +250,7 @@ class AreaOfInterest(ndb.Model):
     threats = ndb.TextProperty()  # text type is longer but is not indexed.
     type = ndb.StringProperty()
     wiki = ndb.StringProperty()  # beware max url 500 - like to a story about this area.
+    region = ndb.StringProperty()
 
     """
     WDPA Attributes
