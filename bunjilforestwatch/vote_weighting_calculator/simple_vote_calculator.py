@@ -1,19 +1,24 @@
 class SimpleVoteCalculator(object):
   USER_TRUST_THRESHOLD = 10
-  TIME_SPENT_THRESHOLD = 5.0 # In seconds
 
-  def get_weighted_vote(self, user, case, time_spent=0.0):
+  """
+  Represents the number of seconds that has to pass in order for the user's
+  maximum trust value to be realized
+  """
+  TASK_DURATION_SECONDS_THRESHOLD = 5.0
+
+  def get_weighted_vote(self, user, case, task_duration_seconds=0.01):
     # IF trust is greater than threshold number THEN
-    # We do not consider time_spent in weighting
+    # We do not consider task_duration_seconds in weighting
     if user.trust > self.USER_TRUST_THRESHOLD:
       return user.trust
     else:
-      if time_spent > self.TIME_SPENT_THRESHOLD:
-        time_spent = self.TIME_SPENT_THRESHOLD
-      elif time_spent == 0:
-        # Prevent division by zero
-        time_spent = 0.01
+      if task_duration_seconds > self.TASK_DURATION_SECONDS_THRESHOLD:
+        task_duration_seconds = self.TASK_DURATION_SECONDS_THRESHOLD
 
-      # Return user's trust value based on the amount of time_spent
+      # Return user's trust value based on the amount of task_duration_seconds
       # Each second provides a full 20% value of trust
-      return user.trust * (time_spent / self.TIME_SPENT_THRESHOLD)
+      return self.get_task_duration_vote_modifier(user.trust, task_duration_seconds)
+
+  def get_task_duration_vote_modifier(self, trust_value, task_duration_seconds):
+    return trust_value * (task_duration_seconds / self.TASK_DURATION_SECONDS_THRESHOLD)

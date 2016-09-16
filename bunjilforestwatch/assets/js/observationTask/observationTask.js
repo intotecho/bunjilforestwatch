@@ -56,7 +56,7 @@ export default React.createClass({
     if (_.isEmpty(state.case) === false) {
       return (
         <VotingTaskBar
-          initialTimeSpent={Date.now()}
+          taskStartTime={Date.now()}
           setSelectedCategory={setSelectedCategory}
           caseId={state.case.case_id}
         />

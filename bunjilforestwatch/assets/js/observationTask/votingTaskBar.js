@@ -27,13 +27,13 @@ export default React.createClass({
     });
   },
 
-  getTimeSpentOnTask() {
-    const { initialTimeSpent } = this.props;
+  getTaskDuration() {
+    const { taskStartTime } = this.props;
 
-    if (!initialTimeSpent) { return 0; }
+    if (!taskStartTime) { return 0; }
 
     // Original time - current time, convert from milliseconds to seconds
-    return Math.abs((initialTimeSpent - Date.now())) / 1000;
+    return Math.abs((taskStartTime - Date.now())) / 1000;
   },
 
   votingHandler({target: {innerText}}) {
@@ -47,7 +47,7 @@ export default React.createClass({
       let payload = {
         case_id: this.props.caseId,
         vote_category: innerText.toUpperCase(),
-        time_spent: this.getTimeSpentOnTask()
+        task_duration_seconds: this.getTaskDuration()
       };
 
       Request
