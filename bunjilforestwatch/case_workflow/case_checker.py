@@ -1,10 +1,13 @@
-from models import VOTE_CATEGORIES, Case, CaseVotes
+from models import VOTE_CATEGORIES, Case, CaseVotes, FIRE, AGRICULTURE, DEFORESTATION, ROAD
 
 
 class CaseChecker(object):
     MIN_VOTES_FOR_VIABLE_CONSENSUS = 6
     MAX_VOTES = 12
     MIN_CONSENSUS = 66
+
+    def get_min_votes_for_viable_consensus(self):
+        return self.MIN_VOTES_FOR_VIABLE_CONSENSUS
 
     def has_a_majority(self, case):
         """
@@ -69,13 +72,13 @@ class CaseChecker(object):
         if highest_category_votes == 0:
             return None
         elif case.votes.fire == highest_category_votes:
-            return CaseVotes.fire
+            return FIRE
         elif case.votes.agriculture == highest_category_votes:
-            return CaseVotes.agriculture
+            return AGRICULTURE
         elif case.votes.deforestation == highest_category_votes:
-            return CaseVotes.deforestation
+            return DEFORESTATION
         elif case.votes.road == highest_category_votes:
-            return CaseVotes.road
+            return ROAD
 
     @staticmethod
     def total_votes(case):
