@@ -19,6 +19,7 @@ from google.appengine.ext import ndb
 import glad_data_seeder
 from observation_task_routers.dummy_router import DummyRouter
 from observation_task_routers.simple_router import SimpleRouter
+from observation_task_routers.preference_router import PreferenceRouter
 from vote_weighting_calculator.simple_vote_calculator import SimpleVoteCalculator
 
 PRODUCTION_MODE = not os.environ.get(
