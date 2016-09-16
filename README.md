@@ -31,6 +31,7 @@ http://blog.bunjilforestwatch.net/learn/technology/dev-environment-setup-on-wind
 
 ##BUILD DEPENDENCIES
 These libraries are reuqired,
+
 ```sh
 	apiclient/
 	atom/
@@ -68,4 +69,6 @@ These libraries are reuqired,
 	textile.py*
 	textile.pyc
 	uritemplate/
+	python_http_client/
+	sendgrid/
 ```

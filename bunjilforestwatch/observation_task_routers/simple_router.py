@@ -36,7 +36,7 @@ class SimpleRouter(BaseRouter):
 
         """
 
-        open_cases_query = models.Case.query(models.Case.status == 'OPEN')
+        open_cases_query = models.Case.query(models.Case.status == models.OPEN)
 
         for open_case in open_cases_query:
             if self._case_is_not_already_completed_by_user(open_case, user):

@@ -54,7 +54,7 @@ class User(ndb.Model):
 
     """
 
-    name = ndb.StringProperty(required=True, indexed=False)
+    name = ndb.StringProperty(required=True, indexed=True)
     lname = ndb.StringProperty(indexed=True)
     email = ndb.StringProperty()
     register_date = ndb.DateTimeProperty(auto_now_add=True)
@@ -354,6 +354,15 @@ class AreaOfInterest(ndb.Model):
     @property
     def area_followers(self):
         return AreaFollowersIndex.get_key(self.name).get()
+
+    @property
+    def notification_subscriber_user_names(self):
+        followers = self.area_followers
+        return followers.users if followers is not None and followers.count != 0 else []
+
+    def get_notification_subscribers(self):
+        subscriber_names = self.notification_subscriber_user_names
+        return User.query(User.name.IN(subscriber_names)).fetch()
 
     @property
     def num_followers(self):
@@ -1654,28 +1663,55 @@ class CaseVotes(ndb.Model):
         elif vote_category == UNSURE:
             self.unsure += weighted_vote
 
+OPEN = 'OPEN'
+CONFIRMED = 'CONFIRMED'
+UNCONFIRMED = 'UNCONFIRMED'
+
+CASE_STATES = [
+    OPEN,
+    CONFIRMED,
+    UNCONFIRMED
+]
+
 
 class Case(ndb.Model):
     """
     """
 
     glad_cluster = ndb.KeyProperty(kind=GladCluster)  # key to the GladCluster that created the case.
-    status = ndb.StringProperty(required=True, indexed=True, default="OPEN")
+    status = ndb.StringProperty(required=True, indexed=True, default=OPEN, choices=set(CASE_STATES))
     creation_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
 
     votes = ndb.StructuredProperty(CaseVotes, default=CaseVotes())
     confidence = ndb.IntegerProperty(indexed=False, default=0)
 
-    @staticmethod
-    def get_cases_for_glad_cluster(glad_cluster):
-        return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
+    @property
+    def area(self):
+        glad_cluster = self.glad_cluster.get()
+        return glad_cluster.area.get() if glad_cluster is not None else None
 
-    @staticmethod
-    def is_closed(case):
-        if case.status == 'CONFIRMED' or case.status == 'UNCONFIRMED':
+    @property
+    def is_closed(self):
+        if self.status == CONFIRMED or self.status == UNCONFIRMED:
             return True
         else:
             return False
+
+    @property
+    def is_confirmed(self):
+        return self.status == CONFIRMED
+
+    @property
+    def is_unconfirmed(self):
+        return self.status == UNCONFIRMED
+
+    @property
+    def is_open(self):
+        return self.status == OPEN
+
+    @staticmethod
+    def get_cases_for_glad_cluster(glad_cluster):
+        return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
 
 
 class ObservationTaskResponse(ndb.Model):
@@ -1687,6 +1723,7 @@ class ObservationTaskResponse(ndb.Model):
     case_response = ndb.PickleProperty(required=True)
     vote_category = ndb.StringProperty(required=True)
     task_duration_seconds = ndb.FloatProperty(default=0.0)
+
 
 class ObservationTaskPreference(ndb.Model):
     """
@@ -1704,7 +1741,7 @@ class ObservationTaskPreference(ndb.Model):
     def upsert(user_key, region_preference=[]):
         preference = ObservationTaskPreference.get_by_user_key(user_key)
 
-        if preference == None:
+        if preference is None:
             # Only create when there isn't an existing preference record for user
             preference = ObservationTaskPreference(
                 user=user_key,
