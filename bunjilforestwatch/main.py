@@ -2185,12 +2185,15 @@ class ObservationTaskHandler(BaseHandler):
                                                                              vote_category=
                                                                              observation_task_response['vote_category'],
                                                                              case_response=
-                                                                             observation_task_response)
+                                                                             observation_task_response,
+                                                                             time_spent=
+                                                                             observation_task_response['time_spent'])
                     observation_task_entity.put()
 
                     vote_calculator = SimpleVoteCalculator()
                     case.votes.add_vote(observation_task_response['vote_category'],
-                                        vote_calculator.get_weighted_vote(user, case))
+                                        vote_calculator.get_weighted_vote(
+                                            user, case, observation_task_response['time_spent']))
                     case.put()
 
                     case_manager = case_workflow.case_workflow_manager.CaseWorkflowManager()
