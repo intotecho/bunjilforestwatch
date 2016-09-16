@@ -1,14 +1,17 @@
-import case_checker
 import models
+from case_workflow.case_checker import CaseChecker
+from user_trust.user_trust_manager import UserTrustManager
 
-checker = case_checker.CaseChecker()
-Case = models.Case
+checker = CaseChecker()
+userTrustManager = UserTrustManager()
 
 
+# TODO: subscribe to case vote received event and spawn a thread
 class CaseWorkflowManager(object):
     """
     Identifies when cases are eligible for closing and performs the case closing function
     """
+
     def __init__(self):
         pass
 
@@ -21,12 +24,13 @@ class CaseWorkflowManager(object):
         """
         case.status = status
         case.put()
+        userTrustManager.update_all_users_trust(case)  # TODO: remove and fire event instead
 
     def check_cases(self):
         """
         Identifies any classes suitable for closing and passes them to the close_case function
         """
-        open_cases_query = Case.query(Case.status == 'OPEN')
+        open_cases_query = models.Case.query(models.Case.status == 'OPEN')
         for open_case in open_cases_query:
             self.update_case_status(open_case)
 
@@ -43,3 +47,4 @@ class CaseWorkflowManager(object):
                 update_case_state = 'UNCONFIRMED'
         if update_case_state != 'OPEN':
             self._close_case(case, update_case_state)
+            # TODO: fire case closed event
