@@ -10,9 +10,6 @@ class UserTrustManager(object):
     Updates the trust of all users who voted on the case that has just closed.
     """
 
-    """
-    The amount of trust that is gained or lost when the user responses correctly or incorrectly.
-    """
     TRUST_MODIFIER_FOR_RESPONSE = 0.1
     PORTION_OF_MIN_VOTES_TO_USE_FOR_MAX_TRUST = 0.8
 
@@ -21,13 +18,19 @@ class UserTrustManager(object):
     def __init__(self):
         pass
 
-    def _get_max_trust(self):
+    def get_max_trust(self):
         """
         :return: The maximum trust that a user can have. This is a percentage of the minimum number of votes to
          close a case with a viable majority.
         """
         self.checker.get_min_votes_for_viable_consensus()
         return self.checker.get_min_votes_for_viable_consensus() * self.PORTION_OF_MIN_VOTES_TO_USE_FOR_MAX_TRUST
+
+    def get_trust_modifier_for_response(self):
+        """
+        :return: The amount of trust that is gained or lost when the user responses correctly or incorrectly.
+        """
+        return self.TRUST_MODIFIER_FOR_RESPONSE;
 
     def _update_user_trust(self, user, case, response):
         if (user is not None) and (case is not None) and (response is not None):
@@ -37,7 +40,7 @@ class UserTrustManager(object):
                 else:
                     trust_modifier = -self.TRUST_MODIFIER_FOR_RESPONSE
 
-                new_trust = clamp(user.trust + trust_modifier, 0, self._get_max_trust())
+                new_trust = clamp(user.trust + trust_modifier, 0, self.get_max_trust())
 
                 if user.trust != new_trust:
                     user.trust = new_trust
