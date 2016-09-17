@@ -1,3 +1,5 @@
+from google.appengine.ext.deferred import deferred
+
 import models
 from case_workflow.case_checker import CaseChecker
 from user_trust.user_trust_manager import UserTrustManager
@@ -24,7 +26,9 @@ class CaseWorkflowManager(object):
         """
         case.status = status
         case.put()
-        userTrustManager.update_all_users_trust(case)  # TODO: remove and fire event instead
+
+        deferred.defer(userTrustManager.update_all_users_trust, case.key.id(),
+                       _queue='update-user-trust-queue')
 
     def check_cases(self):
         """

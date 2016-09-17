@@ -1,3 +1,7 @@
+import logging
+
+from google.appengine.ext import ndb
+
 import models
 from case_workflow import case_checker
 from case_workflow.case_checker import CaseChecker
@@ -46,16 +50,18 @@ class UserTrustManager(object):
                     user.trust = new_trust
                     user.put()
 
-    def update_all_users_trust(self, case):
+    def update_all_users_trust(self, case_id):
         """
-        :param case: The case that has recently been closed.
+        :param case_id: The id of the case that has recently been closed.
         :return: When a case closes each user who voted on the case will have their trust modified based on whether
         the category they voted for. If the user voted for the category with the most votes then their trust will
         increase and will decrease if they selected a lesser chosen category.
         """
+        case = models.Case.get_by_id(id=case_id)
         if case is not None:
             task_responses = models.ObservationTaskResponse.query() \
                 .filter(models.ObservationTaskResponse.case == case.key).fetch()
+            logging.info('Updating {} user/s trust due to case {} closure'.format(str(len(task_responses)), str(case.key.id())))
 
             for response in task_responses:
                 try:
