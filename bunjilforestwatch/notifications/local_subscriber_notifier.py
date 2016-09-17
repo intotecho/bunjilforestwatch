@@ -1,6 +1,9 @@
+import logging
+
 from case_workflow.case_checker import CaseChecker
 from notifications.email_sender import EmailSender
 from time import gmtime, strftime
+import models
 
 
 class LocalSubscriberNotifier(object):
@@ -46,14 +49,19 @@ class LocalSubscriberNotifier(object):
                 """.format(recipient.name, threat, case.key.id(), case.area.name,
                            strftime("%a, %d %b %Y %X %Z", gmtime()))
 
-    def notify_subscribers_of_case_closure(self, case):
+    def notify_subscribers_of_case_closure(self, case_id):
         """
         Notifies notification subscribers of the case area of the closure of the case.
-        :param case: The case that has just been closed
+        :param case_id: The id of the case that has just been closed
         """
+        case = models.Case.get_by_id(id=case_id)
         if case is not None and case.is_closed and self._case_checker.total_votes(case) > 0:
             recipients = self._get_local_subscribers(case)
             subject = self._get_case_closed_email_subject(case)
+            logging.info(
+                'Sending notifications to {} local subscribers due to closure of case with id {}'.format(
+                    str(len(recipients)),
+                    str(case.key.id())))
 
             for recipient in recipients:
                 content = self._get_case_closed_email_content(case, recipient)
