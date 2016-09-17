@@ -1684,7 +1684,11 @@ class Case(ndb.Model):
 
     votes = ndb.StructuredProperty(CaseVotes, default=CaseVotes())
     confidence = ndb.IntegerProperty(indexed=False, default=0)
-
+    
+    @property
+    def non_unique_task_name(self):
+        return '{}-{}'.format(self.key.id(), self.glad_cluster.id())
+    
     @property
     def area(self):
         glad_cluster = self.glad_cluster.get()

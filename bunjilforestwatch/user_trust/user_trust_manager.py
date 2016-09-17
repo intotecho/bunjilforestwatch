@@ -1,6 +1,7 @@
 import logging
 
-from google.appengine.ext import ndb
+from google.appengine.api.taskqueue import InvalidTaskError
+from google.appengine.ext.deferred import deferred
 
 import models
 from case_workflow import case_checker
@@ -50,13 +51,7 @@ class UserTrustManager(object):
                     user.trust = new_trust
                     user.put()
 
-    def update_all_users_trust(self, case_id):
-        """
-        :param case_id: The id of the case that has recently been closed.
-        :return: When a case closes each user who voted on the case will have their trust modified based on whether
-        the category they voted for. If the user voted for the category with the most votes then their trust will
-        increase and will decrease if they selected a lesser chosen category.
-        """
+    def _update_all_users_trust(self, case_id):
         case = models.Case.get_by_id(id=case_id)
         if case is not None and case.is_closed:
             task_responses = models.ObservationTaskResponse.query() \
@@ -68,3 +63,18 @@ class UserTrustManager(object):
                     self._update_user_trust(response.user.get(), case, response)
                 except Exception:
                     pass
+
+    def update_all_users_trust_async(self, case):
+        """
+        :param case: The case that has recently been closed.
+        :return: When a case closes each user who voted on the case will have their trust modified based on whether
+        the category they voted for. If the user voted for the category with the most votes then their trust will
+        increase and will decrease if they selected a lesser chosen category.
+
+        NOTE: This task will only be completed once per case.
+        """
+        try:
+            deferred.defer(self._update_all_users_trust, case.key.id(), _countdown=10, _queue='update-user-trust-queue',
+                           _name='closed-{}'.format(case.non_unique_task_name))
+        except InvalidTaskError:
+            pass

@@ -1,5 +1,8 @@
 import logging
 
+from google.appengine.api.taskqueue import InvalidTaskError
+from google.appengine.ext.deferred import deferred
+
 from case_workflow.case_checker import CaseChecker
 from notifications.email_sender import EmailSender
 from time import gmtime, strftime
@@ -49,11 +52,7 @@ class LocalSubscriberNotifier(object):
                 """.format(recipient.name, threat, case.key.id(), case.area.name,
                            strftime("%a, %d %b %Y %X %Z", gmtime()))
 
-    def notify_subscribers_of_case_closure(self, case_id):
-        """
-        Notifies notification subscribers of the case area of the closure of the case.
-        :param case_id: The id of the case that has just been closed
-        """
+    def _notify_subscribers_of_case_closure(self, case_id):
         case = models.Case.get_by_id(id=case_id)
         if case is not None and case.is_closed and self._case_checker.total_votes(case) > 0:
             recipients = self._get_local_subscribers(case)
@@ -66,3 +65,17 @@ class LocalSubscriberNotifier(object):
             for recipient in recipients:
                 content = self._get_case_closed_email_content(case, recipient)
                 self._email_sender.send(recipient.email, subject, content)
+
+    def notify_subscribers_of_case_closure_async(self, case):
+        """
+        Notifies notification subscribers of the case area of the closure of the case.
+        :param case: The case that has just been closed
+
+        NOTE: This task will only be completed once per case.
+        """
+        try:
+            deferred.defer(self._notify_subscribers_of_case_closure, case.key.id(), _countdown=10,
+                           _queue='send-notifications-queue',
+                           _name='closed-{}'.format(case.non_unique_task_name))
+        except InvalidTaskError:
+            pass
