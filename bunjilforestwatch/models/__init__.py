@@ -250,7 +250,7 @@ class AreaOfInterest(ndb.Model):
     threats = ndb.TextProperty()  # text type is longer but is not indexed.
     type = ndb.StringProperty()
     wiki = ndb.StringProperty()  # beware max url 500 - like to a story about this area.
-    region = ndb.StringProperty()
+    region = ndb.StringProperty(repeated=True)
 
     """
     WDPA Attributes
@@ -1693,6 +1693,7 @@ class ObservationTaskResponse(ndb.Model):
     case_response = ndb.PickleProperty(required=True)
     vote_category = ndb.StringProperty(required=True)
     task_duration_seconds = ndb.FloatProperty(default=0.0)
+
 
 class ObservationTaskPreference(ndb.Model):
     """
