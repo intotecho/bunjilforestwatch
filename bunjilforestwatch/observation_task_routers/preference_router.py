@@ -51,7 +51,14 @@ class PreferenceRouter(BaseRouter):
         return None
 
     def _return_case_for_user(self, case):
-            cluster = models.GladCluster.get_by_id(case.glad_cluster.id())
-            area = models.AreaOfInterest.get_by_id(cluster.area.id())
+        """
+        Args:
+            case: the case to be served to the user
 
-            return NextObservationTaskAjaxModel(case, cluster, area)
+        Returns: the ajaxmodel object to be with appropriate parameters
+
+        """
+        cluster = models.GladCluster.get_by_id(case.glad_cluster.id())
+        area = models.AreaOfInterest.get_by_id(cluster.area.id())
+
+        return NextObservationTaskAjaxModel(case, cluster, area)
