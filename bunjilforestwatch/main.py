@@ -1417,6 +1417,7 @@ class NewAreaHandler(BaseHandler):
         try:
             area = models.AreaOfInterest(
                 id=area_name, name=area_name,
+                region=[],
                 owner=self.session['user']['key'],
                 description=new_area['properties']['area_description']['description'].decode('utf-8'),
                 description_why=new_area['properties']['area_description']['description_why'].decode('utf-8'),
@@ -1448,6 +1449,7 @@ class NewAreaHandler(BaseHandler):
         ### set boundary if one was provided.
         if boundary_feature != None:
             area.set_boundary_fc(eeFeatureCollection, False)
+            area.region = find_regions(eeFeatureCollection)
 
         ### update the area and the referencing user
         try:
