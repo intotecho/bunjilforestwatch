@@ -1013,6 +1013,7 @@ class ExistingAreaHandler(BaseHandler):
                     def update_txn(area, boundary_hull_dict):
                         area.set_boundary_fc(boundary_hull_dict, True)
                         area.set_boundary_geojsonstr(operation['value'])
+                        area.region = region_manager.find_regions(eeFeatureCollection)
                         area.put()
                         return
 

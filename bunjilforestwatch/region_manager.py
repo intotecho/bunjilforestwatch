@@ -33,28 +33,30 @@ def find_regions(area_fc):
         logging.error('Sorry, Server Credentials Error')
         return False
 
+    area_geom = area_fc.geometry()
     regions = []
 
-    if _get_congo_fc().geometry().intersects(area_fc, 100).getInfo():
+    if _is_in_congo_fc().geometry().intersects(area_geom,100).getInfo():
         regions.append('congo')
-    if _get_peru_fc().geometry().intersects(area_fc, 100).getInfo():
+    if _is_in_peru_fc().geometry().intersects(area_geom,100).getInfo():
         regions.append('peru')
-    if _get_indonesia_fc().geometry().intersects(area_fc, 100).getInfo():
+    if _is_in_indonesia_fc().geometry().intersects(area_geom,100).getInfo():
         regions.append('indonesia')
 
     return regions
 
 
-def _get_peru_fc():
+def _is_in_peru_fc():
     countries = ee.FeatureCollection('ft:1tdSwUL7MVpOauSgRzqVTOwdfy17KDbw-1d9omPw')
     return countries.filterMetadata('Country', 'equals', 'Peru')
 
 
-def _get_congo_fc():
+def _is_in_congo_fc():
     countries = ee.FeatureCollection('ft:1tdSwUL7MVpOauSgRzqVTOwdfy17KDbw-1d9omPw')
     return countries.filterMetadata('Country', 'equals', 'Congo')
 
 
-def _get_indonesia_fc():
+def _is_in_indonesia_fc():
     countries = ee.FeatureCollection('ft:1tdSwUL7MVpOauSgRzqVTOwdfy17KDbw-1d9omPw')
     return countries.filterMetadata('Country', 'equals', 'Indonesia')
+
