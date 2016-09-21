@@ -137,26 +137,55 @@ function createObsOverlay(obs, role, algorithm) {
 function displayObsOverlay(obs, role, algorithm) { //called from base-maps.html
 	"use strict";
     var ovl = findOverlay(obs, role, algorithm);
-    
-    if (ovl !== null) {
-    	
-    	var test_tile_url = ['https://earthengine.googleapis.com/map', ovl.map_id, 1, 0, 0].join("/");
-    	test_tile_url += '?token=' + ovl.token;
 
-    	var tooltip = "Overlay: " +  obs.captured  +  " Id: " + obs.image_id + " " + ovl.overlay_role + " " + ovl.algorithm;
-        var overlayname = obs.captured + ":" + ovl.overlay_role;          
-
-    	$.get(test_tile_url).done(function(data) {
-    	       console.log("Map overlay already generated");
-               displayOverlay(ovl, overlayname, tooltip);
-    	      
-        }).error(function( jqxhr, textStatus, error ) {
-                console.log("Map overlay expired - regenerating");
-                updateOverlay(ovl, overlayname, tooltip);
-        });
+    if (obs.properties !== null) {
+		if (ovl !== null) {
+            var overlayname = obs.captured + ":" + ovl.overlay_role;
+            console.log("Map overlay already generated");
+            displayOverlay(ovl, overlayname, tooltip);
+        }
     }
-    else {
-        createObsOverlay(obs, role, algorithm);
+    else
+    {	
+		if (ovl !== null) {
+
+			var test_tile_url = ['https://earthengine.googleapis.com/map', ovl.map_id, 1, 0, 0].join("/");
+			test_tile_url += '?token=' + ovl.token;
+
+			var tooltip = "Overlay: " +  obs.captured  +  " Id: " + obs.image_id + " " + ovl.overlay_role + " " + ovl.algorithm;
+			var overlayname = obs.captured + ":" + ovl.overlay_role;
+
+			$.get(test_tile_url).done(function(data) {
+				   console.log("Map overlay already generated");
+				   displayOverlay(ovl, overlayname, tooltip);
+
+			}).error(function( jqxhr, textStatus, error ) {
+					console.log("Map overlay expired - regenerating");
+					updateOverlay(ovl, overlayname, tooltip);
+			});
+		}
+		else {
+            if (obs.properties !== null) {
+                var layer = new google.maps.FusionTablesLayer({
+                    query: {
+                        select: 'latlong',
+                        from: area_json.glad_alerts
+                    },
+                    styles: [
+                        {
+                            markerOptions: {
+                                iconName: "small_pink"
+                            }
+                        }
+                    ]
+                });
+                layer.overlaytype = 'fusion';
+                obs.overlays.push(layer);
+            }
+            else {
+                createObsOverlay(obs, role, algorithm);
+            }
+		}
     }
 }
 	

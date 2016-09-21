@@ -297,12 +297,15 @@ function initialize() {
 			"Glad Alerts",
 			"pink",
 			100,
-			"Alerts" + area_json.properties.glad_alerts,
+			"Alerts: " + area_json.glad_alerts,
 			layerslider_callback);
     }
  	if (typeof(area_json.glad_clusters) !== 'undefined' ) {
- 	
-		newData = displayFeatureCollection(map_under_lhs, jQuery.parseJSON(area_json.glad_clusters));
+        var geojson_cluster = jQuery.parseJSON(area_json.glad_clusters);
+        //var d = Date(geojson_cluster.features[0].properties.AlertsDate);
+        //var datestring= d.getFullYear() + "-" + d.getMonth() + "-" + d.getDay();
+
+		newData = displayFeatureCollection(map_under_lhs, geojson_cluster);
 		if (newData !== null) {
 			newData.name = "clusters";
 			newData.overlaytype = 'data';
@@ -312,7 +315,9 @@ function initialize() {
 					"Alert Clusters",
 					"pink",
 					100,
-					"Clusters" + area_json.properties.area_name,
+					"Clusters for " +  area_json.properties.area_name
+                    + " clusters: " +  geojson_cluster.features.length
+                    + "date: " + geojson_cluster.features[0].properties.AlertsDate,
 					layerslider_callback);
 		}
  	}
@@ -570,7 +575,7 @@ function initialize() {
               var left = u.position.left;
               $('#map-left-c-prior').width(left);
                 if(left < 20) {
-                    console.log(left);
+                    //console.log(left);
                     $('#draghandle').attr("{background-color:blue}");
                 }
               //$('#draghandle').width('11px').height('11px');

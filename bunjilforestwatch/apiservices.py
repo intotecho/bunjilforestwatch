@@ -120,49 +120,15 @@ def get_latest_file(folder_id):
                                               pageToken=page_token).execute()
         for file in response.get('files', []):
             # Process change
-            print 'Found file: %s (%s)' % (file.get('name'), file.get('id'))
+            logging.debug('Found file: %s (%s)' %(file.get('name'), file.get('id')))
             return file.get('id')
         return None
         #page_token = response.get('nextPageToken', None)
         #if page_token is None:
         #    break;
 
-import ee
 
-'''
-Returns a html formatted string:
-      ee.batch.Task.list() returns a dictionary describing the current status of the task as it appears on
-      the EE server. Includes the following fields:
-      - state: One of the values in Task.State.
-      - creation_timestamp_ms: The Unix timestamp of when the task was created.
-      - update_timestamp_ms: The Unix timestamp of when the task last changed.
-      - output_url: URL of the output. Appears only if state is COMPLETED.
-      - error_message: Failure reason. Appears only if state is FAILED.
-      May also include other fields.
-'''
-def list_exports():
-    if not eeservice.initEarthEngineService():
-        return logging.error('Earth Engine Credentials Error')
-    listing = "<h2>Earth Engine Export Tasks</h2><br/>"
-    tasks = ee.batch.Task.list()
-    for t in tasks:
-        result = t.status()
-        listing += result['id'] + ' : ' +  result['state'] + ' : '   + result['description']
-        if result['state'] == 'COMPLETED':
-            try:
-                for url in result['output_url']:
-                    listing += ' <a href="' + url + '" target="#_blank">' + result['id'] + '</a>'
-            except KeyError:
-                pass
-        if result['state'] == 'FAILED':
-            try:
-                for error in result['error_message']:
-                    listing += error
-            except KeyError:
-                pass
-        listing += '<br>'
 
-    return listing
 
 '''
 @returns a list of file items that can be rendered.
@@ -270,6 +236,11 @@ def list_tables():
 
 
 def fusiontable_url(id, name):
+    '''
+    @params id: The docid of the table
+    @params name: The link text to display.
+    @returns:  a HTML formatted string that is a link to a fusion table
+    '''
     return '<a href="https://www.google.com/fusiontables/data?docid=' + id + '">' + name + '</a> '
 
 def make_file_public(drive_service, fileId):

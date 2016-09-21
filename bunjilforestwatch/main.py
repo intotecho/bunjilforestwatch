@@ -1319,6 +1319,7 @@ class NewAreaHandler(BaseHandler):
             ndb.put_multi([user, area])
             return user, area
 
+        one_month_ago = datetime.datetime.today() - datetime.timedelta(days=30) # starting point for GLAD Alerts
 
         try:
             area = models.AreaOfInterest(
@@ -1336,7 +1337,8 @@ class NewAreaHandler(BaseHandler):
                 boundary_geojsonstr=boundary_geojsonstr,
                 map_center=center, map_zoom=zoom,
                 max_latlon=maxlatlon, min_latlon=minlatlon,
-                glad_monitored=False
+                glad_monitored=False,
+                last_glad_alerts_date=one_month_ago
             )
         except e:
             self.add_message('danger', 'Error creating area. %s' % (e))
@@ -1448,9 +1450,10 @@ class DeleteAreaHandler(BaseHandler):
         area_followers = models.AreaFollowersIndex.get_by_id(area.name.encode('utf-8'), parent=area.key)
         # if user does not own area or user is not admin - disallow
 
-        if (area.owner.string_id() != user.name) and (user.role != 'admin'):
-            msg = 'Only the owner of an area or admin can delete an area %s %s' %(area.owner, user)
-            #logging.error('Only the owner of an area or admin can delete an area %s %s', area.owner, user)
+        if (area.owner.string_id() != user.name) and  (not users.is_current_user_admin()):
+            msg = 'Only the owner of an area or admin can delete an area %s %s' %(area.owner, user.role)
+            logging.error(msg)
+
             #self.add_message('danger',
             #                 "Only the owner of an area or admin can delete an area. owner:'{0!s}' user:'{1!s}'".format(
             #                     area.owner, user))
@@ -1461,22 +1464,7 @@ class DeleteAreaHandler(BaseHandler):
             }
             self.response.set_status(403)
             return self.response.out.write(json.dumps(results))
-            '''
-            geojson_area = area.toGeoJSON()
 
-            return self.redirect(webapp2.uri_for('view-area', area_name=area_name), {
-                'username': user.name,
-                'area_json': geojson_area,
-                'area': area,
-                'show_navbar': True,
-                'show_delete': False,
-                'is_owner': False,
-                'is_new': False,  # area exists
-                'celllist': json.dumps(cell_list),  # to be replaced by jsonarea
-                'area_followers': area_followers,
-                'obslist': json.dumps(observations)
-            })
-            '''
         # remove area from other user's area_following lists.
         area_followers_index = cache.get_area_followers(area_name)
 
@@ -1689,7 +1677,6 @@ class GetLandsatCellsHandler(BaseHandler):
         self.response.write(json.dumps(getCellsResult))
         return
 
-
 class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
     # This handler responds to Ajax request, hence it returns a response.write()
 
@@ -1717,8 +1704,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
 
         if not eeservice.initEarthEngineService():  # we need earth engine now.
             returnval['result'] = "error"
-            returnval[
-                'reason'] = 'Sorry, Cannot contact Google Earth Engine right now to create visualization. Please come back later'
+            returnval['reason'] = 'Cannot contact  Earth Engine. Try again later'
             self.add_message('danger', returnval['reason'])
             logging.error(returnval['reason'])
             self.response.write(json.dumps(returnval))
@@ -1726,7 +1712,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
 
         if area.get_boundary_hull_fc() == None:
             returnval['result'] = "error"
-            returnval['reason'] = 'Sorry, Cannot creat overlay. Area %s does not have a valid location or boundary' % (
+            returnval['reason'] = 'Sorry, cannot create overlay. Area %s does not have a valid location or boundary' % (
             area.name)
             self.add_message('danger', returnval['reason'])
             logging.error(returnval['reason'])
@@ -1736,8 +1722,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
         map_id = eeservice.getLandsatOverlay(area.get_boundary_hull_fc(), satelite, algorithm, latest, opt_params)
         if not map_id:
             returnval['result'] = "error"
-            returnval[
-                'reason'] = 'Sorry, Cannot creat overlay.  Google Earth Engine did not provide a map_id. Please come back later'
+            returnval['reason'] = 'Earth Engine did not provide a map_id. Try again later'
             self.add_message('danger', returnval['reason'])
             logging.error(returnval['reason'])
             self.response.write(json.dumps(returnval))
@@ -1752,7 +1737,7 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
             cell = cache.get_cell(path, row, area_name)
             if cell is not None:
                 # captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-                obs = models.Observation(parent=area.key,
+                obs = models.Observation(parent=area.key, obs_type='LANDSAT',
                                          image_collection=map_id['collection'],
                                          captured=map_id['capture_datetime'],
                                          image_id=map_id['id'])
@@ -1766,8 +1751,9 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
 
         else:
             # TODO: Do we really want some Observation with the parent being aoi instead of cell?
-            obs = models.Observation(parent=area.key, image_collection=map_id['collection'],
-                                     captured=map_id['capture_datetime'], image_id=map_id['id'], obs_role='ad-hoc')
+            obs = models.Observation(parent=area.key, obs_type='LANDSAT',
+                                     image_collection=map_id['collection'],
+                                     captured=map_id['capture_datetime'], image_id=map_id['id'], obs_role='AD_HOC')
 
         obs.put()
         ovl = models.Overlay(parent=obs.key,
@@ -1784,24 +1770,57 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
         # logging.info("map_id %s", map_id) logging.info("tile_path %s",area.tile_path)
         returnval = ovl.Overlay2Dictionary()
         returnval['result'] = "success"
-        returnval[
-            'reason'] = "LandsatOverlayRequestHandler() created " + ovl.overlay_role + " " + ovl.algorithm + " overlay."
+        returnval['reason'] = "LandsatOverlayRequestHandler() created " + ovl.overlay_role + " " + ovl.algorithm + " overlay."
         logging.debug(returnval['reason'])
         # self.populate_user_session() - no user in Ajax call.
         self.response.write(json.dumps(returnval))
 
 
-'''
-CreateOverlayHandler() create a new overlay and appends it to the observation
-        parameters:
-            observation key,
-            role,
-            algorithm,
-'''
+
+
+class ImageOverlayHandler(BaseHandler):
+    """
+    Handlers for fetching or updating image overlays from an LANDSAT image_id
+    """
+    def get(self, image_id, algorithm, role, **opt_params):
+        """
+        Find and return an overlay. If not found, create it.
+        @returns a dictionary that contains
+        - the result code, 'error' or 'success'
+        - the result message
+        - if success, the overlay as a dictionary see models.Overlay.Overlay2Dictionary()
+
+        This handler responds to Ajax request, hence it returns a response.write()
+        """
+
+        ovl = models.Overlay.find_overlay(image_id, algorithm, role, opt_params)
+        if not ovl:
+            ovl = models.Overlay.create(image_id, algorithm, role, opt_params)
+        return ovl
+
+    def update(self, image_id, algorithm, role):
+        'regenrerate the mapid and token for an existing overlay whose asset has expired'
+        returnval = {}
+
+        ovl = models.Overlay.find_overlay(image_id, algorithm, role, opt_params)
+        if not ovl:
+            returnval['result'] = "error"
+            returnval['reason'] = "ImageOverlayHandler - Could not find ImageOverlay"
+        else:
+            returnval['overlay'] = ovl.update(opt_params)
+        if returnval['result'] != 'success':
+            logging.error(returnval['reason'])
+        return self.response.write(json.dumps(returnval))
 
 
 class CreateOverlayHandler(BaseHandler):
-    # This handler responds to Ajax request, hence it returns a response.write()
+    """
+    This handler responds to Ajax request, hence it returns a response.write()
+    CreateOverlayHandler() create a new overlay and appends it to the observation
+        @param observation key:
+        @param role:
+        @param algorithm:
+    """
 
     def get(self, obskey_encoded, role, algorithm):
         obs = models.Observation.get_from_encoded_key(obskey_encoded)
@@ -1859,7 +1878,7 @@ class CreateOverlayHandler(BaseHandler):
         obs.put()  # TODO put inside a tx
         cache.set_keys([obs, ovl])  # Does this work?
 
-        returnval = ovl.Overlay2Dictionary()
+        returnval['overlay'] = ovl.Overlay2Dictionary()
         returnval['result'] = "success"
         returnval['reason'] = "CreateOverlayHandler() added " + role + " " + algorithm + " overlay"
         logging.debug(returnval['reason'])
@@ -1911,8 +1930,7 @@ class UpdateOverlayAjaxHandler(BaseHandler):
             map_id = eeservice.getPriorLandsatOverlay(obs)
         else:
             returnval['result'] = "error"
-            returnval[
-                'reason'] = "UpdateOverlayHandler() - Unknown role " + ovl.overlay_role + "(use 'latest' or 'prior')."
+            returnval['reason'] = "UpdateOverlayHandler() - Unknown role " + ovl.overlay_role + "(use 'latest' or 'prior')."
             logging.error(returnval['reason'])
             return self.response.write(json.dumps(returnval))
 
@@ -1930,7 +1948,7 @@ class UpdateOverlayAjaxHandler(BaseHandler):
         ovl.put()
         cache.set_keys([ovl])
 
-        returnval = ovl.Overlay2Dictionary()
+        returnval['overlay'] = ovl.Overlay2Dictionary()
         returnval['result'] = "success"
         returnval['reason'] = "UpdateOverlayHandler() updated " + ovl.overlay_role + " " + ovl.algorithm + " overlay"
         logging.debug(returnval['reason'])
@@ -2020,14 +2038,14 @@ class ObservationTaskAjaxHandler(BaseHandler):
 
 
 
-'''
-checkForNewInArea() is a function to check if any new images for the specified area. 
-Called by CheckForNewInAllAreasHandler() and CheckForNewInAreaHandler()
-returns a HTML formatted string
-
-This is not a handler and can be moved to another file
-'''
 def checkForNewInArea(area):
+    '''
+    Check for ANY new images for the specified area.
+    Called by CheckForNewInAllAreasHandler() and CheckForNewInAreaHandler()
+    returns a HTML formatted string
+
+    This is not a handler and can be moved to another file
+    '''
     area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
     linestr = u'<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
     obstask_cachekeys = []
@@ -2082,7 +2100,7 @@ class CheckForNewInAllAreasHandler(BaseHandler):
         initstr += u"<p>If an observation task is created, the first follower of the area receives an email with an observation task.</p>"
 
         if not eeservice.initEarthEngineService():  # we need earth engine now. logging.info(initstr)
-            initstr = u'CheckForNewInAllAreasHandler: Sorry, Cannot contact Google Earth Engine right now to create your area. Please come back later'
+            initstr = u'CheckForNewInAllAreasHandler: Cannot contact Google Earth Engine right now to create your area. Please come back later'
             self.response.set_status(503)
             return self.response.write(initstr)
 
@@ -2147,21 +2165,23 @@ class CheckForGladAlertsInAllAreasHandler(BaseHandler):
         #cache.flush()
         self.response.write(returnstr.encode('utf-8'))
 
-'''
-CheckForGladAlertsInAreaHandler() looks at a single area of interest and gets GLAD-ALERTS
-'''
 class CheckForGladAlertsInAreaHandler(BaseHandler):
 
     def get(self, area_name, noupdate=None):
+        '''
+        CheckForGladAlertsInAreaHandler() looks at a single area of interest and gets GLAD-ALERTS
+        '''
         area = cache.get_area(area_name)
         if not area:
             area = cache.get_area(area_name)
-            logging.error('CheckForGladAlertsInAreaHandler: Area not found!')
+            logging.error('CheckFoArGladAlertsInAreaHandler: Area not found!')
             return self.error(400)
         else:
             logging.debug('CheckForGladAlertsInAreaHandler: check-new-area-images for area_name %s', area_name)
 
-        return gladalerts.handleCheckForGladAlertsInArea(self, area, noupdate)
+            response = gladalerts.handleCheckForGladAlertsInArea(self, area, noupdate)
+            self.response.write(response)
+            return
 
 '''
 ProcessAlerts2ClustersHandler() looks at a single area of interest and gets GLAD-ALERTS
@@ -3512,7 +3532,7 @@ class ListFolder(BaseHandler):
 
 class ListExportTasks(BaseHandler):
     def get(self):
-        return self.response.write(apiservices.list_exports()) #json.dumps(list, indent=4, sort_keys=True)
+        return self.response.write(eeservice.list_exports()) #json.dumps(list, indent=4, sort_keys=True)
 
 
 
@@ -3619,6 +3639,11 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/obs/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
     webapp2.Route(r'/obs/<task_id>', handler=ObservationTaskAjaxHandler, name='view-obstask'),
 
+
+    webapp2.Route(r'/overlay/<landsat_id>/<role>/<algorithm>', handler=ImageOverlayHandler,
+                  name='overlay-create'),
+
+
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
     # this section must be last, since the regexes below will match one and two -level URLs
     webapp2.Route(r'/<username>/journals', handler=ViewJournalsHandler, name='view-journals'),
@@ -3684,6 +3709,7 @@ RESERVED_NAMES = set([
     'news',
     'oauth',
     'obs',
+    'overlay',
     'obstasks'
     'openid',
     'prior',

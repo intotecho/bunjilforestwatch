@@ -1,7 +1,7 @@
 """
 #Wrappers for Earth Engine Routines Commenced 25/05/2013
-@author: cgoodman can be shared.
-# Copyright (c) 2013-14 Chris Goodman <bunjilforestwatch@gmail.com>
+@author: cgoodman. can be shared.
+# Copyright (c) 2013-16 Chris Goodman <chris@bunjilforestwatch.net>
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -18,44 +18,28 @@
 
 import logging
 import gladalerts
-
 from google.appengine.ext import db # is it required?
-
-import cache
-#from models import Observation # only required for Observations model.
 import models
-
 import os
-#logging.debug('PYTHONPATH: %s',os.environ['PYTHONPATH'])
-#logging.debug('HTTP_PROXY: %s',os.environ['HTTP_PROXY'])
-#logging.debug('HTTPS_PROXY: %s',os.environ['HTTPS_PROXY'])
-
-#from oauth2client.contrib.appengine import AppAssertionCredentials
 from oauth2client import util # to disable positional parameters warning.
-
 import datetime
 import json
 import settings #You have to import your own private keys. 
 import ee
-import oauth2client.client
 from google.appengine.api import urlfetch #change timeout from 5 to 60 s. https://stackoverflow.com/questions/13051628/gae-appengine-deadlineexceedederror-deadline-exceeded-while-waiting-for-htt
 from ee.oauthinfo import OAuthInfo
-
-#from oauth2client.service_account import ServiceAccountCredentials
 
 # from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
     
 
-'''
-initEarthEngineService()
-Call once per session to authenticate to EE
-SERVER_SOFTWARE: In the development web server, this value is "Development/X.Y" where "X.Y" is the version of the runtime. 
-When running on App Engine, this value is "Google App Engine/X.Y.Z".
-
-'''
 def reallyinitEarthEngineService():
+    '''
+    Call once per session to authenticate to Earth Engine
+    SERVER_SOFTWARE: In the development web server, this value is "Development/X.Y" where "X.Y" is the version of the runtime.
+    When running on App Engine, this value is "Google App Engine/X.Y.Z".
+    '''
     util.positional_parameters_enforcement = util.POSITIONAL_IGNORE   # avoid the WARNING [util.py:129] new_request() takes at most 1 positional argument (4 given)
     OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/fusiontables.readonly'
     OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/fusiontables'
@@ -90,11 +74,13 @@ def reallyinitEarthEngineService():
 
 class EarthEngineService():
 
-    #this will call reallyinitEarthEngineService() when module is imported.  
-    #logging.info("Init class EarthEngineService")
+    """
+    Initialisation for this class will call reallyinitEarthEngineService() when module is imported.
+    """
+
     earthengine_intialised = False
     credentials = None
-    
+
     @staticmethod
     def isReady():
         if not EarthEngineService.earthengine_intialised:
@@ -104,42 +90,41 @@ class EarthEngineService():
         else:
             if not PRODUCTION_MODE:
                 logging.debug("Dev: EarthEngineService is Ready")
-                
         return EarthEngineService.earthengine_intialised
 
 
-
-#to maintain backward compatibility with existing calls ...
 def initEarthEngineService():
+    # to maintain backward compatibility with existing calls ...
     return EarthEngineService.isReady()
                                       
 
-'''
-checkForNewObservationInCell() checks the collection for the latest image and compares it to the last stored. 
-    If a newer image is found, the observation is added and the function returns True.
-    If no new image is found, the function returns False. 
-    An error is logged if no images are found. 
-    If no observation exists, one is created.
-'''
 def checkForNewObservationInCell(area, cell, collection_name):
-    #poly = [] #TODO Move poly to a method of models.AOI
-    #//for geopt in area.coordinates:
-    #//    poly.append([geopt.lon, geopt.lat]) 
-        
+    '''
+    Checks the collection for the latest image and compares it to the last stored.
+    :param collection_name: a landsat collection.
+        @returns Observation if a newer image is found and the Observation is stored,  else returns None if no new image found.
+
+    An error is logged if no images are found.
+
+    If no observation exists, one is created.
+    '''
+
     params = {'path':cell.path, 'row':cell.row}
     #print 'area', area, ' params: ', params
-    latest_image = getLatestLandsatImage(area.get_boundary_hull_fc(), collection_name, 0, params) # most recent image for this cell in the collection
+    latest_image = getLatestLandsatImage(area.get_boundary_hull_fc(), collection_name, 0, params)
+    # most recent image for this cell in the collection
+
     if latest_image is not None:
         storedlastObs = cell.latestObservation(collection_name)
-        if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
+        if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured:
+            #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
             
-            obs = models.Observation(parent=cell.key, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="latest")
+            obs = models.Observation(parent=cell.key, obs_type='LANDSAT',image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="LATEST")
             obs.put()
             if storedlastObs is None:
                 logging.debug('checkForNewObservationInCell FIRST observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
             else:
                 logging.debug('checkForNewObservationInCell NEW observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
-                
             return obs
         else:
             logging.debug('checkForNewObservationInCell no newer observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
@@ -147,40 +132,43 @@ def checkForNewObservationInCell(area, cell, collection_name):
         logging.error('checkForNewObservationInCell no matching image in collection %s %s %s %s', area.name, collection_name, cell.path, cell.row)
     return None
 
-'''
-getLatestLandsatImage(eeFeatureCollection, string as name of ee.imagecollection)
+#secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
 
-    returns the 'depth' latest image from the collection that overlaps the boundary coordinates.
-    Could also clip the image to the coordinates to reduce the size.
-    return type is ee.Image(). Some non-ee attributes are appended to the object.
-        capture_date, is a string rep of the system_date.
-'''
-secsperyear = 60 * 60 * 24 * 365 #  365 days * 24 hours * 60 mins * 60 secs
+def getLatestLandsatImage(overlapping_area, collection_name, latest_depth, params):
+    '''
+    getLatestLandsatImage(eeFeatureCollection, string as name of ee.imagecollection)
+    :param overlapping_area: an eeFeatureCollection
+    :param collection_name: an earth engine LANDSAT image collection
+    :latest_depth: - is the latest but depth. User zero for the most recent image, 1 for the image before that.
+    :params: A dictionary that may include include the path and row, or be empty.
+             If not provided, will return the latest of any overlapping image.
+             Otherwise, will only look for images with that path and row.
 
-def getLatestLandsatImage(park_boundary, collection_name, latest_depth, params):
-    #feat = boundary_hull_fc.buffer(0, 1e-10) # buffer will force polygon to be CCW so search intersects with interior.
-    #logging.info('feat %s', feat)
-    #boundary_feature = ee.Feature(feat, {'name': 'areaName', 'fill': 1})
-    #park_boundary = ee.FeatureCollection(boundary_feature)
-    
+    @returns the 'depth' latest image from the collection that overlaps the boundary coordinates as an ee.Image().
+
+    Some non-ee attributes are appended to the object:  capture_date, is a string rep of the system_date.
+
+    The function collects all images for the past 365 days, then filters by overlapping area and path anf row.
+    Ther results set is sorted by date and the depth result is returned.
+    '''
+
     end_date   = datetime.datetime.today()
-    start_date = end_date - datetime.timedelta(seconds = 1 * secsperyear/2 )
-    #logging.debug('getLatestLandsatImage() start:%s, end:%s ',start_date,  end_date)
-    #logging.debug('getLatestLandsatImage() park boundary as FC %s ',park_boundary)
+    start_date = end_date - datetime.timedelta(days=365)
+    logging.debug('getLatestLandsatImage() start:%s, end:%s', start_date,  end_date)
+    #logging.debug('getLatestLandsatImage() park boundary as FC %s ',overlapping_area)
 
     image_collection = ee.ImageCollection(collection_name)
 
-    if ('path' in params) and ('row' in params): 
-
+    filteredCollection = image_collection.filterDate(start_date, end_date).filterBounds(
+        overlapping_area)  # latest image from any cells that overlaps the area.
+    if ('path' in params):
         path = int(params['path'])
-        row = int(params['row'])
-        logging.debug("filter Landsat Collection by Path=%d Row=%d and date", path, row)
-        resultingCollection = image_collection.filterBounds(park_boundary).filterDate(start_date, end_date).filterMetadata('WRS_PATH', 'equals', path).filterMetadata('WRS_ROW', 'equals', row)#) #latest image form this cell.
-    else:
-        logging.debug("filter Landsat Collection by date and bounds only")
-        resultingCollection = image_collection.filterDate(start_date, end_date).filterBounds(park_boundary) # latest image from any cells that overlaps the area. 
-    
-    sortedCollection = resultingCollection.sort('system:time_start', False )
+        filteredCollection = filteredCollection.filterMetadata('WRS_PATH', 'equals', path)
+    if ('row' in params):
+        row= int(params['row'])
+        filteredCollection = filteredCollection.filterMetadata('WRS_ROW', 'equals', row)
+
+    sortedCollection = filteredCollection.sort('system:time_start', False)
     #logging.debug('sortedCollection: %s', sortedCollection)
     scenes = sortedCollection.getInfo()
 
@@ -214,17 +202,13 @@ def getLatestLandsatImage(park_boundary, collection_name, latest_depth, params):
     latest_image.name = iid
     latest_image.capture_date = date_str
     latest_image.system_time_start = system_time_start
-    
-    return latest_image  #.clip(park_boundary)
 
-
-
-'''
-getLandsatImageById(collection_name,image_id, algorithm )
-
-'''
+    return latest_image  #.clip(overlapping_area)
 
 def getLandsatImageById(collection_name,image_id, algorithm):
+    """
+    getLandsatImageById(collection_name,image_id, algorithm )
+    """
 
     image = ee.Image(image_id)
     props = image.getInfo()['properties'] #logging.info('image properties: %s', props)
@@ -346,13 +330,13 @@ def simpleCloudScoreOverlay():
 
 #simpleCloudScoreOverlay()
 
-'''
-getPriorLandsatOverlay(obs)
-#Based on https://ee-api.appspot.com/ ->Scripts -> Simple Cloud Score
-'''
+
 
 def getPriorLandsatOverlay(obs):
-
+    """
+    getPriorLandsatOverlay(obs)
+    #Based on https://ee-api.appspot.com/ ->Scripts -> Simple Cloud Score
+    """
     ref_image = ee.Image(obs.image_id)
     props = ref_image.getInfo()['properties'] #logging.info('image properties: %s', props)
     path = props['WRS_PATH']
@@ -429,57 +413,59 @@ def getPriorLandsatOverlay_oldalgorithm(obs):
 
 #B9_THRESHOLD = 4200 #originally  5200
 
-'''
-    SharpenLandsat7HSVUpres()
-    
-    Pan Sharpening is an image fusion method in which high-resolution panchromatic data is fused with lower resolution multispectral data 
-    to create a colorized high-resolution dataset. The resulting product should only serve as an aid to literal analysis and not for further spectral analysis
 
-    References: http://landsat.usgs.gov/panchromatic_image_sharpening.php
-                Javascript Example https://ee-api.appspot.com/b38107da4a6c487a706b860ec41d9dc9
-        
-'''
 def SharpenLandsat7HSVUpres(image):
-        
-        logging.debug ('SharpenLandsat7HSVUpres: image.getInfo() %s', image.getInfo())
-        # Grab a sample L7 image and pull out the RGB and pan bands
-        # in the range (0, 1).  (The range of the pan band values waschosen to roughly match the other bands.)
-        rgb = image.select(['B3', 'B2', 'B1']).unitScale(0, 255) #Select the visible red, green and blue bands. # was 30, 40 50 on old collection nanme
-        pan = image.select(['B8']).unitScale(0, 155) # was 80 on old colleciton name.
+    """
+        SharpenLandsat7HSVUpres()
 
-        #Convert to HSV, swap in the pan band, and convert back to RGB.
-        huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
-        upres = ee.Image.cat(huesat, pan).hsvtorgb()  
-        byteimage = upres.multiply(255).byte()
-        newImage = image.addBands(byteimage); #keep all the metadata of image, but add the new bands.
-        return(newImage)
+        Pan Sharpening is an image fusion method in which high-resolution panchromatic data is fused with lower resolution multispectral data
+        to create a colorized high-resolution dataset. The resulting product should only serve as an aid to literal analysis and not for further spectral analysis
+
+        References: http://landsat.usgs.gov/panchromatic_image_sharpening.php
+                    Javascript Example https://ee-api.appspot.com/b38107da4a6c487a706b860ec41d9dc9
+
+    """
+    logging.debug ('SharpenLandsat7HSVUpres: image.getInfo() %s', image.getInfo())
+    # Grab a sample L7 image and pull out the RGB and pan bands
+    # in the range (0, 1).  (The range of the pan band values waschosen to roughly match the other bands.)
+    rgb = image.select(['B3', 'B2', 'B1']).unitScale(0, 255) #Select the visible red, green and blue bands. # was 30, 40 50 on old collection nanme
+    pan = image.select(['B8']).unitScale(0, 155) # was 80 on old colleciton name.
+
+    #Convert to HSV, swap in the pan band, and convert back to RGB.
+    huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
+    upres = ee.Image.cat(huesat, pan).hsvtorgb()
+    byteimage = upres.multiply(255).byte()
+    newImage = image.addBands(byteimage); #keep all the metadata of image, but add the new bands.
+    return(newImage)
 
 def SharpenLandsat8HSVUpres(image):
-        #Convert to HSV, swap in the pan band, and convert back to RGB. 
-        #Javascript Example from https://ee-api.appspot.com/#5ea3dd541a2173702cfe6c7a88346475
-        #Pan sharpen Landsat 8
-        rgb = image.select("B4","B3","B2")
-        pan = image.select("B8")
-        huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
-        upres = ee.Image.cat(huesat, pan).hsvtorgb()  
-        byteimage = upres.multiply(255).byte()
-        newImage = image.addBands(byteimage); #keep all the metadata of image, but add the new bands.
-        return(newImage) 
+    #Convert to HSV, swap in the pan band, and convert back to RGB.
+    #Javascript Example from https://ee-api.appspot.com/#5ea3dd541a2173702cfe6c7a88346475
+    #Pan sharpen Landsat 8
+    rgb = image.select("B4","B3","B2")
+    pan = image.select("B8")
+    huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
+    upres = ee.Image.cat(huesat, pan).hsvtorgb()
+    byteimage = upres.multiply(255).byte()
+    newImage = image.addBands(byteimage); #keep all the metadata of image, but add the new bands.
+    return(newImage)
 
 
 ###################################
-# getPercentile(image, percentile, crs)
-#
-# Return the percentile values for each band in an image.
-# 
-# If percentile is passed as[5,95] then this will calculate the 5% and 95% values for each band in a Landsat image.
-# We use these to construct visualization parameters for displaying the image. Mainly interested in RGB but all bands are returned.
-#
-# Example on groups list: August 8, 2013
 #
 #===============================================================================
 
 def getPercentile(image, percentile, crs):
+    """
+    getPercentile(image, percentile, crs)
+
+    @returns the percentile values for each band in an image.
+
+    If percentile is passed as[5,95] then this will calculate the 5% and 95% values for each band in a Landsat image.
+    We use these to construct visualization parameters for displaying the image. Mainly interested in RGB but all bands are returned.
+
+    Example on groups list: August 8, 2013
+    """
     return image.reduceRegion(
         ee.Reducer.percentile(percentile), # reducer
         None, # geometry (Defaults to the footprint of the image's first band)
@@ -573,8 +559,9 @@ def getThumbnailPath(image): # Function Not Used.
         logging.info('thumbnail url: %s', thumbpath)
         return thumbpath
 
-# Get a download URL for a GeoTIFF overlay.
 def getOverlayPath(image, prefix, red, green, blue):
+    """ Get a download URL for a GeoTIFF overlay.
+    """
 
     crs = image.getInfo()['bands'][0]['crs']
     #imgbands = image.get('bands')
@@ -611,23 +598,24 @@ def getOverlayPath(image, prefix, red, green, blue):
     logging.info('getOverlayPath: %s',       path)
     return path
 
-'''
-visualizeImage()
-parameters:
-    collection_name - name of EE image collection LANDSAT/LC8_L1T_TOA or LANDSAT/LE7_L1T
-    image -  returned by ee.Image.
-    algorithm: - What visualisation of the image to return
-            'rgb' - visual
-            'ndvi' - NDVI
-    depth:
-        0 return the latest image in the collection 
-        1 return the image before that.
-        2 return the image before 1. 
 
-Returns an earth engine mapid that can be displayed on a google map with additional attributues from the ee.Image object:
-
-'''
 def visualizeImage(collection_name, image, algorithm):
+    """
+    visualizeImage()
+    parameters:
+        collection_name - name of EE image collection LANDSAT/LC8_L1T_TOA or LANDSAT/LE7_L1T
+        image -  returned by ee.Image.
+        algorithm: - What visualisation of the image to return
+                'rgb' - visual
+                'ndvi' - NDVI
+        depth:
+            0 return the latest image in the collection
+            1 return the image before that.
+            2 return the image before 1.
+
+    Returns an earth engine mapid that can be displayed on a google map with additional attributues from the ee.Image object:
+
+    """
     if algorithm is None:
         algorithm = 'rgb'
     if collection_name == 'LANDSAT/LC8_L1T_TOA' :
@@ -674,6 +662,8 @@ def visualizeImage(collection_name, image, algorithm):
         elif algorithm.lower() == 'ndvi':
             print "l7 ndvi not implemented"
             return None
+    else:
+        logging.error("visualizeImage(): unknown collection %s", collection_name)
 
 
 def getLandsatOverlay(boundary_fc, satellite, algorithm, depth, params):
@@ -693,16 +683,17 @@ def getLandsatOverlay(boundary_fc, satellite, algorithm, depth, params):
     return visualizeImage(collection_name, image, algorithm)
 
         
-'''
-getPathRow returns max or min value of the sort_property in a collection.
-#FIXME - THis has a bug. It is not returning the expected values. However, I am no longer using it. So low priority.
-Example:
-    max_path = getPathRow(boundCollection,"WRS_PATH", False)
-    min_path = getPathRow(boundCollection,"WRS_PATH", True)
-    max_row  = getPathRow(boundCollection,"WRS_ROW", False)
-    min_row  = getPathRow(boundCollection,"WRS_ROW", True)
-'''
+
 def getPathRow(collection, sort_property, ascending):
+    """
+    getPathRow returns max or min value of the sort_property in a collection.
+    #FIXME - THis has a bug. It is not returning the expected values. However, I am no longer using it. So low priority.
+    Example:
+        max_path = getPathRow(boundCollection,"WRS_PATH", False)
+        min_path = getPathRow(boundCollection,"WRS_PATH", True)
+        max_row  = getPathRow(boundCollection,"WRS_ROW", False)
+        min_row  = getPathRow(boundCollection,"WRS_ROW", True)
+    """
     limited_collection_info = (collection.limit(1, sort_property, ascending).getInfo())        
     try:
         max_prop = limited_collection_info['features'][0]['properties'][sort_property]
@@ -711,36 +702,36 @@ def getPathRow(collection, sort_property, ascending):
         logging.error('getPathRow(): Index Exception %s %s', sort_property, ascending)
         return -1
 
-#determine the overlapping cells from the image collection returned and store them in area.cells.
-'''
-getLandsatCells() is given an AreaOfInterest and returns a list of overlapping cells (Landsat Swathes).
 
-  parameters: area, and AreaOfInterest.
-  
-  Normally, this function is only called once for an area whe it does not have any cells in its cellList.
-  Otherwise, duplicate cells may be created.
-  
-  The function first extracts its boundary.
-  
-  Then it calls earth engine to generate a collection of L7 images from the last 2 years.
-  It queries the collection for the images with the min and max paths and min and max row. This includes cells that don't overlap the area.
-  It then loops through each path and row within these bounds to check for an image with that path row combination.
-  If found, then the path/row cell overlaps the area and is added to the cells list.
-  It returns the cell list as well as setting the max and min coordinates.
-  If there has never been an image collected in 2 years, then that cell will be missing.
-  
-  Once the intersecting path/rows are collected, the function loops through each overlapping given path/row
-      it gets an image. 
-       then calculate the intersection of the cell with the area's boundary.
-       if percentage is min threshold (say 50% of image area) then default-select the cell.
-       if percentage is below then deselect cell from auto-monitoring.
-       Lastly find any area that is not intersected by any selected cell and find a cell that intersects it.
-
-    @TODO: Could add the latest observation here. First sort in reverse date order.#obs = image_info['properties']['system_date']
-    @TODO: There is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query. 
-'''
 def getLandsatCells(area):
-    
+    """
+    getLandsatCells() is given an AreaOfInterest and returns a list of overlapping cells (Landsat Swathes).
+    from the image collection returned and stores them in area.cells.
+
+    @parameters: area: and AreaOfInterest.
+
+      Normally, this function is only called once for an area whe it does not have any cells in its cellList.
+      Otherwise, duplicate cells may be created.
+
+      The function first extracts its boundary.
+
+      Then it calls earth engine to generate a collection of L7 images from the last 2 years.
+      It queries the collection for the images with the min and max paths and min and max row. This includes cells that don't overlap the area.
+      It then loops through each path and row within these bounds to check for an image with that path row combination.
+      If found, then the path/row cell overlaps the area and is added to the cells list.
+      It returns the cell list as well as setting the max and min coordinates.
+      If there has never been an image collected in 2 years, then that cell will be missing.
+
+      Once the intersecting path/rows are collected, the function loops through each overlapping given path/row
+          it gets an image.
+           then calculate the intersection of the cell with the area's boundary.
+           if percentage is min threshold (say 50% of image area) then default-select the cell.
+           if percentage is below then deselect cell from auto-monitoring.
+           Lastly find any area that is not intersected by any selected cell and find a cell that intersects it.
+
+        @TODO: Could add the latest observation here. First sort in reverse date order.#obs = image_info['properties']['system_date']
+        @TODO: There is a more efficient way of getting the list of overlapping cells for an area - with a get distinct query.
+    """
     # Test if area already has cellList
     if len(area.cells) != 0 :
         logging.error("getLandsatCells() - deleting area's existing list of %s cells", area.cells)
@@ -845,10 +836,50 @@ def getLandsatCells(area):
     db.run_in_transaction(txn_saveCellList, cellList, area)
 
 
-    cache.flush() # FIXME: get user to call cache.set(area, cells)
     return True
 
 
+def list_exports():
+    """
+    Returns a html formatted string:
+          ee.batch.Task.list() returns a dictionary describing the current status of the task as it appears on
+          the EE server. Includes the following fields:
+          - state: One of the values in Task.State.
+          - creation_timestamp_ms: The Unix timestamp of when the task was created.
+          - update_timestamp_ms: The Unix timestamp of when the task last changed.
+          - output_url: URL of the output. Appears only if state is COMPLETED.
+          - error_message: Failure reason. Appears only if state is FAILED.
+          May also include other fields.
+    """
+
+    if not initEarthEngineService():
+        return logging.error('Earth Engine Credentials Error')
+    listing = "<h2>Earth Engine Export Tasks</h2><br/>"
+    tasks = ee.batch.Task.list()
+
+    for t in tasks:
+        result = t.status()
+        listing += result['id'] + ' : ' +  result['state'] + ' : '   + result['description']
+        try:
+            listing += 'ts:' + result['update_timestamp_ms']
+        except:
+            pass
+
+        if result['state'] == 'COMPLETED':
+            try:
+                for url in result['output_url']:
+                    listing += ' <a href="' + url + '" target="#_blank">' + result['id'] + '</a>'
+            except KeyError:
+                pass
+        if result['state'] == 'FAILED':
+            try:
+                for error in result['error_message']:
+                    listing += error
+            except KeyError:
+                pass
+        listing += '<br>'
+
+    return listing
 
 
 ################# EOF ############################################

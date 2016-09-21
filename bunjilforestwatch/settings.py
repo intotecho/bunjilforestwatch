@@ -278,3 +278,8 @@ import warnings
 #with warnings.catch_warnings(): # doesn't work
 #    warnings.filterwarnings("ignore",category=DeprecationWarning)
 #    import md5, sha, webob
+
+MAX_CASES = 10 # Per cluster event
+
+MAX_CLUSTER_AREA = 100 #Ha If cluster is bigger, split into separate cases.
+

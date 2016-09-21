@@ -154,7 +154,7 @@ def handleCheckForGladAlertsInArea(handler, area, noupdate=None):
     Checks GFW GLAD API for new alerts in area for new period.
     Updates area with fusion table and new date.
     Calls alerts2cluster
-    @params noupdate: If set, function does not update area.last_alerts_date to today
+    @params noupdate: If set, function does not update area.last_glad_alerts_date to today
     @returns a string which may be an error message.
     """
 
@@ -167,18 +167,26 @@ def handleCheckForGladAlertsInArea(handler, area, noupdate=None):
 
     today_dt = datetime.datetime.today()
     today_str = today_dt.strftime('%Y-%m-%d')  #today_str = '2016-05-18'
+    since_date = None
 
-    if area.last_alerts_date <> None:
-        since_date = area.last_alerts_date.strftime('%Y-%m-%d')
-    else:
+    try:
+        if area.last_glad_alerts_date:
+            since_date = area.last_glad_alerts_date.strftime('%Y-%m-%d')
+            logging.debug('handleCheckForGladAlertsInArea() since date %s', since_date)
+    except (ValueError) as e:
+        logging.error('handleCheckForGladAlertsInArea() error in last_glad_alerts_date  format %s', area.last_glad_alerts_date)
+        pass
+
+    if since_date == None:
+        logging.info('handleCheckForGladAlertsInArea() New Area! Computing alerts starting from %s.', since_date)
         since_date_dt = today_dt - datetime.timedelta(days=30) # no alerts have been collected yet. So collect last 30 days.
         since_date = since_date_dt.strftime('%Y-%m-%d')
+    since_date = '2016-05-05'  # HACK
 
     # call the API
     table_name = area.name + "-" + since_date + "-" + today_str
     parent_id = area.folder()
     try:
-        #alerts_result, ft, count
         resp = getAlerts('glad-alerts', geom, table_name, since_date, today_str, 'csv', parent_id)
     except TypeError, e:
         handler.response.set_status(500)
@@ -189,7 +197,7 @@ def handleCheckForGladAlertsInArea(handler, area, noupdate=None):
         if resp['download_response'].status_code == 200:
             if resp['fusiontable'] and resp['count'] > 0:
                 if not noupdate:
-                    area.last_alerts_date = today_dt
+                    area.last_glad_alerts_date = today_dt
                 else:
                     logging.info('Noupdate requested - not updating last_alerts_date')
 
@@ -201,10 +209,11 @@ def handleCheckForGladAlertsInArea(handler, area, noupdate=None):
                 """
                 Cluster the Alerts
                 """
-                msg += alerts2Clusters(area, True)
-                return msg
+                result = alerts2Clusters(area, True)
+                print result
+                return msg + ' - ' + result
             else:
-                area.last_alerts_date = today_dt
+                area.last_glad_alerts_date = today_dt
                 area.put()
                 msg += "No Alerts returned."
             return msg
@@ -280,7 +289,7 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, pare
         'msg': "OK"
     }
     if since_date == to_date:
-        resp['msg'] = 'getAlerts: SKIPPING - since_date and to_date are the same %s' %to_date
+        resp['msg'] = 'getAlerts: SKIPPING - since_date and to_date are the same %s' %table_name
         resp['status'] = 400
         logging.warning(resp['msg'])
         return resp
@@ -299,6 +308,7 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, pare
                                 deadline=15,
                                 payload=request_payload
                                 )
+        logging.debug('getAlerts() fetch url: %s', url)
 
         if resp['geturl_response'].status_code == 200:
             logging.debug('getAlerts: getdownload url OK')
@@ -323,17 +333,18 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, pare
                 logging.error(resp['msg'])
                 return resp
 
-            #logging.debug('getAlerts: download url: %s', download_url)
+            logging.debug('getAlerts() download url: %s', download_url)
             try:
                 resp['download_response'] = urlfetch.fetch(download_url,
                                 method='GET',
                                 deadline=60
                                 )
                 try:
-                    logging.debug('resp.download_response: %s ', resp['download_response'].status_code)
+                    logging.debug('getAlerts() download_response: %s for %s', resp['download_response'].status_code, table_name)
 
                     if resp['download_response'].status_code == 200:
-                        #print 'resp['download_response']: ', resp['download_response']
+                        #print 'resp[download_response]: \n'
+                        #print resp['download_response'].content
                         if format == 'csv':
                             resp['fusiontable'], resp['count'] = handleAlertDataCSV(table_name, parent_id, since_date, to_date, resp['download_response'].content)
                             #return resp['download_response'], ft, count
@@ -386,8 +397,12 @@ def getAlerts(alert_type, polygon, table_name, since_date, to_date, format, pare
 
         #logging.error("Download URL returned error: %s" %(resp['download_response'].status_code))
         #return {'content': 'Download URL returned error', 'status_code': resp['download_response'].status_code}, None, 0
-        resp['msg'] = 'Download URL returned error: %s' %(resp['download_response'].status_code)
-        resp['status'] = resp['download_response'].status_code
+        if resp['download_response']:
+            resp['msg'] = 'Download URL returned error: %s' %(resp['download_response'].status_code)
+            resp['status'] = resp['download_response'].status_code
+        else:
+            resp['msg'] = 'No response'
+            resp['status'] = 503
         logging.error(resp['msg'])
         return resp
 
@@ -515,7 +530,6 @@ def alerts2Clusters(area, create_task=True):
 
     #hulls = clusters.map(lambda f: f.convexHull(10)) # not using convex Hulls.
 
-
     """
     Join Cluster Feature Collection with List of Points
     """
@@ -545,7 +559,7 @@ def alerts2Clusters(area, create_task=True):
         selectors=['AlertsInCluster']
     )
 
-    since_date = area.last_alerts_date.strftime('%Y-%m-%d')
+    since_date = area.last_glad_alerts_date.strftime('%Y-%m-%d')
 
     today_dt = datetime.datetime.today()
     today_str = today_dt.strftime('%Y-%m-%d')  #today_str = '2016-05-18'
@@ -557,7 +571,7 @@ def alerts2Clusters(area, create_task=True):
     if since_date:
         filename += "Since_" + since_date
 
-    clusterProperties = {
+    clusterProperties_dict = {
         'name': 'gladclusters',
         'filename': filename,
         'epsilon': eps,
@@ -566,58 +580,90 @@ def alerts2Clusters(area, create_task=True):
         'since_date': since_date,
         'clustered_date': today_str,
         'alerts_date': latest_date_iso, #iso format
-        'num_alerts:': latest_alerts,  # Alerts with Latest Date only
         'num_clusters': num_clusters,
         'distinct_dates': date_count,
         'num_alerts_alldates': num_alerts,
         'most_alerts_in_cluster': most_populous_cluster.get('max').getInfo()
+        # More properties are added below
     }
-
-    """
-    clustersWithPoints = clustersWithPoints.set('name', 'gladclusters',
-        'epsilon', eps,
-        'area', area.name,
-        'ft', 'https://www.google.com/fusiontables/DataSource?docid=' + ft,
-        'since_date', since_date,
-        'clustered_date', today_str,
-        'alerts_date', latest_date_iso, #iso format
-        'num_alerts:', latest_alerts,  # Alerts with Latest Date only
-        'num_clusters', num_clusters,
-        'distinct_dates', date_count,
-        'num_alerts_alldates', num_alerts,
-        'most_alerts_in_cluster', most_populous_cluster.get('max').getInfo()
-    )
-    """
-    clustersWithPoints = clustersWithPoints.set(clusterProperties)
 
     clustersWithPoints = clustersWithPoints.map(
         lambda f:f.set('points', ee.Algorithms.GeometryConstructors.MultiPoint(
             ee.List(ee.Feature(f).get('points')).map(lambda p : ee.Feature(p).geometry()))))
 
-    print clustersWithPoints.propertyNames().getInfo()
+    list = ee.List([])
+    image_collection = ee.ImageCollection('LANDSAT/LC8_L1T_TOA').filterDate('2016-04-01', '2016-11-09')
 
+    clustersWithPoints = clustersWithPoints.map(
+        lambda f: f.set({'image_collection' : image_collection.get('link'),
+                        'LANDSAT_Latest': image_collection\
+                .filterBounds(ee.Feature(f).geometry()).limit(2, 'system:time_start', False)\
+                .iterate(addToList, list)
+                    }))
+    '''
+    clustersWithPoints = clustersWithPoints.map(
+        lambda f:f.set({'LANDSAT_Latest': image_collection
+                .filterBounds(ee.Feature(f).geometry()).limit(2, 'system:time_start', False)
+                .iterate(
+                    lambda image, list: (ee.List(list).add(list, ee.Dictionary({
+                            'image_id':     image.id(),
+                            'collection':   image_collection.get('link'),
+                            'path':         image.get('WRS_PATH'),
+                            'row':          image.get('WRS_ROW'),
+                            'captured':     image.get('system:time_start')
+                            })))
+            , list)
+                    }))
 
-    task = ee.batch.Export.table.toDrive(clustersWithPoints, description=area.name + ' Clusters',
+    '''
+    clusterProperties_dict['LANDSAT_Latest'] = clustersWithPoints.get('LANDSAT_Latest')
+    clusterProperties_dict['image_collection'] = clustersWithPoints.get('image_collection')
+    c = clustersWithPoints.getInfo()
+    print c
+
+    dt = datetime.datetime.now()
+    taskName = dt.strftime(filename + "_Exported_%a%Y%b%d_%H%M")
+
+    task = ee.batch.Export.table.toDrive(clustersWithPoints, description=taskName,
                                          folder=foldername, fileNamePrefix=filename, fileFormat='geoJSON')
-    """@change drive to cloud?
-        task = ee.batch.Export.table.toCloudStorage({
-            'collection': test_fc,
-            'description': 'clustersWithPoints',
-            'bucket': 'bfw-ee-cluster-tables',
-            'fileNamePrefix': 'cluster_with_alert_points ',
-            'fileFormat': 'KML'
-        })
-    """
+    '''
+    ctask = ee.batch.Export.table.toCloudStorage
+            collection=clustersWithPoints,
+            description=taskName,
+            bucket='bfw-ee-cluster-tables',
+            fileNamePrefix=filename,
+            fileFormat='geoJSON'
+        )
+    '''
     task.start()
+    #ctask.start()
 
     if create_task:
         #wait for export to finish then create a task.
-        deferred.defer(check_export_status, task.id, clusterProperties, _countdown=10, _queue="export-check-queue")
+        deferred.defer(check_export_status, task.id, clusterProperties_dict, _countdown=10, _queue="export-check-queue")
         logging.info("Started task to export GLAD Cluster")
     return "Exporting alerts to GLAD Cluster"
 
 
+def addToList(image, images):
+    return ee.List(images).add(ee.Dictionary({
+        'image_id': image.id(),
+        'path': image.get('WRS_PATH'),
+        'row': image.get('WRS_ROW'),
+        'captured': image.get('system:time_start')
+    }))
+
+
 def check_export_status(task_id, clusterProperties):
+    """
+    Waits for task to finish then creates an observation linking clusterProperties with the cluster fiel
+    Args:
+        task_id:
+        clusterProperties:
+
+    Returns:
+
+    """
     logging.debug("check_export_status() for area %s task %s", clusterProperties['area'], task_id)
     # Do your work here
     try:
@@ -644,6 +690,8 @@ def check_export_status(task_id, clusterProperties):
                 area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
                 if area_followers:
                     models.ObservationTask.createObsTask(area, new_observations, "GLADCLUSTER", area_followers.users)
+            else:
+                pass
         except Exception as e:
             msg = "Exception creating GLAD ObservationTask {0!s}".format(e)
             logging.error(msg)
@@ -688,6 +736,9 @@ def handleAlerts2Clusters(handler, area_name):
 def handleCheckForGladAlertsInAllAreas(handler):
     handler.response.set_status(500)
     return handler.response.write('handleCheckForGladAlertsInAllAreas() Not implemented!')
+
+
+
 
 
 def testupdate(tableid):
@@ -783,7 +834,6 @@ def forestchange_stats(testfeature):
         'percent_loss': percent_loss,
     }
     return results
-
 
 def testupdate(tableid):
     """
