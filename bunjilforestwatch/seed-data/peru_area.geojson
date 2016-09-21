@@ -1,0 +1,95 @@
+{
+  "type": "FeatureCollection",
+  "properties": {
+    "area_url": "/area/Peru%20Seed",
+    "fill-opacity": 0.5,
+    "area_name": "Peru Seed",
+    "area_description": {
+      "wiki": "",
+      "threats": "",
+      "description": "",
+      "description_how": "",
+      "description_who": "",
+      "description_why": ""
+    },
+    "stroke": "#550055",
+    "owner": "zak",
+    "stroke-width": 2,
+    "fill": "#550055",
+    "stroke-opacity": 1,
+    "area": "Peru Seed",
+    "folder_id": "0B-lTullYuWZ_OEt2ZjhaSXVzYTA",
+    "fusion_table": {
+      "ft_docid": ""
+    },
+    "shared": "public"
+  },
+  "features": [
+    {
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.85098266601562,
+          -6.751896464843362
+        ]
+      },
+      "type": "Feature",
+      "properties": {
+        "name": "mapview",
+        "zoom": 11
+      }
+    },
+    {
+      "geometry": {
+        "type": "Point",
+      "coordinates": [
+          -75.85098266601562,
+          -6.751896464843362
+        ]
+      },
+      "type": "Feature",
+      "properties": {
+        "name": "area_location",
+        "descr": "user specified center location of area"
+      }
+    },
+    {
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -76.1187744140625,
+              -6.5391025879031535
+            ],
+            [
+              -75.76171875,
+              -6.48452534126518
+            ],
+            [
+              -75.574951171875,
+              -6.959144154386019
+            ],
+            [
+              -75.948486328125,
+              -7.100892668623642
+            ],
+            [
+              -76.1187744140625,
+              -6.5391025879031535
+            ]
+          ]
+        ]
+      },
+      "type": "Feature",
+      "properties": {
+        "name": "boundary_hull",
+        "stroke-opacity": 1,
+        "fill-opacity": 0.5,
+        "stroke": "#555555",
+        "stroke-width": 2,
+        "fill": "#555555"
+      }
+    }
+  ]
+}

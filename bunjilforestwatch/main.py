@@ -16,6 +16,10 @@ import os
 
 from google.appengine.ext import ndb
 
+import glad_data_seeder
+from observation_task_routers.dummy_router import DummyRouter
+from observation_task_routers.simple_router import SimpleRouter
+
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
 
@@ -49,6 +53,7 @@ import re
 import geojson
 import bleach
 import apiservices
+from observation_task_routers import *
 
 from google.appengine.api import files
 from google.appengine.api import taskqueue
@@ -1958,17 +1963,15 @@ class UpdateOverlayAjaxHandler(BaseHandler):
 
 
 '''
-ObservationTaskHandler() when a user clicks on a link in an obstask email they come here to see the new image.
+    Legacy: Old_ObservationTaskHandler() when a user clicks on a link in an obstask email they come here to see the new image.
 '''
-
-
-class ObservationTaskAjaxHandler(BaseHandler):
+class Old_ObservationTaskAjaxHandler(BaseHandler):
     def get(self, task_id):
 
-        obstask = models.ObservationTask.get_by_id(long(task_id))
+        obstask = models.Old_ObservationTask.get_by_id(long(task_id))
         if obstask is None:
-            self.add_message('danger', "Task not found. ObservationTaskHandler")
-            resultstr = "Task not found. ObservationTaskHandler: key {0!s}".format(task_id)
+            self.add_message('danger', "Task not found. Old_ObservationTaskAjaxHandler")
+            resultstr = "Task not found. Old_ObservationTaskAjaxHandler: key {0!s}".format(task_id)
             logging.error(resultstr)
             return self.response.write(resultstr)
 
@@ -1995,8 +1998,8 @@ class ObservationTaskAjaxHandler(BaseHandler):
 
         area = obstask.aoi.get()
         if area is None:
-            self.add_message('danger', "ObservationTaskHandler: Task for deleted area. ")
-            resultstr = "Task's area not found. ObservationTaskHandler: key {0!s}".format(task_id)
+            self.add_message('danger', "Old_ObservationTaskAjaxHandler: Task for deleted area. ")
+            resultstr = "Task's area not found. Old_ObservationTaskAjaxHandler: key {0!s}".format(task_id)
             logging.error(resultstr)
             return self.response.write(resultstr)
 
@@ -2035,7 +2038,87 @@ class ObservationTaskAjaxHandler(BaseHandler):
         })
 
 
+class ObservationTaskHandler(BaseHandler):
+    def get(self, router_name='DUMMY'):
 
+        try:
+            username = self.session['user']['name']
+            user = cache.get_user(username)
+            if not user:
+                raise KeyError
+                # TODO: use proper page redirects and redirect to login page.
+
+        except KeyError:
+            return self.response.write('You must be logged in!')
+
+        router = None
+        if router_name == 'DUMMY':
+            router = DummyRouter()
+        elif router_name == 'SIMPLE':
+            router = SimpleRouter()
+        else:
+            result_str = "Specified router not found"
+            logging.error(result_str)
+            result_str = "Specified router not found"
+            logging.error(result_str)
+            return self.response.write(result_str)
+
+        result = router.get_next_observation_task(user)
+        self.response.write(result.to_JSON())
+
+    def post(self):
+        """
+            Accepts an observation task response
+            
+            Example request body
+            {
+                "vote_category": "FIRE",
+                "case_id": 4573418615734272
+            }
+        :return:
+        """
+        try:
+            username = self.session['user']['name']
+            user = cache.get_user(username)
+            if not user:
+                raise KeyError
+
+        except KeyError:
+            self.response.set_status(401)
+            return
+
+        observation_task_response = json.loads(self.request.body)
+        # TODO: use a json encoder and us a Decoding Error for the validation
+        if observation_task_response['vote_category'] is not None:
+            if observation_task_response['case_id'] is not None:
+                # TODO: consider moving this check down into a JSON decoding function or BLL module
+                if observation_task_response['vote_category'] in models.VOTE_CATEGORIES:
+                    case = models.Case.get_by_id(id=observation_task_response['case_id'])
+                    if case is None:
+                        # TODO: consider moving this check down into a BLL module
+                        self.response.set_status(404)
+                        return
+
+                    # Check if user has already completed task
+                    if models.ObservationTaskResponse \
+                        .query(models.ObservationTaskResponse.userid == user.key,
+                               models.ObservationTaskResponse.case == case.key).fetch():
+                        self.response.set_status(400)
+                        return
+
+                    observation_task_entity = models.ObservationTaskResponse(userid=user.key,
+                                                                             case=case.key,
+                                                                             vote_category=
+                                                                             observation_task_response['vote_category'],
+                                                                             case_response=
+                                                                             observation_task_response)
+                    observation_task_entity.put()
+
+                    self.response.set_status(201)
+                    return
+
+        self.reponse.set_status(400)
+        return
 
 
 def checkForNewInArea(area):
@@ -2075,7 +2158,7 @@ def checkForNewInArea(area):
 
         # send each follower of this area an email with reference to a task.
         if new_observations:
-            linestr += models.ObservationTask.createObsTask(area, new_observations, "LANDSATIMAGE", area_followers.users)
+            linestr += models.Old_ObservationTask.createObsTask(area, new_observations, "LANDSATIMAGE", area_followers.users)
         else:
             linestr += u"<ul><li>No new observations found.</li></ul>"
     else:
@@ -2202,6 +2285,29 @@ class DistributeGladClusters(BaseHandler):
         return gladalerts.distributeGladClusters(self, area_name)
 
 
+class SeedGladClusterData(BaseHandler):
+
+    def get(self):
+
+        try:
+            username = self.session['user']['name']
+            user = cache.get_user(username)
+            if not user:
+                raise KeyError
+
+        except KeyError:
+            # TODO: use proper page redirects and redirect to login page.
+            return self.response.write('You must be logged in as an administrator to seed glad cluster / case data')
+
+        success, message = glad_data_seeder.seed_data(user)
+        if success:
+            self.response.set_status(200)
+        else:
+            self.response.set_status(400)
+
+        return self.response.write(message)
+
+
 '''
 DistributeGladClusters() takes a GLAD-ALERT cluster and sends it to volunteers as tasks
 '''
@@ -2235,7 +2341,7 @@ class MailTestHandler(BaseHandler):
         #         username = "myotheremail@gmail.com"
 
         user = cache.get_user(self.session['user']['name'])
-        tasks = models.ObservationTask.query().order(-models.ObservationTask.created_date).fetch(2)
+        tasks = models.Old_ObservationTask.query().order(-models.Old_ObservationTask.created_date).fetch(2)
         # mailer.new_image_email(user)
         if not tasks:
             return self.handle_error("No tasks to test mailer")
@@ -2320,7 +2426,7 @@ class ViewObservationTasksHandler(BaseHandler):
         else:
             logging.debug('ViewObservationTasks: user:%s, area:%s, page:%d', user2view, area_name,
                           page)  # Move here to XSS sanitise user2view
-            pages = len(tasks) / models.ObservationTask.OBSTASKS_PER_PAGE
+            pages = len(tasks) / models.Old_ObservationTask.OBSTASKS_PER_PAGE
             if pages < 1:
                 pages = 1
 
@@ -3590,6 +3696,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/admin/exports', handler=ListExportTasks, name='list-exports-tasks'),
     webapp2.Route(r'/admin/test/<test_name>/<area_name>', handler=RunAreaTest, name='area-test'),
 
+    webapp2.Route(r'/admin/alerts/glad/seed', handler=SeedGladClusterData),
     webapp2.Route(r'/admin/alerts/glad/checknew', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
     webapp2.Route(r'/admin/alerts/glad/checknew/<noupdate>', handler=CheckForGladAlertsInAllAreasHandler, name='alerts-glad-all'),
     webapp2.Route(r'/admin/alerts/glad/<area_name>', handler=CheckForGladAlertsInAreaHandler, name='alerts-glad-area'),
@@ -3631,13 +3738,17 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/area/<area_name>/action/<action>/<satelite>/<algorithm>/<latest>/<path:\d+>/<row:\d+>',
                     handler=LandsatOverlayRequestHandler, name='new-landsat-overlay'),
 
+    webapp2.Route(r'/observation-task/<router_name>/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
+    webapp2.Route(r'/observation-task/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
+    webapp2.Route(r'/observation-task/response', handler=ObservationTaskHandler, name="next-task", methods=['POST']),
+
     # observation tasks see also admin/obs/list
     webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
                   name='view-obstasks'),
     webapp2.Route(r'/obs/overlay/create/<obskey_encoded>/<role>/<algorithm>', handler=CreateOverlayHandler,
                   name='create-overlay'),
     webapp2.Route(r'/obs/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
-    webapp2.Route(r'/obs/<task_id>', handler=ObservationTaskAjaxHandler, name='view-obstask'),
+    webapp2.Route(r'/obs/<task_id>', handler=Old_ObservationTaskAjaxHandler, name='view-obstask'),
 
 
     webapp2.Route(r'/overlay/<landsat_id>/<role>/<algorithm>', handler=ImageOverlayHandler,
@@ -3670,6 +3781,8 @@ RESERVED_NAMES = set([
     'about',
     'assets',
     'myareas',
+    'observation-task',
+    'next',
     'account',
     'activity',
     'area',

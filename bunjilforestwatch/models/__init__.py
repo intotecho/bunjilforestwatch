@@ -852,6 +852,19 @@ class AreaOfInterest(ndb.Model):
         except ee.EEException:
             return None, 500, "EEException creating FeatureCollection"
 
+    @staticmethod
+    def get_area_name_by_cluster_id(cluster_id):
+        query1 = AreaOfInterest.query(AreaOfInterest.glad_monitored == True)
+        data = None
+        for area in query1:
+            if area.get_gladcluster() == cluster_id:
+                data = area.name
+        if data is None:
+            logging.error("get_area() no area found for %s", cluster_id)
+            return None
+        return data
+
+
     '''
     def getBoundary(self, geojsonBoundary):
         """
@@ -1292,6 +1305,8 @@ Each task has a unique ID.
 '''
 
 class ObservationTask(ndb.Model):
+
+    #class Old_ObservationTask(ndb.Model):
     OBSTASKS_PER_PAGE = 5
     # Observation
     name = ndb.StringProperty()
@@ -1362,8 +1377,8 @@ class ObservationTask(ndb.Model):
             area_followers = AreaFollowersIndex.get_by_id(area.name, parent=area.key)
 
         # send each follower of this area an email with reference to a task.
-        new_task = ObservationTask(aoi=area.key, tasktype=type, observations=new_observations, aoi_owner=area.owner,
-                                          share=area.share, status="open")  # always select the first follower.
+        new_task = Old_ObservationTask(aoi=area.key, tasktype=type, observations=new_observations, aoi_owner=area.owner,
+                                       share=area.share, status="open")  # always select the first follower.
         priority = 0
         for user_key in area_followers: # area_followers.users:
             user = cache.get_user(user_key)
@@ -1766,3 +1781,67 @@ class BlogEntry(ndb.Model):
 
 class Config(ndb.Expando):
     pass
+
+
+class GladCluster(ndb.Model):
+    """
+    """
+    area = ndb.KeyProperty(kind=AreaOfInterest)  # key to the GladCluster that created the case.
+    first_alert_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
+    geojson = ndb.PickleProperty(required=True, indexed=False)
+
+    @staticmethod
+    def get_glad_clusters_for_area(area):
+        return GladCluster.query(GladCluster.area == area.key).fetch()
+
+FIRE = 'FIRE'
+DEFORESTATION = 'DEFORESTATION'
+AGRICULTURE = 'AGRICULTURE'
+ROAD = 'ROAD'
+UNSURE = 'UNSURE'
+
+VOTE_CATEGORIES = [
+    FIRE,
+    DEFORESTATION,
+    AGRICULTURE,
+    ROAD,
+    UNSURE
+]
+
+
+class CaseVotes(ndb.Model):
+    """
+    Stores the number of votes made for each vote category within a given case
+    """
+    fire = ndb.IntegerProperty(indexed=False, default=0)
+    deforestation = ndb.IntegerProperty(indexed=False, default=0)
+    agriculture = ndb.IntegerProperty(indexed=False, default=0)
+    road = ndb.IntegerProperty(indexed=False, default=0)
+    unsure = ndb.IntegerProperty(indexed=False, default=0)
+
+
+class Case(ndb.Model):
+    """
+    """
+
+    glad_cluster = ndb.KeyProperty(kind=GladCluster)  # key to the GladCluster that created the case.
+    status = ndb.StringProperty(required=True, indexed=True, default="OPEN")
+    creation_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
+
+    votes = ndb.StructuredProperty(CaseVotes, default=CaseVotes())
+    confidence = ndb.IntegerProperty(indexed=False, default=0)
+
+    @staticmethod
+    def get_cases_for_glad_cluster(glad_cluster):
+        return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
+
+
+class ObservationTaskResponse(ndb.Model):
+    """
+    """
+    date_completed = ndb.DateTimeProperty(auto_now_add=True)
+    userid = ndb.KeyProperty(kind=User)  # TODO: consider making this a key property to userid
+    case = ndb.KeyProperty(kind=Case)  # TODO: consider using key reference to case instead
+    case_response = ndb.PickleProperty(required=True)
+    vote_category = ndb.StringProperty(required=True)
+
