@@ -1,5 +1,5 @@
+.DS_Store
 secrets.py
-package.json
 Makefile
 */.jshintrc
 */.pylintrc
@@ -83,7 +83,8 @@ bunjilforestwatch/lib/oauth2client/
 bunjilforestwatch/lib/six.py
 bunjilforestwatch/lib/Crypto/
 
-
+bunjilforestwatch/node_modules/
+bunjilforestwatch/assets/bundles/
 
 bunjilforestwatch/gfw/*
 bunjilforestwatch/notused/*

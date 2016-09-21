@@ -10,18 +10,24 @@ builtins:
 - deferred: on
 - remote_api: off
 
-
 skip_files:
 - ^(.*/)?#.*#$
 - ^(.*/)?.*~$
 - ^(.*/)?.*\.py[co]$
 - ^(.*/)?.*/RCS/.*$
 - ^(.*/)?\..*$
+- ^(.*/)?\.bak$
 - ^(.*/)?.*/notused/.*$
 - ^(.*/)?.*/build/.*$
 - ^(.*/)?.*/source/.*$
 - ^(.*/)?.*\.db$
 - ^(.*/)?.*\.dist-info$
+- ^(.*/)?node_modules/.*$
+- ^(.*/)?assets/js/.*$
+- ^(.*/)?assets/stylesheets/.*$
+- ^(.*/)?webpack.config\.js
+- ^(.*/)?webpack-stats\.json
+- ^(.*/)?package\.json
 
 libraries:
 - name: jinja2
@@ -45,6 +51,9 @@ inbound_services:
 - warmup
 
 handlers:
+- url: /assets
+  static_dir: assets
+
 - url: /favicon.ico
   static_files: static/images/favicon.ico
   upload: static/images/favicon.ico

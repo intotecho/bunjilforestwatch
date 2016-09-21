@@ -19,6 +19,7 @@ from google.appengine.ext import ndb
 import glad_data_seeder
 from observation_task_routers.dummy_router import DummyRouter
 from observation_task_routers.simple_router import SimpleRouter
+from vote_weighting_calculator.simple_vote_calculator import SimpleVoteCalculator
 
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
@@ -53,6 +54,7 @@ import re
 import geojson
 import bleach
 import apiservices
+import case_workflow.case_workflow_manager
 from observation_task_routers import *
 
 from google.appengine.api import files
@@ -72,6 +74,7 @@ from google.appengine.api import memcache
 import settings
 import secrets
 import gladalerts
+import region_manager
 
 '''
 decorator = OAuth2Decorator(
@@ -387,7 +390,6 @@ class EarthEngineWarmUpHandler(BaseHandler):
         self.response.write("EarthEngineWarmUpHandler")
         return
 
-
 class MainPage(BaseHandler):
     """ Main handler for default page.
     Default page is index.html if not authenticated, or index-user if authenticated.
@@ -445,6 +447,92 @@ class MainPage(BaseHandler):
                 'show_navbar': False
             })
 
+class MainPageObsTask(BaseHandler):
+    """ Main handler for default page.
+    Default page is index.html if not authenticated, or index-user if authenticated.
+    """
+
+    def get(self):
+        # TODO: to move this logic to the client router instead
+        if 'user' in self.session:
+            try:
+                preference = self.preference;
+            except AttributeError:
+                # Get preference from datastore
+                preference = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
+                self.preference = preference
+
+            if preference:
+                self.render('bfw-baseEntry-react.html')
+            else:
+                # Preference can be empty after creation (async issue?)
+                # Regardless, we don't care, just render preference entry
+                self.redirect(webapp2.uri_for('obsTaskPreference'))
+        else:
+            self.render('index.html', {
+                'show_navbar': False
+            })  # not logged in.
+
+class ObsTaskPreferenceHandler(BaseHandler):
+    """
+    """
+    def get(self):
+        if 'user' in self.session:
+            self.render('bfw-baseEntry-react.html')
+        else:
+            self.render('index.html', {
+                'show_navbar': False
+            })  # not logged in.
+
+class ObsTaskPreferenceResource(BaseHandler):
+    """
+    This class defines the list of REST endpoints that are exposed for Preference data
+    """
+
+    """Return a JSON of certain attributes in ObservationTaskPreference model
+
+    Checks if User exists in session, then uses the User's key to obtain the preference data
+    from the datastore which will be inserted into a JSON format and sent back as a response.
+    """
+    def get(self):
+        if 'user' in self.session:
+            result = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
+
+            if result:
+                response = { "region_preference": result.region_preference }
+            else:
+                response = { "region_preference": [] }
+
+            self.response.set_status(200)
+            return self.response.write(json.dumps(response))
+        else:
+            logging.error('Cannot GET from ObsTaskPreferenceResource - user not found in session')
+            return self.error(401)
+
+    """Updates an ObservationTaskPreference data based on user_key and request payload
+
+    Checks if User exists in session, then extracts the request payload in order to update
+    the ObservationTaskPreference record that is bound by User's key.
+    """
+    def post(self):
+        if 'user' in self.session:
+            user_key = self.session['user']['key']
+            response = json.loads(self.request.body)
+
+            if response['region_preference'] is not None:
+                models.ObservationTaskPreference.upsert(user_key, response['region_preference'])
+
+                return self.response.set_status(200)
+            else:
+                logging.error('Cannot POST to ObsTaskPreferenceResource - region preferences not found')
+                return self.error(400)
+        else:
+            logging.error('Cannot POST to ObsTaskPreferenceResource - user not found in session')
+            return self.error(401)
+
+class RegionHandler(BaseHandler):
+    def get(self):
+        return self.response.write(json.dumps(region_manager.get_regions()));
 
 class ViewAllAreas(BaseHandler):
     def get(self, username):
@@ -2039,7 +2127,7 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
 
 
 class ObservationTaskHandler(BaseHandler):
-    def get(self, router_name='DUMMY'):
+    def get(self, router_name='SIMPLE'):
 
         try:
             username = self.session['user']['name']
@@ -2059,12 +2147,16 @@ class ObservationTaskHandler(BaseHandler):
         else:
             result_str = "Specified router not found"
             logging.error(result_str)
-            result_str = "Specified router not found"
-            logging.error(result_str)
+            self.response.set_status(404)
             return self.response.write(result_str)
 
         result = router.get_next_observation_task(user)
-        self.response.write(result.to_JSON())
+        if result is None:
+            self.response.set_status(404)
+            return self.response.write("No uncompleted tasks available")
+
+        return self.response.write(result.to_JSON())
+        self.response.set_status(200)
 
     def post(self):
         """
@@ -2101,20 +2193,32 @@ class ObservationTaskHandler(BaseHandler):
 
                     # Check if user has already completed task
                     if models.ObservationTaskResponse \
-                        .query(models.ObservationTaskResponse.userid == user.key,
+                        .query(models.ObservationTaskResponse.user == user.key,
                                models.ObservationTaskResponse.case == case.key).fetch():
                         self.response.set_status(400)
                         return
 
-                    observation_task_entity = models.ObservationTaskResponse(userid=user.key,
+                    observation_task_entity = models.ObservationTaskResponse(user=user.key,
                                                                              case=case.key,
                                                                              vote_category=
                                                                              observation_task_response['vote_category'],
                                                                              case_response=
-                                                                             observation_task_response)
+                                                                             observation_task_response,
+                                                                             task_duration_seconds=
+                                                                             observation_task_response['task_duration_seconds'])
                     observation_task_entity.put()
 
+                    vote_calculator = SimpleVoteCalculator()
+                    case.votes.add_vote(observation_task_response['vote_category'],
+                                        vote_calculator.get_weighted_vote(
+                                            user, case, observation_task_response['task_duration_seconds']))
+                    case.put()
+
+                    case_manager = case_workflow.case_workflow_manager.CaseWorkflowManager()
+                    case_manager.update_case_status(case)
+
                     self.response.set_status(201)
+
                     return
 
         self.reponse.set_status(400)
@@ -3656,7 +3760,8 @@ config = {
 
 app = webapp2.WSGIApplication([
     webapp2.Route(r'_ah/warmup', handler=EarthEngineWarmUpHandler, name='earth-engine'),
-    webapp2.Route(r'/', handler=MainPage, name='main'),
+    webapp2.Route(r'/', handler=MainPageObsTask, name='main2'),
+    webapp2.Route(r'/old', handler=MainPage, name='main'),
 
     webapp2.Route('/.well-known/acme-challenge/<challenge_id>', AcmeChallengeHandler, methods=['GET', 'POST']),
     # google site verification
@@ -3741,6 +3846,11 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/observation-task/<router_name>/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
     webapp2.Route(r'/observation-task/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
     webapp2.Route(r'/observation-task/response', handler=ObservationTaskHandler, name="next-task", methods=['POST']),
+
+    webapp2.Route(r'/observation-task/preference', handler=ObsTaskPreferenceHandler, name='obsTaskPreference'),
+    webapp2.Route(r'/observation-task/preference/resource', handler=ObsTaskPreferenceResource, name='obsTaskPreferenceResource'),
+
+    webapp2.Route(r'/region', handler=RegionHandler, name='RegionHandler'),
 
     # observation tasks see also admin/obs/list
     webapp2.Route(r'/obs/list', handler=ViewObservationTasksHandler, handler_method='ViewObservationTasksForAll',
@@ -3840,7 +3950,9 @@ RESERVED_NAMES = set([
     'twitter',
     'upload',
     'user',
-    'users'
+    'users',
+    'old',
+    'region'
 ])
 
 # assert that all routes are listed in RESERVED_NAMES
