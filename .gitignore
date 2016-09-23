@@ -82,6 +82,8 @@ bunjilforestwatch/lib/markdown/
 bunjilforestwatch/lib/oauth2client/
 bunjilforestwatch/lib/six.py
 bunjilforestwatch/lib/Crypto/
+bunjilforestwatch/lib/python_http_client/
+bunjilforestwatch/lib/sendgrid/
 
 bunjilforestwatch/node_modules/
 bunjilforestwatch/assets/bundles/
