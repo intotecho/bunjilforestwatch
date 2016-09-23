@@ -30,7 +30,7 @@ class LocalSubscriberNotifier(object):
         if case is not None and recipient:
             threat = self._case_checker.get_most_voted_category(case).capitalize()
             if case.is_confirmed:
-                return """Dear {},
+                return '''Dear {},
                 A {} threat has been detected in an area you have expressed interest in.
 
                 Area Name: {}
@@ -38,10 +38,10 @@ class LocalSubscriberNotifier(object):
                 Date: {}
 
                 This message was sent by Bunjil Forest Watch
-                """.format(recipient.name, threat, case.key.id(), case.area.name, strftime("%a, %d %b %Y %X %Z", gmtime()))
+                '''.format(recipient.name.capitalize(), threat, case.key.id(), case.area.name, strftime("%a, %d %b %Y %X %Z", gmtime()))
 
             # FIXME: show list of all potential options when there is little convergence
-            return """Dear {},
+            return '''Dear {},
                 An UNCONFIRMED {} threat has been detected in an area you have expressed interest in.
 
                 Area Name: {}
@@ -49,7 +49,7 @@ class LocalSubscriberNotifier(object):
                 Date: {}
 
                 This message was sent by Bunjil Forest Watch
-                """.format(recipient.name, threat, case.key.id(), case.area.name,
+                '''.format(recipient.name.capitalize(), threat, case.key.id(), case.area.name,
                            strftime("%a, %d %b %Y %X %Z", gmtime()))
 
     def _notify_subscribers_of_case_closure(self, case_id):

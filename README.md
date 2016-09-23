@@ -30,7 +30,7 @@ http://blog.bunjilforestwatch.net/learn/technology/dev-environment-setup-on-wind
 * CONTRIBUTORS: http://bunjilforestwatch.atlassian.net (requires login)
 
 ##BUILD DEPENDENCIES
-These libraries are reuqired,
+These libraries are required,
 
 ```sh
 	apiclient/
