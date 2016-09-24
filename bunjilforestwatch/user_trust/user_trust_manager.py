@@ -39,17 +39,16 @@ class UserTrustManager(object):
 
     def _update_user_trust(self, user, case, response):
         if (user is not None) and (case is not None) and (response is not None):
-            if response.vote_category != models.UNSURE:
-                if response.vote_category.upper() == CaseChecker.get_most_voted_category(case):
-                    trust_modifier = self.TRUST_MODIFIER_FOR_RESPONSE
-                else:
-                    trust_modifier = -self.TRUST_MODIFIER_FOR_RESPONSE
+            if response.vote_category.upper() == CaseChecker.get_most_voted_category(case):
+                trust_modifier = self.TRUST_MODIFIER_FOR_RESPONSE
+            else:
+                trust_modifier = -self.TRUST_MODIFIER_FOR_RESPONSE
 
-                new_trust = clamp(user.trust + trust_modifier, 0, self.get_max_trust())
+            new_trust = clamp(user.trust + trust_modifier, 0, self.get_max_trust())
 
-                if user.trust != new_trust:
-                    user.trust = new_trust
-                    user.put()
+            if user.trust != new_trust:
+                user.trust = new_trust
+                user.put()
 
     def _update_all_users_trust(self, case_id):
         case = models.Case.get_by_id(id=case_id)
