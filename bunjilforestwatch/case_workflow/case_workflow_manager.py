@@ -29,10 +29,7 @@ class CaseWorkflowManager(object):
         case.status = status
         case.put()
         userTrustManager.update_all_users_trust_async(case)
-        # subscriberNotifier.notify_subscribers_of_case_closure_async(case)
-
-        deferred.defer(subscriberNotifier._notify_subscribers_of_case_closure, case.key.id(),
-                       _queue='send-notifications-queue')
+        subscriberNotifier.notify_subscribers_of_case_closure_async(case)
 
     def check_cases(self):
         """
