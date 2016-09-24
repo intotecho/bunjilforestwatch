@@ -1,5 +1,3 @@
-from google.appengine.ext.deferred import deferred
-
 import models
 from case_workflow.case_checker import CaseChecker
 from notifications.local_subscriber_notifier import LocalSubscriberNotifier
