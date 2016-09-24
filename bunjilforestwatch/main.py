@@ -19,6 +19,7 @@ from google.appengine.ext import ndb
 import glad_data_seeder
 from observation_task_routers.dummy_router import DummyRouter
 from observation_task_routers.simple_router import SimpleRouter
+from observation_task_routers.preference_router import PreferenceRouter
 from vote_weighting_calculator.simple_vote_calculator import SimpleVoteCalculator
 
 PRODUCTION_MODE = not os.environ.get(
@@ -1012,6 +1013,7 @@ class ExistingAreaHandler(BaseHandler):
                     def update_txn(area, boundary_hull_dict):
                         area.set_boundary_fc(boundary_hull_dict, True)
                         area.set_boundary_geojsonstr(operation['value'])
+                        area.region = region_manager.find_regions(eeFeatureCollection)
                         area.put()
                         return
 
@@ -1416,6 +1418,7 @@ class NewAreaHandler(BaseHandler):
         try:
             area = models.AreaOfInterest(
                 id=area_name, name=area_name,
+                region=[],
                 owner=self.session['user']['key'],
                 description=new_area['properties']['area_description']['description'].decode('utf-8'),
                 description_why=new_area['properties']['area_description']['description_why'].decode('utf-8'),
@@ -1447,6 +1450,7 @@ class NewAreaHandler(BaseHandler):
         ### set boundary if one was provided.
         if boundary_feature != None:
             area.set_boundary_fc(eeFeatureCollection, False)
+            area.region = find_regions(eeFeatureCollection)
 
         ### update the area and the referencing user
         try:
@@ -2109,7 +2113,7 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
 
 
 class ObservationTaskHandler(BaseHandler):
-    def get(self, router_name='SIMPLE'):
+    def get(self, router_name='REGION_PREFERENCE'):
 
         try:
             username = self.session['user']['name']
@@ -2126,6 +2130,8 @@ class ObservationTaskHandler(BaseHandler):
             router = DummyRouter()
         elif router_name == 'SIMPLE':
             router = SimpleRouter()
+        elif router_name == "REGION_PREFERENCE":
+            router = PreferenceRouter()
         else:
             result_str = "Specified router not found"
             logging.error(result_str)

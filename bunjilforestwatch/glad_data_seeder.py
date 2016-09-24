@@ -7,6 +7,7 @@ import eeservice
 import geojson
 import models
 from gladalerts import create_glad_cluster_and_case_entities
+from region_manager import find_regions
 
 
 def remove_old_seeded_area(old_seeded_area):
@@ -117,6 +118,8 @@ def create_area(new_area_geojson_str, logged_in_user):
     try:
         area = models.AreaOfInterest(
             id=area_name, name=area_name,
+            # region=new_area['properties']['region_name'].decode('utf-8'),
+            region=[],
             owner=logged_in_user.key,
             description=new_area['properties']['area_description']['description'].decode('utf-8'),
             description_why=new_area['properties']['area_description']['description_why'].decode('utf-8'),
@@ -145,6 +148,7 @@ def create_area(new_area_geojson_str, logged_in_user):
             new_area)
         boundary_hull_dict = models.AreaOfInterest.calc_boundary_fc(eeFeatureCollection)
         area.set_boundary_fc(boundary_hull_dict, False)
+        area.region = find_regions(eeFeatureCollection)
 
     # update the area and the referencing user
     try:
