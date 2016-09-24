@@ -25,13 +25,14 @@ class PreferenceRouter(BaseRouter):
 
     def _select_case_to_use_for_next_observation_task(self, user):
         """
-        Gets 2 arrays at the start of the method then compares them to each other
+        Gets an array of open cases and an array of the user's preferences. Returns an observation task that aligns
+        to the user's preferences if one is available, otherwise returns an observation task for any open case
 
         Args:
             user: The user currently in session
 
         Returns:
-            The row of the next case task if one is available
+            The next observation task for a user to complete
 
         """
 
@@ -40,8 +41,8 @@ class PreferenceRouter(BaseRouter):
 
         for open_case in open_cases_query:
             cluster = models.GladCluster.get_by_id(open_case.glad_cluster.id())
-            preference = models.AreaOfInterest.get_by_id(cluster.area.id())
-            if self._case_is_not_already_completed_by_user(open_case, user) and (preference.region in user_preferences.region_preference):
+            area = models.AreaOfInterest.get_by_id(cluster.area.id())
+            if self._case_is_not_already_completed_by_user(open_case, user) and (area.region in user_preferences.region_preference):
                 return self._return_case_for_user(open_case)
 
         for open_case in open_cases_query:

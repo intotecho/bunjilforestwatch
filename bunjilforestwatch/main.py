@@ -2113,7 +2113,7 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
 
 
 class ObservationTaskHandler(BaseHandler):
-    def get(self, router_name='PREFERENCE'):
+    def get(self, router_name='REGION_PREFERENCE'):
 
         try:
             username = self.session['user']['name']
@@ -2130,7 +2130,7 @@ class ObservationTaskHandler(BaseHandler):
             router = DummyRouter()
         elif router_name == 'SIMPLE':
             router = SimpleRouter()
-        elif router_name == "PREFERENCE":
+        elif router_name == "REGION_PREFERENCE":
             router = PreferenceRouter()
         else:
             result_str = "Specified router not found"
