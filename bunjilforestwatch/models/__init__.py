@@ -17,11 +17,15 @@ import ee
 import hashlib
 import geojson
 import json
+
+import mailer
 import secrets
 import cache
 import apiservices
 
 # from contrib.gis.geos import coords
+import utils
+
 
 class DerefModel(ndb.Model):
     def get_key(self, prop_name):
@@ -1684,8 +1688,7 @@ class Case(ndb.Model):
     creation_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
 
     votes = ndb.StructuredProperty(CaseVotes, default=CaseVotes())
-    confidence = ndb.IntegerProperty(indexed=False, default=0)
-    
+
     @property
     def non_unique_task_name(self):
         return '{}-{}'.format(self.key.id(), self.glad_cluster.id())

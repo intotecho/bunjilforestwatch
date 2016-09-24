@@ -2213,14 +2213,14 @@ class ObservationTaskHandler(BaseHandler):
         return
 
 
-'''
-checkForNewInArea() is a function to check if any new images for the specified area.
-Called by CheckForNewInAllAreasHandler() and CheckForNewInAreaHandler()
-returns a HTML formatted string
-
-This is not a handler and can be moved to another file
-'''
 def checkForNewInArea(area):
+    """
+    checkForNewInArea() is a function to check if any new images for the specified area.
+    Called by CheckForNewInAllAreasHandler() and CheckForNewInAreaHandler()
+    returns a HTML formatted string
+
+    This is not a handler and can be moved to another file
+    """
     area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
     linestr = u'<h2>Area:<b>{0!s}</b></h2>'.format(area.name)
     obstask_cachekeys = []
@@ -2282,9 +2282,9 @@ class CheckForNewInAllAreasHandler(BaseHandler):
         returnstr = initstr
 
         all_areas = cache.get_all_areas()  # includes unlisted and private areas.
-        hostname = utils.get_custom_hostname()
+        # hostname = utils.get_custom_hostname()
         for area in all_areas:
-            returnstr += checkForNewInArea(area, hostname)
+            returnstr += checkForNewInArea(area)
 
         self.response.write(returnstr.encode('utf-8'))
 
