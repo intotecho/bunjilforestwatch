@@ -74,6 +74,7 @@ export default React.createClass({
       const coords = features[0].properties.points.coordinates[0];
       const long = coords[0];
       const lat = coords[1];
+
       return <GeoMapDisplay features={features} long={long} lat={lat}/>;
     }
 

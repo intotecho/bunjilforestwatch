@@ -24,7 +24,7 @@ export default React.createClass({
         return {
           ElementClass: Polygon,
           paths: coordinates.map(this.geometryToComponentWithLatLng, { type: `LineString` })[0],
-          options: { strokeColor: 'orange', fillColor: 'orange' }
+          options: { strokeColor: '#6495ed', fillColor: '#6495ed' }
         };
       case `LineString`:
         coordinates = coordinates.map(this.geometryToComponentWithLatLng, { type: `Point` });
@@ -44,7 +44,7 @@ export default React.createClass({
     }
   },
 
-  render() {
+  renderGeometry() {
     /*
       WARNING: This function may break in the future, or not work as intended
       Source example: http://react-google-maps.tomchentw.com/#/geojson?_k=5myn14
@@ -52,9 +52,8 @@ export default React.createClass({
       - As of current, spreading geometry returns no attributes
       - Child element is not included
       - Element states is not included
-      - Certain attributes do not work (e.g. fillColor, strokeColor, etc)
     */
-    const mapElements = this.props.features.reduce((array, feature, index) => {
+    return this.props.features.reduce((array, feature, index) => {
       const { properties } = feature;
       const { ElementClass, ChildElementClass, ...geometry } = this.geometryToComponentWithLatLng(feature.geometry);
 
@@ -68,6 +67,28 @@ export default React.createClass({
 
       return array;
     }, [], this);
+  },
+
+  renderClusterAlerts() {
+    const { properties, id } = this.props.features[0];
+    const coordinates = properties.points.coordinates;
+
+    return coordinates.map((alertCoordinates) => {
+      const googleCoordinates = new google.maps.LatLng(alertCoordinates[1], alertCoordinates[0]);
+
+      return (
+        // TODO: Render markers as a custom image icon
+        <Marker
+          key={`json-${id}-${Math.random() * Date.now()}`}
+          position={googleCoordinates}
+          options={ pinColor: 'orange' }
+          {...properties}>
+        </Marker>
+      );
+    });
+  },
+
+  render() {
 
     // You must parseFloat since Google Maps expects a real number
     // Lat and Long are both strings due to JSX interpolation {}
@@ -89,7 +110,8 @@ export default React.createClass({
                 streetViewControl: false,
                 mapTypeControl: false
               }}>
-              {mapElements}
+              {this.renderGeometry()}
+              {this.renderClusterAlerts()}
             </GoogleMap>
           }
         />
