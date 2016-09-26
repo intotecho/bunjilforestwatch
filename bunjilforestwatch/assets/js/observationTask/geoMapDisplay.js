@@ -81,7 +81,6 @@ export default React.createClass({
         <Marker
           key={`json-${id}-${Math.random() * Date.now()}`}
           position={googleCoordinates}
-          options={ pinColor: 'orange' }
           {...properties}>
         </Marker>
       );
