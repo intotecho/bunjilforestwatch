@@ -989,8 +989,8 @@ class LandsatCell(ndb.Model):
         return celldict
 
     def latestObservation(self, collectionName="L8"):  # query for latest observation from given imageCollection.
-        q = Observation.query(Observation.image_collection == collectionName, ancestor=self.key).order(
-            -Observation.captured).fetch(1)
+        q = GladClusterCollection.query(GladClusterCollection.image_collection == collectionName, ancestor=self.key).order(
+            -GladClusterCollection.captured).fetch(1)
         if q is not None and len(q) <> 0:
             return q[0]
         else:
@@ -1022,8 +1022,10 @@ class Overlay(ndb.Model):
     token = ndb.StringProperty(required=False, default=None)  # RGB Map Overlay Token might have expired.
     algorithm = ndb.StringProperty(
         required=False)  # identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
-    overlay_role = ndb.StringProperty(
+    overlay_role = ndb.StringProperty(  # TODO: remove this
         required=False)  # Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'.
+
+    image_collection = ndb.StringProperty(required=False)  # identifies the ImageCollection name, not an EE object.
 
     def Overlay2Dictionary(self):
         obsdict = {
@@ -1062,9 +1064,8 @@ Some Observations have no image_id as they are composites of many images.
 '''
 
 
-class Observation(ndb.Model):
-    image_collection = ndb.StringProperty(required=False)  # identifies the ImageCollection name, not an EE object.
-    image_id = ndb.StringProperty(required=False)  # LANDSAT Image ID of Image - key to query EE.
+class GladClusterCollection(ndb.Model):
+    image_collection = ndb.StringProperty(required=False)  # TODO: Remove
     properties = ndb.JsonProperty(required=False)  # store cluster properties.
     captured = ndb.DateTimeProperty(
         required=False)  # sysdate or date Image was captured - could be derived by EE from collection+image_id.
@@ -1124,16 +1125,16 @@ class Observation(ndb.Model):
         }
     '''
     @staticmethod
-    def createGladAlertObservation(area, clusterProperties):
+    def createGladClusterCollection(area, clusterProperties):
 
         #cluster_file_id = area.get_gladcluster_file_id()
         date = datetime.datetime.fromtimestamp(clusterProperties['alerts_date']/1000) #mm to secs
-        obs = Observation(parent=area.key,  properties=clusterProperties,
-                                            image_collection="GLADALERTS",
-                                            captured=date, image_id=clusterProperties['file_id'],
-                                            obs_role="LATEST")
-        obs.put()
-        return obs
+        cluster_collection = GladClusterCollection(parent=area.key, properties=clusterProperties,
+                                    image_collection="GLADALERTS",
+                                    captured=date, image_id=clusterProperties['file_id'],
+                                    obs_role="LATEST")
+        cluster_collection.put()
+        return cluster_collection
 
 
 '''
@@ -1141,7 +1142,7 @@ class Task is an observation task, based on a landsat image in an AOI. The task 
 Each task has a unique ID.
 '''
 
-
+# TODO: REMOVE This has been deprecated in favour of cases
 class Old_ObservationTask(ndb.Model):
     OBSTASKS_PER_PAGE = 5
     # Observation
@@ -1622,9 +1623,14 @@ class Config(ndb.Expando):
 class GladCluster(ndb.Model):
     """
     """
+
     area = ndb.KeyProperty(kind=AreaOfInterest)  # key to the GladCluster that created the case.
     first_alert_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
     geojson = ndb.PickleProperty(required=True, indexed=False)
+
+    # key of the collection of clusters this originated from
+    glad_cluster_collection = ndb.KeyProperty(kind=GladClusterCollection, default=None)
+    overlays = ndb.KeyProperty(kind=Overlay, repeated=True, default=None)
 
     @staticmethod
     def get_glad_clusters_for_area(area):

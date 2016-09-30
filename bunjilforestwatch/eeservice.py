@@ -135,7 +135,7 @@ def checkForNewObservationInCell(area, cell, collection_name):
         storedlastObs = cell.latestObservation(collection_name)
         if storedlastObs is None or latest_image.system_time_start > storedlastObs.captured: #captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
             
-            obs = models.Observation(parent=cell.key, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="latest")
+            obs = models.GladClusterCollection(parent=cell.key, image_collection=collection_name, captured=latest_image.system_time_start, image_id=latest_image.name, obs_role="latest")
             obs.put()
             if storedlastObs is None:
                 logging.debug('checkForNewObservationInCell FIRST observation for %s %s %s %s', area.name, collection_name, cell.path, cell.row)
