@@ -24,7 +24,7 @@ export default React.createClass({
         return {
           ElementClass: Polygon,
           paths: coordinates.map(this.geometryToComponentWithLatLng, { type: `LineString` })[0],
-          options: { strokeColor: 'orange', fillColor: 'orange' }
+          options: { strokeColor: '#6495ed', fillColor: '#6495ed' }
         };
       case `LineString`:
         coordinates = coordinates.map(this.geometryToComponentWithLatLng, { type: `Point` });
