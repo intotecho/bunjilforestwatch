@@ -6,6 +6,20 @@ import {
 } from "react-google-maps";
 
 export default React.createClass({
+  getInitialState() {
+    return {
+      renderClusters: true
+    }
+  },
+
+  componentWillReceiveProps(nextProps) {
+    if (this.props.clusterId != nextProps.clusterId) {
+      this.setState({
+        renderClusters: true
+      });
+    }
+  },
+
   geometryToComponentWithLatLng(geometry) {
     let type;
     const isArray = Array.isArray(geometry);
@@ -66,8 +80,12 @@ export default React.createClass({
   },
 
   renderClusterAlerts() {
+    if (!this.state.renderClusters) { return; }
+
     const { properties, id } = this.props.features[0];
     const coordinates = properties.points.coordinates;
+
+    setTimeout(() => this.setState({ renderClusters: false }), 3000);
 
     return coordinates.map((alertCoordinates, index) => {
       const googleCoordinates = new google.maps.LatLng(alertCoordinates[1], alertCoordinates[0]);

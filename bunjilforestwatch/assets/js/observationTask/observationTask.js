@@ -70,12 +70,13 @@ export default React.createClass({
     const {state} = this;
 
     if (_.isEmpty(state.gladCluster) === false) {
+      const clusterId = state.gladCluster.cluster_id;
       const features = state.gladCluster.geojson.features;
       const coords = features[0].properties.points.coordinates[0];
       const long = coords[0];
       const lat = coords[1];
 
-      return <GeoMapDisplay features={features} long={long} lat={lat}/>;
+      return <GeoMapDisplay clusterId={clusterId} features={features} long={long} lat={lat} />;
     }
 
     return; // TODO: have the map object have a default no features available view
