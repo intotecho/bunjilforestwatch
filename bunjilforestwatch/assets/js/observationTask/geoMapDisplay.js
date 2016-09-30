@@ -1,14 +1,16 @@
 import React from 'react';
-
-import { GoogleMapLoader, GoogleMap, Marker,
-         Polyline, Polygon, InfoWindow } from "react-google-maps";
+import { categories, categoryImages } from '../constants';
+import {
+  GoogleMapLoader, GoogleMap, Marker,
+  Polyline, Polygon, InfoWindow
+} from "react-google-maps";
 
 export default React.createClass({
   geometryToComponentWithLatLng(geometry) {
     let type;
     const isArray = Array.isArray(geometry);
+    let coordinates = isArray ? geometry : geometry.coordinates;
 
-    // Manually determine the type
     if (geometry.type === 'Polygon') {
       type = geometry.type;
     } else if (isArray && geometry.length > 2) {
@@ -16,8 +18,6 @@ export default React.createClass({
     } else {
       type = 'Point';
     }
-
-    let coordinates = isArray ? geometry : geometry.coordinates;
 
     switch (type) {
       case `Polygon`:
@@ -44,14 +44,10 @@ export default React.createClass({
     }
   },
 
-  renderGeometry() {
+  renderObsTaskBoundary() {
     /*
       WARNING: This function may break in the future, or not work as intended
       Source example: http://react-google-maps.tomchentw.com/#/geojson?_k=5myn14
-
-      - As of current, spreading geometry returns no attributes
-      - Child element is not included
-      - Element states is not included
     */
     return this.props.features.reduce((array, feature, index) => {
       const { properties } = feature;
@@ -73,29 +69,30 @@ export default React.createClass({
     const { properties, id } = this.props.features[0];
     const coordinates = properties.points.coordinates;
 
-    return coordinates.map((alertCoordinates) => {
+    return coordinates.map((alertCoordinates, index) => {
       const googleCoordinates = new google.maps.LatLng(alertCoordinates[1], alertCoordinates[0]);
 
       return (
-        // TODO: Render markers as a custom image icon
         <Marker
-          key={`json-${id}-${Math.random() * Date.now()}`}
+          key={`json-${id}-${index}`}
           position={googleCoordinates}
+          icon={require('../../images/geo_cluster.png')}
           {...properties}>
         </Marker>
       );
     });
   },
 
-  render() {
-
+  getMapCoordinates() {
     // You must parseFloat since Google Maps expects a real number
     // Lat and Long are both strings due to JSX interpolation {}
-    const coords = {
+    return {
       lat: parseFloat(this.props.lat),
       lng: parseFloat(this.props.long)
     };
+  },
 
+  render() {
     return (
       <section style={{ height: "95%" }}>
         <GoogleMapLoader
@@ -104,12 +101,12 @@ export default React.createClass({
             <GoogleMap
               mapTypeId='satellite'
               defaultZoom={16}
-              center={coords}
+              center={this.getMapCoordinates()}
               options={{
                 streetViewControl: false,
                 mapTypeControl: false
               }}>
-              {this.renderGeometry()}
+              {this.renderObsTaskBoundary()}
               {this.renderClusterAlerts()}
             </GoogleMap>
           }
