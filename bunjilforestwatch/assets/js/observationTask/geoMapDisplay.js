@@ -1,14 +1,16 @@
 import React from 'react';
-
-import { GoogleMapLoader, GoogleMap, Marker,
-         Polyline, Polygon, InfoWindow } from "react-google-maps";
+import Request from 'superagent';
+import {
+  GoogleMapLoader, GoogleMap, Marker,
+  Polyline, Polygon, InfoWindow, OverlayView
+} from "react-google-maps";
 
 export default React.createClass({
   geometryToComponentWithLatLng(geometry) {
     let type;
     const isArray = Array.isArray(geometry);
+    let coordinates = isArray ? geometry : geometry.coordinates;
 
-    // Manually determine the type
     if (geometry.type === 'Polygon') {
       type = geometry.type;
     } else if (isArray && geometry.length > 2) {
@@ -16,8 +18,6 @@ export default React.createClass({
     } else {
       type = 'Point';
     }
-
-    let coordinates = isArray ? geometry : geometry.coordinates;
 
     switch (type) {
       case `Polygon`:
@@ -76,6 +76,82 @@ export default React.createClass({
     };
   },
 
+  // Remove when endpoints are ready and fix renderMapOverlay()
+  testRenderMapOverlay() {
+    const { lat = 0.0, long = 0.0 } = this.props;
+    // Pretend we made a request to get an image
+    const cogwheelSrc = require('../../images/cogwheel.png');
+
+    // Pretend new Array is overlay data set from props
+    let overlays = [1,2,3,4,5,6,7,8,9,10];
+
+    return overlays.map((value) => {
+      const lLat = parseFloat(lat) + (Math.random() * 0.5);
+      const lLong = parseFloat(long) + (Math.random() * 0.5);
+
+      return (
+        <OverlayView
+          key={value}
+          position={{ lat: lLat, long: lLong }}
+          mapPaneName={OverlayView.OVERLAY_LAYER}>
+          <img src={cogwheelSrc} />
+        </OverlayView>
+      );
+    });
+  },
+
+  renderMapOverlay() {
+    // TODO: Hook ObservationTask to pass both data down
+    // let { overlays, gladClusterId } = this.props;
+
+    // if (!overlays) {
+    //   overlays = this.createOverlay(gladClusterId);
+    // }
+
+    // overlays.forEach((overlay) => {
+    //   const = eeMapAPIUrl = 'https://earthengine.googleapis.com/map';
+    //   let overlayTileUrl = [eeMapAPIUrl, overlay.map_id, 1, 0, 0].join("/");
+
+    //   overlayTileUrl += '?token=' + overlay.token;
+
+    //   Request
+    //   .get(overlayTileUrl)
+    //   .end(
+    //     function (err, res) {
+    //       if (err || !res.ok) {
+    //         overlay = this.regenerateOverlay(overlay.map_id);
+    //       }
+    //     }
+    //   );
+    // });
+
+    // displayOverlay(overlay);
+  },
+
+  createOverlay(gladClusterId) {
+    Request
+    .get('overlay/create/' + gladClusterId)
+    .end(
+      function (err, res) {
+        if (err === null && res.ok) {
+          return JSON.parse(res.text);
+        }
+      }
+    );
+  },
+
+  regenerateOverlay(gladClusterId) {
+    Request
+    .get('overlay/regenerate/' + gladClusterId)
+    .end(
+      function (err, res) {
+        if (err === null && res.ok) {
+          return JSON.parse(res.text);
+        }
+      }
+    );
+  },
+
   render() {
     return (
       <section style={{ height: "95%" }}>
@@ -91,6 +167,7 @@ export default React.createClass({
                 mapTypeControl: false
               }}>
               {this.renderObsTaskBoundary()}
+              {this.testRenderMapOverlay()}
             </GoogleMap>
           }
         />
