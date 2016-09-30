@@ -44,17 +44,12 @@ export default React.createClass({
     }
   },
 
-  render() {
+  renderObsTaskBoundary() {
     /*
       WARNING: This function may break in the future, or not work as intended
       Source example: http://react-google-maps.tomchentw.com/#/geojson?_k=5myn14
-
-      - As of current, spreading geometry returns no attributes
-      - Child element is not included
-      - Element states is not included
-      - Certain attributes do not work (e.g. fillColor, strokeColor, etc)
     */
-    const mapElements = this.props.features.reduce((array, feature, index) => {
+    return this.props.features.reduce((array, feature, index) => {
       const { properties } = feature;
       const { ElementClass, ChildElementClass, ...geometry } = this.geometryToComponentWithLatLng(feature.geometry);
 
@@ -68,14 +63,20 @@ export default React.createClass({
 
       return array;
     }, [], this);
+  },
+
+  getMapCoordinates() {
+    const { lat = 0.0, long = 0.0 } = this.props;
 
     // You must parseFloat since Google Maps expects a real number
     // Lat and Long are both strings due to JSX interpolation {}
-    const coords = {
-      lat: parseFloat(this.props.lat),
-      lng: parseFloat(this.props.long)
+    return {
+      lat: parseFloat(lat),
+      lng: parseFloat(long)
     };
+  },
 
+  render() {
     return (
       <section style={{ height: "95%" }}>
         <GoogleMapLoader
@@ -84,12 +85,12 @@ export default React.createClass({
             <GoogleMap
               mapTypeId='satellite'
               defaultZoom={16}
-              center={coords}
+              center={this.getMapCoordinates()}
               options={{
                 streetViewControl: false,
                 mapTypeControl: false
               }}>
-              {mapElements}
+              {this.renderObsTaskBoundary()}
             </GoogleMap>
           }
         />
