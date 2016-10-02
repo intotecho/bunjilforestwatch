@@ -6,6 +6,7 @@
 
 
 import models
+from overlay_manager import fetch_latest_overlay
 
 '''
 import csv
@@ -685,9 +686,23 @@ def create_glad_cluster_and_case_entities(area, glad_cluster_collection):
     Creates an entry in the data store for each glad cluster in a given area
     """
     gladcluster_geojson_collection = get_glad_cluster_list(area.get_gladcluster())
+
+    overlays = fetch_latest_overlay(area)
+
+    # FIXME: HACK - Should put this somewhere else
+    if glad_cluster_collection is not None:
+        image_collection = overlays[0].image_collection if overlays is not None and len(overlays) > 0 else 'LANDSAT/LC8_L1T_TOA'
+        glad_cluster_collection.image_collection = image_collection
+        glad_cluster_collection.put()
+
+    overlay_keys = []
+    for overlay in overlays:
+        overlay_keys.append(overlay.key)
+
     for cluster in gladcluster_geojson_collection:
 
         if glad_cluster_collection is not None:
+
             cluster_entity = models.GladCluster(area=area.key,
                                                 geojson=cluster,
                                                 glad_cluster_collection=glad_cluster_collection.key)
@@ -695,6 +710,7 @@ def create_glad_cluster_and_case_entities(area, glad_cluster_collection):
             cluster_entity = models.GladCluster(area=area.key,
                                                 geojson=cluster)
 
+        cluster_entity.overlays = overlay_keys
         cluster_entity.put()
         case_entity = models.Case(glad_cluster=cluster_entity.key)
         case_entity.put()

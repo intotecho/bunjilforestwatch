@@ -23,6 +23,7 @@ from handlers.glad_cluster_handlers import SeedGladClusterData
 from handlers.observation_task_handlers import ObservationTaskHandler
 from handlers.observation_task_preference_handlers import ObsTaskPreferenceHandler
 from handlers.observation_task_preference_handlers import ObsTaskPreferenceResource
+from handlers.overlay_handlers import RegenerateOverlayHandler
 from handlers.region_handlers import RegionHandler
 from observation_task_routers.dummy_router import DummyRouter
 from observation_task_routers.simple_router import SimpleRouter
@@ -71,7 +72,7 @@ from google.appengine.api.app_identity import get_default_version_hostname
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 
-from google.appengine.ext.webapp import blobstore_handlers
+from google.appengine.ext.webapp import blobstore_handlers, urllib
 from webapp2_extras import sessions
 from google.appengine.api import memcache
 
@@ -3401,6 +3402,8 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/observation-task/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
     webapp2.Route(r'/observation-task/response', handler=ObservationTaskHandler, name="next-task", methods=['POST']),
 
+    webapp2.Route(r'/overlay/regenerate/<overlay_key>', handler=RegenerateOverlayHandler, name='regenerate-overlay'),
+
     webapp2.Route(r'/observation-task/preference', handler=ObsTaskPreferenceHandler, name='obsTaskPreference'),
     webapp2.Route(r'/observation-task/preference/resource', handler=ObsTaskPreferenceResource, name='obsTaskPreferenceResource'),
 
@@ -3411,7 +3414,7 @@ app = webapp2.WSGIApplication([
                   name='view-obstasks'),
     webapp2.Route(r'/obs/overlay/create/<obskey_encoded>/<role>/<algorithm>', handler=CreateOverlayHandler,
                   name='create-overlay'),
-    webapp2.Route(r'/obs/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
+    webapp2.Route(r'/obs/overlay/update/<overlay_key>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
     webapp2.Route(r'/obs/<task_id>', handler=Old_ObservationTaskAjaxHandler, name='view-obstask'),
 
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
@@ -3500,7 +3503,8 @@ RESERVED_NAMES = set([
     'user',
     'users',
     'old',
-    'region'
+    'region',
+    'overlay'
 ])
 
 # assert that all routes are listed in RESERVED_NAMES
