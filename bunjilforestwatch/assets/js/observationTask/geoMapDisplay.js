@@ -100,46 +100,35 @@ export default React.createClass({
     });
   },
 
+  // FIXME
   renderMapOverlay() {
-    // TODO: Hook ObservationTask to pass both data down
-    // let { overlays, gladClusterId } = this.props;
+    let { overlays, clusterId } = this.props;
 
-    // if (!overlays) {
-    //   overlays = this.createOverlay(gladClusterId);
-    // }
+    overlays.forEach((overlay) => {
+      const eeMapAPIUrl = 'https://earthengine.googleapis.com/map';
+      let overlayTileUrl = [eeMapAPIUrl, overlay.map_id, 1, 0, 0].join("/");
 
-    // overlays.forEach((overlay) => {
-    //   const = eeMapAPIUrl = 'https://earthengine.googleapis.com/map';
-    //   let overlayTileUrl = [eeMapAPIUrl, overlay.map_id, 1, 0, 0].join("/");
+      overlayTileUrl += '?token=' + overlay.token;
 
-    //   overlayTileUrl += '?token=' + overlay.token;
-
-    //   Request
-    //   .get(overlayTileUrl)
-    //   .end(
-    //     function (err, res) {
-    //       if (err || !res.ok) {
-    //         overlay = this.regenerateOverlay(overlay.map_id);
-    //       }
-    //     }
-    //   );
-    // });
+      // FIXME
+      // CORS issue with EE endpoint
+      Request
+      .get(overlayTileUrl)
+      .withCredentials()
+      .end(
+        function (err, res) {
+          if (err || !res.ok) {
+            // overlay = this.regenerateOverlay(overlay.map_id);
+            console.log(res);
+          }
+        }
+      );
+    });
 
     // displayOverlay(overlay);
   },
 
-  createOverlay(gladClusterId) {
-    Request
-    .get('overlay/create/' + gladClusterId)
-    .end(
-      function (err, res) {
-        if (err === null && res.ok) {
-          return JSON.parse(res.text);
-        }
-      }
-    );
-  },
-
+  // FIXME
   regenerateOverlay(gladClusterId) {
     Request
     .get('overlay/regenerate/' + gladClusterId)
@@ -167,7 +156,7 @@ export default React.createClass({
                 mapTypeControl: false
               }}>
               {this.renderObsTaskBoundary()}
-              {this.testRenderMapOverlay()}
+              {this.renderMapOverlay()}
             </GoogleMap>
           }
         />
