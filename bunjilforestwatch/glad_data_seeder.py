@@ -189,7 +189,7 @@ def seed_data(logged_in_user):
     if not peru_area_success:
         return False, "Error: could not seed data for some reason"
 
-    create_glad_cluster_and_case_entities(peru_area)
+    create_glad_cluster_and_case_entities(peru_area, None)  # TODO: create fake glad_cluster_collection
 
     return True, "GladCluster and case data has been seeded successfully. " \
                  "NOTE: any previously seeded data has been removed"

@@ -989,8 +989,8 @@ class LandsatCell(ndb.Model):
         return celldict
 
     def latestObservation(self, collectionName="L8"):  # query for latest observation from given imageCollection.
-        q = Observation.query(Observation.image_collection == collectionName, ancestor=self.key).order(
-            -Observation.captured).fetch(1)
+        q = GladClusterCollection.query(GladClusterCollection.image_collection == collectionName, ancestor=self.key).order(
+            -GladClusterCollection.captured).fetch(1)
         if q is not None and len(q) <> 0:
             return q[0]
         else:
@@ -1007,32 +1007,52 @@ class LandsatCell(ndb.Model):
             return LandsatCell.query().filter(LandsatCell.path == int(path)).filter(LandsatCell.row == int(row)).get()
 
 
-'''
-class Overlay describes a visualisation of an image asset.
-It includes the map_id and token, an algorithm and information about the type.
-Used for a (Landsat) satelite image that has been retrieved and converted to a usable (visible/NDVI) format.
-The image is based on an Observatioin Asset.
-Note that the Overlay is an asset in the earth engine that has a limited expiry date.
-If the tiles returned are 404 then it is necessary to recreate the overlay.
-'''
-
-
 class Overlay(ndb.Model):
+    """
+    class Overlay describes a visualisation of an image asset.
+    It includes the map_id and token, an algorithm and information about the type.
+    Used for a (Landsat) satelite image that has been retrieved and converted to a usable (visible/NDVI) format.
+    The image is based on an Observation Asset.
+
+    Note that the Overlay could be an asset belonging to Google Earth Engine that may have a limited expiry date.
+    In future it's lifecycle may be managed by Bunjil's in cloud storage and cached for some time.
+
+    If the browser sees the image tiles returned are 404 (NOT FOUND) then the browser must initiate a call to
+    regenerate the overlay.
+    """
+
+    image_id = ndb.StringProperty(required=True, indexed=True)  # LANDSAT Image ID of Image - key to query EE.
     map_id = ndb.StringProperty(required=False, default=None)  # RGB Map Overlay Id generated in GEE -
     token = ndb.StringProperty(required=False, default=None)  # RGB Map Overlay Token might have expired.
     algorithm = ndb.StringProperty(
         required=False)  # identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
-    overlay_role = ndb.StringProperty(
+    overlay_role = ndb.StringProperty(  # TODO: remove this
         required=False)  # Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'.
 
+    image_collection = ndb.StringProperty(required=True)  # identifies the ImageCollection name, not an EE object.
+
+    @property
+    def to_dict(self):
+        return {
+            "image_id": self.image_id,
+            "map_id": self.map_id,
+            "token": self.token,
+            "algorithm": self.algorithm,
+            "image_collection": self.image_collection,
+            "key": self.key.urlsafe(),
+        }
+
+    # TODO: remove
     def Overlay2Dictionary(self):
         obsdict = {
+            "image_id": self.key.id(),
             "map_id": self.map_id,
             "token": self.token,
             "algorithm": self.algorithm,
             "overlay_role": self.overlay_role,
             "parent": str(self.key.parent()),
-            "key": self.key.urlsafe()
+            "key": self.key.urlsafe(),
+            "image_collection": self.image_collection
         }
         return obsdict
 
@@ -1049,29 +1069,19 @@ class Overlay(ndb.Model):
         return ovl
 
 
-'''
-class Observation (could rename to ObservationAsset) describes a Landsat satellite image.
+class GladClusterCollection(ndb.Model):
+    """
+    An GladClusterCollection represents a collection of GLAD clusters that were retrieved in the same request.
+    """
 
-An Observation contains a list of zero or more Overlays, each Overlay is a visualization of the ObservationAsset.
-
-The main use is the captured date. Once this observation has been actioned, it becomes the latest, against which future observations are base-lined for change detection.
-This allows the app to redraw the overlay computed by earth engine on a new browser session without recalculating it - providing the overlay token has not expired.
-In which case, app will need to regenerate the observation.
-
-Some Observations have no image_id as they are composites of many images.
-'''
-
-
-class Observation(ndb.Model):
-    image_collection = ndb.StringProperty(required=False)  # identifies the ImageCollection name, not an EE object.
-    image_id = ndb.StringProperty(required=False)  # LANDSAT Image ID of Image - key to query EE.
+    image_collection = ndb.StringProperty(required=False)  # TODO: Remove
     properties = ndb.JsonProperty(required=False)  # store cluster properties.
-    captured = ndb.DateTimeProperty(
-        required=False)  # sysdate or date Image was captured - could be derived by EE from collection+image_id.
-    obs_role = ndb.StringProperty(
-        required=False)  # Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'.
-    overlays = ndb.KeyProperty(repeated=True,
-                               default=None)  # list of keys to overlays (visualisations of this observation asset)
+    captured = ndb.DateTimeProperty(required=False)
+    # sysdate or date Image was captured - could be derived by EE from collection+image_id.
+    obs_role = ndb.StringProperty(required=False)  # TODO: remove
+    # Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'.
+    overlays = ndb.KeyProperty(repeated=True, default=None)  # TODO: remove
+    # list of keys to overlays (visualisations of this observation asset)
 
     # landsatCell = ndb.ReferenceProperty(LandsatCell) #defer initialization to init to avoid forward reference to new class defined. http://stackoverflow.com/questions/1724316/referencing-classes-in-python - use parent instead.
 
@@ -1124,16 +1134,16 @@ class Observation(ndb.Model):
         }
     '''
     @staticmethod
-    def createGladAlertObservation(area, clusterProperties):
+    def createGladClusterCollection(area, clusterProperties):
 
         #cluster_file_id = area.get_gladcluster_file_id()
         date = datetime.datetime.fromtimestamp(clusterProperties['alerts_date']/1000) #mm to secs
-        obs = Observation(parent=area.key,  properties=clusterProperties,
-                                            image_collection="GLADALERTS",
-                                            captured=date, image_id=clusterProperties['file_id'],
-                                            obs_role="LATEST")
-        obs.put()
-        return obs
+        cluster_collection = GladClusterCollection(parent=area.key, properties=clusterProperties,
+                                    image_collection="GLADALERTS",
+                                    captured=date, image_id=clusterProperties['file_id'],
+                                    obs_role="LATEST")
+        cluster_collection.put()
+        return cluster_collection
 
 
 '''
@@ -1141,7 +1151,7 @@ class Task is an observation task, based on a landsat image in an AOI. The task 
 Each task has a unique ID.
 '''
 
-
+# TODO: REMOVE This has been deprecated in favour of cases
 class Old_ObservationTask(ndb.Model):
     OBSTASKS_PER_PAGE = 5
     # Observation
@@ -1622,10 +1632,23 @@ class Config(ndb.Expando):
 class GladCluster(ndb.Model):
     """
     """
+
     area = ndb.KeyProperty(kind=AreaOfInterest)  # key to the GladCluster that created the case.
     first_alert_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
     geojson = ndb.PickleProperty(required=True, indexed=False)
 
+    # key of the collection of clusters this originated from
+    glad_cluster_collection = ndb.KeyProperty(kind=GladClusterCollection, default=None)
+    overlays = ndb.KeyProperty(kind=Overlay, repeated=True, default=None)
+    
+    @property
+    def overlays_entities(self):
+        overlays = []
+        for overlay in self.overlays:
+            overlays.append(overlay.get())
+
+        return overlays
+    
     @staticmethod
     def get_glad_clusters_for_area(area):
         return GladCluster.query(GladCluster.area == area.key).fetch()
