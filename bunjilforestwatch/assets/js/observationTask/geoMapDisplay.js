@@ -6,6 +6,24 @@ import {
 } from "react-google-maps";
 
 export default React.createClass({
+  getInitialState() {
+    return {
+      shouldCenterMap: true
+    };
+  },
+
+  componentWillReceiveProps(nextProps) {
+    if (this.props.clusterId === nextProps.clusterId) {
+      this.setState({
+        shouldCenterMap: false
+      });
+    } else {
+      this.setState({
+        shouldCenterMap: true
+      });
+    }
+  },
+
   geometryToComponentWithLatLng(geometry) {
     let type;
     const isArray = Array.isArray(geometry);
@@ -95,6 +113,10 @@ export default React.createClass({
   },
 
   render() {
+    const mapCoordinates = this.state.shouldCenterMap
+      ? this.getMapCoordinates()
+      : null;
+
     return (
       <section style={{ height: "95%" }}>
         <GoogleMapLoader
@@ -103,7 +125,7 @@ export default React.createClass({
             <GoogleMap
               mapTypeId='satellite'
               defaultZoom={16}
-              center={this.getMapCoordinates()}
+              center={mapCoordinates}
               options={{
                 streetViewControl: false,
                 mapTypeControl: false
