@@ -83,13 +83,17 @@
 }
 
 .toggleSwitchCluster {
-  margin-left: 14px;
+  margin-left: 105px;
   margin-top: 8px;
 }
 
 .toggleSwitchClusterLabel {
+  bottom: -10px;
+  display: inline-block;
+  font-size: 13px;
+  left: -105px;
+  margin: 0;
+  padding: 10px 65px 10px 25px;
+  position: absolute;
   white-space: nowrap;
-  font-size: 12px;
-  margin-top: 5px;
-  margin-left: 48px;
 }

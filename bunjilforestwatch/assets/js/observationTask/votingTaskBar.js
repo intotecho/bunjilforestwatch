@@ -103,7 +103,7 @@ export default React.createClass({
         classNames={toggleSwitchCluster}>
 
         <p className={toggleSwitchClusterLabel}>
-          Display clusters
+          Display alerts
         </p>
 
       </ToggleSwitch>

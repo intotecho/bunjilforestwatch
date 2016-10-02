@@ -1,9 +1,9 @@
 // Sourced from: http://www.w3schools.com/howto/howto_css_switch.asp
 .toggleSwitch {
-  position: relative;
   display: inline-block;
-  width: 40px;
-  height: 24px;
+  height: 14px;
+  position: relative;
+  width: 25px;
 
   input {
     display: none;
@@ -11,24 +11,24 @@
 }
 
 .slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   background-color: #ccc;
+  bottom: 0;
+  cursor: pointer;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
   transition: .4s;
 
   &:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 4px;
-    bottom: 4px;
     background-color: white;
+    bottom: 2px;
+    content: "";
+    height: 10px;
+    left: 3px;
+    position: absolute;
     transition: .4s;
+    width: 10px;
   }
 
   &.round {
@@ -50,6 +50,6 @@
   }
 
   &:checked + .slider:before {
-    transform: translateX(16px);
+    transform: translateX(9px);
   }
 }

@@ -16,16 +16,13 @@ export default React.createClass({
       <label
         onClick={this.props.onClick}
         className={toggleSwitchClasses}>
-
         <input
           className={checkbox}
           type='checkbox'
           defaultChecked={this.props.defaultChecked}
         />
-
         <div className={`${slider} ${round}`} />
         {this.props.children}
-
       </label>
     );
   }
