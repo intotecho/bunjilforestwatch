@@ -17,6 +17,14 @@ import os
 from google.appengine.ext import ndb
 
 import glad_data_seeder
+from handlers.base_handlers import BaseHandler
+from handlers.base_handlers import BaseUploadHandler
+from handlers.glad_cluster_handlers import SeedGladClusterData
+from handlers.observation_task_handlers import ObservationTaskHandler
+from handlers.observation_task_preference_handlers import ObsTaskPreferenceHandler
+from handlers.observation_task_preference_handlers import ObsTaskPreferenceResource
+from handlers.overlay_handlers import RegenerateOverlayHandler
+from handlers.region_handlers import RegionHandler
 from observation_task_routers.dummy_router import DummyRouter
 from observation_task_routers.simple_router import SimpleRouter
 from observation_task_routers.preference_router import PreferenceRouter
@@ -64,7 +72,7 @@ from google.appengine.api.app_identity import get_default_version_hostname
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 
-from google.appengine.ext.webapp import blobstore_handlers
+from google.appengine.ext.webapp import blobstore_handlers, urllib
 from webapp2_extras import sessions
 from google.appengine.api import memcache
 
@@ -117,261 +125,6 @@ def rendert(s, p, d={}):
         d['google_analytics'] = settings.GOOGLE_ANALYTICS
 
     s.response.out.write(utils.render(p, d))
-
-
-class BaseHandler(webapp2.RequestHandler):
-    """This class docstring shows how to use sphinx and rst syntax
-    BaseHandler class provides common functionality that all app handlers derive from.
-
-       - **parameters**, **types**, **return** and **return types**::
-    The first line is brief explanation, which may be completed with
-    a longer one. For instance to discuss about its methods. The only
-    method here is :func:`function1`'s. The main idea is to document
-    the class and methods's arguments with
-
-    - **parameters**, **types**, **return** and **return types**::
-
-          :param arg1: description
-          :param arg2: description
-          :type arg1: type description
-          :type arg1: type description
-          :return: return description
-          :rtype: the return type description
-
-    - and to provide sections such as **Example** using the double commas syntax::
-
-          :Example:
-
-          followed by a blank line !
-
-      which appears as follow:
-
-      :Example:
-
-      followed by a blank line
-
-    - Finally special sections such as **See Also**, **Warnings**, **Notes**
-      use the sphinx syntax (*paragraph directives*)::
-
-          .. seealso:: blabla
-          .. warnings also:: blabla
-          .. note:: blabla
-          .. todo:: blabla
-
-    .. note::
-        There are many other Info fields but they may be redundant:
-            * param, parameter, arg, argument, key, keyword: Description of a
-              parameter.
-            * type: Type of a parameter.
-            * raises, raise, except, exception: That (and when) a specific
-              exception is raised.
-            * var, ivar, cvar: Description of a variable.
-            * returns, return: Description of the return value.
-            * rtype: Return type.
-
-    .. note::
-        There are many other directives such as versionadded, versionchanged,
-        rubric, centered, ... See the sphinx documentation for more details.
-
-    Here below is the results of the :func:`function1` docstring.
-
-    """
-
-    def render(self, _template, context={}):
-        """returns (arg1 / arg2) + arg3
-
-        renders a template in a user's context by calling utils.rv()
-        adds some app specific functionality such as additional messages.
-       - **parameters**, **types**, **return** and **return types**::
-        This is a longer explanation, which may include math with latex syntax
-        :math:`\\alpha`.
-        Then, you need to provide optional subsection in this order (just to be
-        consistent and have a uniform documentation. Nothing prevent you to
-        switch the order):
-
-          - parameters using ``:param <name>: <description>``
-          - type of the parameters ``:type <name>: <description>``
-          - returns using ``:returns: <description>``
-          - examples (doctest)
-          - seealso using ``.. seealso:: text``
-          - notes using ``.. note:: text``
-          - warning using ``.. warning:: text``
-          - todo ``.. todo:: text``
-
-        **Advantages**:
-         - Uses sphinx markups, which will certainly be improved in future
-           version
-         - Nice HTML output with the See Also, Note, Warnings directives
-
-
-        **Drawbacks**:
-         - Just looking at the docstring, the parameter, type and  return
-           sections do not appear nicely
-
-        :param arg1: the first value
-        :param arg2: the first value
-        :param arg3: the first value
-        :type arg1: int, float,...
-        :type arg2: int, float,...
-        :type arg3: int, float,...
-        :returns: arg1/arg2 +arg3
-        :rtype: int, float
-
-        :Example:
-
-        >>> import template
-        >>> a = template.MainClass1()
-        >>> a.function1(1,1,1)
-        2
-
-        .. note:: can be useful to emphasize
-            important feature
-        .. seealso:: :class:`MainClass2`
-        .. warning:: arg2 must be non-zero.
-        .. todo:: check that arg2 is non zero.
-        """
-        context['session'] = self.session
-        context['user'] = self.session.get('user')
-        context['messages'] = self.get_messages()
-        context['active'] = _template.partition('.')[0]
-
-        ga = ''
-        if 'localhost' in self.request.url:
-            self.add_message("warning",
-                             "Local - Production instance at <a href='http://www.bunjilforestwatch.net'>www.bunjilforestwatch.net</a>")
-            ga = secrets.GOOGLE_ANALYTICS_DEV
-
-        if 'bunjilfw' in self.request.url:
-            self.add_message("warning", "Test Instance - Production is now at bunjilforestwatch.net")
-            ga = secrets.GOOGLE_ANALYTICS_TEST
-
-        if 'appbfw-test' in self.request.url:
-            self.add_message("info", "Production is now at bunjilforestwatch.net")
-            ga = secrets.GOOGLE_ANALYTICS_TEST
-
-        if 'appbfw' in self.request.url:
-            self.add_message("warning", "Warning not using sercure url bunjilforestwatch.net")
-            ga = secrets.GOOGLE_ANALYTICS_PROD
-
-        if 'bunjilforestwatch' in self.request.url:
-            ga = secrets.GOOGLE_ANALYTICS_PROD
-            # self.add_message("info", "Production")
-
-        context['google_analytics'] = ga
-
-        for k in ['login_source']:
-            if k in self.session:
-                context[k] = self.session[k]
-
-        # logging.info('BaseHandler: render template %s with context <<%s>>,', _template, context)
-        # logging.debug('BaseHandler: messages %s', context['messages'])
-        # print '\033[1;33mRed like Radish\033[1;m'
-        # print '\033[1;34mRed like Radish\033[1;m \x1b[0m'
-        # print('\033[31m' + 'some red text')
-        # print('\033[30m' + 'reset to default color')
-
-        # logging.debug('BaseHandler:\033[1;31m Color Console Test\033[1;m  \x1b[0m %s', "Reset to Default Color")
-
-        rv = utils.render(_template, context)
-
-        self.response.write(rv)
-
-    def dispatch(self):
-        self.session_store = sessions.get_store(request=self.request)
-        # logging.info('BaseHandler:dispatch %s', self.request)
-
-        try:
-            webapp2.RequestHandler.dispatch(self)
-        finally:
-            self.session_store.save_sessions(self.response)
-
-    @webapp2.cached_property
-    def session(self):
-        return self.session_store.get_session(backend='datastore')
-
-    #
-    def populate_user_session(self, user=None):
-        """This should be called any time the session data needs to be updated.
-        session['var'] = var should never be used, except in this function
-        This function adds the below data to the data returned to the template.
-        """
-
-        if 'user' not in self.session and not user:
-            logging.error("populate_user_session() - no user!")
-            return
-        elif not user:
-            user = cache.get_user(self.session['user']['name'])
-
-        self.session['user'] = {
-            'admin': users.is_current_user_admin(),
-            'avatar': user.gravatar(),
-            'email': user.email,
-            'key': user.key,  # .urlsafe(),
-            'name': user.name,
-            'token': user.token,
-            'role': user.role
-        }
-        user_key = self.session['user']['key']
-
-        self.session['journals'] = cache.get_journal_list(user_key)
-        self.session['areas_list'] = cache.get_areas_list(user_key)  # TODO This list can be long and expensive.
-        self.session['following_areas_list'] = cache.get_following_areas_list(user_key)  # used for basehandler menu.
-
-    MESSAGE_KEY = '_flash_message'
-
-    def add_message(self, level, message):
-        self.session.add_flash(message, level, BaseHandler.MESSAGE_KEY)
-
-    def get_messages(self):
-        return self.session.get_flashes(BaseHandler.MESSAGE_KEY)
-
-    def process_credentials(self, name, email, source, uid):
-
-        User = models.User
-
-        if source == models.USER_SOURCE_GOOGLE:
-            user = User.query(
-                User.google_id == uid).get()
-            # .filter('%s_id' %source, uid).get()
-        else:
-            logging.error('Only USER_SOURCE_GOOGLE IS IMPLENTED')
-
-        if not user:
-            registered = False
-            self.session['register'] = {'name': name, 'email': email, 'source': source, 'uid': uid}
-        else:
-            registered = True
-            self.populate_user_session(user)
-            self.session['login_source'] = source
-            user.put()  # to update last_active
-
-        return user, registered
-
-    def logout(self):
-        """ Destroys a user session
-        """
-        for k in ['user', 'journals', 'areas']:
-            if k in self.session:
-                del self.session[k]
-
-
-class BaseUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
-    """ Alternative Base Class for upload request handlers.
-    """
-    session_store = None
-
-    def add_message(self, level, message):
-        self.session.add_flash(message, level, BaseHandler.MESSAGE_KEY)
-        self.store()
-
-    def store(self):
-        self.session_store.save_sessions(self.response)
-
-    @webapp2.cached_property
-    def session(self):
-        if not self.session_store:
-            self.session_store = sessions.get_store(request=self.request)
-        return self.session_store.get_session(backend='datastore')
 
 
 class EarthEngineWarmUpHandler(BaseHandler):
@@ -473,67 +226,6 @@ class MainPageObsTask(BaseHandler):
             self.render('index.html', {
                 'show_navbar': False
             })  # not logged in.
-
-class ObsTaskPreferenceHandler(BaseHandler):
-    """
-    """
-    def get(self):
-        if 'user' in self.session:
-            self.render('bfw-baseEntry-react.html')
-        else:
-            self.render('index.html', {
-                'show_navbar': False
-            })  # not logged in.
-
-class ObsTaskPreferenceResource(BaseHandler):
-    """
-    This class defines the list of REST endpoints that are exposed for Preference data
-    """
-
-    """Return a JSON of certain attributes in ObservationTaskPreference model
-
-    Checks if User exists in session, then uses the User's key to obtain the preference data
-    from the datastore which will be inserted into a JSON format and sent back as a response.
-    """
-    def get(self):
-        if 'user' in self.session:
-            result = models.ObservationTaskPreference.get_by_user_key(self.session['user']['key'])
-
-            if result:
-                response = { "region_preference": result.region_preference }
-            else:
-                response = { "region_preference": [] }
-
-            self.response.set_status(200)
-            return self.response.write(json.dumps(response))
-        else:
-            logging.error('Cannot GET from ObsTaskPreferenceResource - user not found in session')
-            return self.error(401)
-
-    """Updates an ObservationTaskPreference data based on user_key and request payload
-
-    Checks if User exists in session, then extracts the request payload in order to update
-    the ObservationTaskPreference record that is bound by User's key.
-    """
-    def post(self):
-        if 'user' in self.session:
-            user_key = self.session['user']['key']
-            response = json.loads(self.request.body)
-
-            if response['region_preference'] is not None:
-                models.ObservationTaskPreference.upsert(user_key, response['region_preference'])
-
-                return self.response.set_status(200)
-            else:
-                logging.error('Cannot POST to ObsTaskPreferenceResource - region preferences not found')
-                return self.error(400)
-        else:
-            logging.error('Cannot POST to ObsTaskPreferenceResource - user not found in session')
-            return self.error(401)
-
-class RegionHandler(BaseHandler):
-    def get(self):
-        return self.response.write(json.dumps(region_manager.get_regions()));
 
 class ViewAllAreas(BaseHandler):
     def get(self, username):
@@ -1849,10 +1541,10 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
             cell = cache.get_cell(path, row, area_name)
             if cell is not None:
                 # captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
-                obs = models.Observation(parent=area.key,
-                                         image_collection=map_id['collection'],
-                                         captured=map_id['capture_datetime'],
-                                         image_id=map_id['id'])
+                obs = models.GladClusterCollection(parent=area.key,
+                                                   image_collection=map_id['collection'],
+                                                   captured=map_id['capture_datetime'],
+                                                   image_id=map_id['id'])
             else:
                 returnval['result'] = "error"
                 returnval['reason'] = 'LandsatOverlayRequestHandler - cache.get_cell error'
@@ -1863,14 +1555,15 @@ class LandsatOverlayRequestHandler(BaseHandler):  # 'new-landsat-overlay'
 
         else:
             # TODO: Do we really want some Observation with the parent being aoi instead of cell?
-            obs = models.Observation(parent=area.key, image_collection=map_id['collection'],
-                                     captured=map_id['capture_datetime'], image_id=map_id['id'], obs_role='ad-hoc')
+            obs = models.GladClusterCollection(parent=area.key, image_collection=map_id['collection'],
+                                               captured=map_id['capture_datetime'], image_id=map_id['id'], obs_role='ad-hoc')
 
         obs.put()
         ovl = models.Overlay(parent=obs.key,
                              map_id=map_id['mapid'],
                              token=map_id['token'],
                              overlay_role='special',
+                             image_collection=map_id['collection'],
                              algorithm=algorithm)
 
         ovl.put()  # Do first to create a key.
@@ -1901,7 +1594,7 @@ class CreateOverlayHandler(BaseHandler):
     # This handler responds to Ajax request, hence it returns a response.write()
 
     def get(self, obskey_encoded, role, algorithm):
-        obs = models.Observation.get_from_encoded_key(obskey_encoded)
+        obs = models.GladClusterCollection.get_from_encoded_key(obskey_encoded)
 
         returnval = {}
 
@@ -2112,107 +1805,6 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
         })
 
 
-class ObservationTaskHandler(BaseHandler):
-    def get(self, router_name='REGION_PREFERENCE'):
-
-        try:
-            username = self.session['user']['name']
-            user = cache.get_user(username)
-            if not user:
-                raise KeyError
-                # TODO: use proper page redirects and redirect to login page.
-
-        except KeyError:
-            return self.response.write('You must be logged in!')
-
-        router = None
-        if router_name == 'DUMMY':
-            router = DummyRouter()
-        elif router_name == 'SIMPLE':
-            router = SimpleRouter()
-        elif router_name == "REGION_PREFERENCE":
-            router = PreferenceRouter()
-        else:
-            result_str = "Specified router not found"
-            logging.error(result_str)
-            self.response.set_status(404)
-            return self.response.write(result_str)
-
-        result = router.get_next_observation_task(user)
-        if result is None:
-            self.response.set_status(404)
-            return self.response.write("No uncompleted tasks available")
-
-        return self.response.write(result.to_JSON())
-        self.response.set_status(200)
-
-    def post(self):
-        """
-            Accepts an observation task response
-            
-            Example request body
-            {
-                "vote_category": "FIRE",
-                "case_id": 4573418615734272
-            }
-        :return:
-        """
-        try:
-            username = self.session['user']['name']
-            user = cache.get_user(username)
-            if not user:
-                raise KeyError
-
-        except KeyError:
-            self.response.set_status(401)
-            return
-
-        observation_task_response = json.loads(self.request.body)
-        # TODO: use a json encoder and us a Decoding Error for the validation
-        if observation_task_response['vote_category'] is not None:
-            if observation_task_response['case_id'] is not None:
-                # TODO: consider moving this check down into a JSON decoding function or BLL module
-                if observation_task_response['vote_category'] in models.VOTE_CATEGORIES:
-                    case = models.Case.get_by_id(id=observation_task_response['case_id'])
-                    if case is None:
-                        # TODO: consider moving this check down into a BLL module
-                        self.response.set_status(404)
-                        return
-
-                    # Check if user has already completed task
-                    if models.ObservationTaskResponse \
-                        .query(models.ObservationTaskResponse.user == user.key,
-                               models.ObservationTaskResponse.case == case.key).fetch():
-                        self.response.set_status(400)
-                        return
-
-                    observation_task_entity = models.ObservationTaskResponse(user=user.key,
-                                                                             case=case.key,
-                                                                             vote_category=
-                                                                             observation_task_response['vote_category'],
-                                                                             case_response=
-                                                                             observation_task_response,
-                                                                             task_duration_seconds=
-                                                                             observation_task_response['task_duration_seconds'])
-                    observation_task_entity.put()
-
-                    vote_calculator = SimpleVoteCalculator()
-                    case.votes.add_vote(observation_task_response['vote_category'],
-                                        vote_calculator.get_weighted_vote(
-                                            user, case, observation_task_response['task_duration_seconds']))
-                    case.put()
-
-                    case_manager = case_workflow.case_workflow_manager.CaseWorkflowManager()
-                    case_manager.update_case_status(case)
-
-                    self.response.set_status(201)
-
-                    return
-
-        self.reponse.set_status(400)
-        return
-
-
 def checkForNewInArea(area):
     """
     checkForNewInArea() is a function to check if any new images for the specified area.
@@ -2373,29 +1965,6 @@ class DistributeGladClusters(BaseHandler):
     def get(self, area_name):
         # for a in areas
         return gladalerts.distributeGladClusters(self, area_name)
-
-
-class SeedGladClusterData(BaseHandler):
-
-    def get(self):
-
-        try:
-            username = self.session['user']['name']
-            user = cache.get_user(username)
-            if not user:
-                raise KeyError
-
-        except KeyError:
-            # TODO: use proper page redirects and redirect to login page.
-            return self.response.write('You must be logged in as an administrator to seed glad cluster / case data')
-
-        success, message = glad_data_seeder.seed_data(user)
-        if success:
-            self.response.set_status(200)
-        else:
-            self.response.set_status(400)
-
-        return self.response.write(message)
 
 
 '''
@@ -3833,6 +3402,8 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/observation-task/next', handler=ObservationTaskHandler, name="next-task", methods=['GET']),
     webapp2.Route(r'/observation-task/response', handler=ObservationTaskHandler, name="next-task", methods=['POST']),
 
+    webapp2.Route(r'/overlay/regenerate/<overlay_key>', handler=RegenerateOverlayHandler, name='regenerate-overlay'),
+
     webapp2.Route(r'/observation-task/preference', handler=ObsTaskPreferenceHandler, name='obsTaskPreference'),
     webapp2.Route(r'/observation-task/preference/resource', handler=ObsTaskPreferenceResource, name='obsTaskPreferenceResource'),
 
@@ -3843,7 +3414,7 @@ app = webapp2.WSGIApplication([
                   name='view-obstasks'),
     webapp2.Route(r'/obs/overlay/create/<obskey_encoded>/<role>/<algorithm>', handler=CreateOverlayHandler,
                   name='create-overlay'),
-    webapp2.Route(r'/obs/overlay/update/<ovlkey>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
+    webapp2.Route(r'/obs/overlay/update/<overlay_key>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
     webapp2.Route(r'/obs/<task_id>', handler=Old_ObservationTaskAjaxHandler, name='view-obstask'),
 
     webapp2.Route(r'/tasks/social_post', handler=SocialPost, name='social-post'),
@@ -3932,7 +3503,8 @@ RESERVED_NAMES = set([
     'user',
     'users',
     'old',
-    'region'
+    'region',
+    'overlay'
 ])
 
 # assert that all routes are listed in RESERVED_NAMES
