@@ -77,9 +77,17 @@ export default React.createClass({
   },
 
   regenerateOverlay(overlayKey) {
-    Request
-    .get('overlay/regenerate/' + overlayKey)
-    .end();
+    return new Promise((resolve) => {
+      Request
+      .get('overlay/regenerate/' + overlayKey)
+      .end((err, res) => {
+        if (!err && res.ok) {
+          resolve(JSON.parse(res.text));
+        } else {
+          resolve();
+        }
+      });
+    });
   },
 
   // FIXME: Hack
@@ -87,6 +95,7 @@ export default React.createClass({
     // Prop retrieval hack, component may not exist by then
     if (!googleMapComponent) { return; }
 
+    const { hasExpired, regenerateOverlay, getGoogleOverlay } = this;
     const { overlays } = this.props;
     const { map } = googleMapComponent.props;
 
@@ -94,35 +103,43 @@ export default React.createClass({
     if (!map) { return ; }
 
     overlays.forEach((overlay) => {
-      new Promise((resolve, reject) => {
-        if (this.hasExpired(overlay)) {
-          reject();
+      hasExpired(overlay).then((hasExpired) => {
+        // If image has expired, then regenerate it, else push data
+        if (hasExpired) {
+          regenerateOverlay(overlay.key).then((newOverlay) => {
+            if (newOverlay) {
+              // Push using new overlay data obtained from request
+              map.overlayMapTypes.push(getGoogleOverlay(newOverlay));
+            }
+          });
         } else {
-          map.overlayMapTypes.push(this.getGoogleOverlay(overlay));
-          resolve();
+          map.overlayMapTypes.push(getGoogleOverlay(overlay));
         }
       });
     });
   },
 
   hasExpired(overlay) {
-    const self = this;
-    let testURL = ['https://earthengine.googleapis.com/map', overlay.map_id, 1, 0, 0].join("/");
+    return new Promise((resolve) => {
+      resolve(() => {
+        let testURL = ['https://earthengine.googleapis.com/map', overlay.map_id, 1, 0, 0].join("/");
 
-    testURL += '?token=' + overlay.token;
+        testURL += '?token=' + overlay.token;
 
-    Request
-    .get(testURL)
-    .end(function (err, res) {
-      if (err || !res.ok) {
-        if (overlay.key) {
-          self.regenerateOverlay(overlay.key);
-        }
-        return true;
-      }
+        Request
+        .get(testURL)
+        .end(function (err, res) {
+          if (err || !res.ok) {
+            if (overlay.key) {
+              self.regenerateOverlay(overlay.key);
+            }
+            return true;
+          }
+        });
+
+        return false;
+      });
     });
-
-    return false;
   },
 
   getGoogleOverlay(overlay) {
