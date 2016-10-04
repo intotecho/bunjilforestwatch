@@ -1,11 +1,30 @@
 import React from 'react';
 import Request from 'superagent';
+import { categories, categoryImages } from '../constants';
 import {
   GoogleMapLoader, GoogleMap, Marker,
   Polyline, Polygon, InfoWindow
 } from "react-google-maps";
 
 export default React.createClass({
+  getInitialState() {
+    return {
+      shouldCenterMap: true
+    };
+  },
+
+  componentWillReceiveProps(nextProps) {
+    if (this.props.clusterId === nextProps.clusterId) {
+      this.setState({
+        shouldCenterMap: false
+      });
+    } else {
+      this.setState({
+        shouldCenterMap: true
+      });
+    }
+  },
+
   geometryToComponentWithLatLng(geometry) {
     let type;
     const isArray = Array.isArray(geometry);
@@ -65,6 +84,26 @@ export default React.createClass({
     }, [], this);
   },
 
+  renderClusterAlerts() {
+    if (!this.props.displayClusters) { return; }
+
+    const { properties, id } = this.props.features[0];
+    const coordinates = properties.points.coordinates;
+
+    return coordinates.map((alertCoordinates, index) => {
+      const googleCoordinates = new google.maps.LatLng(alertCoordinates[1], alertCoordinates[0]);
+
+      return (
+        <Marker
+          key={`json-${id}-${index}`}
+          position={googleCoordinates}
+          icon={require('../../images/geo_cluster.png')}
+          {...properties}>
+        </Marker>
+      );
+    });
+  },
+
   getMapCoordinates() {
     const { lat = 0.0, long = 0.0 } = this.props;
 
@@ -120,24 +159,19 @@ export default React.createClass({
 
   hasExpired(overlay) {
     return new Promise((resolve) => {
-      resolve(() => {
-        let testURL = ['https://earthengine.googleapis.com/map', overlay.map_id, 1, 0, 0].join("/");
+      let testURL = ['https://earthengine.googleapis.com/map', overlay.map_id, 1, 0, 0].join("/");
 
-        testURL += '?token=' + overlay.token;
+      testURL += '?token=' + overlay.token;
 
-        Request
-        .get(testURL)
-        .end(function (err, res) {
-          if (err || !res.ok) {
-            if (overlay.key) {
-              self.regenerateOverlay(overlay.key);
-            }
-            return true;
-          }
-        });
-
-        return false;
+      Request
+      .get(testURL)
+      .end(function (err, res) {
+        if (err || !res.ok) {
+          resolve(true);
+        }
       });
+
+      resolve(false);
     });
   },
 
@@ -160,6 +194,8 @@ export default React.createClass({
   },
 
   render() {
+    const mapCoordinates = (this.state.shouldCenterMap) ? this.getMapCoordinates() : null;
+
     return (
       <section style={{ height: "95%" }}>
         <GoogleMapLoader
@@ -169,12 +205,13 @@ export default React.createClass({
               ref={(googleMapComponent) => this.renderMapOverlays(googleMapComponent)}
               mapTypeId='satellite'
               defaultZoom={16}
-              center={this.getMapCoordinates()}
+              center={mapCoordinates}
               options={{
                 streetViewControl: false,
                 mapTypeControl: false
               }}>
               {this.renderObsTaskBoundary()}
+              {this.renderClusterAlerts()}
             </GoogleMap>
           }
         />

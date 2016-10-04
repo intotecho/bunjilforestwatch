@@ -11,6 +11,7 @@ import {uSizeFull} from '../../stylesheets/utils';
 export default React.createClass({
   getInitialState() {
     return {
+      displayClusters: true,
       selectedCategory: null,
       areaId: -1,
       case: {},
@@ -20,6 +21,12 @@ export default React.createClass({
 
   componentWillMount() {
     this.startNextTask();
+  },
+
+  setDisplayClusters(boolean) {
+    this.setState({
+      displayClusters: boolean
+    });
   },
 
   setSelectedCategory(selectedCategory) {
@@ -58,6 +65,7 @@ export default React.createClass({
     if (_.isEmpty(state.case) === false) {
       return (
         <VotingTaskBar
+          setDisplayClusters={this.setDisplayClusters}
           taskStartTime={Date.now()}
           setSelectedCategory={setSelectedCategory}
           caseId={state.case.case_id}
@@ -69,9 +77,10 @@ export default React.createClass({
   },
 
   renderGeoMapDisplay() {
-    const { gladCluster, overlays } = this.state;
+    const { gladCluster, displayClusters, overlays } = this.state;
 
     if (_.isEmpty(gladCluster) === false) {
+      const clusterId = gladCluster.cluster_id;
       const features = gladCluster.geojson.features;
       const coords = features[0].properties.points.coordinates[0];
       const long = coords[0];
@@ -79,8 +88,9 @@ export default React.createClass({
 
       return (
         <GeoMapDisplay
+          displayClusters={displayClusters}
+          clusterId={clusterId}
           overlays={overlays}
-          clusterId={gladCluster.cluster_id}
           features={features}
           long={long}
           lat={lat}
