@@ -76,9 +76,9 @@ export default React.createClass({
     };
   },
 
-  regenerateOverlay(clusterId) {
+  regenerateOverlay(overlayKey) {
     Request
-    .get('overlay/regenerate/' + clusterId)
+    .get('overlay/regenerate/' + overlayKey)
     .end();
   },
 
@@ -87,7 +87,7 @@ export default React.createClass({
     // Prop retrieval hack, component may not exist by then
     if (!googleMapComponent) { return; }
 
-    let { overlays, clusterId } = this.props;
+    const { overlays } = this.props;
     const { map } = googleMapComponent.props;
 
     // If actual google map's object doesn't exist
@@ -109,8 +109,8 @@ export default React.createClass({
     .get(testURL)
     .end(function (err, res) {
       if (err || !res.ok) {
-        if (self.props.clusterId) {
-          self.regenerateOverlay(self.props.clusterId);
+        if (overlay.key) {
+          self.regenerateOverlay(overlay.key);
         }
         return true;
       }
