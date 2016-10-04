@@ -2,7 +2,7 @@ import React from 'react';
 import Request from 'superagent';
 import {
   GoogleMapLoader, GoogleMap, Marker,
-  Polyline, Polygon, InfoWindow, OverlayView
+  Polyline, Polygon, InfoWindow
 } from "react-google-maps";
 
 export default React.createClass({
@@ -76,69 +76,72 @@ export default React.createClass({
     };
   },
 
-  // Remove when endpoints are ready and fix renderMapOverlay()
-  testRenderMapOverlay() {
-    const { lat = 0.0, long = 0.0 } = this.props;
-    // Pretend we made a request to get an image
-    const cogwheelSrc = require('../../images/cogwheel.png');
-
-    // Pretend new Array is overlay data set from props
-    let overlays = [1,2,3,4,5,6,7,8,9,10];
-
-    return overlays.map((value) => {
-      const lLat = parseFloat(lat) + (Math.random() * 0.5);
-      const lLong = parseFloat(long) + (Math.random() * 0.5);
-
-      return (
-        <OverlayView
-          key={value}
-          position={{ lat: lLat, long: lLong }}
-          mapPaneName={OverlayView.OVERLAY_LAYER}>
-          <img src={cogwheelSrc} />
-        </OverlayView>
-      );
-    });
+  regenerateOverlay(clusterId) {
+    Request
+    .get('overlay/regenerate/' + clusterId)
+    .end();
   },
 
-  // FIXME
-  renderMapOverlay() {
+  // FIXME: Hack
+  renderMapOverlay(googleMapComponent) {
+    // Prop retrieval hack, component may not exist by then
+    if (!googleMapComponent) { return; }
+
     let { overlays, clusterId } = this.props;
+    const { map } = googleMapComponent.props;
+
+    // If actual google map's object doesn't exist
+    if (!map) { return ; }
 
     overlays.forEach((overlay) => {
-      const eeMapAPIUrl = 'https://earthengine.googleapis.com/map';
-      let overlayTileUrl = [eeMapAPIUrl, overlay.map_id, 1, 0, 0].join("/");
-
-      overlayTileUrl += '?token=' + overlay.token;
-
-      // FIXME
-      // CORS issue with EE endpoint
-      Request
-      .get(overlayTileUrl)
-      .withCredentials()
-      .end(
-        function (err, res) {
-          if (err || !res.ok) {
-            // overlay = this.regenerateOverlay(overlay.map_id);
-            console.log(res);
-          }
-        }
-      );
+      this.hasExpired(overlay);
+      map.overlayMapTypes.push(this.getGoogleOverlay(overlay));
     });
-
-    // displayOverlay(overlay);
   },
 
-  // FIXME
-  regenerateOverlay(gladClusterId) {
+  hasExpired(overlay) {
+    const self = this;
+    let testURL = ['https://earthengine.googleapis.com/map', overlay.map_id, 1, 0, 0].join("/");
+
+    testURL += '?token=' + overlay.token;
+
     Request
-    .get('overlay/regenerate/' + gladClusterId)
-    .end(
-      function (err, res) {
-        if (err === null && res.ok) {
-          return JSON.parse(res.text);
+    .get(testURL)
+    .end(function (err, res) {
+      if (err || !res.ok) {
+        if (self.props.clusterId) {
+          self.regenerateOverlay(self.props.clusterId);
         }
+        return true;
       }
-    );
+    });
+
+    return false;
+  },
+
+  getGoogleOverlay(overlay) {
+    var eeMapOptions = {
+      getTileUrl: (tile, zoom) => {
+        var url = [
+          'https://earthengine.googleapis.com/map',
+          overlay.map_id, zoom, tile.x, tile.y
+        ].join("/");
+
+        url += '?token=' + overlay.token;
+
+        /*
+          Source: overlay-mgr.js, LN:274 (as of 4th Oct 2016)
+
+          Code is missing pending URL checks, please check if
+          this is important
+        */
+
+        return url;
+      },
+      tileSize: new google.maps.Size(256, 256)
+    };
+
+    return new google.maps.ImageMapType(eeMapOptions);
   },
 
   render() {
@@ -148,6 +151,7 @@ export default React.createClass({
           containerElement={ <div style={{ height: "100%", width: "100%" }} /> }
           googleMapElement={
             <GoogleMap
+              ref={(googleMapComponent) => this.renderMapOverlay(googleMapComponent)}
               mapTypeId='satellite'
               defaultZoom={16}
               center={this.getMapCoordinates()}
