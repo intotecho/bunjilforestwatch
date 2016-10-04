@@ -167,9 +167,6 @@ export default React.createClass({
       .get(testURL)
       .end(function (err, res) {
         if (err || !res.ok) {
-          if (overlay.key) {
-            self.regenerateOverlay(overlay.key);
-          }
           resolve(true);
         }
       });
