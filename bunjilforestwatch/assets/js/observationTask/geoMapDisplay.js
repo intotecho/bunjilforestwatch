@@ -94,8 +94,14 @@ export default React.createClass({
     if (!map) { return ; }
 
     overlays.forEach((overlay) => {
-      this.hasExpired(overlay);
-      map.overlayMapTypes.push(this.getGoogleOverlay(overlay));
+      new Promise((resolve, reject) => {
+        if (this.hasExpired(overlay)) {
+          reject();
+        } else {
+          map.overlayMapTypes.push(this.getGoogleOverlay(overlay));
+          resolve();
+        }
+      });
     });
   },
 
