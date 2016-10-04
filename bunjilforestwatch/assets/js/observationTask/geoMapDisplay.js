@@ -135,13 +135,6 @@ export default React.createClass({
 
         url += '?token=' + overlay.token;
 
-        /*
-          Source: overlay-mgr.js, LN:274 (as of 4th Oct 2016)
-
-          Code is missing pending URL checks, please check if
-          this is important
-        */
-
         return url;
       },
       tileSize: new google.maps.Size(256, 256)
