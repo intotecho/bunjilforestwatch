@@ -14,6 +14,8 @@ import {
   preferenceButton, toggleSwitchCluster, toggleSwitchClusterLabel
 } from '../../stylesheets/observationTask/votingTaskBar';
 
+// TODO: Split the voting component and the toggle components into two seperate
+//       components that live inside the parent task bar component
 export default React.createClass({
 
   getInitialState() {
