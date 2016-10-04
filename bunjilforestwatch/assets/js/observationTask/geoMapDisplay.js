@@ -194,9 +194,7 @@ export default React.createClass({
   },
 
   render() {
-    const mapCoordinates = (this.state.shouldCenterMap)
-      ? this.getMapCoordinates()
-      : null;
+    const mapCoordinates = (this.state.shouldCenterMap) ? this.getMapCoordinates() : null;
 
     return (
       <section style={{ height: "95%" }}>
