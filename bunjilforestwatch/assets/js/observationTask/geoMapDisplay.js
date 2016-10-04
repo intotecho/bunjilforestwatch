@@ -83,7 +83,7 @@ export default React.createClass({
   },
 
   // FIXME: Hack
-  renderMapOverlay(googleMapComponent) {
+  renderMapOverlays(googleMapComponent) {
     // Prop retrieval hack, component may not exist by then
     if (!googleMapComponent) { return; }
 
@@ -150,7 +150,7 @@ export default React.createClass({
           containerElement={ <div style={{ height: "100%", width: "100%" }} /> }
           googleMapElement={
             <GoogleMap
-              ref={(googleMapComponent) => this.renderMapOverlay(googleMapComponent)}
+              ref={(googleMapComponent) => this.renderMapOverlays(googleMapComponent)}
               mapTypeId='satellite'
               defaultZoom={16}
               center={this.getMapCoordinates()}
@@ -159,7 +159,6 @@ export default React.createClass({
                 mapTypeControl: false
               }}>
               {this.renderObsTaskBoundary()}
-              {this.renderMapOverlay()}
             </GoogleMap>
           }
         />
