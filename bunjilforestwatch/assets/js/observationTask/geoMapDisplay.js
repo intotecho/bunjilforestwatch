@@ -1,4 +1,5 @@
 import React from 'react';
+import Request from 'superagent';
 import { categories, categoryImages } from '../constants';
 import {
   GoogleMapLoader, GoogleMap, Marker,
@@ -104,28 +105,110 @@ export default React.createClass({
   },
 
   getMapCoordinates() {
+    const { lat = 0.0, long = 0.0 } = this.props;
+
     // You must parseFloat since Google Maps expects a real number
     // Lat and Long are both strings due to JSX interpolation {}
     return {
-      lat: parseFloat(this.props.lat),
-      lng: parseFloat(this.props.long)
+      lat: parseFloat(lat),
+      lng: parseFloat(long)
     };
   },
 
-  render() {
-    const mapCoordinates = this.state.shouldCenterMap
-      ? this.getMapCoordinates()
-      : null;
+  regenerateOverlay(overlayKey) {
+    return new Promise((resolve) => {
+      Request
+      .get('overlay/regenerate/' + overlayKey)
+      .end((err, res) => {
+        if (!err && res.ok) {
+          resolve(JSON.parse(res.text));
+        } else {
+          resolve();
+        }
+      });
+    });
+  },
 
+  renderMapOverlays(googleMapComponent) {
+    // FIXME: Hacked prop retrieval hack, component may not exist by then
+    if (!googleMapComponent) { return; }
+
+    const { hasExpired, regenerateOverlay, getGoogleOverlay } = this;
+    const { overlays } = this.props;
+    const { map } = googleMapComponent.props;
+
+    // If actual google map's object doesn't exist
+    if (!map) { return; }
+
+    overlays.forEach((overlay) => {
+      hasExpired(overlay).then((hasExpired) => {
+        // If image has expired, then regenerate it, else push data
+        if (hasExpired) {
+          regenerateOverlay(overlay.key).then((newOverlay) => {
+            if (newOverlay) {
+              // Push using new overlay data obtained from request
+              map.overlayMapTypes.push(getGoogleOverlay(newOverlay));
+            }
+          });
+        } else {
+          map.overlayMapTypes.push(getGoogleOverlay(overlay));
+        }
+      });
+    });
+  },
+
+  hasExpired(overlay) {
+    return new Promise((resolve) => {
+      resolve(() => {
+        let testURL = ['https://earthengine.googleapis.com/map', overlay.map_id, 1, 0, 0].join("/");
+
+        testURL += '?token=' + overlay.token;
+
+        Request
+        .get(testURL)
+        .end(function (err, res) {
+          if (err || !res.ok) {
+            if (overlay.key) {
+              self.regenerateOverlay(overlay.key);
+            }
+            return true;
+          }
+        });
+
+        return false;
+      });
+    });
+  },
+
+  getGoogleOverlay(overlay) {
+    var eeMapOptions = {
+      getTileUrl: (tile, zoom) => {
+        var url = [
+          'https://earthengine.googleapis.com/map',
+          overlay.map_id, zoom, tile.x, tile.y
+        ].join("/");
+
+        url += '?token=' + overlay.token;
+
+        return url;
+      },
+      tileSize: new google.maps.Size(256, 256)
+    };
+
+    return new google.maps.ImageMapType(eeMapOptions);
+  },
+
+  render() {
     return (
       <section style={{ height: "95%" }}>
         <GoogleMapLoader
           containerElement={ <div style={{ height: "100%", width: "100%" }} /> }
           googleMapElement={
             <GoogleMap
+              ref={(googleMapComponent) => this.renderMapOverlays(googleMapComponent)}
               mapTypeId='satellite'
               defaultZoom={16}
-              center={mapCoordinates}
+              center={this.getMapCoordinates()}
               options={{
                 streetViewControl: false,
                 mapTypeControl: false

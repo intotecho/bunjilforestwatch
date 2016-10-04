@@ -54,6 +54,13 @@ indexes:
   - name: date
     direction: desc
 
+- kind: GladClusterCollection
+  ancestor: yes
+  properties:
+  - name: image_collection
+  - name: captured
+    direction: desc
+
 - kind: Observation
   ancestor: yes
   properties:

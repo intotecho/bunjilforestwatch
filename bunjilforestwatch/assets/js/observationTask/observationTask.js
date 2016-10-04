@@ -46,11 +46,13 @@ export default React.createClass({
           if (err === null && res.ok) {
             // Response is coming back as JSON string
             const response = JSON.parse(res.text);
+
             self.setState({
               areaId: response.area_id,
               selectedCategory: null,
               case: response.case,
-              gladCluster: response.glad_cluster
+              gladCluster: response.glad_cluster,
+              overlays: response.overlays
             });
           }
         }
@@ -75,7 +77,7 @@ export default React.createClass({
   },
 
   renderGeoMapDisplay() {
-    const { gladCluster, displayClusters } = this.state;
+    const { gladCluster, displayClusters, overlays } = this.state;
 
     if (_.isEmpty(gladCluster) === false) {
       const clusterId = gladCluster.cluster_id;
@@ -88,6 +90,7 @@ export default React.createClass({
         <GeoMapDisplay
           displayClusters={displayClusters}
           clusterId={clusterId}
+          overlays={overlays}
           features={features}
           long={long}
           lat={lat}

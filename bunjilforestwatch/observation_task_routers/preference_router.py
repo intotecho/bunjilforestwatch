@@ -61,5 +61,5 @@ class PreferenceRouter(BaseRouter):
         """
         cluster = models.GladCluster.get_by_id(case.glad_cluster.id())
         area = models.AreaOfInterest.get_by_id(cluster.area.id())
-
-        return NextObservationTaskAjaxModel(case, cluster, area)
+        overlays = cluster.overlays_entities
+        return NextObservationTaskAjaxModel(case, cluster, area, overlays)
