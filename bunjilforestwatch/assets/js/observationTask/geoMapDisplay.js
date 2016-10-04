@@ -159,24 +159,22 @@ export default React.createClass({
 
   hasExpired(overlay) {
     return new Promise((resolve) => {
-      resolve(() => {
-        let testURL = ['https://earthengine.googleapis.com/map', overlay.map_id, 1, 0, 0].join("/");
+      let testURL = ['https://earthengine.googleapis.com/map', overlay.map_id, 1, 0, 0].join("/");
 
-        testURL += '?token=' + overlay.token;
+      testURL += '?token=' + overlay.token;
 
-        Request
-        .get(testURL)
-        .end(function (err, res) {
-          if (err || !res.ok) {
-            if (overlay.key) {
-              self.regenerateOverlay(overlay.key);
-            }
-            return true;
+      Request
+      .get(testURL)
+      .end(function (err, res) {
+        if (err || !res.ok) {
+          if (overlay.key) {
+            self.regenerateOverlay(overlay.key);
           }
-        });
-
-        return false;
+          resolve(true);
+        }
       });
+
+      resolve(false);
     });
   },
 
