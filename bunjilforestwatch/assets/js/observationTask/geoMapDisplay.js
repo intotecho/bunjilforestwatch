@@ -90,9 +90,8 @@ export default React.createClass({
     });
   },
 
-  // FIXME: Hack
   renderMapOverlays(googleMapComponent) {
-    // Prop retrieval hack, component may not exist by then
+    // FIXME: Hacked prop retrieval hack, component may not exist by then
     if (!googleMapComponent) { return; }
 
     const { hasExpired, regenerateOverlay, getGoogleOverlay } = this;
@@ -100,7 +99,7 @@ export default React.createClass({
     const { map } = googleMapComponent.props;
 
     // If actual google map's object doesn't exist
-    if (!map) { return ; }
+    if (!map) { return; }
 
     overlays.forEach((overlay) => {
       hasExpired(overlay).then((hasExpired) => {
