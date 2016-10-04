@@ -39,11 +39,13 @@ export default React.createClass({
           if (err === null && res.ok) {
             // Response is coming back as JSON string
             const response = JSON.parse(res.text);
+
             self.setState({
               areaId: response.area_id,
               selectedCategory: null,
               case: response.case,
-              gladCluster: response.glad_cluster
+              gladCluster: response.glad_cluster,
+              overlays: response.overlays
             });
           }
         }
@@ -67,14 +69,23 @@ export default React.createClass({
   },
 
   renderGeoMapDisplay() {
-    const {state} = this;
+    const { gladCluster, overlays } = this.state;
 
-    if (_.isEmpty(state.gladCluster) === false) {
-      const features = state.gladCluster.geojson.features;
+    if (_.isEmpty(gladCluster) === false) {
+      const features = gladCluster.geojson.features;
       const coords = features[0].properties.points.coordinates[0];
       const long = coords[0];
       const lat = coords[1];
-      return <GeoMapDisplay features={features} long={long} lat={lat}/>;
+
+      return (
+        <GeoMapDisplay
+          overlays={overlays}
+          clusterId={gladCluster.cluster_id}
+          features={features}
+          long={long}
+          lat={lat}
+        />
+      );
     }
 
     return; // TODO: have the map object have a default no features available view
