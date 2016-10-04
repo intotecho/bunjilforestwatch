@@ -197,6 +197,10 @@ export default React.createClass({
   },
 
   render() {
+    const mapCoordinates = (this.state.shouldCenterMap)
+      ? this.getMapCoordinates()
+      : null;
+
     return (
       <section style={{ height: "95%" }}>
         <GoogleMapLoader
@@ -206,7 +210,7 @@ export default React.createClass({
               ref={(googleMapComponent) => this.renderMapOverlays(googleMapComponent)}
               mapTypeId='satellite'
               defaultZoom={16}
-              center={this.getMapCoordinates()}
+              center={mapCoordinates}
               options={{
                 streetViewControl: false,
                 mapTypeControl: false
