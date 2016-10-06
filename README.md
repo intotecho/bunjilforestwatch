@@ -30,7 +30,8 @@ http://blog.bunjilforestwatch.net/learn/technology/dev-environment-setup-on-wind
 * CONTRIBUTORS: http://bunjilforestwatch.atlassian.net (requires login)
 
 ##BUILD DEPENDENCIES
-These libraries are reuqired,
+These libraries are required,
+
 ```sh
 	apiclient/
 	atom/
@@ -68,4 +69,6 @@ These libraries are reuqired,
 	textile.py*
 	textile.pyc
 	uritemplate/
+	python_http_client/
+	sendgrid/
 ```

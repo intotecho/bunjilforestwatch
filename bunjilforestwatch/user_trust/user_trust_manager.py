@@ -1,6 +1,7 @@
 import logging
 
-from google.appengine.ext import ndb
+from google.appengine.api.taskqueue import InvalidTaskError
+from google.appengine.ext.deferred import deferred
 
 import models
 from case_workflow import case_checker
@@ -38,27 +39,20 @@ class UserTrustManager(object):
 
     def _update_user_trust(self, user, case, response):
         if (user is not None) and (case is not None) and (response is not None):
-            if response.vote_category != models.UNSURE:
-                if response.vote_category.upper() == CaseChecker.get_most_voted_category(case):
-                    trust_modifier = self.TRUST_MODIFIER_FOR_RESPONSE
-                else:
-                    trust_modifier = -self.TRUST_MODIFIER_FOR_RESPONSE
+            if response.vote_category.upper() == CaseChecker.get_most_voted_category(case):
+                trust_modifier = self.TRUST_MODIFIER_FOR_RESPONSE
+            else:
+                trust_modifier = -self.TRUST_MODIFIER_FOR_RESPONSE
 
-                new_trust = clamp(user.trust + trust_modifier, 0, self.get_max_trust())
+            new_trust = clamp(user.trust + trust_modifier, 0, self.get_max_trust())
 
-                if user.trust != new_trust:
-                    user.trust = new_trust
-                    user.put()
+            if user.trust != new_trust:
+                user.trust = new_trust
+                user.put()
 
-    def update_all_users_trust(self, case_id):
-        """
-        :param case_id: The id of the case that has recently been closed.
-        :return: When a case closes each user who voted on the case will have their trust modified based on whether
-        the category they voted for. If the user voted for the category with the most votes then their trust will
-        increase and will decrease if they selected a lesser chosen category.
-        """
+    def _update_all_users_trust(self, case_id):
         case = models.Case.get_by_id(id=case_id)
-        if case is not None:
+        if case is not None and case.is_closed:
             task_responses = models.ObservationTaskResponse.query() \
                 .filter(models.ObservationTaskResponse.case == case.key).fetch()
             logging.info('Updating {} user/s trust due to case {} closure'.format(str(len(task_responses)), str(case.key.id())))
@@ -68,3 +62,18 @@ class UserTrustManager(object):
                     self._update_user_trust(response.user.get(), case, response)
                 except Exception:
                     pass
+
+    def update_all_users_trust_async(self, case):
+        """
+        :param case: The case that has recently been closed.
+        :return: When a case closes each user who voted on the case will have their trust modified based on whether
+        the category they voted for. If the user voted for the category with the most votes then their trust will
+        increase and will decrease if they selected a lesser chosen category.
+
+        NOTE: This task will only be completed once per case.
+        """
+        try:
+            deferred.defer(self._update_all_users_trust, case.key.id(), _countdown=10, _queue='update-user-trust-queue',
+                           _name='closed-{}'.format(case.non_unique_task_name))
+        except InvalidTaskError:
+            pass

@@ -13,6 +13,8 @@ class CaseChecker(object):
         """
         :return: True: if the votes for a case form a clear majority for one vote category. Based on MIN_CONSENSUS
         and MIN_VOTES_FOR_VIABLE_CONSENSUS requirements.
+
+        If the majority category is models.UNSURE then false will be returned as this is not considered a valid majority.
         """
         highest_category_votes = 0
         if case.votes.fire > highest_category_votes:
@@ -57,6 +59,8 @@ class CaseChecker(object):
         """
         Returns the VOTE_CATEGORY that corresponds with the highest vote
         A possible bug is 50/50 splits
+
+        If highest voted category is models.UNSURE then the second highest category will be returned.
         """
         highest_category_votes = 0
 
@@ -84,7 +88,7 @@ class CaseChecker(object):
     def total_votes(case):
         """
         Returns:
-            result: a float value of all votes tallied together
+            result: a float value of all votes tallied together. NOTE: this count includes the unsure votes.
         Args:
             case: a case data store entry
         """

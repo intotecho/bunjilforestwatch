@@ -11,4 +11,5 @@ class DummyRouter(BaseRouter):
         area = cache.get_area("Peru Seed")
         cluster = models.GladCluster.get_glad_clusters_for_area(area)[0]
         case = models.Case.get_cases_for_glad_cluster(cluster)[0]
-        return NextObservationTaskAjaxModel(case, cluster, area)
+        overlays = cluster.overlays_entities
+        return NextObservationTaskAjaxModel(case, cluster, area, overlays)

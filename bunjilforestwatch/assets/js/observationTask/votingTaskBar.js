@@ -4,15 +4,18 @@ import { browserHistory } from 'react-router';
 
 import { categories, categoryImages } from '../constants';
 import Button from '../button';
+import ToggleSwitch from '../toggleSwitch';
 import Icon from '../icon';
 import {uTextAlignCenter} from '../../stylesheets/utils';
 import {
   container, categoryListItem, title,
   categoryButton, categoryOptionList,
   categoryIcon, lineSeparator, preferenceIcon,
-  preferenceButton
+  preferenceButton, toggleSwitchCluster, toggleSwitchClusterLabel
 } from '../../stylesheets/observationTask/votingTaskBar';
 
+// TODO: Split the voting component and the toggle components into two seperate
+//       components that live inside the parent task bar component
 export default React.createClass({
 
   getInitialState() {
@@ -71,6 +74,14 @@ export default React.createClass({
     }
   },
 
+  clusterToggleHandler({ target }) {
+    // Event is fired off twice, oddly first is undefined
+    if (target.checked != true && target.checked != false) { return; }
+    if (!this.props.setDisplayClusters) { return; }
+
+    this.props.setDisplayClusters(target.checked);
+  },
+
   renderCategoryList() {
     let categoryList = categories.map((category, index) => {
       return (
@@ -84,6 +95,21 @@ export default React.createClass({
     });
 
     return <ul className={categoryOptionList}>{categoryList}</ul>;
+  },
+
+  renderClusterToggle() {
+    return (
+      <ToggleSwitch
+        onClick={this.clusterToggleHandler}
+        defaultChecked={true}
+        classNames={toggleSwitchCluster}>
+
+        <p className={toggleSwitchClusterLabel}>
+          Display alerts
+        </p>
+
+      </ToggleSwitch>
+    );
   },
 
   renderPreferenceSetting() {
@@ -105,6 +131,8 @@ export default React.createClass({
       <div className={container}>
         <p className={titleClasses}>Category</p>
         {this.renderCategoryList()}
+        <span className={lineSeparator} />
+        {this.renderClusterToggle()}
         <span className={lineSeparator} />
         {this.renderPreferenceSetting()}
       </div>

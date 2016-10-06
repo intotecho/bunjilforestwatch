@@ -9,8 +9,9 @@ const categoryImages = {
 };
 
 const regionPreference = {
-  'borneo': require('../images/borneo.jpeg'),
-  'peru': require('../images/peru.jpeg')
+  'congo': require('../images/congo.png'),
+  'peru': require('../images/peru.jpeg'),
+  'indonesia': require('../images/indonesia.png')
 };
 
 export {

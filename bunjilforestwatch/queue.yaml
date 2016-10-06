@@ -12,3 +12,6 @@ queue:
 
 - name: update-user-trust-queue
   rate: 1/s
+
+- name: send-notifications-queue
+  rate: 1/s

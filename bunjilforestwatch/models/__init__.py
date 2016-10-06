@@ -17,11 +17,15 @@ import ee
 import hashlib
 import geojson
 import json
+
+import mailer
 import secrets
 import cache
 import apiservices
 
 # from contrib.gis.geos import coords
+import utils
+
 
 class DerefModel(ndb.Model):
     def get_key(self, prop_name):
@@ -54,7 +58,7 @@ class User(ndb.Model):
 
     """
 
-    name = ndb.StringProperty(required=True, indexed=False)
+    name = ndb.StringProperty(required=True, indexed=True)
     lname = ndb.StringProperty(indexed=True)
     email = ndb.StringProperty()
     register_date = ndb.DateTimeProperty(auto_now_add=True)
@@ -250,6 +254,7 @@ class AreaOfInterest(ndb.Model):
     threats = ndb.TextProperty()  # text type is longer but is not indexed.
     type = ndb.StringProperty()
     wiki = ndb.StringProperty()  # beware max url 500 - like to a story about this area.
+    region = ndb.StringProperty(repeated=True)
 
     """
     WDPA Attributes
@@ -353,6 +358,15 @@ class AreaOfInterest(ndb.Model):
     @property
     def area_followers(self):
         return AreaFollowersIndex.get_key(self.name).get()
+
+    @property
+    def notification_subscriber_user_names(self):
+        followers = self.area_followers
+        return followers.users if followers is not None and followers.count != 0 else []
+
+    def get_notification_subscribers(self):
+        subscriber_names = self.notification_subscriber_user_names
+        return User.query(User.name.IN(subscriber_names)).fetch()
 
     @property
     def num_followers(self):
@@ -979,14 +993,14 @@ class LandsatCell(ndb.Model):
 
         return celldict
 
-    def latestObservation(self, collectionName):
-        '''
+    def latestObservation(self, collectionName="L8"):  # query for latest observation from given imageCollection.
+        """
         queries for latest observation from given imageCollection belonging to the cell.
         :param collectionName:  LANDSAT/LC8_L1T_TOA or LANDSAT/LE7_L1T_TOA
         @returns Observation if found, else None
-        '''
-        q = Observation.query(Observation.image_collection == collectionName, ancestor=self.key).order(
-            -Observation.captured).fetch(1)
+        """
+        q = GladClusterCollection.query(GladClusterCollection.image_collection == collectionName, ancestor=self.key).order(
+            -GladClusterCollection.captured).fetch(1)
         if q is not None and len(q) <> 0:
             return q[0]
         else:
@@ -1008,6 +1022,7 @@ class LandsatCell(ndb.Model):
         :param area: the area to check
         :image_collection_names: The names of image collections to include in the check.
 
+<<<<<<< HEAD
         Does not care if cell is monitored or followed.
 
         Used by glad clusters to identify the latest image
@@ -1059,11 +1074,31 @@ class Overlay(ndb.Model):
     """
     image_id = ndb.StringProperty(required=False, default=None)  # Overlay is created from this asset.
 
+=======
+class Overlay(ndb.Model):
+    """
+    class Overlay describes a visualisation of an image asset.
+    It includes the map_id and token, an algorithm and information about the type.
+    Used for a (Landsat) satelite image that has been retrieved and converted to a usable (visible/NDVI) format.
+    The image is based on an Observation Asset.
+
+    Note that the Overlay could be an asset belonging to Google Earth Engine that may have a limited expiry date.
+    In future it's lifecycle may be managed by Bunjil's in cloud storage and cached for some time.
+
+    If the browser sees the image tiles returned are 404 (NOT FOUND) then the browser must initiate a call to
+    regenerate the overlay.
+    """
+
+    image_id = ndb.StringProperty(required=True, indexed=True)  # LANDSAT Image ID of Image - key to query EE.
+    map_id = ndb.StringProperty(required=False, default=None)  # RGB Map Overlay Id generated in GEE -
+    token = ndb.StringProperty(required=False, default=None)  # RGB Map Overlay Token might have expired.
+>>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
     algorithm = ndb.StringProperty(
         required=False)  # identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
-    overlay_role = ndb.StringProperty(
+    overlay_role = ndb.StringProperty(  # TODO: remove this
         required=False)  # Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'.
 
+<<<<<<< HEAD
     map_id = ndb.StringProperty(required=False, default=None)  # Map Overlay Id generated in GEE might expire
     token = ndb.StringProperty(required=False, default=None)  # Map Overlay Token might have expired.
 
@@ -1074,14 +1109,32 @@ class Overlay(ndb.Model):
         self.map_id = None
         self.token = None
 
+=======
+    image_collection = ndb.StringProperty(required=True)  # identifies the ImageCollection name, not an EE object.
+
+    @property
+    def to_dict(self):
+        return {
+            "image_id": self.image_id,
+            "map_id": self.map_id,
+            "token": self.token,
+            "algorithm": self.algorithm,
+            "image_collection": self.image_collection,
+            "key": self.key.urlsafe(),
+        }
+
+    # TODO: remove
+>>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
     def Overlay2Dictionary(self):
         obsdict = {
+            "image_id": self.key.id(),
             "map_id": self.map_id,
             "token": self.token,
             "algorithm": self.algorithm,
             "overlay_role": self.overlay_role,
             "parent": str(self.key.parent()),
-            "key": self.key.urlsafe()
+            "key": self.key.urlsafe(),
+            "image_collection": self.image_collection
         }
         return obsdict
 
@@ -1107,6 +1160,7 @@ class Overlay(ndb.Model):
             role_p:  'latest' etc
             **opt_params:
 
+<<<<<<< HEAD
         Finds an observation matching the image.
             @todo if not found, create?
             finds a visualisaiton of that image,
@@ -1229,6 +1283,21 @@ class Observation(ndb.Model):
 
     overlays = ndb.KeyProperty(repeated=True,
                                default=None)  # list of keys to overlays (visualisations of this observation asset)
+=======
+class GladClusterCollection(ndb.Model):
+    """
+    An GladClusterCollection represents a collection of GLAD clusters that were retrieved in the same request.
+    """
+
+    image_collection = ndb.StringProperty(required=False)  # TODO: Remove
+    properties = ndb.JsonProperty(required=False)  # store cluster properties.
+    captured = ndb.DateTimeProperty(required=False)
+    # sysdate or date Image was captured - could be derived by EE from collection+image_id.
+    obs_role = ndb.StringProperty(required=False)  # TODO: remove
+    # Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'.
+    overlays = ndb.KeyProperty(repeated=True, default=None)  # TODO: remove
+    # list of keys to overlays (visualisations of this observation asset)
+>>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
 
     @staticmethod  # make it static so ndb recognises the kind='Observation'
     def get_from_encoded_key(encoded_key):
@@ -1262,6 +1331,7 @@ class Observation(ndb.Model):
 
 
     @staticmethod
+<<<<<<< HEAD
     def createGladAlertObservation(area, clusterProperties):
         """
         :param clusterProperties: A dictionary{
@@ -1280,8 +1350,12 @@ class Observation(ndb.Model):
                'file_id': area.get_gladcluster_file_id()
            }
         """
+=======
+    def createGladClusterCollection(area, clusterProperties):
+>>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
 
         date = datetime.datetime.fromtimestamp(clusterProperties['alerts_date']/1000) #mm to secs
+<<<<<<< HEAD
         obs = Observation(parent=area.key,
                           obs_type = "GLADALERTS",
                           properties=clusterProperties,
@@ -1302,6 +1376,14 @@ class Observation(ndb.Model):
                           obs_role=role)
         obs.put()
         return obs
+=======
+        cluster_collection = GladClusterCollection(parent=area.key, properties=clusterProperties,
+                                    image_collection="GLADALERTS",
+                                    captured=date, image_id=clusterProperties['file_id'],
+                                    obs_role="LATEST")
+        cluster_collection.put()
+        return cluster_collection
+>>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
 
 
 '''
@@ -1309,9 +1391,14 @@ class Task is an observation task, based on a landsat image in an AOI. The task 
 Each task has a unique ID.
 '''
 
+<<<<<<< HEAD
 class ObservationTask(ndb.Model):
 
     #class Old_ObservationTask(ndb.Model):
+=======
+# TODO: REMOVE This has been deprecated in favour of cases
+class Old_ObservationTask(ndb.Model):
+>>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
     OBSTASKS_PER_PAGE = 5
     # Observation
     name = ndb.StringProperty()
@@ -1791,10 +1878,23 @@ class Config(ndb.Expando):
 class GladCluster(ndb.Model):
     """
     """
+
     area = ndb.KeyProperty(kind=AreaOfInterest)  # key to the GladCluster that created the case.
     first_alert_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
     geojson = ndb.PickleProperty(required=True, indexed=False)
 
+    # key of the collection of clusters this originated from
+    glad_cluster_collection = ndb.KeyProperty(kind=GladClusterCollection, default=None)
+    overlays = ndb.KeyProperty(kind=Overlay, repeated=True, default=None)
+    
+    @property
+    def overlays_entities(self):
+        overlays = []
+        for overlay in self.overlays:
+            overlays.append(overlay.get())
+
+        return overlays
+    
     @staticmethod
     def get_glad_clusters_for_area(area):
         return GladCluster.query(GladCluster.area == area.key).fetch()
@@ -1837,28 +1937,63 @@ class CaseVotes(ndb.Model):
         elif vote_category == UNSURE:
             self.unsure += weighted_vote
 
+OPEN = 'OPEN'
+CONFIRMED = 'CONFIRMED'
+UNCONFIRMED = 'UNCONFIRMED'
+
+CASE_STATES = [
+    OPEN,
+    CONFIRMED,
+    UNCONFIRMED
+]
+
 
 class Case(ndb.Model):
     """
     """
 
     glad_cluster = ndb.KeyProperty(kind=GladCluster)  # key to the GladCluster that created the case.
-    status = ndb.StringProperty(required=True, indexed=True, default="OPEN")
+    status = ndb.StringProperty(required=True, indexed=True, default=OPEN, choices=set(CASE_STATES))
     creation_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
 
     votes = ndb.StructuredProperty(CaseVotes, default=CaseVotes())
-    confidence = ndb.IntegerProperty(indexed=False, default=0)
+
+    @property
+    def non_unique_task_name(self):
+        return '{}-{}'.format(self.key.id(), self.glad_cluster.id())
+    
+    @property
+    def area(self):
+        glad_cluster = self.glad_cluster.get()
+        return glad_cluster.area.get() if glad_cluster is not None else None
+
+    @property
+    def is_closed(self):
+        if self.status == CONFIRMED or self.status == UNCONFIRMED:
+            return True
+        else:
+            return False
+
+    @property
+    def area(self):
+        glad_cluster = self.glad_cluster.get()
+        return glad_cluster.area.get() if glad_cluster is not None else None
+
+    @property
+    def is_confirmed(self):
+        return self.status == CONFIRMED
+
+    @property
+    def is_unconfirmed(self):
+        return self.status == UNCONFIRMED
+
+    @property
+    def is_open(self):
+        return self.status == OPEN
 
     @staticmethod
     def get_cases_for_glad_cluster(glad_cluster):
         return Case.query(Case.glad_cluster == glad_cluster.key).fetch()
-
-    @staticmethod
-    def is_closed(case):
-        if case.status == 'CONFIRMED' or case.status == 'UNCONFIRMED':
-            return True
-        else:
-            return False
 
 
 class ObservationTaskResponse(ndb.Model):
@@ -1870,6 +2005,7 @@ class ObservationTaskResponse(ndb.Model):
     case_response = ndb.PickleProperty(required=True)
     vote_category = ndb.StringProperty(required=True)
     task_duration_seconds = ndb.FloatProperty(default=0.0)
+
 
 class ObservationTaskPreference(ndb.Model):
     """
@@ -1887,7 +2023,7 @@ class ObservationTaskPreference(ndb.Model):
     def upsert(user_key, region_preference=[]):
         preference = ObservationTaskPreference.get_by_user_key(user_key)
 
-        if preference == None:
+        if preference is None:
             # Only create when there isn't an existing preference record for user
             preference = ObservationTaskPreference(
                 user=user_key,

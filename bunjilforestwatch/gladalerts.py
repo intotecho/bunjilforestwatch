@@ -6,6 +6,7 @@
 
 
 import models
+from overlay_manager import fetch_latest_overlay
 
 '''
 import csv
@@ -684,20 +685,20 @@ def check_export_status(task_id, clusterProperties):
         try:
             area = cache.get_area(clusterProperties['area'])
             clusterProperties['file_id'] = area.get_gladcluster_file_id()
+                    
+            new_cluster_collections = []
+            cluster_collection = models.GladClusterCollection.createGladClusterCollection(area, clusterProperties)
+            if cluster_collection is not None:
+                new_cluster_collections.append(cluster_collection.key)
+                area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
+                # TODO: remove, because old observation tasks have been deprecated
+                if area_followers:
+                    models.Old_ObservationTask.createObsTask(area, new_cluster_collections, "GLADCLUSTER", area_followers.users)
+
             try:
-                create_glad_cluster_and_case_entities(area)
+                create_glad_cluster_and_case_entities(area, cluster_collection)
             except Exception as e:
                 logging.error("Failed to create clustered geojson and case entries in the data store")
-                    
-            new_observations = []
-            obs = models.Observation.createGladAlertObservation(area, clusterProperties)
-            if obs is not None:
-                new_observations.append(obs.key)
-                area_followers = models.AreaFollowersIndex.get_by_id(area.name, parent=area.key)
-                if area_followers:
-                    models.ObservationTask.createObsTask(area, new_observations, "GLADCLUSTER", area_followers.users)
-            else:
-                pass
         except Exception as e:
             msg = "Exception creating GLAD ObservationTask {0!s}".format(e)
             logging.error(msg)
@@ -726,13 +727,36 @@ def get_glad_cluster_list(glad_cluster_geojson_str):
     return glad_cluster_geogjson_collection
 
 
-def create_glad_cluster_and_case_entities(area):
+def create_glad_cluster_and_case_entities(area, glad_cluster_collection):
     """
     Creates an entry in the data store for each glad cluster in a given area
     """
     gladcluster_geojson_collection = get_glad_cluster_list(area.get_gladcluster())
+
+    overlays = fetch_latest_overlay(area)
+
+    # FIXME: HACK - Should put this somewhere else
+    if glad_cluster_collection is not None:
+        image_collection = overlays[0].image_collection if overlays is not None and len(overlays) > 0 else 'LANDSAT/LC8_L1T_TOA'
+        glad_cluster_collection.image_collection = image_collection
+        glad_cluster_collection.put()
+
+    overlay_keys = []
+    for overlay in overlays:
+        overlay_keys.append(overlay.key)
+
     for cluster in gladcluster_geojson_collection:
-        cluster_entity = models.GladCluster(area=area.key, geojson=cluster)
+
+        if glad_cluster_collection is not None:
+
+            cluster_entity = models.GladCluster(area=area.key,
+                                                geojson=cluster,
+                                                glad_cluster_collection=glad_cluster_collection.key)
+        else:
+            cluster_entity = models.GladCluster(area=area.key,
+                                                geojson=cluster)
+
+        cluster_entity.overlays = overlay_keys
         cluster_entity.put()
         case_entity = models.Case(glad_cluster=cluster_entity.key)
         case_entity.put()
