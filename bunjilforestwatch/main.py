@@ -259,7 +259,7 @@ class FacebookCallback(BaseHandler):
                 self.redirect(webapp2.uri_for(local_redirect, callback='callback'))
                 return
 
-        self.redirect(webapp2.uri_for('main'))
+        self.redirect(webapp2.uri_for('main2'))
 
 
 class GoogleLogin(BaseHandler):
