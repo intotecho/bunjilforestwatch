@@ -1821,7 +1821,7 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
         })
 
 
-<<<<<<< HEAD
+
 class ObservationTaskHandler(BaseHandler):
     def get(self, router_name='SIMPLE'):
 

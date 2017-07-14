@@ -27,3 +27,4 @@ DROPBOX_SECRET = ''
 MY_SERVICE_ACCOUNT = 'whitelist@gmail.com'  # replace with your service account whitelisted for google earth enigne!
 MY_PRIVATE_KEY_FILE = 'path\own-privatekey.p12'       # replace with you private key file path
 
+SENDGRID_API_KEY = 'Get key from sendgrid.com' #https://app.sendgrid.com/settings/api_keys

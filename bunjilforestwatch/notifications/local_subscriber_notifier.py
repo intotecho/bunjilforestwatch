@@ -8,7 +8,6 @@ from notifications.email_sender import EmailSender
 from time import gmtime, strftime
 import models
 
-
 class LocalSubscriberNotifier(object):
     _email_sender = EmailSender()
     _case_checker = CaseChecker()

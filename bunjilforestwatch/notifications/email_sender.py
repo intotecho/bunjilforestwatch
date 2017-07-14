@@ -1,5 +1,9 @@
-from sendgrid.helpers.mail import mail
-from sendgrid import sendgrid
+#from sendgrid.helpers.mail import mail
+#from sendgrid.helpers import mail
+
+import sendgrid
+import os
+from sendgrid.helpers.mail import *
 
 import secrets
 

@@ -1022,7 +1022,6 @@ class LandsatCell(ndb.Model):
         :param area: the area to check
         :image_collection_names: The names of image collections to include in the check.
 
-<<<<<<< HEAD
         Does not care if cell is monitored or followed.
 
         Used by glad clusters to identify the latest image
@@ -1074,7 +1073,6 @@ class Overlay(ndb.Model):
     """
     image_id = ndb.StringProperty(required=False, default=None)  # Overlay is created from this asset.
 
-=======
 class Overlay(ndb.Model):
     """
     class Overlay describes a visualisation of an image asset.
@@ -1092,15 +1090,11 @@ class Overlay(ndb.Model):
     image_id = ndb.StringProperty(required=True, indexed=True)  # LANDSAT Image ID of Image - key to query EE.
     map_id = ndb.StringProperty(required=False, default=None)  # RGB Map Overlay Id generated in GEE -
     token = ndb.StringProperty(required=False, default=None)  # RGB Map Overlay Token might have expired.
->>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
     algorithm = ndb.StringProperty(
         required=False)  # identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
     overlay_role = ndb.StringProperty(  # TODO: remove this
         required=False)  # Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'.
 
-<<<<<<< HEAD
-    map_id = ndb.StringProperty(required=False, default=None)  # Map Overlay Id generated in GEE might expire
-    token = ndb.StringProperty(required=False, default=None)  # Map Overlay Token might have expired.
 
     def __init__( image_id, algorithm, role, **opt_params):
         super(Overlay, self).__init__()
@@ -1109,7 +1103,6 @@ class Overlay(ndb.Model):
         self.map_id = None
         self.token = None
 
-=======
     image_collection = ndb.StringProperty(required=True)  # identifies the ImageCollection name, not an EE object.
 
     @property
@@ -1124,7 +1117,7 @@ class Overlay(ndb.Model):
         }
 
     # TODO: remove
->>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
+
     def Overlay2Dictionary(self):
         obsdict = {
             "image_id": self.key.id(),
@@ -1160,7 +1153,6 @@ class Overlay(ndb.Model):
             role_p:  'latest' etc
             **opt_params:
 
-<<<<<<< HEAD
         Finds an observation matching the image.
             @todo if not found, create?
             finds a visualisaiton of that image,
@@ -1283,7 +1275,7 @@ class Observation(ndb.Model):
 
     overlays = ndb.KeyProperty(repeated=True,
                                default=None)  # list of keys to overlays (visualisations of this observation asset)
-=======
+
 class GladClusterCollection(ndb.Model):
     """
     An GladClusterCollection represents a collection of GLAD clusters that were retrieved in the same request.
@@ -1297,7 +1289,6 @@ class GladClusterCollection(ndb.Model):
     # Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'.
     overlays = ndb.KeyProperty(repeated=True, default=None)  # TODO: remove
     # list of keys to overlays (visualisations of this observation asset)
->>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
 
     @staticmethod  # make it static so ndb recognises the kind='Observation'
     def get_from_encoded_key(encoded_key):
@@ -1331,7 +1322,6 @@ class GladClusterCollection(ndb.Model):
 
 
     @staticmethod
-<<<<<<< HEAD
     def createGladAlertObservation(area, clusterProperties):
         """
         :param clusterProperties: A dictionary{
@@ -1350,12 +1340,9 @@ class GladClusterCollection(ndb.Model):
                'file_id': area.get_gladcluster_file_id()
            }
         """
-=======
     def createGladClusterCollection(area, clusterProperties):
->>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
 
         date = datetime.datetime.fromtimestamp(clusterProperties['alerts_date']/1000) #mm to secs
-<<<<<<< HEAD
         obs = Observation(parent=area.key,
                           obs_type = "GLADALERTS",
                           properties=clusterProperties,
@@ -1376,14 +1363,6 @@ class GladClusterCollection(ndb.Model):
                           obs_role=role)
         obs.put()
         return obs
-=======
-        cluster_collection = GladClusterCollection(parent=area.key, properties=clusterProperties,
-                                    image_collection="GLADALERTS",
-                                    captured=date, image_id=clusterProperties['file_id'],
-                                    obs_role="LATEST")
-        cluster_collection.put()
-        return cluster_collection
->>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
 
 
 '''
@@ -1391,11 +1370,11 @@ class Task is an observation task, based on a landsat image in an AOI. The task 
 Each task has a unique ID.
 '''
 
-<<<<<<< HEAD
+'''
 class ObservationTask(ndb.Model):
 
     #class Old_ObservationTask(ndb.Model):
-=======
+
 # TODO: REMOVE This has been deprecated in favour of cases
 class Old_ObservationTask(ndb.Model):
 >>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
@@ -1503,12 +1482,12 @@ class Old_ObservationTask(ndb.Model):
         linestr += u'</ul>'
         logging.debug(linestr)
         return linestr
+'''
 
 '''
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
 Based on journalr.org
 '''
-
 
 class Journal(ndb.Model):
     ENTRIES_PER_PAGE = 5
@@ -1874,10 +1853,10 @@ class BlogEntry(ndb.Model):
 class Config(ndb.Expando):
     pass
 
-
+"""
+"""
 class GladCluster(ndb.Model):
-    """
-    """
+
 
     area = ndb.KeyProperty(kind=AreaOfInterest)  # key to the GladCluster that created the case.
     first_alert_time = ndb.DateTimeProperty(required=True, indexed=False, auto_now_add=True)
