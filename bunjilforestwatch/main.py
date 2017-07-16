@@ -347,6 +347,9 @@ class RegisterUserHandler(BaseHandler):
                         errors['email'] = 'You must have an email to use this service.'
                         email = None
                     '''
+                    if not role:
+                        errors['role'] = 'You must select a role to use this service.'
+                        role = 'volunteer'
 
                     user = models.User.get_or_insert(username,
                                                      role=role,

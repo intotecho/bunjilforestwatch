@@ -27,7 +27,7 @@ import json
 import settings #You have to import your own private keys. 
 import ee
 from google.appengine.api import urlfetch #change timeout from 5 to 60 s. https://stackoverflow.com/questions/13051628/gae-appengine-deadlineexceedederror-deadline-exceeded-while-waiting-for-htt
-from ee.oauthinfo import OAuthInfo
+#from ee.oauthinfo import OAuthInfo
 
 # from http://stackoverflow.com/questions/3086091/debug-jinja2-in-google-app-engine/3694434#3694434
 from oauth2client.appengine import AppAssertionCredentials
@@ -43,10 +43,11 @@ def reallyinitEarthEngineService():
     When running on App Engine, this value is "Google App Engine/X.Y.Z".
     '''
     util.positional_parameters_enforcement = util.POSITIONAL_IGNORE   # avoid the WARNING [util.py:129] new_request() takes at most 1 positional argument (4 given)
-    OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/fusiontables.readonly'
-    OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/fusiontables'
-    OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/drive'
-    OAuthInfo.SCOPE += ' https://www.googleapis.com/auth/drive.file'
+
+    OAuthInfo_SCOPE = ' https://www.googleapis.com/auth/fusiontables.readonly'
+    OAuthInfo_SCOPE += ' https://www.googleapis.com/auth/fusiontables'
+    OAuthInfo_SCOPE += ' https://www.googleapis.com/auth/drive'
+    OAuthInfo_SCOPE += ' https://www.googleapis.com/auth/drive.file'
     try:
         if os.environ['SERVER_SOFTWARE'].startswith('Development'): 
             logging.info("Initialising Earth Engine authenticated connection from devserver")
@@ -62,7 +63,7 @@ def reallyinitEarthEngineService():
             EE_CREDENTIALS = ee.ServiceAccountCredentials(acct, key)
         else:
             logging.info("Initialising Earth Engine authenticated connection from App Engine")
-            EE_CREDENTIALS = AppAssertionCredentials(OAuthInfo.SCOPE)
+            EE_CREDENTIALS = AppAssertionCredentials(OAuthInfo_SCOPE)
             #EE_CREDENTIALS= ServiceAccountCredentials.from_json_keyfile_name(key, OAuthInfo.SCOPE)
 
         ee.Initialize(EE_CREDENTIALS) 
@@ -742,7 +743,7 @@ def getLandsatCells(area):
     # Get the area's boundary or location and convert to a FeatureCollection.    
     fc = area.get_boundary_hull_fc()
     park_geom = fc.geometry()
-    park_area = park_geom.area(100).getInfo()
+    park_area = park_geom.area().getInfo()
 
     if park_area < 10 : # no boundary defined.
         logging.warning("getLandsatCells() - No Park Area %d", park_area)
@@ -753,7 +754,8 @@ def getLandsatCells(area):
     # Get an imageCollection of all L7 images from recent years that overlap the area, load just the image metadata ['features'].
     end_date   = datetime.datetime.today()
     start_date = end_date - datetime.timedelta(weeks = 104) # last 2 years.
-    boundCollection = ee.ImageCollection('LANDSAT/LE7_L1T').filterBounds(fc).filterDate(start_date, end_date) #.sort('system:time_start', False )
+    collection_name = 'LANDSAT/LE7_L1T'
+    boundCollection = ee.ImageCollection(collection_name).filterBounds(fc).filterDate(start_date, end_date) #.sort('system:time_start', False )
     features = boundCollection.getInfo()['features']
     
     logging.info('getLandsatCells() %s', features)
@@ -767,15 +769,21 @@ def getLandsatCells(area):
         #if not cell_name in cellnames:
         if not any(c.key.string_id() == cell_name for c in cellList):
             try:
-                image_id= image_info['properties']['system:index']
+                image_id= collection_name + '/' + image_info['properties']['system:index']
                 image = ee.Image(image_id)
-                image_geom = image.geometry() # should be relatively constant
-                overlap_geom = image_geom.intersection(park_geom, 10)
-                overlap_area  = overlap_geom.area(10).getInfo()
+                try:
+                    image_geom = image.geometry() # should be relatively constant
+                    overlap_geom = image_geom.intersection(park_geom, 10)
+                    overlap_area  = overlap_geom.area().getInfo()
+                except Exception, e:
+                    logging.error("findcell geometry exception {0!s}".format(e)) #Image not found?
+                    continue
+
             except Exception, e:
-                logging.error("findcell exception {0!s}".format(e)) #Image not found?
+                logging.error("findcell image exception {0!s}".format(e)) #Image not found?
                 continue
-            overlap = overlap_area/park_area 
+
+            overlap = overlap_area/park_area
            
             cell = models.LandsatCell(parent=area.key, id=cell_name, aoi=area.key, path=p, row=r, monitored=False , overlap=overlap, image_id=image_id)
             cellList.append(cell)

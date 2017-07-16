@@ -785,14 +785,15 @@ class AreaOfInterest(ndb.Model):
         """
         Given an arbitrary ee.FeatureCollection, return a dictionary of the convex hull of the collection's geometry.
         @param eeFeatureCollection: an ee.FeatureCollection of arbitrary geometries.
-        The returned dictionary also containst centroid, bounds and total_area.
-
+        The returned dictionary also contains centroid, bounds and total_area.
 
         @return boundary_hull as a dictionary - not a string
         """
-        hull = eeFeatureCollection.geometry().convexHull(10)
+        geom = eeFeatureCollection.geometry(ee.ErrorMargin(1))
+        hull = geom.convexHull(ee.ErrorMargin(1))
+
         hull_coords = hull.coordinates().getInfo()
-        bounds = hull.bounds(10)
+        bounds = hull.bounds()
         rectangle = bounds.coordinates().getInfo()
 
         boundary_hull_dict = {
@@ -806,8 +807,8 @@ class AreaOfInterest(ndb.Model):
                 "fill": "#555555",
                 "fill-opacity": 0.5,
                 "rectangle": rectangle,
-                "centroid" : hull.centroid(10).coordinates().getInfo(),
-                "total_area": hull.area(10).getInfo() / 1e6  # area in sq km
+                "centroid" : hull.centroid().coordinates().getInfo(),
+                "total_area": hull.area().getInfo() / 1e6  # area in sq km
             },
             "geometry": {
                 "type": "Polygon",
@@ -845,7 +846,7 @@ class AreaOfInterest(ndb.Model):
             if object_type == 'Feature':
                 eeFeature = ee.Feature(geojson_obj['geometry'])
                 cw_geom = eeFeature.geometry()
-                ccw_geom = cw_geom.buffer(0, 1e-10)  # force polygon to be CCW so search intersects with interior.
+                ccw_geom = cw_geom.buffer(0, 1)  # force polygon to be CCW so search intersects with interior.
                 eeFeature = ee.Feature(ccw_geom, {'name': geojson_obj['properties']['name'], 'fill': 1})
                 eeFeatures.append(eeFeature)
 
@@ -857,7 +858,7 @@ class AreaOfInterest(ndb.Model):
                 for feature in features:
                     eeFeature = ee.Feature(feature['geometry'])
                     cw_geom = eeFeature.geometry()
-                    ccw_geom = cw_geom.buffer(0, 1e-10)  # force polygon to be CCW so search intersects with interior.
+                    ccw_geom = cw_geom.buffer(0, 1)  # force polygon to be CCW so search intersects with interior.
                     eeFeature = ee.Feature(ccw_geom, {'name': "Border FeatureCollection", 'fill': 1})
                     eeFeatures.append(eeFeature)
             else:

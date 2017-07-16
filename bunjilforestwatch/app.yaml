@@ -57,13 +57,16 @@ handlers:
 - url: /favicon.ico
   static_files: static/images/favicon.ico
   upload: static/images/favicon.ico
+  application_readable: true
 
 - url: /robots.txt
   static_files: static/robots.txt
   upload: static/robots.txt
+  application_readable: true
 
 - url: /static
   static_dir: static
+  application_readable: true
 
 - url: /.well-known/.*
   script: main.app
