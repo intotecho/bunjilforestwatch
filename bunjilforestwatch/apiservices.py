@@ -26,8 +26,8 @@ def create_drive_service():
         logging.error('Sorry, Server Credentials Error')
     credentials = eeservice.EarthEngineService.credentials
     http = credentials.authorize(httplib2.Http())
-    return build(serviceName='drive', version='v3', http=http, credentials=credentials)
-
+    #return build(serviceName='drive', version='v3', http=http, credentials=credentials) #raised ValueError('Arguments http and credentials are mutually exclusive.')
+    return build(serviceName='drive', version='v3', http=http)
 
 '''
 get_file(id)
