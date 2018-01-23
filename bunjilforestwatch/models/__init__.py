@@ -1072,9 +1072,7 @@ class Overlay(ndb.Model):
     If the browser sees the image tiles returned are 404 (NOT FOUND) then the browser must initiate a call to
     generate or recreate the overlay.
     """
-    image_id = ndb.StringProperty(required=False, default=None)  # Overlay is created from this asset.
 
-class Overlay(ndb.Model):
     """
     class Overlay describes a visualisation of an image asset.
     It includes the map_id and token, an algorithm and information about the type.
@@ -1088,23 +1086,25 @@ class Overlay(ndb.Model):
     regenerate the overlay.
     """
 
-    image_id = ndb.StringProperty(required=True, indexed=True)  # LANDSAT Image ID of Image - key to query EE.
+    #image_id = ndb.StringProperty(required=False, default=None)  # Overlay is created from this asset. LANDSAT Image ID of Image - key to query EE.
     map_id = ndb.StringProperty(required=False, default=None)  # RGB Map Overlay Id generated in GEE -
     token = ndb.StringProperty(required=False, default=None)  # RGB Map Overlay Token might have expired.
     algorithm = ndb.StringProperty(
         required=False)  # identifies how the image was created - e.g. NDVI, RGB etc. #TODO How to specify this.
     overlay_role = ndb.StringProperty(  # TODO: remove this
         required=False)  # Purpose of this asset for the task. expected values: 'LATEST', 'PREVIOUS'.
+    image_collection = ndb.StringProperty(required=True)  # identifies the ImageCollection name, not an EE object.
 
 
-    def __init__( image_id, algorithm, role, **opt_params):
+    def __init__( self, image_id, image_collection, algorithm, role, **opt_params):
         super(Overlay, self).__init__()
         self.algorithm = algorithm
         self.overlay_role = role
+        self.image_id= image_id
         self.map_id = None
         self.token = None
+        self.image_collection=image_collection
 
-    image_collection = ndb.StringProperty(required=True)  # identifies the ImageCollection name, not an EE object.
 
     @property
     def to_dict(self):
@@ -1279,10 +1279,11 @@ class Observation(ndb.Model):
 
 class GladClusterCollection(ndb.Model):
     """
-    An GladClusterCollection represents a collection of GLAD clusters that were retrieved in the same request.
+    A GladClusterCollection represents a collection of GLAD clusters that were retrieved in the same request.
     """
 
     image_collection = ndb.StringProperty(required=False)  # TODO: Remove
+    image_id = ndb.StringProperty(required=False)  # TODO: Remove
     properties = ndb.JsonProperty(required=False)  # store cluster properties.
     captured = ndb.DateTimeProperty(required=False)
     # sysdate or date Image was captured - could be derived by EE from collection+image_id.
@@ -1305,7 +1306,7 @@ class GladClusterCollection(ndb.Model):
 
     def Observation2Dictionary(self):
         obsdict = {
-            "obs_type" : self.obs_type,
+            "obs_type" : "GLADALERTS", # self.obs_type,
             "image_collection": self.image_collection,
             "image_id": self.image_id,
             "captured": self.captured.strftime("%Y-%m-%d @ %H:%M"),
@@ -1371,14 +1372,10 @@ class Task is an observation task, based on a landsat image in an AOI. The task 
 Each task has a unique ID.
 '''
 
-'''
-class ObservationTask(ndb.Model):
 
-    #class Old_ObservationTask(ndb.Model):
+class Original_ObservationTask(ndb.Model):
 
-# TODO: REMOVE This has been deprecated in favour of cases
-class Old_ObservationTask(ndb.Model):
->>>>>>> 1a32b77e0306211b81583479d1dec6990d498e2e
+# TODO: REMOVE once cases is integrated.
     OBSTASKS_PER_PAGE = 5
     # Observation
     name = ndb.StringProperty()
@@ -1449,7 +1446,7 @@ class Old_ObservationTask(ndb.Model):
             area_followers = AreaFollowersIndex.get_by_id(area.name, parent=area.key)
 
         # send each follower of this area an email with reference to a task.
-        new_task = Old_ObservationTask(aoi=area.key, tasktype=type, observations=new_observations, aoi_owner=area.owner,
+        new_task = Original_ObservationTask(aoi=area.key, tasktype=type, observations=new_observations, aoi_owner=area.owner,
                                        share=area.share, status="open")  # always select the first follower.
         priority = 0
         for user_key in area_followers: # area_followers.users:
@@ -1483,13 +1480,12 @@ class Old_ObservationTask(ndb.Model):
         linestr += u'</ul>'
         logging.debug(linestr)
         return linestr
-'''
+
 
 '''
 A Journal consists of user entries. Journals used for recording observations from tasks are a special class as they also record the image id.
 Based on journalr.org
 '''
-
 class Journal(ndb.Model):
     ENTRIES_PER_PAGE = 5
     MAX_JOURNALS = 100
@@ -1743,6 +1739,7 @@ class Activity(DerefModel):
         ai.put()
 
 
+
 class ActivityIndex(ndb.Model):
     receivers = ndb.StringProperty(repeated=True)
     date = ndb.DateTimeProperty(auto_now_add=True)
@@ -1829,7 +1826,6 @@ RENDER_TYPE_CHOICES = [
     RENDER_TYPE_TEXTILE,
 ]
 
-
 class BlogEntry(ndb.Model):
     ENTRIES_PER_PAGE = 10
 
@@ -1854,8 +1850,8 @@ class BlogEntry(ndb.Model):
 class Config(ndb.Expando):
     pass
 
-"""
-"""
+
+
 class GladCluster(ndb.Model):
 
 

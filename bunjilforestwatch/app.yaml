@@ -53,6 +53,7 @@ inbound_services:
 handlers:
 - url: /assets
   static_dir: assets
+  application_readable: true
 
 - url: /favicon.ico
   static_files: static/images/favicon.ico

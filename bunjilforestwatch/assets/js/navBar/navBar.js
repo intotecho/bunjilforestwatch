@@ -7,7 +7,8 @@ import classNames from 'classnames';
 import { navBar, navList } from '../../stylesheets/navBar/navBar';
 
 const NAVIGATIONS = {
-  'home': '/old',
+  'home': '/',
+  'glad': 'glad',
   'about': '',
   'areas': '',
   'tasks': '',

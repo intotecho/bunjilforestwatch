@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "watch": "./node_modules/.bin/webpack --config webpack.config.js --watch"
+    "watch": "./node_modules/.bin/webpack --config webpack.config.js --watch",
+    "build": "webpack"
   },
   "repository": {
     "type": "git",
@@ -46,7 +47,7 @@
     "style-loader": "^0.13.1",
     "superagent": "^2.2.0",
     "velocity-react": "^1.1.5",
-    "webpack": "^1.13.2",
+    "webpack": "^1.15.0",
     "webpack-bundle-tracker": "0.0.93"
   }
 }

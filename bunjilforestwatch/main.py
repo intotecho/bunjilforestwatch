@@ -4,11 +4,7 @@
 
 main.py Web Handlers
 ====================
-
-This document is planned to give a tutorial-like overview of all web handlers in the bunjil forest wastch app.
 """
-# from jsonpointer import resolve_pointer
-
 
 
 from __future__ import with_statement
@@ -36,7 +32,8 @@ PRODUCTION_MODE = not os.environ.get(
 if not PRODUCTION_MODE:
     from sys import path
 
-    sdk_path = 'C:/Program Files (x86)/Google/google_appengine/'  # https://cloud.google.com/appengine/docs/python/tools/libraries27#vendoring
+    #sdk_path = 'C:/Program Files (x86)/Google/google_appengine/'  # https://cloud.google.com/appengine/docs/python/tools/libraries27#vendoring
+    sdk_path = 'C:/Program Files (x86)/Google/google-cloud-sdk/'  # https://cloud.google.com/appengine/docs/python/tools/libraries27#vendoring
     path.insert(0, sdk_path)
     import dev_appserver
 
@@ -143,6 +140,7 @@ class EarthEngineWarmUpHandler(BaseHandler):
         self.response.status = 202  # The request has been accepted for processing
         self.response.write("EarthEngineWarmUpHandler")
         return
+
 
 class MainPage(BaseHandler):
     """ Main handler for default page.
@@ -1657,10 +1655,13 @@ class CreateOverlayHandler(BaseHandler):
 
         # captured_date = datetime.datetime.strptime(map_id['date_acquired'], "%Y-%m-%d")
         ovl = models.Overlay(parent=obs.key,
+                             image_id=obs.image_id,
+                             image_collection=obs.image_collection,
+                             algorithm=algorithm,
+                             role=role,  # is it safe to assume?
                              map_id=map_id['mapid'],
                              token=map_id['token'],
-                             overlay_role=role,  # is it safe to assume?
-                             algorithm=algorithm)
+                             )
 
         # obs.captured = map_id['capture_datetime'] #we already  had this?
 
@@ -1749,15 +1750,18 @@ class UpdateOverlayAjaxHandler(BaseHandler):
 
 
 '''
-    Legacy: Old_ObservationTaskHandler() when a user clicks on a link in an obstask email they come here to see the new image.
+    Legacy: Original_ObservationTaskHandler() when a user clicks on a link in an obstask email they come here to see the new image.
+    This ObservationTask is for a user to review an entier landsat image (very hard). This is very hard. 
+    This was the original observation task so renamed to Origianl_ObservationTaskHandler
+    The new handler will concentrate on GLAD clusters and can be found at handlers/observation_task_handlers.py
 '''
-class Old_ObservationTaskAjaxHandler(BaseHandler):
+class Original_ObservationTaskAjaxHandler(BaseHandler):
     def get(self, task_id):
 
-        obstask = models.Old_ObservationTask.get_by_id(long(task_id))
+        obstask = models.Original_ObservationTask.get_by_id(long(task_id))
         if obstask is None:
-            self.add_message('danger', "Task not found. Old_ObservationTaskAjaxHandler")
-            resultstr = "Task not found. Old_ObservationTaskAjaxHandler: key {0!s}".format(task_id)
+            self.add_message('danger', "Task not found. Original_ObservationTaskAjaxHandler")
+            resultstr = "Task not found. Original_ObservationTaskAjaxHandler: key {0!s}".format(task_id)
             logging.error(resultstr)
             return self.response.write(resultstr)
 
@@ -1784,8 +1788,8 @@ class Old_ObservationTaskAjaxHandler(BaseHandler):
 
         area = obstask.aoi.get()
         if area is None:
-            self.add_message('danger', "Old_ObservationTaskAjaxHandler: Task for deleted area. ")
-            resultstr = "Task's area not found. Old_ObservationTaskAjaxHandler: key {0!s}".format(task_id)
+            self.add_message('danger', "Original_ObservationTaskAjaxHandler: Task for deleted area. ")
+            resultstr = "Task's area not found. Original_ObservationTaskAjaxHandler: key {0!s}".format(task_id)
             logging.error(resultstr)
             return self.response.write(resultstr)
 
@@ -1961,7 +1965,7 @@ def checkForNewInArea(area):
 
         # send each follower of this area an email with reference to a task.
         if new_observations:
-            linestr += models.Old_ObservationTask.createObsTask(area, new_observations, "LANDSATIMAGE", area_followers.users)
+            linestr += models.Original_ObservationTask.createObsTask(area, new_observations, "LANDSATIMAGE", area_followers.users)
         else:
             linestr += u"<ul><li>No new observations found.</li></ul>"
     else:
@@ -2121,7 +2125,7 @@ class MailTestHandler(BaseHandler):
         #         username = "myotheremail@gmail.com"
 
         user = cache.get_user(self.session['user']['name'])
-        tasks = models.Old_ObservationTask.query().order(-models.Old_ObservationTask.created_date).fetch(2)
+        tasks = models.Original_ObservationTask.query().order(-models.Original_ObservationTask.created_date).fetch(2)
         # mailer.new_image_email(user)
         if not tasks:
             return self.handle_error("No tasks to test mailer")
@@ -2206,7 +2210,7 @@ class ViewObservationTasksHandler(BaseHandler):
         else:
             logging.debug('ViewObservationTasks: user:%s, area:%s, page:%d', user2view, area_name,
                           page)  # Move here to XSS sanitise user2view
-            pages = len(tasks) / models.Old_ObservationTask.OBSTASKS_PER_PAGE
+            pages = len(tasks) / models.Original_ObservationTask.OBSTASKS_PER_PAGE
             if pages < 1:
                 pages = 1
 
@@ -3436,8 +3440,8 @@ config = {
 
 app = webapp2.WSGIApplication([
     webapp2.Route(r'_ah/warmup', handler=EarthEngineWarmUpHandler, name='earth-engine'),
-    webapp2.Route(r'/', handler=MainPageObsTask, name='main2'),
-    webapp2.Route(r'/old', handler=MainPage, name='main'),
+    webapp2.Route(r'/', handler=MainPage, name='main'),
+    webapp2.Route(r'/glad', handler=MainPageObsTask, name='glad'),
 
     webapp2.Route('/.well-known/acme-challenge/<challenge_id>', AcmeChallengeHandler, methods=['GET', 'POST']),
     # google site verification
@@ -3536,7 +3540,7 @@ app = webapp2.WSGIApplication([
     webapp2.Route(r'/obs/overlay/create/<obskey_encoded>/<role>/<algorithm>', handler=CreateOverlayHandler,
                   name='create-overlay'),
     webapp2.Route(r'/obs/overlay/update/<overlay_key>/<algorithm>', handler=UpdateOverlayAjaxHandler, name='update-overlay'),
-    webapp2.Route(r'/obs/<task_id>', handler=Old_ObservationTaskAjaxHandler, name='view-obstask'),
+    webapp2.Route(r'/obs/<task_id>', handler=Original_ObservationTaskAjaxHandler, name='view-obstask'),
 
 
     webapp2.Route(r'/overlay/<landsat_id>/<role>/<algorithm>', handler=ImageOverlayHandler,
@@ -3594,6 +3598,7 @@ RESERVED_NAMES = set([
     'follow',
     'followers',
     'following',
+    'glad',
     'google',
     'googledocs',
     'googleplus',

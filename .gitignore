@@ -84,6 +84,7 @@ bunjilforestwatch/lib/six.py
 bunjilforestwatch/lib/Crypto/
 bunjilforestwatch/lib/python_http_client/
 bunjilforestwatch/lib/sendgrid/
+bunjilforestwatch/lib/asn1crypto/
 
 bunjilforestwatch/node_modules/
 bunjilforestwatch/assets/bundles/
@@ -96,6 +97,7 @@ node_modules/*
 .metadata/*
 */photothumb.db
 *.bak
+*.bscp
 *.BAT
 *.bat
 *.json

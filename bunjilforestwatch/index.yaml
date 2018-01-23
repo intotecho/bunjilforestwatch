@@ -95,6 +95,12 @@ indexes:
 
 - kind: Old_ObservationTask
   properties:
+  - name: aoi
+  - name: created_date
+    direction: desc
+
+- kind: Old_ObservationTask
+  properties:
   - name: assigned_owner
   - name: created_date
     direction: desc
@@ -102,5 +108,11 @@ indexes:
 - kind: Old_ObservationTask
   properties:
   - name: share
+  - name: created_date
+    direction: desc
+
+- kind: Original_ObservationTask
+  properties:
+  - name: aoi
   - name: created_date
     direction: desc

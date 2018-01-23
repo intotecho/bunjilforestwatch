@@ -213,7 +213,7 @@ def getLandsatImageById(collection_name,image_id, algorithm):
     getLandsatImageById(collection_name,image_id, algorithm )
     """
 
-    image = ee.Image(collection_name + "/" + image_id)
+    image = ee.Image(image_id) #   image = ee.Image(collection_name + "/" + image_id)
     props = image.getInfo()['properties'] #logging.info('image properties: %s', props)
     
     system_time_start = datetime.datetime.fromtimestamp(props['system:time_start'] / 1000) #convert ms
